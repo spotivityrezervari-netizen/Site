@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#030303">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Rezervări Sport</title>
+    
+    <link rel="stylesheet" href="css/style.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/db.js"></script>
+    <script src="js/app.js" defer></script>
+</head>
+<body>
+
+    <div class="fundal-water">
+        
+        <!-- SELECTOR DE LIMBĂ (Dreapta-sus, Doar Text) -->
+        <div id="selector-limba" style="position: absolute; top: 20px; right: 20px; display: flex; background: rgba(0,0,0,0.7); border-radius: 20px; border: 1px solid rgba(255,255,255,0.2); padding: 5px; gap: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 1000;">
+            <button id="btn-lang-ro" class="btn-lang" onclick="schimbaLimba('ro')" style="background: transparent; border: none; color: white; cursor: pointer; font-weight: bold; padding: 6px 12px; border-radius: 15px; transition: 0.3s;">RO</button>
+            <button id="btn-lang-hu" class="btn-lang" onclick="schimbaLimba('hu')" style="background: transparent; border: none; color: white; cursor: pointer; font-weight: bold; padding: 6px 12px; border-radius: 15px; transition: 0.3s;">HU</button>
+            <button id="btn-lang-en" class="btn-lang" onclick="schimbaLimba('en')" style="background: transparent; border: none; color: white; cursor: pointer; font-weight: bold; padding: 6px 12px; border-radius: 15px; transition: 0.3s;">EN</button>
+        </div>
+
+        <!-- BUTON CONT (Poziția originală) -->
+        <button class="buton-top-cont" id="btn-top-cont" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <img src="assets/imagini/avatar.jpeg" alt="Avatar" style="width: 26px; height: 26px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.3);">
+            <span id="text-top-cont" data-i18n="contul_meu">Contul Meu</span>
+        </button>
+
+        <div class="grila-sporturi">
+            <div class="card-sport" data-sport="Fotbal">
+                <img src="assets/imagini/fotbal.png" alt="Fotbal" class="iconita-minge">
+                <h2 data-i18n="fotbal">Fotbal</h2>
+            </div>
+            <div class="card-sport" data-sport="Baschet">
+                <img src="assets/imagini/baschet.png" alt="Baschet" class="iconita-minge">
+                <h2 data-i18n="baschet">Baschet</h2>
+            </div>
+            <div class="card-sport" data-sport="Tenis">
+                <img src="assets/imagini/tenis.png" alt="Tenis" class="iconita-minge">
+                <h2 data-i18n="tenis">Tenis</h2>
+            </div>
+            <div class="card-sport" data-sport="Volei">
+                <img src="assets/imagini/volei.png" alt="Volei" class="iconita-minge">
+                <h2 data-i18n="volei">Volei</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL AUTH -->
+    <div class="modal" id="modal-auth" style="display: none;">
+        <div class="modal-continut">
+            <button class="buton-inchidere" id="inchide-auth">X</button>
+            <div class="taburi-auth">
+                <button class="tab-auth activ" id="tab-login" data-i18n="autentificare">Autentificare</button>
+                <button class="tab-auth" id="tab-register" data-i18n="creare_cont">Creare Cont</button>
+            </div>
+
+            <div id="form-login" class="formular-auth">
+                <div class="grup-input"><label data-i18n="email">Adresă Email</label><input type="email" id="login-email" placeholder="nume@email.com" required></div>
+                <div class="grup-input"><label data-i18n="parola">Parolă</label><input type="password" id="login-parola" placeholder="••••••••" required></div>
+                <button type="button" id="btn-executa-login" class="buton-rezervare" data-i18n="intra_cont">Intră în cont</button>
+                <a href="#" id="btn-forgot-password" style="font-size: 13px; color: #3b82f6; display: block; margin-top: 15px; text-align: center; text-decoration: none;" data-i18n="ai_uitat_parola">Ai uitat parola? (Resetare)</a>
+            </div>
+
+            <div id="form-register" class="formular-auth" style="display: none;">
+                <div class="grup-input"><label data-i18n="nume_complet">Nume Complet / Username</label><input type="text" id="reg-nume" placeholder="Numele tău" required></div>
+                <div class="grup-input"><label data-i18n="email">Adresă Email</label><input type="email" id="reg-email" placeholder="nume@email.com" required></div>
+                <div class="grup-input"><label data-i18n="telefon">Număr de Telefon</label><input type="tel" id="reg-telefon" placeholder="0712345678" required></div>
+                <div class="grup-input"><label data-i18n="parola">Parolă</label><input type="password" id="reg-parola" placeholder="••••••••" required></div>
+                <button type="button" id="btn-executa-register" class="buton-rezervare" data-i18n="btn_creare_cont">Creează Cont</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PROFIL -->
+    <div class="modal" id="modal-profil" style="display: none;">
+        <div class="modal-continut">
+            <button class="buton-inchidere" id="inchide-profil">X</button>
+            <div class="profil-header">
+                <div style="display: flex; justify-content: center; margin-bottom: 15px;">
+                    <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+                        <img src="assets/imagini/avatar.jpeg" alt="Profil" style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                </div>
+                <h2 data-i18n="profil_titlu">Profilul Tău</h2>
+            </div>
+            <div class="detalii-utilizator">
+                <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); padding: 12px 15px; border-radius: 12px; margin-bottom: 10px; font-size: 15px; display: flex; align-items: center; gap: 10px;">
+                    <span>👤</span> <strong id="profil-nume" style="color: white;">Nume Nesetat</strong>
+                </div>
+                <p style="display: flex; gap: 10px;"><span>📧</span> <span id="profil-email">client@email.com</span></p>
+                <p style="display: flex; gap: 10px;"><span>📞</span> <span id="profil-telefon">0712 345 678</span></p>
+            </div>
+            <div class="actiuni-cont">
+                <button class="btn-cont" id="btn-vezi-active">🟢 <span data-i18n="rez_active">Rezervări Active</span> (<span id="nr-active">0</span>)</button>
+                <button class="btn-cont" id="btn-vezi-istoric">🕒 <span data-i18n="istoric">Istoric Rezervări</span></button>
+                <button class="btn-cont" id="btn-vezi-chat" style="position: relative;">
+                    💬 <span data-i18n="chat_btn">Chat</span>
+                    <span class="bulina-notificare" id="bulina-chat-client" style="display: none;">0</span>
+                </button>
+                <button class="btn-deconectare" id="btn-logout">🚪 <span data-i18n="deconectare">Deconectare</span></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL LISTĂ REZERVĂRI -->
+    <div class="modal" id="modal-lista-rezervari" style="display: none;">
+        <div class="modal-continut" style="max-width: 500px; max-height: 80vh; overflow-y: auto;">
+            <button class="buton-inchidere" id="inchide-istoric-client">X</button>
+            <h2 id="titlu-lista-rezervari" class="titlu-modal" data-i18n="rez_active_titlu">Rezervările Tale Active</h2>
+            <div id="container-rezervari" style="display: flex; flex-direction: column; gap: 15px; margin-top: 15px;"></div>
+            <button id="inapoi-la-profil" class="buton-rezervare" style="margin-top: 20px; background: #555;" data-i18n="inapoi_profil">Înapoi la Profil</button>
+        </div>
+    </div>
+
+    <!-- MODAL TERENURI -->
+    <div class="modal" id="modal-terenuri" style="display: none;">
+        <div class="modal-continut modal-mare">
+            <button class="buton-inchidere" id="inchide-terenuri">X</button>
+            <h2 class="titlu-modal" id="titlu-sport" data-i18n="alege_terenul">Alege Terenul</h2>
+            
+            <div style="display: flex; gap: 15px; margin-bottom: 25px; justify-content: center; flex-wrap: wrap; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px;">
+                <div class="grup-input" style="margin: 0; min-width: 140px;">
+                    <label style="font-size: 12px; color: #aaa;" data-i18n="data_dorita">Data Dorită</label>
+                    <input type="date" id="filtru-data" style="width: 100%;">
+                </div>
+                <div class="grup-input" style="margin: 0; min-width: 140px;">
+                    <label style="font-size: 12px; color: #aaa;" data-i18n="ora_dorita">Ora Dorită</label>
+                    <select id="filtru-ora" style="width: 100%; padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.5); color: white; border: 1px solid rgba(255,255,255,0.2);">
+                        <option value="ALL" data-i18n="toate_orele">Toate Orele</option>
+                        <option value="10:00">10:00</option>
+                        <option value="12:00">12:00</option>
+                        <option value="13:00">13:00</option>
+                        <option value="14:00">14:00</option>
+                        <option value="15:00">15:00</option>
+                        <option value="16:00">16:00</option>
+                        <option value="17:00">17:00</option>
+                        <option value="18:00">18:00</option>
+                        <option value="19:00">19:00</option>
+                        <option value="20:00">20:00</option>
+                        <option value="21:00">21:00</option>
+                        <option value="22:00">22:00</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grila-terenuri" id="container-dinamic-terenuri"></div>
+        </div>
+    </div>
+
+    <!-- MODAL REZERVARE -->
+    <div class="modal" id="modal-rezervare" style="display: none;">
+        <div class="modal-continut">
+            <button class="buton-inapoi" id="inapoi-la-terenuri" data-i18n="inapoi">Înapoi</button>
+            <button class="buton-inchidere" id="inchide-rezervare">X</button>
+            <h2 class="titlu-modal" data-i18n="finalizare_rezervare">Finalizare Rezervare</h2>
+            
+            <div class="optiune-minge" id="container-minge">
+                <span id="text-label-minge" data-i18n="nevoie_minge">Ai nevoie de minge?</span>
+                <label class="switch-apple">
+                    <input type="checkbox" id="checkbox-minge">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <h3 class="subtitlu-modal" data-i18n="alege_ziua">Alege Ziua</h3>
+            <div class="grila-zile" id="container-zile"></div>
+
+            <h3 class="subtitlu-modal" data-i18n="alege_ora">Alege Ora (Poți selecta mai multe)</h3>
+            <div class="grila-ore" id="container-ore"></div>
+
+            <div class="zona-butoane-finale">
+
+                <button class="buton-locatie" id="buton-vezi-locatia">📍 <span data-i18n="vezi_locatia">Vezi Locația (Hartă)</span></button>
+                <button class="buton-rezervare" id="buton-confirma" data-i18n="alegeti_o_ora">Alegeți o oră</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CHAT CLIENT (Dual Layout) -->
+    <div class="modal" id="modal-chat-client" style="display: none;">
+        <div class="modal-continut modal-mare modal-chat-box" style="width: 100%; max-width: 800px; padding: 20px;">
+            <div class="chat-header">
+                <h2 style="font-size: 20px; color: #3b82f6;" data-i18n="chat_titlu">💬 Mesaje Chat</h2>
+                <button class="buton-inchidere" style="position: static;" id="inchide-chat-client">X</button>
+            </div>
+            
+            <div class="container-dual-chat">
+                <!-- Lista de conversații (Terenuri) -->
+                <div class="lista-conversații-side" id="chat-client-lista-terenuri">
+                    <!-- Se va popula dinamic din app.js -->
+                    <p style="color: #ccc; font-size: 13px; text-align: center; margin-top: 20px;" data-i18n="chat_cauta_conv">Se caută conversații...</p>
+                </div>
+                
+                <!-- Fereastra de mesaje efectivă -->
+                <div class="fereastra-mesaje-side">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h3 id="chat-client-teren-titlu" style="font-size: 16px; margin: 0; color: white; display: none;" data-i18n="chat_alege_conv">Alege o conversație</h3>
+                        <button id="btn-inapoi-conversatie-client" style="background: transparent; border: none; color: white; font-size: 20px; cursor: pointer;" class="btn-inchide-conversatie-mobile">✖</button>
+                    </div>
+                    
+                    <div class="lista-mesaje" id="chat-client-mesaje">
+                        <p style="color: #ccc; text-align: center; margin-top: auto; margin-bottom: auto;" data-i18n="chat_selecteaza_stanga">Selectează un teren din stânga pentru a vedea mesajele.</p>
+                    </div>
+
+                    <div class="chat-input-zona">
+                        <input type="text" id="chat-client-input" placeholder="Scrie un mesaj..." data-i18n-placeholder="chat_scrie" disabled>
+                        <button class="chat-btn-trimite" id="chat-client-btn-trimite" disabled>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                        </button>
+                    </div>
+                    <p id="chat-client-avertisment" style="color: #ef4444; font-size: 12px; margin-top: 5px; display: none; text-align: center;" data-i18n="chat_avertisment">Este nevoie de rezervare pentru a trimite un chat</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
+
+    <!-- MODAL PAROLA NOUA -->
+    <div id="modal-parola-noua" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.95); z-index: 999999; justify-content: center; align-items: center;">
+        <div class="modal-box" style="background: #1e1e1e; padding: 30px; border-radius: 15px; border: 2px solid #3b82f6; max-width: 400px; width: 90%; text-align: center;">
+            <h2 style="color: white; margin-bottom: 15px;">?? Reseteaza Parola</h2>
+            <p style="color: #ccc; font-size: 14px; margin-bottom: 20px;">Introdu noua parola mai jos (minim 6 caractere).</p>
+            <input type="password" id="input-noua-parola" placeholder="Noua parola..." style="padding: 15px; width: 100%; box-sizing: border-box; border-radius: 8px; border: none; margin-bottom: 20px; font-size: 16px;">
+            <button id="btn-salveaza-parola-noua" style="padding: 15px 24px; width: 100%; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px;">Salveaza Noua Parola</button>
+            <button class="buton-inchidere" style="margin-top: 15px; padding: 10px; background: transparent; color: white; border: 1px solid #ccc; border-radius: 8px; cursor: pointer; width: 100%;">Anuleaza</button>
+        </div>
+    </div>
+

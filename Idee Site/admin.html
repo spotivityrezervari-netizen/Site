@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#030303">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Panou Admin - Rezervări Sport</title>
+    <link rel="stylesheet" href="css/style.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/db.js"></script>
+    <script src="js/admin.js" defer></script>
+    
+    <style>
+        .modal-continut {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100%;
+            box-sizing: border-box;
+            margin: auto; 
+        }
+
+        .tabel-scrolabil {
+            background: rgba(0,0,0,0.3); 
+            border-radius: 10px; 
+            overflow-x: auto; 
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        #container-istoric::-webkit-scrollbar { width: 6px; }
+        #container-istoric::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 4px; }
+        #container-istoric::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="fundal-water">
+        
+        <!-- ECRAN LOGIN -->
+        <div id="sectiune-login" class="modal-continut" style="max-width: 400px; border-color: white;">
+            <h2 class="titlu-modal" data-trad="t-logare">🔐 Logare Panou Control</h2>
+            <div class="formular-auth">
+                <div class="grup-input"><label>Adresă Email:</label><input type="email" id="login-email-admin" required></div>
+                <div class="grup-input"><label>Parolă de acces:</label><input type="password" id="login-parola" required></div>
+                <button type="button" id="login-admin-btn" class="buton-rezervare" style="margin-top: 10px;">Intră în Sistem</button>
+            </div>
+        </div>
+
+        <!-- DASHBOARD ADMIN (Meniul Principal cu Carduri) -->
+        <div id="sectiune-dashboard" style="display: none; flex-direction: column; gap: 30px; width: 100%; max-width: 1200px; margin: 0 auto; padding: 20px;">
+            
+            <!-- Bara de Sus -->
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);">
+                <span id="text-rol-activ" style="font-weight: bold; color: #a1eafb; margin-top: 5px;">Conectat</span>
+                
+                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 10px;">
+                    <div style="display: flex; gap: 10px;">
+                        <button id="btn-vezi-chat-admin" class="btn-cont" style="padding: 6px 14px; position: relative;">
+                            💬 Chat
+                            <span class="bulina-notificare" id="bulina-chat-admin" style="display: none;">0</span>
+                        </button>
+                        <button id="btn-logout-admin" class="btn-deconectare" style="padding: 6px 14px;" data-trad="t-logout">Deconectare</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Meniul de Carduri (Generează Pop-up-uri la Click) -->
+            <div class="grila-sporturi" style="max-width: 100%; padding: 0;">
+                
+                <!-- PANOURI SUPER ADMIN -->
+                <div class="card-sport super-admin-only" style="display: none; padding: 20px;" onclick="document.getElementById('modal-adauga-teren').style.display='flex'">
+                    <h2 style="font-size: 18px;">🏟️<br><br>Adaugă Teren</h2>
+                </div>
+                <div class="card-sport super-admin-only" style="display: none; padding: 20px;" onclick="document.getElementById('modal-creeaza-cont').style.display='flex'">
+                    <h2 style="font-size: 18px;">💼<br><br>Creare Angajat</h2>
+                </div>
+
+                <!-- PANOURI COMUNE -->
+                <div class="card-sport admin-comun" style="display: none; padding: 20px;" onclick="document.getElementById('modal-rezervare-manuala').style.display='flex'">
+                    <h2 style="font-size: 18px;">📝<br><br><span data-trad="t-rez-man-scurt">Rezervare Manuală</span></h2>
+                </div>
+                <div class="card-sport admin-comun" style="display: none; padding: 20px;" onclick="document.getElementById('modal-tabel-program').style.display='flex'">
+                    <h2 style="font-size: 18px;">📋<br><br><span data-trad="t-prog-scurt">Program & Active</span></h2>
+                </div>
+                <div class="card-sport admin-comun" style="display: none; padding: 20px;" onclick="document.getElementById('modal-istoric').style.display='flex'">
+                    <h2 style="font-size: 18px;">📅<br><br><span data-trad="t-istoric-titlu-scurt">Toate Rezervările</span></h2>
+                </div>
+
+                <!-- Aici JS-ul va injecta cardurile pentru setările terenurilor alocate -->
+                <div id="container-meniu-terenuri" style="display: contents;"></div>
+            </div>
+
+        </div> <!-- End Dashboard -->
+    </div> <!-- End fundal-water -->
+
+    <!-- ===================== ZONA DE MODALE (POP-UP-URI) ===================== -->
+
+    <div class="modal" id="modal-adauga-teren">
+        <div class="modal-continut modal-mare" style="border-color: #f59e0b; width: 100%; max-width: 550px;">
+            <button class="buton-inchidere" onclick="this.parentElement.parentElement.style.display='none'">X</button>
+            <div>
+                <h2 class="titlu-modal" style="font-size: 20px; text-align: left; color: #f59e0b;">🏟️ Adaugă Teren Nou</h2>
+            </div>
+            <div class="formular-auth" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; display: flex; flex-direction: column; flex: 1;">
+                <div class="grup-input"><label>Nume Teren</label><input type="text" id="teren-nume"></div>
+                <div class="grup-input"><label>Sport</label><select id="teren-sport"><option value="Fotbal">Fotbal</option><option value="Baschet">Baschet</option><option value="Tenis">Tenis</option><option value="Volei">Volei</option></select></div>
+                <div class="grup-input"><label>Preț/oră (Lei)</label><input type="number" id="teren-pret"></div>
+                <div class="grup-input" style="display:flex; justify-content:space-between; margin-top:10px;"><label>Ofertă Minge?</label><input type="checkbox" id="teren-minge" checked style="width:20px;height:20px;"></div>
+                <div class="grup-input" style="margin-top:10px;"><label>Preț Minge (Lei)</label><input type="number" id="teren-pret-minge" value="15"></div>
+                <div class="grup-input" style="margin-top:10px;"><label>Link Google Maps</label><input type="text" id="teren-locatie" placeholder="https://maps..."></div>
+                <div class="grup-input" style="margin-top:10px; overflow: hidden; width: 100%;">
+                    <label style="color: #a1eafb;">📸 Încarcă Poza</label>
+                    <input type="file" id="teren-poza" accept="image/*" style="background: rgba(0,0,0,0.5); color: white; padding: 10px; border-radius: 5px; cursor: pointer; border: 1px dashed rgba(255,255,255,0.2); width: 100%; box-sizing: border-box; min-width: 0;">
+                </div>
+                <button type="button" id="btn-adauga-teren" class="buton-rezervare" style="background: #f59e0b; color: black; margin-top:20px;">➕ Adaugă Teren</button>
+            </div>
+            <h3 style="color: white; font-size: 16px; margin-top: 20px;">Terenuri Existente:</h3>
+            <div id="container-lista-terenuri" style="display: flex; flex-direction: column; gap: 10px; overflow-y: auto; max-height: 200px;"></div>
+        </div>
+    </div>
+
+    <div class="modal" id="modal-creeaza-cont">
+        <div class="modal-continut modal-mare" style="border-color: #34c759; width: 100%; max-width: 550px;">
+            <button class="buton-inchidere" onclick="this.parentElement.parentElement.style.display='none'">X</button>
+            <div>
+                <h2 class="titlu-modal" style="font-size: 20px; text-align: left; color: #34c759;">🧑💼 Alocare Terenuri Angajat</h2>
+                <p style="color: #ccc; font-size: 13px; margin-top: -10px; margin-bottom: 10px;">(ATENȚIE: Contul cu parola trebuie creat întâi în Supabase Auth)</p>
+            </div>
+            <div class="formular-auth" style="display: flex; flex-direction: column; flex: 1;">
+                <div class="grup-input"><label>Nume Angajat / Admin</label><input type="text" id="super-nume"></div>
+                <div class="grup-input"><label>Adresă E-mail (Creată în Supabase)</label><input type="email" id="super-email"></div>
+                <div class="grup-input"><label>Bifează terenurile la care are acces:</label>
+                    <div id="container-checkbox-terenuri" style="display:flex; flex-direction:column; gap:5px; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px;"></div>
+                </div>
+                <button type="button" id="creeaza-supervisor-btn" class="buton-rezervare" style="margin-top: 20px; background: #34c759; color: black;">Alocă Terenuri</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="modal-rezervare-manuala">
+        <div class="modal-continut modal-mare" style="border-color: #a855f7; width: 100%; max-width: 550px;">
+            <button class="buton-inchidere" onclick="this.parentElement.parentElement.style.display='none'">X</button>
+            <div>
+                <h2 class="titlu-modal" style="font-size: 20px; text-align: left; color: #a855f7;" data-trad="t-rez-man">📝 Adaugă Rezervare Manuală</h2>
+                <p style="color: #ccc; font-size: 13px; margin-top: -10px; margin-bottom: 10px;" data-trad="t-rez-desc">(Dacă e ocupată, sistemul blochează)</p>
+            </div>
+            <div class="formular-auth" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; display: flex; flex-direction: column; flex: 1;">
+                <div class="grup-input"><label data-trad="t-pt-ce-teren">Pentru ce teren?</label><select id="manual-teren" style="background: rgba(0,0,0,0.5); color: white; padding: 10px; border-radius: 5px;"></select></div>
+                <div class="grup-input"><label data-trad="t-nume">Nume Client (sau Telefon)</label><input type="text" id="manual-client" placeholder="Ex: Ion - 07..."></div>
+                <div class="grup-input"><label data-trad="t-data-cal">Data calendaristică</label><input type="date" id="manual-data" style="background: rgba(0,0,0,0.5); color: white; padding: 10px; border-radius: 5px;"></div>
+                <div class="grup-input"><label data-trad="t-ora">Ora</label>
+                    <select id="manual-ora" style="background: rgba(0,0,0,0.5); color: white; padding: 10px; border-radius: 5px;">
+                        <option value="12:00">12:00</option><option value="13:00">13:00</option><option value="14:00">14:00</option><option value="15:00">15:00</option>
+                        <option value="16:00">16:00</option><option value="17:00">17:00</option><option value="18:00">18:00</option><option value="19:00">19:00</option>
+                        <option value="20:00">20:00</option><option value="21:00">21:00</option><option value="22:00">22:00</option>
+                    </select>
+                </div>
+                <div class="grup-input"><label data-trad="t-pret-incasat">Preț Încasat</label><input type="text" id="manual-pret" placeholder="100 Lei"></div>
+                <button type="button" id="btn-rezervare-manuala" class="buton-rezervare" style="background: #a855f7; margin-top: 20px;" data-trad="t-btn-salv">➕ Salvează</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="modal-tabel-program">
+        <div class="modal-continut modal-mare" style="border-color: #06b6d4; width: 100%; max-width: 600px;">
+            <button class="buton-inchidere" onclick="this.parentElement.parentElement.style.display='none'">X</button>
+            <div>
+                <h2 class="titlu-modal" style="font-size: 20px; text-align: left; color: #06b6d4;" data-trad="t-prog">📋 Program & Disponibilitate</h2>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; flex-wrap: wrap;">
+                    <div class="grup-input" style="flex: 1; min-width: 150px; margin: 0;">
+                        <label style="margin-bottom: 5px;" data-trad="t-alege">Alege Terenul</label>
+                        <select id="tabel-teren" style="background: rgba(0,0,0,0.5); color: white; padding: 10px; border-radius: 5px; width: 100%; border: 1px solid rgba(255,255,255,0.1);"></select>
+                    </div>
+                    <div class="grup-input" style="flex: 1; min-width: 150px; margin: 0;">
+                        <label style="margin-bottom: 5px;" data-trad="t-data">Data Dorită</label>
+                        <input type="date" id="tabel-data" style="background: rgba(0,0,0,0.5); color: white; padding: 10px; border-radius: 5px; width: 100%; border: 1px solid rgba(255,255,255,0.1);">
+                    </div>
+                </div>
+                <div class="tabel-scrolabil" style="max-height: 400px; overflow-y: auto;">
+                    <table style="width: 100%; border-collapse: collapse; color: white; text-align: left; font-size: 14px;">
+                        <thead>
+                            <tr style="background: rgba(255,255,255,0.1); border-bottom: 1px solid rgba(255,255,255,0.2);">
+                                <th style="padding: 12px; width: 80px;" data-trad="t-ora-th">Ora</th>
+                                <th style="padding: 12px; width: 90px;" data-trad="t-status">Status</th>
+                                <th style="padding: 12px;" data-trad="t-detalii">Client / Detalii</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabel-corp-program">
+                            <tr><td colspan="3" style="padding: 15px; text-align: center;">Alegeți un teren și o dată.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <button class="buton-rezervare" onclick="window.incarcaTabelProgram()" style="background: #06b6d4; color: black; margin-top: 20px; padding: 10px;" data-trad="t-reincarca">🔄 Reîncarcă Programul</button>
+        </div>
+    </div>
+
+    <div class="modal" id="modal-istoric">
+        <div class="modal-continut modal-mare" style="border-color: #3b82f6; width: 100%; max-width: 600px;">
+            <button class="buton-inchidere" onclick="this.parentElement.parentElement.style.display='none'">X</button>
+            <div style="flex-shrink: 0;">
+                <h2 class="titlu-modal" style="font-size: 20px; text-align: left; margin-bottom: 15px; color: #3b82f6;" data-trad="t-istoric-titlu">📅 Toate Rezervările (Descărcare)</h2>
+                <button type="button" id="btn-istoric" class="buton-rezervare" style="background: #3b82f6; width: 100%; margin-bottom: 15px;" data-trad="t-istoric-btn">🔄 Descarcă Rezervările</button>
+            </div>
+            <div id="container-istoric" style="display: flex; flex-direction: column; gap: 15px; overflow-y: auto; flex: 1; padding-right: 5px;">
+                <p style="color: white; text-align: center; margin-top: 20px;">Apasă Descarcă...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Aici JS-ul va injecta modalele generate dinamic pentru setările fiecărui teren -->
+    <div id="container-modale-terenuri" style="display: contents;"></div>
+
+    <!-- MODAL CHAT ADMIN (Dual Layout) -->
+    <div class="modal" id="modal-chat-admin" style="display: none;">
+        <div class="modal-continut modal-mare modal-chat-box" style="width: 100%; max-width: 900px; padding: 20px; border-color: #3b82f6;">
+            <div class="chat-header">
+                <h2 style="font-size: 20px; color: #3b82f6;">💬 Mesaje Clienți</h2>
+                <button class="buton-inchidere" style="position: static;" onclick="document.getElementById('modal-chat-admin').style.display='none'">X</button>
+            </div>
+            
+            <div class="container-dual-chat">
+                <!-- Lista de conversații -->
+                <div class="lista-conversații-side" id="chat-admin-lista-conversații">
+                    <p style="color: #ccc; font-size: 13px; text-align: center; margin-top: 20px;">Se descarcă mesajele...</p>
+                </div>
+                
+                <!-- Fereastra de mesaje efectivă -->
+                <div class="fereastra-mesaje-side">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h3 id="chat-admin-conversație-titlu" style="font-size: 16px; margin: 0; color: white; display: none;">Alege o conversație</h3>
+                        <button id="btn-inapoi-conversatie-admin" style="background: transparent; border: none; color: white; font-size: 20px; cursor: pointer;" class="btn-inchide-conversatie-mobile">✖</button>
+                    </div>
+                    
+                    <div class="lista-mesaje" id="chat-admin-mesaje">
+                        <p style="color: #ccc; text-align: center; margin-top: auto; margin-bottom: auto;">Selectează un client din stânga pentru a vedea mesajele.</p>
+                    </div>
+
+                    <div class="chat-input-zona">
+                        <button id="chat-admin-btn-sterge" style="background: #ef4444; border: none; padding: 10px; border-radius: 5px; cursor: pointer; color: white; display: none;" title="Șterge conversația">🗑️</button>
+                        <input type="text" id="chat-admin-input" placeholder="Scrie un mesaj..." disabled>
+                        <button class="chat-btn-trimite" id="chat-admin-btn-trimite" disabled>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
