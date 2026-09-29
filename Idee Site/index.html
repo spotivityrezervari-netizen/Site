@@ -6,56 +6,348 @@
     <meta name="theme-color" content="#030303">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Rezervări Sport</title>
+    <title>Rezervari Sport</title>
     
-    <link rel="stylesheet" href="css/style.css">
-    
+    <link rel="stylesheet" href="css/style.css?v=33">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/db.js"></script>
-    <script src="js/app.js" defer></script>
+    <script src="js/app.js?v=13" defer></script>
+    <style>
+
+        /* Fundal pagina */
+        .fundal-water {
+            background: linear-gradient(135deg, #020617 0%, #1e293b 100%) !important;
+            width: 100% !important;
+            height: 100% !important;
+            position: absolute !important;
+            top: 0; left: 0; right: 0; bottom: 0;
+            overflow: hidden !important;
+        }
+
+        /* Ascunde scrollbars globally */
+        body, html {
+            overflow: hidden !important;
+            width: 100% !important;
+            height: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            position: fixed !important;
+        }
+        
+        /* Top bar elements styling */
+        .buton-top-cont, #selector-limba, #filtru-oras-global {
+            z-index: 9999 !important;
+            background: rgba(255, 255, 255, 0.4) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05) !important;
+        }
+        .buton-top-cont img { border-color: rgba(0,0,0,0.1) !important; }
+        .btn-lang { color: #ffffff !important; }
+        #sageata-filtru { color: #ffffff !important; }
+
+        /* Container principal */
+        .grila-sporturi {
+            position: absolute !important;
+            z-index: 1 !important;
+            background: transparent !important;
+            max-width: none !important;
+            top: 0 !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            width: 100% !important;
+            margin: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+        }
+
+        /* Globul central urias */
+        .centru-video {
+            position: absolute !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            background-color: transparent !important;
+            width: 115vw !important;
+            height: 115vw !important;
+            max-width: 550px !important;
+            max-height: 550px !important;
+            min-width: 380px !important;
+            min-height: 380px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            border: none !important;
+        }
+
+        .centru-video video {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: contain !important;
+            mix-blend-mode: normal !important;
+            background: transparent !important;
+        }
+
+        /* Wrappers pentru fiecare card sport */
+        .orbita-wrapper {
+            position: absolute !important;
+            z-index: 10 !important;
+            display: block !important;
+            width: max-content !important;
+            max-width: max-content !important;
+            min-width: max-content !important;
+        }
+        
+        /* Design pilula solida */
+        .orbita-wrapper .card-sport {
+            width: max-content !important;
+            max-width: max-content !important;
+            min-width: max-content !important;
+            height: auto !important;
+            padding: 8px 16px !important;
+            border-radius: 40px !important;
+            margin: 0 !important;
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            background: rgba(255, 255, 255, 0.15) !important;
+            backdrop-filter: blur(8px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.4) !important;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+            color: #ffffff !important;
+            transition: all 0.3s ease !important;
+        }
+        
+        .orbita-wrapper .card-sport:hover {
+            transform: scale(1.1) translateY(-3px) !important;
+            background: rgba(255, 255, 255, 0.25) !important;
+            border-color: rgba(255, 255, 255, 0.7) !important;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2) !important;
+        }
+
+        .orbita-wrapper .iconita-minge {
+            width: 28px !important;
+            height: 28px !important;
+            margin-right: 12px !important;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)) !important;
+        }
+
+        .orbita-wrapper h2 {
+            font-size: 15px !important;
+            font-weight: 700 !important;
+            margin: 0 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+        }
+
+        /* --- MOBILE POSITIONS --- */
+        .orbita-wrapper:nth-child(2) { top: 30%; left: 3%; transform: scale(1) !important; right: auto; } /* Fotbal */
+        .orbita-wrapper:nth-child(6) { top: 45%; left: 3%; transform: scale(1) !important; right: auto; bottom: auto; } /* Tenis Picior */
+        .orbita-wrapper:nth-child(3) { top: 25%; right: 3%; left: auto; transform: scale(1) !important; } /* Baschet */
+        .orbita-wrapper:nth-child(5) { bottom: 18%; left: 3%; right: auto; top: auto; transform: scale(1) !important; } /* Tenis */
+        .orbita-wrapper:nth-child(4) { bottom: 18%; right: 3%; left: auto; top: auto; transform: scale(1) !important; } /* Volei */
+
+        /* --- DESKTOP POSITIONS --- */
+        /* Fixam overlap-ul butonului X (inchidere) in TOATE ferestrele */
+        .modal-continut {
+            padding-top: 65px !important;
+        }
+        
+        .taburi-auth {
+            margin-top: 0 !important;
+        }
+
+    
+        /* Asiguram ca textul nu se rupe pe doua randuri pentru a pastra simetria */
+        .orbita-wrapper .card-sport {
+            justify-content: flex-start !important;
+            padding: 10px 15px !important;
+        }
+        .orbita-wrapper h2 {
+            font-size: 18px !important;
+            white-space: nowrap !important; /* forteaza pe un singur rand */
+        }
+        .orbita-wrapper .iconita-minge {
+            width: 28px !important;
+            height: 28px !important;
+            margin-right: 8px !important;
+        }
+
+    
+        /* Aliniere perfecta pe verticala si orizontala a continutului din butoane */
+        .orbita-wrapper .card-sport {
+            display: flex !important;
+            align-items: center !important; /* asigura alinierea verticala pe mijloc */
+            justify-content: flex-start !important; /* asigura ca toate icoanele incep din stanga la fel */
+            padding: 8px 20px !important;
+            height: 46px !important; /* inaltime fixa pentru a asigura ca icoana si textul au aceeasi "camera" */
+        }
+        
+        .orbita-wrapper h2 {
+            font-size: 18px !important;
+            white-space: nowrap !important;
+            line-height: 1 !important; /* anuleaza orice padding invizibil al textului care l-ar putea impinge in sus/jos */
+            margin: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+        }
+        
+        .orbita-wrapper .iconita-minge {
+            width: 28px !important;
+            height: 28px !important;
+            margin-right: 12px !important;
+            display: block !important;
+        }
+
+    
+        /* --- DESKTOP SIZING --- */
+        @media (min-width: 768px) {
+            .centru-video {
+                width: 92vh !important;
+                height: 92vh !important;
+                min-width: 690px !important;
+                min-height: 690px !important;
+            }
+            
+            /* --- DESKTOP POSITIONS (ALINIATE LA STANGA) --- */
+            .orbita-wrapper:nth-child(2) { top: 15%; left: 15%; transform: translateY(-50%) !important; right: auto; } /* Fotbal */
+            .orbita-wrapper:nth-child(6) { top: 35%; left: 15%; transform: translateY(-50%) !important; right: auto; bottom: auto; } /* Tenis Picior */
+            .orbita-wrapper:nth-child(3) { top: 25%; right: 15%; left: auto; transform: translateY(-50%) !important; } /* Baschet */
+            .orbita-wrapper:nth-child(5) { bottom: 25%; left: 15%; right: auto; top: auto; transform: translateY(50%) !important; } /* Tenis */
+            .orbita-wrapper:nth-child(4) { bottom: 25%; right: 15%; left: auto; top: auto; transform: translateY(50%) !important; } /* Volei */
+        }
+        
+        /* Fixare EXACTA icoana + text in interiorul butonului */
+        .orbita-wrapper h2 {
+            font-size: 18px !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            line-height: 1 !important;
+            white-space: nowrap !important;
+        }
+        .orbita-wrapper .iconita-minge {
+            width: 28px !important;
+            height: 28px !important;
+            margin: 0 !important; /* RESETAM MARGINILE, INCLUSIV CEL DE BOTTOM 20px DIN STYLE.CSS */
+            margin-right: 8px !important;
+            padding: 0 !important;
+            display: block !important;
+        }
+
+    
+        /* --- Ascundem elementele globale din header cand se deschide un modal --- */
+        body:has(.modal[style*="display: flex"]) #wrapper-filtru-oras,
+        body:has(.modal[style*="display: flex"]) #selector-limba,
+        body:has(.modal[style*="display: flex"]) .buton-top-cont {
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+        
+        /* Stilizam select-urile sa fie negre nativ pe Windows */
+        #filtru-oras-global option, #filtru-ora option {
+            background-color: #0f172a !important;
+            color: #ffffff !important;
+        }
+
+    
+        /* Evitam complet suprapunerea "squishing" a field-urilor si butoanelor in form-uri */
+        .formular-auth > * {
+            flex-shrink: 0 !important;
+        }
+        .grup-input {
+            flex-shrink: 0 !important;
+        }
+        
+        /* Adaugam mai mult spatiu inainte de butonul Creeaza Cont / Login */
+        .formular-auth .buton-rezervare {
+            margin-top: 20px !important;
+            flex-shrink: 0 !important;
+        }
+        
+        /* Ne asiguram ca fereastra face scroll daca nu incape continutul, fara sa striveasca box-urile */
+        .modal-continut {
+            overflow-y: auto !important;
+            max-height: 90vh !important;
+        }
+
+    </style>
 </head>
 <body>
 
     <div class="fundal-water">
+        <!-- Cadranele 4-split pentru background -->
+        <div style="position: absolute; top: 0; left: 0; width: 50%; height: 50%; background-color: #0f172a; background-image: linear-gradient(rgba(2,6,23,0.6), rgba(2,6,23,0.6)), url('assets/imagini/fundal_fotbal.jpg'); background-size: cover; background-position: center; z-index: 0; transition: opacity 0.5s;"></div>
+        <div style="position: absolute; top: 0; right: 0; width: 50%; height: 50%; background-color: #0f172a; background-image: linear-gradient(rgba(2,6,23,0.6), rgba(2,6,23,0.6)), url('assets/imagini/fundal_baschet.jpg'); background-size: cover; background-position: center; z-index: 0; transition: opacity 0.5s;"></div>
+        <div style="position: absolute; bottom: 0; left: 0; width: 50%; height: 50%; background-color: #0f172a; background-image: linear-gradient(rgba(2,6,23,0.6), rgba(2,6,23,0.6)), url('assets/imagini/fundal_tenis.jpg'); background-size: cover; background-position: center; z-index: 0; transition: opacity 0.5s;"></div>
+        <div style="position: absolute; bottom: 0; right: 0; width: 50%; height: 50%; background-color: #0f172a; background-image: linear-gradient(rgba(2,6,23,0.6), rgba(2,6,23,0.6)), url('assets/imagini/fundal_volei.jpg'); background-size: cover; background-position: center; z-index: 0; transition: opacity 0.5s;"></div>
+        <div id="fundal-imagine-sport" style="position: absolute; top:0; left:0; width:100%; height:100%; background-color: #020617; background-size: cover; background-position: center; opacity: 0; transition: opacity 0.5s ease; z-index: 1;"></div>
         
-        <!-- SELECTOR DE LIMBĂ (Dreapta-sus, Doar Text) -->
+        <!-- SELECTOR DE LIMBA -->
         <div id="selector-limba" style="position: absolute; top: 20px; right: 20px; display: flex; background: rgba(0,0,0,0.7); border-radius: 20px; border: 1px solid rgba(255,255,255,0.2); padding: 5px; gap: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 1000;">
             <button id="btn-lang-ro" class="btn-lang" onclick="schimbaLimba('ro')" style="background: transparent; border: none; color: white; cursor: pointer; font-weight: bold; padding: 6px 12px; border-radius: 15px; transition: 0.3s;">RO</button>
             <button id="btn-lang-hu" class="btn-lang" onclick="schimbaLimba('hu')" style="background: transparent; border: none; color: white; cursor: pointer; font-weight: bold; padding: 6px 12px; border-radius: 15px; transition: 0.3s;">HU</button>
             <button id="btn-lang-en" class="btn-lang" onclick="schimbaLimba('en')" style="background: transparent; border: none; color: white; cursor: pointer; font-weight: bold; padding: 6px 12px; border-radius: 15px; transition: 0.3s;">EN</button>
         </div>
 
-        <!-- BUTON CONT (Poziția originală) -->
+        <!-- BUTON CONT -->
         <button class="buton-top-cont" id="btn-top-cont" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
             <img src="assets/imagini/avatar.jpeg" alt="Avatar" style="width: 26px; height: 26px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.3);">
             <span id="text-top-cont" data-i18n="contul_meu">Contul Meu</span>
         </button>
 
+        <div id="wrapper-filtru-oras" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999 !important; display: flex; flex-direction: column; align-items: center; transition: opacity 0.3s;">
+            <select id="filtru-oras-global" style="background: rgba(0,0,0,0.6); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 8px 20px; border-radius: 20px; font-weight: bold; cursor: pointer; text-align: center; text-align-last: center; appearance: none; -webkit-appearance: none; min-width: 130px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); backdrop-filter: blur(5px);">
+                <option value="ALL">Toate Orasele</option>
+            </select>
+        </div>
+
         <div class="grila-sporturi">
-            <div class="card-sport" data-sport="Fotbal">
-                <img src="assets/imagini/fotbal.png" alt="Fotbal" class="iconita-minge">
-                <h2 data-i18n="fotbal">Fotbal</h2>
+            <div class="centru-video">
+                <video src="assets/imagini/logo_sfera_loop_transparent (inc2).webm" autoplay loop muted playsinline></video>
             </div>
-            <div class="card-sport" data-sport="Baschet">
-                <img src="assets/imagini/baschet.png" alt="Baschet" class="iconita-minge">
-                <h2 data-i18n="baschet">Baschet</h2>
+            
+            <div class="orbita-wrapper">
+                <div class="card-sport" data-sport="Fotbal">
+                    <img src="assets/imagini/fotbal.png" alt="Fotbal" class="iconita-minge">
+                    <h2 data-i18n="fotbal">Fotbal</h2>
+                </div>
             </div>
-            <div class="card-sport" data-sport="Tenis">
-                <img src="assets/imagini/tenis.png" alt="Tenis" class="iconita-minge">
-                <h2 data-i18n="tenis">Tenis</h2>
+            <div class="orbita-wrapper">
+                <div class="card-sport" data-sport="Baschet">
+                    <img src="assets/imagini/baschet.png" alt="Baschet" class="iconita-minge">
+                    <h2 data-i18n="baschet">Baschet</h2>
+                </div>
             </div>
-            <div class="card-sport" data-sport="Volei">
-                <img src="assets/imagini/volei.png" alt="Volei" class="iconita-minge">
-                <h2 data-i18n="volei">Volei</h2>
+            <div class="orbita-wrapper">
+                <div class="card-sport" data-sport="Volei">
+                    <img src="assets/imagini/volei.png" alt="Volei" class="iconita-minge">
+                    <h2 data-i18n="volei">Volei</h2>
+                </div>
+            </div>
+            <div class="orbita-wrapper">
+                <div class="card-sport" data-sport="Tenis">
+                    <img src="assets/imagini/tenis.png" alt="Tenis" class="iconita-minge">
+                    <h2 data-i18n="tenis">Tenis</h2>
+                </div>
+            </div>
+            <div class="orbita-wrapper">
+                <div class="card-sport" data-sport="Tenis Picior">
+                    <img src="assets/imagini/fotbal.png" alt="Tenis Picior" class="iconita-minge">
+                    <h2 data-i18n="tenis_picior">Tenis Picior</h2>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- MODAL AUTH -->
+
+<!-- MODAL AUTH -->
     <div class="modal" id="modal-auth" style="display: none;">
         <div class="modal-continut">
             <button class="buton-inchidere" id="inchide-auth">X</button>
-            <div class="taburi-auth">
+            <div class="taburi-auth" style="margin-top: 0px;">
                 <button class="tab-auth activ" id="tab-login" data-i18n="autentificare">Autentificare</button>
                 <button class="tab-auth" id="tab-register" data-i18n="creare_cont">Creare Cont</button>
             </div>
@@ -64,7 +356,7 @@
                 <div class="grup-input"><label data-i18n="email">Adresă Email</label><input type="email" id="login-email" placeholder="nume@email.com" required></div>
                 <div class="grup-input"><label data-i18n="parola">Parolă</label><input type="password" id="login-parola" placeholder="••••••••" required></div>
                 <button type="button" id="btn-executa-login" class="buton-rezervare" data-i18n="intra_cont">Intră în cont</button>
-                <a href="#" id="btn-forgot-password" style="font-size: 13px; color: #3b82f6; display: block; margin-top: 15px; text-align: center; text-decoration: none;" data-i18n="ai_uitat_parola">Ai uitat parola? (Resetare)</a>
+                <a href="#" id="btn-forgot-password" style="font-size: 13px; color: #3b82f6; display: block; margin-top: 15px; text-align: center; text-align-last: center; text-decoration: none;" data-i18n="ai_uitat_parola">Ai uitat parola? (Resetare)</a>
             </div>
 
             <div id="form-register" class="formular-auth" style="display: none;">
@@ -127,11 +419,11 @@
             <div style="display: flex; gap: 15px; margin-bottom: 25px; justify-content: center; flex-wrap: wrap; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px;">
                 <div class="grup-input" style="margin: 0; min-width: 140px;">
                     <label style="font-size: 12px; color: #aaa;" data-i18n="data_dorita">Data Dorită</label>
-                    <input type="date" id="filtru-data" style="width: 100%;">
+                    <input type="date" id="filtru-data" style="width: 100%; box-sizing: border-box;">
                 </div>
                 <div class="grup-input" style="margin: 0; min-width: 140px;">
                     <label style="font-size: 12px; color: #aaa;" data-i18n="ora_dorita">Ora Dorită</label>
-                    <select id="filtru-ora" style="width: 100%; padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.5); color: white; border: 1px solid rgba(255,255,255,0.2);">
+                    <select id="filtru-ora" style="width: 100%; box-sizing: border-box; padding: 14px; border-radius: 12px; background: rgba(0, 0, 0, 0.4); color: white; border: 1px solid rgba(255, 255, 255, 0.2); font-size: 16px; outline: none; cursor: pointer;">
                         <option value="ALL" data-i18n="toate_orele">Toate Orele</option>
                         <option value="10:00">10:00</option>
                         <option value="12:00">12:00</option>
@@ -194,7 +486,7 @@
                 <!-- Lista de conversații (Terenuri) -->
                 <div class="lista-conversații-side" id="chat-client-lista-terenuri">
                     <!-- Se va popula dinamic din app.js -->
-                    <p style="color: #ccc; font-size: 13px; text-align: center; margin-top: 20px;" data-i18n="chat_cauta_conv">Se caută conversații...</p>
+                    <p style="color: #ccc; font-size: 13px; text-align: center; text-align-last: center; margin-top: 20px;" data-i18n="chat_cauta_conv">Se caută conversații...</p>
                 </div>
                 
                 <!-- Fereastra de mesaje efectivă -->
@@ -205,7 +497,7 @@
                     </div>
                     
                     <div class="lista-mesaje" id="chat-client-mesaje">
-                        <p style="color: #ccc; text-align: center; margin-top: auto; margin-bottom: auto;" data-i18n="chat_selecteaza_stanga">Selectează un teren din stânga pentru a vedea mesajele.</p>
+                        <p style="color: #ccc; text-align: center; text-align-last: center; margin-top: auto; margin-bottom: auto;" data-i18n="chat_selecteaza_stanga">Selectează un teren din stânga pentru a vedea mesajele.</p>
                     </div>
 
                     <div class="chat-input-zona">
@@ -214,23 +506,15 @@
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                         </button>
                     </div>
-                    <p id="chat-client-avertisment" style="color: #ef4444; font-size: 12px; margin-top: 5px; display: none; text-align: center;" data-i18n="chat_avertisment">Este nevoie de rezervare pentru a trimite un chat</p>
+                    <p id="chat-client-avertisment" style="color: #ef4444; font-size: 12px; margin-top: 5px; display: none; text-align: center; text-align-last: center;" data-i18n="chat_avertisment">Este nevoie de rezervare pentru a trimite un chat</p>
                 </div>
             </div>
         </div>
     </div>
 
+
+
+    
 </body>
+
 </html>
-
-    <!-- MODAL PAROLA NOUA -->
-    <div id="modal-parola-noua" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.95); z-index: 999999; justify-content: center; align-items: center;">
-        <div class="modal-box" style="background: #1e1e1e; padding: 30px; border-radius: 15px; border: 2px solid #3b82f6; max-width: 400px; width: 90%; text-align: center;">
-            <h2 style="color: white; margin-bottom: 15px;">?? Reseteaza Parola</h2>
-            <p style="color: #ccc; font-size: 14px; margin-bottom: 20px;">Introdu noua parola mai jos (minim 6 caractere).</p>
-            <input type="password" id="input-noua-parola" placeholder="Noua parola..." style="padding: 15px; width: 100%; box-sizing: border-box; border-radius: 8px; border: none; margin-bottom: 20px; font-size: 16px;">
-            <button id="btn-salveaza-parola-noua" style="padding: 15px 24px; width: 100%; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px;">Salveaza Noua Parola</button>
-            <button class="buton-inchidere" style="margin-top: 15px; padding: 10px; background: transparent; color: white; border: 1px solid #ccc; border-radius: 8px; cursor: pointer; width: 100%;">Anuleaza</button>
-        </div>
-    </div>
-
