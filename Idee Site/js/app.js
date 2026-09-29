@@ -634,6 +634,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         document.getElementById('modal-terenuri').style.display = 'none';
         document.getElementById('modal-rezervare').style.display = 'flex';
+        
+        // Aplica fundalul sportului si pe modal-rezervare
+        const modalRezervare = document.querySelector('#modal-rezervare .modal-continut');
+        if (modalRezervare && sportCurent) {
+            const sportStr = sportCurent.toLowerCase().replace(/\s+/g, '_');
+            const bgStr = (sportStr === 'tenis_picior') ? 'fotbal' : sportStr;
+            modalRezervare.style.backgroundImage = `linear-gradient(rgba(10, 15, 30, 0.7), rgba(10, 15, 30, 0.7)), url('assets/imagini/fundal_${bgStr}.jpg')`;
+            modalRezervare.style.backgroundSize = 'cover';
+            modalRezervare.style.backgroundPosition = 'center';
+        }
+        
         window.genereazaZile();
     }
 
@@ -662,7 +673,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     modalContinut.style.backgroundPosition = 'center';
                 }
             } });
-    document.getElementById('inchide-rezervare')?.addEventListener('click', () => document.getElementById('modal-rezervare').style.display = 'none');
+    document.getElementById('inchide-rezervare')?.addEventListener('click', () => {
+    document.getElementById('modal-rezervare').style.display = 'none';
+    const bgDiv = document.getElementById('fundal-imagine-sport');
+    if(bgDiv) bgDiv.style.opacity = '0';
+});
     document.getElementById('checkbox-minge')?.addEventListener('change', (e) => { mingeBifata = e.target.checked; actualizeazaButonFinal(); });
 
     window.genereazaZile = function() {
