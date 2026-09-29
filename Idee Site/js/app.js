@@ -215,6 +215,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     await incarcaTerenuri();
 
+    function populeazaFiltruOrase() {
+        const selectOras = document.getElementById('filtru-oras-global');
+        if (!selectOras) return;
+        
+        const oraseUnice = [...new Set(terenuriDinDB.map(t => t.oras ? t.oras.trim().replace(/\.+$/, '') : '').filter(o => o !== ''))];
+        oraseUnice.sort((a, b) => a.localeCompare(b));
+        
+        let html = `<option value="ALL">${window.lang === 'hu' ? 'Minden város' : (window.lang === 'en' ? 'All Cities' : 'Toate Orașele')}</option>`;
+        oraseUnice.forEach(oras => {
+            html += `<option value="${oras}">${oras}</option>`;
+        });
+        
+        selectOras.innerHTML = html;
+    }
+    populeazaFiltruOrase();
+
     const btnTopCont = document.getElementById('btn-top-cont');
     
     window.actualizeazaButonCont = function() {
@@ -254,7 +270,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const modals = ['modal-auth', 'modal-profil', 'modal-terenuri', 'modal-rezervare', 'modal-lista-rezervari', 'modal-chat-client', 'modal-parola-noua'];
             modals.forEach(id => {
                 const el = document.getElementById(id);
-                if (el && el.style.display !== 'none') el.style.display = 'none';
+                if (el && el.style.display !== 'none') { el.style.display = 'none'; 
+                    if(id === 'modal-terenuri') { const bgDiv = document.getElementById('fundal-imagine-sport'); if(bgDiv) bgDiv.style.opacity = '0'; } if (id === 'modal-chat-client') { const inp = document.getElementById('chat-client-input'); if (inp) inp.value = ''; } }
             });
         }
     });
@@ -265,6 +282,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const modalParent = this.closest('.modal');
             if (modalParent) {
                 modalParent.style.display = 'none';
+                if (modalParent.id === 'modal-chat-client') { const inp = document.getElementById('chat-client-input'); if (inp) inp.value = ''; }
             }
         });
     });
@@ -453,14 +471,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             const onClickLocatie = linkLocatie ? `window.open('${linkLocatie}', '_blank')` : `alert('Error')`;
             const butonLocatie = `<button onclick="${onClickLocatie}" style="margin-top: 10px; margin-right: 10px; background: #3b82f6; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer;">📍 ${window.dict[window.lang]['vezi_locatia'].split(' ')[0]}</button>`;
             
+            let butonChat = '';
+            if (tip === 'active') {
+                if (terenAsociat && terenAsociat.are_chat === false) {
+                    butonChat = `<button style="margin-top: 10px; margin-right: 10px; background: #4b5563; color: #9ca3af; border: none; padding: 8px 12px; border-radius: 5px; cursor: not-allowed;" disabled>Chat Indisponibil</button>`;
+                } else {
+                    butonChat = `<button class="chat-teren-client" data-teren="${r.teren}" style="margin-top: 10px; margin-right: 10px; background: #8b5cf6; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer;">💬 Chat</button>`;
+                }
+            }
+
             const dataTradusa = window.traduData(r.data_str);
 
+            const numeOras = (terenAsociat && terenAsociat.oras) ? `(${terenAsociat.oras}) ` : '';
             container.innerHTML += `
                 <div style="background: rgba(255,255,255,0.05); border: 1px solid ${culoareBorder}; padding: 15px; border-radius: 8px; color: white; margin-bottom: 10px; opacity: ${opacitate};">
-                    <h4 style="margin: 0 0 10px 0; color: ${culoareTitlu};">⚽ ${r.sport} - ${r.teren} ${textExtra}</h4>
+                    <h4 style="margin: 0 0 10px 0; color: ${culoareTitlu};">⚽ ${r.sport} - ${r.teren} ${numeOras}${textExtra}</h4>
                     <p style="margin: 5px 0;">📅 ${dataTradusa} | ⏰ ${r.ora}</p>
                     <p style="margin: 5px 0;">Total: <strong>${r.pret_total}</strong></p>
-                    <div style="display: flex; flex-wrap: wrap;">${butonLocatie}${butonAnulare}</div>
+                    <div style="display: flex; flex-wrap: wrap;">${butonLocatie}${butonChat}${butonAnulare}</div>
                 </div>
             `;
         });
@@ -483,6 +511,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                 deschideIstoric("active"); 
             }
         }
+        
+        if (e.target.classList.contains('chat-teren-client')) {
+            const teren = e.target.getAttribute('data-teren');
+            
+            // Închidem modalul de istoric/profil și îl deschidem pe cel de chat
+            const modalIstoric = document.getElementById('modal-lista-rezervari');
+            if (modalIstoric) modalIstoric.style.display = 'none';
+            const modalProfil = document.getElementById('modal-profil');
+            if (modalProfil) modalProfil.style.display = 'none';
+            
+            const modalChatClient = document.getElementById('modal-chat-client');
+            if (modalChatClient) modalChatClient.style.display = 'flex';
+            
+            // Funcția incarcaMesajeClient populează lista și o randează
+            // Apoi selectăm explicit terenul curent
+            await incarcaMesajeClient();
+            
+            // Suprascriem selecția ca să deschidă fix conversația terenului dorit
+            chatClientTerenCurent = teren;
+            deschideConversatiaClient(teren);
+        }
     });
 
     // --- LOGICA TERENURI ---
@@ -493,6 +542,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             document.getElementById('titlu-sport').innerText = `${window.dict[window.lang]['alege_terenul']} - ${numeSportTradus}`;
             document.getElementById('modal-terenuri').style.display = 'flex';
+            
+            // Schimba fundalul cu imaginea sportului
+            const bgDiv = document.getElementById('fundal-imagine-sport');
+            if(bgDiv && sportCurent) {
+                const sportStr = sportCurent.toLowerCase().replace(/\s+/g, '_');
+                const bgStr = (sportStr === 'tenis_picior') ? 'fotbal' : sportStr;
+                
+                // Punem background-ul pe ecranul principal (in spatele modalului)
+                bgDiv.style.backgroundImage = `url('assets/imagini/fundal_${bgStr}.jpg')`;
+                bgDiv.style.opacity = '0.8';
+                
+                // Punem background-ul STRICT IN FEREASTRA (modal-continut)
+                const modalContinut = document.querySelector('#modal-terenuri .modal-continut');
+                if (modalContinut) {
+                    modalContinut.style.backgroundImage = `linear-gradient(rgba(10, 15, 30, 0.7), rgba(10, 15, 30, 0.7)), url('assets/imagini/fundal_${bgStr}.jpg')`;
+                    modalContinut.style.backgroundSize = 'cover';
+                    modalContinut.style.backgroundPosition = 'center';
+                }
+            }
             
             const aziFormatStandard = new Date().toISOString().split('T')[0];
             const filtruData = document.getElementById('filtru-data');
@@ -511,7 +579,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         containerDinamicTerenuri.innerHTML = `<p style="color:white; width: 100%; text-align: center;">${window.dict[window.lang]['se_cauta']}</p>`;
 
-        const terenuriPentruAcestSport = terenuriDinDB.filter(t => t.sport === sportCurent && t.este_activ !== false);
+        const orasSelectat = document.getElementById('filtru-oras-global') ? document.getElementById('filtru-oras-global').value : 'ALL';
+        const terenuriPentruAcestSport = terenuriDinDB.filter(t => t.sport === sportCurent && t.este_activ !== false && (orasSelectat === 'ALL' || (t.oras && t.oras.trim().replace(/\.+$/, '') === orasSelectat)));
 
         if (terenuriPentruAcestSport.length === 0) {
             containerDinamicTerenuri.innerHTML = '<p style="color:white; width: 100%; text-align: center;">0</p>';
@@ -568,8 +637,31 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.genereazaZile();
     }
 
-    document.getElementById('inchide-terenuri')?.addEventListener('click', () => document.getElementById('modal-terenuri').style.display = 'none');
-    document.getElementById('inapoi-la-terenuri')?.addEventListener('click', () => { document.getElementById('modal-rezervare').style.display = 'none'; document.getElementById('modal-terenuri').style.display = 'flex'; });
+    document.getElementById('inchide-terenuri')?.addEventListener('click', () => {
+        document.getElementById('modal-terenuri').style.display = 'none';
+        const bgDiv = document.getElementById('fundal-imagine-sport');
+        if(bgDiv) bgDiv.style.opacity = '0';
+    });
+    document.getElementById('inapoi-la-terenuri')?.addEventListener('click', () => { document.getElementById('modal-rezervare').style.display = 'none'; document.getElementById('modal-terenuri').style.display = 'flex';
+            
+            // Schimba fundalul cu imaginea sportului
+            const bgDiv = document.getElementById('fundal-imagine-sport');
+            if(bgDiv && sportCurent) {
+                const sportStr = sportCurent.toLowerCase().replace(/\s+/g, '_');
+                const bgStr = (sportStr === 'tenis_picior') ? 'fotbal' : sportStr;
+                
+                // Punem background-ul pe ecranul principal (in spatele modalului)
+                bgDiv.style.backgroundImage = `url('assets/imagini/fundal_${bgStr}.jpg')`;
+                bgDiv.style.opacity = '0.8';
+                
+                // Punem background-ul STRICT IN FEREASTRA (modal-continut)
+                const modalContinut = document.querySelector('#modal-terenuri .modal-continut');
+                if (modalContinut) {
+                    modalContinut.style.backgroundImage = `linear-gradient(rgba(10, 15, 30, 0.7), rgba(10, 15, 30, 0.7)), url('assets/imagini/fundal_${bgStr}.jpg')`;
+                    modalContinut.style.backgroundSize = 'cover';
+                    modalContinut.style.backgroundPosition = 'center';
+                }
+            } });
     document.getElementById('inchide-rezervare')?.addEventListener('click', () => document.getElementById('modal-rezervare').style.display = 'none');
     document.getElementById('checkbox-minge')?.addEventListener('change', (e) => { mingeBifata = e.target.checked; actualizeazaButonFinal(); });
 
@@ -871,14 +963,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         const terenuriRezervate = rezervari ? [...new Set(rezervari.map(r => r.teren))] : [];
         
         const toateTerenurileClient = [...new Set([...terenuriCuMesaje, ...terenuriRezervate])];
-
+        
         // VERIFICARE: Aducem setările terenurilor ca să vedem unde e oprit chat-ul
         const { data: infoTerenuri } = await db.from('terenuri').select('nume, are_chat');
         const terenuriFaraChat = infoTerenuri ? infoTerenuri.filter(t => t.are_chat === false).map(t => t.nume) : [];
 
         // Eliminăm din listă terenurile unde chat-ul a fost oprit de admin
         const terenuriPermise = toateTerenurileClient.filter(t => !terenuriFaraChat.includes(t));
-
+        
         if (terenuriPermise.length === 0) {
             listaSide.innerHTML = '<p style="color: #ccc; font-size: 13px; text-align: center;">Nu ai interacțiuni sau rezervări active cu chat.</p>';
             return;
@@ -916,6 +1008,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function deschideConversatiaClient(teren) {
+        if (inputChatClient) inputChatClient.value = '';
         document.getElementById('chat-client-teren-titlu').style.display = 'block';
         document.getElementById('chat-client-teren-titlu').innerText = `Conversație cu Admin (${teren})`;
         
@@ -1047,7 +1140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('chat-client-teren-titlu').style.display = 'none';
         const container = document.getElementById('chat-client-mesaje');
         container.innerHTML = '<p style="color: #ccc; text-align: center; margin-top: auto; margin-bottom: auto;" data-i18n="chat_selecteaza_stanga">Selectează un teren din stânga pentru a vedea mesajele.</p>';
-        if (inputChatClient) inputChatClient.disabled = true;
+        if (inputChatClient) { inputChatClient.value = ''; inputChatClient.disabled = true; }
         if (btnTrimiteChatClient) btnTrimiteChatClient.disabled = true;
         if (avertismentChatClient) avertismentChatClient.style.display = 'none';
     });
@@ -1101,3 +1194,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
 });
+
+
+
+
