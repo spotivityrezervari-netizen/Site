@@ -78,15 +78,16 @@
             min-height: 380px !important;
             display: flex !important;
             align-items: center !important;
-            justify-content: flex-start !important;
+            justify-content: center !important;
             border: none !important;
         }
 
-        .centru-video video {
-            width: 100% !important;
-            height: 100% !important;
+        .centru-video img {
+            width: 50% !important;
+            height: 50% !important;
             object-fit: contain !important;
             mix-blend-mode: screen !important;
+            border-radius: 50% !important;
             background: transparent !important;
         }
 
@@ -288,6 +289,19 @@
             }
         }
 
+    
+        /* --- Ajustari specifice pentru telefoane (Meniul de sus) --- */
+        @media (max-width: 768px) {
+            /* Mutam selectorul de oras sub celelalte doua butoane pentru a avea loc */
+            #wrapper-filtru-oras { top: 60px !important; }
+            
+            /* Micsoram usor butoanele de sus ca sa nu se loveasca intre ele */
+            .buton-top-cont { top: 12px !important; left: 12px !important; padding: 6px 10px !important; font-size: 11px !important; }
+            #selector-limba { top: 12px !important; right: 12px !important; padding: 4px !important; }
+            .btn-lang { padding: 4px 8px !important; font-size: 11px !important; }
+            #filtru-oras-global { padding: 8px 20px !important; font-size: 13px !important; }
+        }
+
     </style>
 </head>
 <body>
@@ -309,7 +323,7 @@
 
         <!-- BUTON CONT -->
         <button class="buton-top-cont" id="btn-top-cont" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-            <img src="assets/imagini/avatar.jpeg" alt="Avatar" style="width: 26px; height: 26px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.3);">
+            <img src="assets/imagini/avatar2.png" alt="Avatar" style="width: 26px; height: 26px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.3);">
             <span id="text-top-cont" data-i18n="contul_meu">Contul Meu</span>
         </button>
 
@@ -321,7 +335,7 @@
 
         <div class="grila-sporturi">
             <div class="centru-video">
-                <video src="assets/imagini/logo_sfera_loop_transparent (inc2).webm" autoplay loop muted playsinline></video>
+                <img src="assets/imagini/avatar2.png" alt="Avatar">
             </div>
             
             <div class="orbita-wrapper">
@@ -391,7 +405,7 @@
             <div class="profil-header">
                 <div style="display: flex; justify-content: center; margin-bottom: 15px;">
                     <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
-                        <img src="assets/imagini/avatar.jpeg" alt="Profil" style="width: 100%; height: 100%; object-fit: cover;">
+                        <img src="assets/imagini/avatar2.png" alt="Profil" style="width: 100%; height: 100%; object-fit: cover;">
                     </div>
                 </div>
                 <h2 data-i18n="profil_titlu">Profilul Tău</h2>
