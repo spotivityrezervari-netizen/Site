@@ -238,12 +238,12 @@ window.actualizeazaBifeTerenuri = async function() {
     const container = document.getElementById('container-checkbox-terenuri');
     if (!container) return;
     container.innerHTML = `
-        <label><input type="checkbox" id="check-super-admin" value="ALL" style="margin-right: 5px;"> 👑 SUPER ADMIN (Acces Total)</label>
+        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;"><input type="checkbox" id="check-super-admin" value="ALL" style="margin-right: 5px; width: 20px; height: 20px; flex-shrink: 0;"> 👑 SUPER ADMIN (Acces Total)</label>
         <hr style="border-color: rgba(255,255,255,0.1); width: 100%; margin: 5px 0;">
     `;
     const { data } = await db.from('terenuri').select('nume, sport');
     if (data) {
-        data.forEach(t => { container.innerHTML += `<label><input type="checkbox" class="check-teren-alocat" value="${t.nume}" style="margin-right: 5px;"> ${t.nume} (${t.sport})</label>`; });
+        data.forEach(t => { container.innerHTML += `<label style="display: flex; align-items: center; gap: 10px; cursor: pointer;"><input type="checkbox" class="check-teren-alocat" value="${t.nume}" style="margin-right: 5px; width: 20px; height: 20px; flex-shrink: 0;"> ${t.nume} (${t.sport})</label>`; });
     }
 };
 
@@ -306,6 +306,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.key === "Escape") {
             document.querySelectorAll('.modal').forEach(m => {
                 m.style.display = 'none';
+                if (m.id === 'modal-chat-admin') { const inp = document.getElementById('chat-admin-input'); if (inp) inp.value = ''; }
+                if (m.id === 'modal-adauga-teren') { window.deschideModalAdaugaTeren(); m.style.display = 'none'; }
             });
         }
     });
@@ -342,8 +344,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('login-admin-btn')?.addEventListener('click', async () => {
-        const email = document.getElementById('login-email-admin').value.trim();
-        const parola = document.getElementById('login-parola').value.trim();
+        const email = document.getElementById('login-email-admin').value.trim().replace(/\.$/, '');
+        const parola = document.getElementById('login-parola').value.trim().replace(/\.$/, '');
         if (!email || !parola) return alert("Introdu adresa de email și parola!");
 
         const btn = document.getElementById('login-admin-btn');
@@ -407,15 +409,63 @@ document.addEventListener('DOMContentLoaded', () => {
                 let htmlMeniu = "";
                 let htmlModale = "";
 
+                
+                const oraseTerenuri = {};
+
                 for (let numeT of listaTerenuriAlocate) {
                     if(!numeT) continue;
                     const { data: terenDB } = await db.from('terenuri').select('*').eq('nume', numeT).single();
                     if (terenDB) {
                         selectManualTeren.innerHTML += `<option value="${terenDB.nume}" data-sport="${terenDB.sport}">${terenDB.nume}</option>`;
                         
-                        let culoareTeren = terenDB.este_activ !== false ? '#3b82f6' : '#ef4444';
+                        let orasul = terenDB.oras || 'Altele';
+                        orasul = orasul.trim().replace(/\.+$/, ''); // STRIP TRAILING DOTS OVERALL
+                        if (!oraseTerenuri[orasul]) oraseTerenuri[orasul] = [];
+                        oraseTerenuri[orasul].push(terenDB);
+                    }
+                }
 
-                        htmlMeniu += `
+                // Make a container for the sub-pages if it doesn't exist
+                let subPagesContainer = document.getElementById('sub-pages-container');
+                if (!subPagesContainer) {
+                    subPagesContainer = document.createElement('div');
+                    subPagesContainer.id = 'sub-pages-container';
+                    subPagesContainer.style.width = '100%';
+                    document.getElementById('sectiune-dashboard').appendChild(subPagesContainer);
+                }
+                subPagesContainer.innerHTML = ''; // reset
+
+                // Global back function
+                window.inchideSubPaginaOras = function() {
+                    const subPages = document.querySelectorAll('.sub-pagina-oras');
+                    subPages.forEach(p => p.style.display = 'none');
+                    document.getElementById('container-meniu-terenuri').parentElement.style.display = ''; // Show main grila
+                };
+
+                // ESC listener for sub-pages
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape') {
+                        const activeSubPage = Array.from(document.querySelectorAll('.sub-pagina-oras')).find(p => p.style.display === 'block');
+                        if (activeSubPage) {
+                            window.inchideSubPaginaOras();
+                        }
+                    }
+                });
+
+                for (const oras in oraseTerenuri) {
+                    const safeOras = oras.replace(/[^a-zA-Z0-9]/g, '') || 'Unknown';
+                    
+                    htmlMeniu += `
+                        <div class="card-sport admin-comun" style="padding: 20px; display: flex;" onclick="document.getElementById('container-meniu-terenuri').parentElement.style.display='none'; document.getElementById('pagina-oras-${safeOras}').style.display='block';">
+                            <h2 style="font-size: 18px;">⚙️<br><br>Setări Terenuri<br>${oras}</h2>
+                        </div>
+                    `;
+
+                    let carduriTerenuri = '';
+                    for (const terenDB of oraseTerenuri[oras]) {
+                        let culoareTeren = terenDB.este_activ !== false ? '#3b82f6' : '#ef4444';
+                        
+                        carduriTerenuri += `
                             <div class="card-sport admin-comun" style="padding: 20px; display: flex;" onclick="document.getElementById('modal-setari-${terenDB.id}').style.display='flex'">
                                 <h2 style="font-size: 18px;">⚙️<br><br>Setări<br>${terenDB.nume}</h2>
                             </div>
@@ -442,7 +492,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                         </div>
 
                                         <div class="grup-input" style="background: rgba(239, 68, 68, 0.1); padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(239, 68, 68, 0.3);">
-                                            <label style="color: #ef4444; font-weight: bold; font-size: 15px;">⛔ Blochează / Deblochează o zi</label>
+                                            <label style="color: #ef4444; font-weight: bold; font-size: 15px;">🔒 Blochează / Deblochează o zi</label>
                                             <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px;">
                                                 <input type="date" id="data-blocare-${terenDB.id}" style="background: rgba(0,0,0,0.5); color: white; padding: 8px; border-radius: 5px; flex: 1; min-width: 120px;">
                                                 <button type="button" onclick="blocheazaZiuaIntreaga('${terenDB.nume}', ${terenDB.id}, event)" style="background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold;">Închide</button>
@@ -451,13 +501,14 @@ document.addEventListener('DOMContentLoaded', () => {
                                         </div>
 
                                         <div class="grup-input" style="margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden; width: 100%; box-sizing: border-box;">
-                                            <label style="margin-bottom: 8px; display: block; color: #a1eafb;">📸 Schimbă Poza Terenului</label>
+                                            <label style="margin-bottom: 8px; display: block; color: #a1eafb;">📷 Schimbă Poza Terenului</label>
                                             <div style="display: flex; gap: 10px; align-items: center; width: 100%;">
                                                 <img src="${terenDB.poza || 'assets/imagini/default.png'}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); flex-shrink: 0;">
                                                 <input type="file" id="poza-${terenDB.id}" accept="image/*" style="background: rgba(0,0,0,0.5); color: white; padding: 8px; border-radius: 5px; flex: 1; min-width: 0; cursor: pointer; border: 1px dashed rgba(255,255,255,0.2);">
                                             </div>
                                         </div>
 
+                                        <div class="grup-input" style="margin-bottom: 15px;"><label>Oraș</label><input type="text" id="oras-${terenDB.id}" value="${terenDB.oras ? terenDB.oras.trim().replace(/\.+$/, '') : ''}" placeholder="Ex: București"></div>
                                         <div class="grup-input"><label>Preț Teren (Lei)</label><input type="number" id="pret-${terenDB.id}" value="${terenDB.pret}"></div>
                                         <div class="grup-input" style="display:flex; justify-content:space-between; margin-top:10px;"><label>Ofertă Minge?</label><input type="checkbox" id="minge-${terenDB.id}" ${terenDB.optiune_minge ? 'checked' : ''} style="width:20px;height:20px;"></div>
                                         <div class="grup-input" style="margin-top:10px;"><label>Preț Minge (Lei)</label><input type="number" id="pret-minge-${terenDB.id}" value="${terenDB.pret_minge || 15}"></div>
@@ -468,13 +519,29 @@ document.addEventListener('DOMContentLoaded', () => {
                                         
                                         <div style="flex: 1;"></div>
                                         <button id="btn-save-${terenDB.id}" type="button" onclick="salveazaSetariTeren(${terenDB.id}, '${terenDB.nume}')" class="buton-rezervare" style="background: #3b82f6; margin-top: 15px;">💾 Salvează Setările pt ${terenDB.nume}</button>
+                                        <button type="button" onclick="stergeTerenDublaConfirmare(${terenDB.id}, '${terenDB.nume}')" class="buton-rezervare" style="background: #ef4444; margin-top: 10px;">🗑️ Șterge Terenul</button>
                                     </div>
                                 </div>
                             </div>
                         `;
                     }
+
+                    const pageHtml = `
+                        <div id="pagina-oras-${safeOras}" class="sub-pagina-oras" style="display: none; width: 100%; margin-top: 20px;">
+                            <div style="display: flex; align-items: center; justify-content: flex-start; margin-bottom: 20px; width: 100%;">
+                                <button class="btn-cont" onclick="window.inchideSubPaginaOras()">
+                                    ⬅️ Înapoi
+                                </button>
+                                <h1 style="color: white; margin: 0; margin-left: 20px; font-size: 24px;">🌍 Terenuri din ${oras}</h1>
+                            </div>
+                            <div class="grila-sporturi" style="display: grid; gap: 20px;">
+                                ${carduriTerenuri}
+                            </div>
+                        </div>
+                    `;
+                    subPagesContainer.innerHTML += pageHtml;
                 }
-                
+
                 containerMeniu.innerHTML = htmlMeniu;
                 containerModale.innerHTML = htmlModale;
                 
@@ -588,10 +655,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const selectBox = document.getElementById('manual-teren');
         const terenAles = selectBox.value;
         const sportAles = selectBox.options[selectBox.selectedIndex].getAttribute('data-sport');
-        const client = document.getElementById('manual-client').value.trim();
+        const client = document.getElementById('manual-client').value.trim().replace(/\.$/, '');
         const dataInput = document.getElementById('manual-data').value;
         const oraAlesa = document.getElementById('manual-ora').value;
-        const pret = document.getElementById('manual-pret').value.trim();
+        const pret = document.getElementById('manual-pret').value.trim().replace(/\.$/, '');
         
         if (!client || !dataInput || !pret) return alert("Completează câmpurile!");
         const d = new Date(dataInput);
@@ -618,13 +685,24 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('btn-rezervare-manuala').innerText = window.lang === 'hu' ? "➕ Mentés" : "➕ Salvează";
     });
 
+        window.deschideModalAdaugaTeren = function() {
+        document.getElementById('teren-nume').value = '';
+        const inputOras = document.getElementById('teren-oras');
+        if (inputOras) inputOras.value = '';
+        document.getElementById('teren-pret').value = '';
+        document.getElementById('teren-locatie').value = '';
+        document.getElementById('teren-poza').value = '';
+        document.getElementById('modal-adauga-teren').style.display = 'flex';
+    };
+
     document.getElementById('btn-adauga-teren')?.addEventListener('click', async () => {
-        const nume = document.getElementById('teren-nume').value.trim();
+        const nume = document.getElementById('teren-nume').value.trim().replace(/\.$/, '');
         const sport = document.getElementById('teren-sport').value;
-        const pret = document.getElementById('teren-pret').value.trim();
+        const oras = document.getElementById('teren-oras') ? document.getElementById('teren-oras').value.trim().replace(/\.$/, '') : '';
+        const pret = document.getElementById('teren-pret').value.trim().replace(/\.$/, '');
         const minge = document.getElementById('teren-minge').checked;
-        const pretMinge = document.getElementById('teren-pret-minge').value.trim();
-        const locatie = document.getElementById('teren-locatie').value.trim();
+        const pretMinge = document.getElementById('teren-pret-minge').value.trim().replace(/\.$/, '');
+        const locatie = document.getElementById('teren-locatie').value.trim().replace(/\.$/, '');
         const fileInput = document.getElementById('teren-poza');
 
         if (!nume || !pret || !locatie) return alert("Completează câmpurile!");
@@ -653,17 +731,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const { error } = await db.from('terenuri').insert([{
-            nume, sport, pret: parseInt(pret), optiune_minge: minge, pret_minge: parseInt(pretMinge), locatie, poza: urlPoza, este_activ: true
+            nume, sport, oras, pret: parseInt(pret), optiune_minge: minge, pret_minge: parseInt(pretMinge), locatie, poza: urlPoza, este_activ: true
         }]);
         
         if (error) alert("❌ Eroare DB: " + error.message);
-        else { alert("✅ Teren adăugat!"); window.incarcaTerenuriAdmin(); window.actualizeazaBifeTerenuri(); }
+        else { alert("✅ Teren adăugat!"); document.getElementById('modal-adauga-teren').style.display='none'; window.incarcaTerenuriAdmin(); window.actualizeazaBifeTerenuri(); }
         btn.innerText = "➕ Adaugă Teren"; btn.disabled = false;
     });
 
     document.getElementById('creeaza-supervisor-btn')?.addEventListener('click', async () => {
-        const nume = document.getElementById('super-nume').value.trim();
-        const email = document.getElementById('super-email').value.trim();
+        const nume = document.getElementById('super-nume').value.trim().replace(/\.$/, '');
+        const email = document.getElementById('super-email').value.trim().replace(/\.$/, '');
         const esteSuper = document.getElementById('check-super-admin').checked;
         const listaTerenuri = Array.from(document.querySelectorAll('.check-teren-alocat:checked')).map(cb => cb.value).join(','); 
 
@@ -931,6 +1009,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // 1. Închide modalul de tabel și setări (dacă e deschis vreunul)
         document.querySelectorAll('.modal').forEach(m => {
             if (m.id !== 'modal-chat-admin') m.style.display = 'none';
+                if (m.id === 'modal-chat-admin') { const inp = document.getElementById('chat-admin-input'); if (inp) inp.value = ''; }
+                if (m.id === 'modal-adauga-teren') { window.deschideModalAdaugaTeren(); m.style.display = 'none'; }
         });
         
         // 2. Setează starea conversației curente
@@ -952,6 +1032,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     async function deschideConversatiaAdmin() {
+        const inp = document.getElementById('chat-admin-input'); if (inp) inp.value = '';
         if (!chatAdminConversatieCurenta) return;
         
         document.getElementById('chat-admin-conversație-titlu').style.display = 'block';
@@ -1025,7 +1106,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function trimiteMesajAdmin() {
         if (!chatAdminConversatieCurenta || inputChatAdmin.disabled) return;
-        const text = inputChatAdmin.value.trim();
+        const text = inputChatAdmin.value.trim().replace(/\.$/, '');
         if (!text) return;
 
         inputChatAdmin.disabled = true;
@@ -1063,7 +1144,7 @@ document.addEventListener('DOMContentLoaded', () => {
         container.innerHTML = '<p style="color: #ccc; text-align: center; margin-top: auto; margin-bottom: auto;">Selectează un client din stânga pentru a vedea mesajele.</p>';
         const btnSterge = document.getElementById('btn-sterge-chat-admin');
         if (btnSterge) btnSterge.style.display = 'none';
-        if (inputChatAdmin) inputChatAdmin.disabled = true;
+        if (inputChatAdmin) { inputChatAdmin.value = ''; inputChatAdmin.disabled = true; }
         if (btnTrimiteChatAdmin) btnTrimiteChatAdmin.disabled = true;
     });
 
@@ -1120,12 +1201,16 @@ window.schimbaStareNoua = function(select, teren, data, ora) {
         select.style.borderColor = '#f59e0b';
     } else if (val === 'blocat') {
         form.style.display = 'none';
+                if (m.id === 'modal-chat-admin') { const inp = document.getElementById('chat-admin-input'); if (inp) inp.value = ''; }
+                if (m.id === 'modal-adauga-teren') { window.deschideModalAdaugaTeren(); m.style.display = 'none'; }
         txtLiber.style.display = 'inline-block';
         select.style.borderColor = '#ef4444';
         window.blocheazaOraSinguraAdmin(teren, data, ora);
         select.value = 'liber'; 
     } else {
         form.style.display = 'none';
+                if (m.id === 'modal-chat-admin') { const inp = document.getElementById('chat-admin-input'); if (inp) inp.value = ''; }
+                if (m.id === 'modal-adauga-teren') { window.deschideModalAdaugaTeren(); m.style.display = 'none'; }
         txtLiber.style.display = 'inline-block';
         select.style.borderColor = '#22c55e';
     }
@@ -1170,8 +1255,8 @@ window.anulareDublaAdmin = async function(idRez, ora) {
 
 window.salveazaRezervareInlineAdmin = async function(teren, data, ora) {
     const oraId = ora.replace(':', '');
-    const nume = document.getElementById('inline-nume-' + oraId).value.trim();
-    const pret = document.getElementById('inline-pret-' + oraId).value.trim();
+    const nume = document.getElementById('inline-nume-' + oraId).value.trim().replace(/\.$/, '');
+    const pret = document.getElementById('inline-pret-' + oraId).value.trim().replace(/\.$/, '');
 
     if (!nume) {
         alert('Introdu un Nume / Telefon pentru a rezerva!');
@@ -1201,5 +1286,25 @@ window.salveazaRezervareInlineAdmin = async function(teren, data, ora) {
         if (typeof window.reincarcaIstoricAdmin === 'function') window.reincarcaIstoricAdmin();
     } else {
         alert('Eroare: ' + error.message);
+    }
+};
+
+window.stergeTerenDublaConfirmare = async function(idDB, numeTeren) {
+    const prima = confirm(`Ești sigur că vrei să ștergi DEFINITIV terenul "${numeTeren}"?\nAceastă acțiune nu poate fi anulată!`);
+    if (!prima) return;
+
+    const aDoua = confirm(`ATENȚIE MAXIMĂ!\nȘtergerea acestui teren va afecta toate rezervările asociate.\nEști 100% sigur că vrei să-l ștergi complet din baza de date?`);
+    if (!aDoua) return;
+
+    const { error } = await db.from('terenuri').delete().eq('id', idDB);
+    
+    if (error) {
+        alert("Eroare la ștergerea terenului: " + error.message);
+    } else {
+        alert("Terenul a fost șters cu succes!");
+        const mod = document.getElementById("modal-setari-" + idDB);
+        if (mod) mod.style.display = 'none';
+        window.incarcaTerenuriAdmin();
+        window.actualizeazaBifeTerenuri();
     }
 };
