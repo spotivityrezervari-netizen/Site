@@ -86,7 +86,7 @@
             width: 100% !important;
             height: 100% !important;
             object-fit: contain !important;
-            mix-blend-mode: normal !important;
+            mix-blend-mode: screen !important;
             background: transparent !important;
         }
 
@@ -271,6 +271,21 @@
         .modal-continut {
             overflow-y: auto !important;
             max-height: 90vh !important;
+        }
+
+    
+        /* --- ULTRA SMALL SCREENS (iPhone SE, Galaxy Fold, etc) --- */
+        @media (max-width: 420px) {
+            .orbita-wrapper {
+                transform: scale(0.85) !important;
+                transform-origin: left center !important;
+            }
+            .orbita-wrapper:nth-child(3), .orbita-wrapper:nth-child(4) {
+                transform-origin: right center !important;
+            }
+            .centru-video {
+                transform: translate(-50%, -50%) scale(0.85) !important;
+            }
         }
 
     </style>
