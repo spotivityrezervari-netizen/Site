@@ -6,6 +6,7 @@
     <meta name="theme-color" content="#030303">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="icon" type="image/png" href="assets/imagini/avatar2.png">
     <title>Rezervari Sport</title>
     
     <link rel="stylesheet" href="css/style.css?v=33">
@@ -26,12 +27,15 @@
 
         /* Ascunde scrollbars globally */
         body, html {
+            background-color: #020617 !important; /* Vopseste spatiile "moarte" de la notch si bara de jos de pe iPhone */
             overflow: hidden !important;
             width: 100% !important;
             height: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
             position: fixed !important;
+            /* Pentru a ne asigura ca extindem si fundalul sub safe-areas */
+
         }
         
         /* Top bar elements styling */
@@ -145,8 +149,8 @@
         }
 
         /* --- MOBILE POSITIONS --- */
-        .orbita-wrapper:nth-child(2) { top: 30%; left: 3%; transform: scale(1) !important; right: auto; } /* Fotbal */
-        .orbita-wrapper:nth-child(6) { top: 45%; left: 3%; transform: scale(1) !important; right: auto; bottom: auto; } /* Tenis Picior */
+        .orbita-wrapper:nth-child(2) { top: 25%; left: 3%; transform: scale(1) !important; right: auto; } /* Fotbal */
+        
         .orbita-wrapper:nth-child(3) { top: 25%; right: 3%; left: auto; transform: scale(1) !important; } /* Baschet */
         .orbita-wrapper:nth-child(5) { bottom: 18%; left: 3%; right: auto; top: auto; transform: scale(1) !important; } /* Tenis */
         .orbita-wrapper:nth-child(4) { bottom: 18%; right: 3%; left: auto; top: auto; transform: scale(1) !important; } /* Volei */
@@ -207,15 +211,13 @@
         /* --- DESKTOP SIZING --- */
         @media (min-width: 768px) {
             .centru-video {
-                width: 92vh !important;
-                height: 92vh !important;
-                min-width: 690px !important;
-                min-height: 690px !important;
+                width: min(90vh, 50vw) !important;
+                height: min(90vh, 50vw) !important;
             }
             
             /* --- DESKTOP POSITIONS (ALINIATE LA STANGA) --- */
-            .orbita-wrapper:nth-child(2) { top: 15%; left: 15%; transform: translateY(-50%) !important; right: auto; } /* Fotbal */
-            .orbita-wrapper:nth-child(6) { top: 35%; left: 15%; transform: translateY(-50%) !important; right: auto; bottom: auto; } /* Tenis Picior */
+            .orbita-wrapper:nth-child(2) { top: 25%; left: 15%; transform: translateY(-50%) !important; right: auto; } /* Fotbal */
+            
             .orbita-wrapper:nth-child(3) { top: 25%; right: 15%; left: auto; transform: translateY(-50%) !important; } /* Baschet */
             .orbita-wrapper:nth-child(5) { bottom: 25%; left: 15%; right: auto; top: auto; transform: translateY(50%) !important; } /* Tenis */
             .orbita-wrapper:nth-child(4) { bottom: 25%; right: 15%; left: auto; top: auto; transform: translateY(50%) !important; } /* Volei */
@@ -302,16 +304,84 @@
             #filtru-oras-global { padding: 8px 20px !important; font-size: 13px !important; }
         }
 
+    
+        /* --- BACKGROUND QUADRANTS --- */
+        .bg-quad {
+            position: absolute !important;
+            background-color: #0f172a;
+            background-size: cover !important;
+            background-position: center !important;
+            z-index: 0;
+            transition: opacity 0.5s;
+            width: 50%;
+            height: 50%;
+        }
+        .bg-quad-1 { top: 0; left: 0; background-image: linear-gradient(rgba(2,6,23,0.6), rgba(2,6,23,0.6)), url('assets/imagini/fundal_fotbal.jpg'); }
+        .bg-quad-2 { top: 0; right: 0; background-image: linear-gradient(rgba(2,6,23,0.6), rgba(2,6,23,0.6)), url('assets/imagini/fundal_baschet.jpg'); }
+        .bg-quad-3 { bottom: 0; left: 0; background-image: linear-gradient(rgba(2,6,23,0.6), rgba(2,6,23,0.6)), url('assets/imagini/fundal_tenis.jpg'); }
+        .bg-quad-4 { bottom: 0; right: 0; background-image: linear-gradient(rgba(2,6,23,0.6), rgba(2,6,23,0.6)), url('assets/imagini/fundal_volei.jpg'); }
+
+        @media (max-width: 768px) {
+            /* Pe telefon: 4 benzi orizontale pe toata latimea, fiecare teren se vede in intregime */
+            .bg-quad {
+                width: 100% !important;
+                height: 25% !important;
+                left: 0 !important;
+                right: 0 !important;
+                background-size: cover !important;
+                background-position: center !important;
+            }
+            .bg-quad-1 { top: 0 !important; bottom: auto !important; }
+            .bg-quad-2 { top: 25% !important; bottom: auto !important; }
+            .bg-quad-3 { top: 50% !important; bottom: auto !important; }
+            .bg-quad-4 { top: 75% !important; bottom: auto !important; }
+        }
+
+    
+        /* --- iOS FULLSCREEN FIX --- */
+        .fundal-water, #fundal-imagine-sport {
+            /* Extindem fundalurile sub marginile fizice (notch, bara jos) pe iOS */
+            top: calc(0px - env(safe-area-inset-top)) !important;
+            bottom: calc(0px - env(safe-area-inset-bottom)) !important;
+            left: calc(0px - env(safe-area-inset-left)) !important;
+            right: calc(0px - env(safe-area-inset-right)) !important;
+            width: auto !important;
+            height: auto !important;
+        }
+
+    
+        /* --- BUTOANE ORE - DIMENSIUNI UNIFORME --- */
+        .btn-ora {
+            min-height: 55px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 8px 4px !important;
+            font-size: 14px !important;
+            box-sizing: border-box !important;
+        }
+        @media (max-width: 768px) {
+            .btn-ora {
+                min-height: 55px !important;
+                font-size: 14px !important;
+            }
+            #container-ore {
+                grid-template-columns: repeat(4, 1fr) !important;
+                gap: 6px !important;
+            }
+        }
+
     </style>
 </head>
 <body>
 
     <div class="fundal-water">
         <!-- Cadranele 4-split pentru background -->
-        <div style="position: absolute; top: 0; left: 0; width: 50%; height: 50%; background-color: #0f172a; background-image: linear-gradient(rgba(2,6,23,0.6), rgba(2,6,23,0.6)), url('assets/imagini/fundal_fotbal.jpg'); background-size: cover; background-position: center; z-index: 0; transition: opacity 0.5s;"></div>
-        <div style="position: absolute; top: 0; right: 0; width: 50%; height: 50%; background-color: #0f172a; background-image: linear-gradient(rgba(2,6,23,0.6), rgba(2,6,23,0.6)), url('assets/imagini/fundal_baschet.jpg'); background-size: cover; background-position: center; z-index: 0; transition: opacity 0.5s;"></div>
-        <div style="position: absolute; bottom: 0; left: 0; width: 50%; height: 50%; background-color: #0f172a; background-image: linear-gradient(rgba(2,6,23,0.6), rgba(2,6,23,0.6)), url('assets/imagini/fundal_tenis.jpg'); background-size: cover; background-position: center; z-index: 0; transition: opacity 0.5s;"></div>
-        <div style="position: absolute; bottom: 0; right: 0; width: 50%; height: 50%; background-color: #0f172a; background-image: linear-gradient(rgba(2,6,23,0.6), rgba(2,6,23,0.6)), url('assets/imagini/fundal_volei.jpg'); background-size: cover; background-position: center; z-index: 0; transition: opacity 0.5s;"></div>
+        <div class="bg-quad bg-quad-1"></div>
+        <div class="bg-quad bg-quad-2"></div>
+        <div class="bg-quad bg-quad-3"></div>
+        <div class="bg-quad bg-quad-4"></div>
         <div id="fundal-imagine-sport" style="position: absolute; top:0; left:0; width:100%; height:100%; background-color: #020617; background-size: cover; background-position: center; opacity: 0; transition: opacity 0.5s ease; z-index: 1;"></div>
         
         <!-- SELECTOR DE LIMBA -->
@@ -329,7 +399,7 @@
 
         <div id="wrapper-filtru-oras" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999 !important; display: flex; flex-direction: column; align-items: center; transition: opacity 0.3s;">
             <select id="filtru-oras-global" style="background: rgba(0,0,0,0.6); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 8px 20px; border-radius: 20px; font-weight: bold; cursor: pointer; text-align: center; text-align-last: center; appearance: none; -webkit-appearance: none; min-width: 130px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); backdrop-filter: blur(5px);">
-                <option value="ALL">Toate Orasele</option>
+                <option value="ALL" data-i18n="toate_orasele">Toate Orasele</option>
             </select>
         </div>
 
@@ -362,12 +432,7 @@
                     <h2 data-i18n="tenis">Tenis</h2>
                 </div>
             </div>
-            <div class="orbita-wrapper">
-                <div class="card-sport" data-sport="Tenis Picior">
-                    <img src="assets/imagini/fotbal.png" alt="Tenis Picior" class="iconita-minge">
-                    <h2 data-i18n="tenis_picior">Tenis Picior</h2>
-                </div>
-            </div>
+            
         </div>
     </div>
 
@@ -544,6 +609,61 @@
 
 
     
+
+    <!-- LEGAL INFO - Buton discret + Modal -->
+    <div id="btn-legal" onclick="document.getElementById('modal-legal').style.display='flex'" style="position: fixed; bottom: 8px; left: 50%; transform: translateX(-50%); z-index: 9998; cursor: pointer; font-size: 11px; color: rgba(255,255,255,0.4); font-family: sans-serif; letter-spacing: 0.5px; transition: color 0.3s; text-align: center; white-space: nowrap;">
+        <span data-i18n="copyright_text">&copy; 2026 Numele SRL</span> &bull; <span data-i18n="drepturi_rezervate">Toate drepturile rezervate</span> &bull; <span style="text-decoration: underline;" data-i18n="info_legale">Info Legale</span>
+    </div>
+
+    <div id="modal-legal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100000; justify-content: center; align-items: center;">
+        <div style="background: #1a1a2e; border: 1px solid rgba(255,255,255,0.15); border-radius: 20px; padding: 35px; max-width: 500px; width: 90%; max-height: 85vh; overflow-y: auto; color: white; font-family: sans-serif; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.8);">
+            <button onclick="document.getElementById('modal-legal').style.display='none'" style="position: absolute; top: 15px; right: 20px; background: none; border: none; color: white; font-size: 22px; cursor: pointer; font-weight: bold;">X</button>
+            
+            <h2 style="margin-top: 0; font-size: 20px; color: #3b82f6; margin-bottom: 20px;" data-i18n="info_legale_titlu">Informații Legale</h2>
+            
+            <div style="font-size: 14px; line-height: 1.8; color: #ccc;">
+                <p style="margin-bottom: 15px;">
+                    <strong style="color: white;" data-i18n="legal_denumire">Denumire:</strong> Numele SRL<br>
+                    <strong style="color: white;">CUI:</strong> RO12345678<br>
+                    <strong style="color: white;" data-i18n="legal_reg">Reg. Comerțului:</strong> J__/____/____<br>
+                    <strong style="color: white;" data-i18n="legal_sediu">Sediu Social:</strong> Str. Exemplu nr. 1, Orașul, Județul, România
+                </p>
+                
+                <p style="margin-bottom: 15px;">
+                    <strong style="color: white;" data-i18n="legal_contact">Contact:</strong><br>
+                    Email: contact@spotivity.ro<br>
+                    Telefon: +40 7XX XXX XXX
+                </p>
+                
+                <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 20px 0;">
+                
+                <p style="margin-bottom: 15px;">
+                    <strong style="color: white;" data-i18n="legal_anpc">Protecția Consumatorilor (ANPC):</strong><br>
+                    <a href="https://anpc.ro" target="_blank" style="color: #3b82f6; text-decoration: none;">anpc.ro</a>
+                </p>
+                
+                <p style="margin-bottom: 15px;">
+                    <strong style="color: white;" data-i18n="legal_sol">Soluționare Online a Litigiilor (SOL):</strong><br>
+                    <a href="https://ec.europa.eu/consumers/odr" target="_blank" style="color: #3b82f6; text-decoration: none;">ec.europa.eu/consumers/odr</a>
+                </p>
+                
+                <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 20px 0;">
+                
+                <p style="margin-bottom: 10px;">
+                    <a href="#" style="color: #3b82f6; text-decoration: none;" data-i18n="legal_termeni">Termeni și Condiții</a>
+                </p>
+                <p style="margin-bottom: 10px;">
+                    <a href="#" style="color: #3b82f6; text-decoration: none;" data-i18n="legal_gdpr">Politica de Confidențialitate (GDPR)</a>
+                </p>
+                <p style="margin-bottom: 10px;">
+                    <a href="#" style="color: #3b82f6; text-decoration: none;" data-i18n="legal_cookies">Politica de Cookies</a>
+                </p>
+            </div>
+            
+            <p style="text-align: center; margin-top: 25px; font-size: 12px; color: rgba(255,255,255,0.3);" data-i18n="copyright_footer">&copy; 2026 Numele SRL. Toate drepturile rezervate.</p>
+        </div>
+    </div>
+
 </body>
 
 </html>
