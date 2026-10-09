@@ -68,7 +68,12 @@ window.dict = {
         'chat_btn': 'Chat', 'rez_active_titlu': 'Rezervările Tale Active', 'chat_titlu': '💬 Mesaje Chat',
         'chat_cauta_conv': 'Se caută conversații...', 'chat_alege_conv': 'Alege o conversație',
         'chat_selecteaza_stanga': 'Selectează un teren din stânga pentru a vedea mesajele.', 'chat_scrie': 'Scrie un mesaj...',
-        'chat_avertisment': 'Este nevoie de rezervare pentru a trimite un chat'
+        'chat_avertisment': 'Este nevoie de rezervare pentru a trimite un chat', 'nume_nesetat': 'Nume Nesetat',
+        'fotbal_tenis_picior': 'Fotbal<br><span style="font-size: 0.8em; font-weight: normal; opacity: 0.8;">Tenis Picior</span>', 'copyright_text': '© 2026 Numele SRL', 'drepturi_rezervate': 'Toate drepturile rezervate',
+        'info_legale': 'Info Legale', 'info_legale_titlu': 'Informații Legale', 'legal_denumire': 'Denumire:', 'legal_reg': 'Reg. Comerțului:',
+        'legal_sediu': 'Sediu Social:', 'legal_contact': 'Contact:', 'legal_anpc': 'Protecția Consumatorilor (ANPC):', 'legal_sol': 'Soluționare Online a Litigiilor (SOL):',
+        'legal_termeni': 'Termeni și Condiții', 'legal_gdpr': 'Politica de Confidențialitate (GDPR)', 'legal_cookies': 'Politica de Cookies',
+        'copyright_footer': '© 2026 Numele SRL. Toate drepturile rezervate.', 'toate_orasele': 'Toate Orașele'
     },
     'hu': {
         'contul_meu': 'Fiókom', 'login_cont': 'Belépés / Fiók', 'fotbal': 'Foci', 'baschet': 'Kosárlabda', 'tenis': 'Tenisz', 'volei': 'Röplabda',
@@ -85,7 +90,12 @@ window.dict = {
         'chat_btn': 'Chat', 'rez_active_titlu': 'Aktív foglalásaid', 'chat_titlu': '💬 Chat üzenetek',
         'chat_cauta_conv': 'Beszélgetések keresése...', 'chat_alege_conv': 'Válassz egy beszélgetést',
         'chat_selecteaza_stanga': 'Válassz egy pályát balról az üzenetek megtekintéséhez.', 'chat_scrie': 'Írj egy üzenetet...',
-        'chat_avertisment': 'Üzenet küldéséhez aktív foglalás szükséges'
+        'chat_avertisment': 'Üzenet küldéséhez aktív foglalás szükséges',
+        'fotbal_tenis_picior': 'Foci<br><span style="font-size: 0.8em; font-weight: normal; opacity: 0.8;">Lábtenisz</span>', 'copyright_text': '© 2026 Numele SRL', 'drepturi_rezervate': 'Minden jog fenntartva',
+        'info_legale': 'Jogi Információk', 'info_legale_titlu': 'Jogi Információk', 'legal_denumire': 'Cégnév:', 'legal_reg': 'Cégjegyzékszám:',
+        'legal_sediu': 'Székhely:', 'legal_contact': 'Kapcsolat:', 'legal_anpc': 'Fogyasztóvédelem (ANPC):', 'legal_sol': 'Online vitarendezés (SOL):',
+        'legal_termeni': 'Feltételek és Szabályok', 'legal_gdpr': 'Adatvédelmi Irányelvek (GDPR)', 'legal_cookies': 'Süti Szabályzat',
+        'copyright_footer': '© 2026 Numele SRL. Minden jog fenntartva.', 'toate_orasele': 'Minden Város'
     },
     'en': {
         'contul_meu': 'My Account', 'login_cont': 'Login / Account', 'fotbal': 'Football', 'baschet': 'Basketball', 'tenis': 'Tennis', 'volei': 'Volleyball',
@@ -102,7 +112,12 @@ window.dict = {
         'chat_btn': 'Chat', 'rez_active_titlu': 'Your Active Bookings', 'chat_titlu': '💬 Chat Messages',
         'chat_cauta_conv': 'Searching for conversations...', 'chat_alege_conv': 'Choose a conversation',
         'chat_selecteaza_stanga': 'Select a court from the left to view messages.', 'chat_scrie': 'Type a message...',
-        'chat_avertisment': 'An active booking is required to send a message'
+        'chat_avertisment': 'An active booking is required to send a message', 'nume_nesetat': 'Name Not Set',
+        'fotbal_tenis_picior': 'Football<br><span style="font-size: 0.8em; font-weight: normal; opacity: 0.8;">Foot Tennis</span>', 'copyright_text': '© 2026 Numele SRL', 'drepturi_rezervate': 'All rights reserved',
+        'info_legale': 'Legal Info', 'info_legale_titlu': 'Legal Information', 'legal_denumire': 'Company Name:', 'legal_reg': 'Registration Number:',
+        'legal_sediu': 'Headquarters:', 'legal_contact': 'Contact:', 'legal_anpc': 'Consumer Protection (ANPC):', 'legal_sol': 'Online Dispute Resolution (ODR):',
+        'legal_termeni': 'Terms and Conditions', 'legal_gdpr': 'Privacy Policy (GDPR)', 'legal_cookies': 'Cookies Policy',
+        'copyright_footer': '© 2026 Numele SRL. All rights reserved.', 'toate_orasele': 'All Cities'
     }
 };
 
@@ -244,7 +259,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (btnTopCont) {
         btnTopCont.addEventListener('click', async () => {
             if (loggedInUser) {
-                if(document.getElementById('profil-nume')) document.getElementById('profil-nume').innerText = loggedInUser.nume || "Nume Nesetat";
+                if(document.getElementById('profil-nume')) document.getElementById('profil-nume').innerText = loggedInUser.nume || (window.dict[window.lang]['nume_nesetat'] || 'Nume Nesetat');
                 document.getElementById('profil-email').innerText = loggedInUser.email;
                 if(document.getElementById('profil-telefon')) document.getElementById('profil-telefon').innerText = loggedInUser.telefon || "-";
                 
@@ -267,11 +282,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- ESC PENTRU A ÎNCHIDE ORICE MODAL ---
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
-            const modals = ['modal-auth', 'modal-profil', 'modal-terenuri', 'modal-rezervare', 'modal-lista-rezervari', 'modal-chat-client', 'modal-parola-noua'];
+            const modals = ['modal-auth', 'modal-profil', 'modal-terenuri', 'modal-rezervare', 'modal-lista-rezervari', 'modal-chat-client', 'modal-parola-noua', 'modal-legal'];
             modals.forEach(id => {
                 const el = document.getElementById(id);
                 if (el && el.style.display !== 'none') { el.style.display = 'none'; 
-                    if(id === 'modal-terenuri') { const bgDiv = document.getElementById('fundal-imagine-sport'); if(bgDiv) bgDiv.style.opacity = '0'; } if (id === 'modal-chat-client') { const inp = document.getElementById('chat-client-input'); if (inp) inp.value = ''; } }
+                    if(id === 'modal-terenuri' || id === 'modal-rezervare') { const bgDiv = document.getElementById('fundal-imagine-sport'); if(bgDiv) bgDiv.style.opacity = '0'; const modalRez = document.querySelector('#modal-rezervare .modal-continut'); if(modalRez) { modalRez.style.backgroundImage = ''; } } if (id === 'modal-chat-client') { const inp = document.getElementById('chat-client-input'); if (inp) inp.value = ''; } }
             });
         }
     });
@@ -580,7 +595,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         containerDinamicTerenuri.innerHTML = `<p style="color:white; width: 100%; text-align: center;">${window.dict[window.lang]['se_cauta']}</p>`;
 
         const orasSelectat = document.getElementById('filtru-oras-global') ? document.getElementById('filtru-oras-global').value : 'ALL';
-        const terenuriPentruAcestSport = terenuriDinDB.filter(t => t.sport === sportCurent && t.este_activ !== false && (orasSelectat === 'ALL' || (t.oras && t.oras.trim().replace(/\.+$/, '') === orasSelectat)));
+        const terenuriPentruAcestSport = terenuriDinDB.filter(t => (t.sport === sportCurent || (sportCurent === 'Fotbal' && t.sport === 'Tenis Picior')) && t.este_activ !== false && (orasSelectat === 'ALL' || (t.oras && t.oras.trim().replace(/\.+$/, '') === orasSelectat)));
 
         if (terenuriPentruAcestSport.length === 0) {
             containerDinamicTerenuri.innerHTML = '<p style="color:white; width: 100%; text-align: center;">0</p>';
@@ -1194,7 +1209,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             nouBtnUitat.style.pointerEvents = "none";
 
             const { error } = await db.auth.resetPasswordForEmail(email.trim(), {
-                redirectTo: window.location.origin + window.location.pathname,
+                redirectTo: 'https://spotivity.ro/',
             });
 
             nouBtnUitat.innerText = textInitial; 
@@ -1213,3 +1228,58 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
 
+
+
+// ==========================================
+// MANUAL URL CHECK PENTRU RECUPERARE PAROLA
+// Supabase PKCE sau V2 uneori nu trimite eventul PASSWORD_RECOVERY,
+// asa ca citim direct din URL pentru a fi siguri 100%.
+// ==========================================
+window.addEventListener('load', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.replace('#', '?'));
+    
+    if (urlParams.get('type') === 'recovery' || hashParams.get('type') === 'recovery' || window.location.href.includes('type=recovery')) {
+        setTimeout(afiseazaModalParolaFortat, 500); // Dam timp lui Supabase sa faca schimbul de sesiune
+    }
+});
+
+const afiseazaModalParolaFortat = () => {
+    if(document.getElementById('overlay-parola-noua-js')) return; // deja exista
+    
+    const overlay = document.createElement('div');
+    overlay.id = 'overlay-parola-noua-js';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.95);z-index:999999;display:flex;justify-content:center;align-items:center;';
+    overlay.innerHTML = `
+        <div style="background:#1e1e1e;padding:30px;border-radius:15px;text-align:center;border:2px solid #3b82f6;width:90%;max-width:400px;font-family:sans-serif;">
+            <h2 style="color:white;margin-bottom:15px;font-size:22px;">Resetare Parolă</h2>
+            <p style="color:#ccc;font-size:14px;margin-bottom:20px;">Introdu noua parolă mai jos (minim 6 caractere).</p>
+            <input type="password" id="input-noua-parola-js-fortat" placeholder="Noua parolă..." style="padding:15px;width:100%;box-sizing:border-box;border-radius:8px;border:none;margin-bottom:20px;font-size:16px;">
+            <button id="btn-salveaza-parola-js-fortat" style="padding:15px 24px;width:100%;background:#3b82f6;color:white;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:16px;">Salvează Noua Parolă</button>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    document.getElementById('btn-salveaza-parola-js-fortat').addEventListener('click', async () => {
+        const noua = document.getElementById('input-noua-parola-js-fortat').value;
+        if(noua.length < 6) return alert("Parola trebuie să aibă minim 6 caractere!");
+        
+        const btn = document.getElementById('btn-salveaza-parola-js-fortat');
+        btn.innerText = "Se salvează...";
+        btn.disabled = true;
+        
+        // Folosim db.auth.updateUser ca sa salvam parola noii sesiuni
+        const { error } = await db.auth.updateUser({ password: noua });
+        
+        if(error) {
+            alert("Eroare la schimbarea parolei: " + error.message);
+            btn.innerText = "Salvează Noua Parolă";
+            btn.disabled = false;
+        } else {
+            alert("Parola a fost schimbată cu succes! Te poți bucura de aplicație.");
+            document.body.removeChild(overlay);
+            // Curatam URL-ul
+            window.history.replaceState(null, '', window.location.pathname);
+        }
+    });
+};
