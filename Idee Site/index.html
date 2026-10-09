@@ -64,7 +64,7 @@
             margin: 0 !important;
             display: flex !important;
             align-items: center !important;
-            justify-content: flex-start !important;
+            justify-content: center !important;
         }
 
         /* Globul central urias */
@@ -107,9 +107,9 @@
         
         /* Design pilula solida */
         .orbita-wrapper .card-sport {
-            width: max-content !important;
-            max-width: max-content !important;
-            min-width: max-content !important;
+            width: 165px !important; /* Lățime fixă identică pentru toate */
+            max-width: 165px !important;
+            min-width: 165px !important;
             height: auto !important;
             padding: 8px 16px !important;
             border-radius: 40px !important;
@@ -117,7 +117,7 @@
             display: flex !important;
             flex-direction: row !important;
             align-items: center !important;
-            justify-content: flex-start !important;
+            justify-content: center !important;
             background: rgba(255, 255, 255, 0.15) !important;
             backdrop-filter: blur(8px) !important;
             border: 1px solid rgba(255, 255, 255, 0.4) !important;
@@ -168,7 +168,7 @@
     
         /* Asiguram ca textul nu se rupe pe doua randuri pentru a pastra simetria */
         .orbita-wrapper .card-sport {
-            justify-content: flex-start !important;
+            justify-content: center !important;
             padding: 10px 15px !important;
         }
         .orbita-wrapper h2 {
@@ -186,8 +186,8 @@
         .orbita-wrapper .card-sport {
             display: flex !important;
             align-items: center !important; /* asigura alinierea verticala pe mijloc */
-            justify-content: flex-start !important; /* asigura ca toate icoanele incep din stanga la fel */
-            padding: 8px 20px !important;
+            justify-content: center !important; /* centram totul ca sa arate simetric in chenarul fix */
+            padding: 8px 12px !important;
             height: 46px !important; /* inaltime fixa pentru a asigura ca icoana si textul au aceeasi "camera" */
         }
         
@@ -301,7 +301,7 @@
             .buton-top-cont { top: 12px !important; left: 12px !important; padding: 6px 10px !important; font-size: 11px !important; }
             #selector-limba { top: 12px !important; right: 12px !important; padding: 4px !important; }
             .btn-lang { padding: 4px 8px !important; font-size: 11px !important; }
-            #filtru-oras-global { padding: 8px 20px !important; font-size: 13px !important; }
+            #filtru-oras-global { padding: 8px 12px !important; font-size: 13px !important; }
         }
 
     
@@ -322,19 +322,15 @@
         .bg-quad-4 { bottom: 0; right: 0; background-image: linear-gradient(rgba(2,6,23,0.6), rgba(2,6,23,0.6)), url('assets/imagini/fundal_volei.jpg'); }
 
         @media (max-width: 768px) {
-            /* Pe telefon: 4 benzi orizontale pe toata latimea, fiecare teren se vede in intregime */
+            /* Revenim la grila in cruce 2x2 pe telefon */
             .bg-quad {
-                width: 100% !important;
-                height: 25% !important;
-                left: 0 !important;
-                right: 0 !important;
-                background-size: cover !important;
-                background-position: center !important;
+                width: 50% !important;
+                height: 50% !important;
             }
-            .bg-quad-1 { top: 0 !important; bottom: auto !important; }
-            .bg-quad-2 { top: 25% !important; bottom: auto !important; }
-            .bg-quad-3 { top: 50% !important; bottom: auto !important; }
-            .bg-quad-4 { top: 75% !important; bottom: auto !important; }
+            .bg-quad-1 { top: 0 !important; left: 0 !important; background-position: bottom right !important; }
+            .bg-quad-2 { top: 0 !important; right: 0 !important; left: auto !important; background-position: bottom left !important; }
+            .bg-quad-3 { bottom: 0 !important; left: 0 !important; top: auto !important; background-position: top right !important; }
+            .bg-quad-4 { bottom: 0 !important; right: 0 !important; top: auto !important; left: auto !important; background-position: top left !important; }
         }
 
     
@@ -370,6 +366,17 @@
                 grid-template-columns: repeat(4, 1fr) !important;
                 gap: 6px !important;
             }
+        }
+
+    
+        /* --- PROTECTIE NOTCH PENTRU ELEMENTELE DE SUS --- */
+        .buton-top-cont { top: calc(env(safe-area-inset-top) + 12px) !important; }
+        #selector-limba { top: calc(env(safe-area-inset-top) + 12px) !important; }
+        #wrapper-filtru-oras { top: calc(env(safe-area-inset-top) + 20px) !important; }
+        
+        @media (max-width: 768px) {
+            /* Pe mobil, filtrul de oras e sub celelalte butoane, deci adaugam 60px la notch */
+            #wrapper-filtru-oras { top: calc(env(safe-area-inset-top) + 60px) !important; }
         }
 
     </style>
