@@ -321,6 +321,107 @@ let passed = 0;
         assert.deepEqual((await isolated.query("select 'public.legacy_json_admin_view'::regclass::oid as oid,pg_get_viewdef('public.legacy_json_admin_view'::regclass) as definition")).rows[0],viewBefore);
       } finally { await isolated.close(); }
     });
+    const prepareWebhookFixture = async db => {
+      await db.exec(schema);
+      await db.exec(`
+        create schema supabase_functions;
+        create table public.test_webhook_events(trigger_name text, operation text, relation_name text);
+        create table public.test_observed_updates(marker integer);
+        create function supabase_functions.http_request() returns trigger language plpgsql as $$
+        begin
+          if current_setting('spotivity.test_forbid_http',true) = 'on' then
+            raise exception 'Test webhook attempted during migration';
+          end if;
+          insert into public.test_webhook_events values(tg_name,tg_op,tg_table_name);
+          return new;
+        end;
+        $$;
+        create function public.test_local_observer() returns trigger language plpgsql as $$
+        begin
+          if not exists (select 1 from pg_trigger where tgrelid=tg_relid
+            and tgname='test_webhook_insert' and tgenabled='O') then
+            raise exception 'An INSERT webhook was changed during migration';
+          end if;
+          insert into public.test_observed_updates values(1);
+          return new;
+        end;
+        $$;
+        create trigger test_webhook_insert after insert on public.rezervari
+          for each row execute function supabase_functions.http_request('https://fixture.invalid/insert');
+        create trigger test_custom_observer after update on public.rezervari
+          for each row execute function public.test_local_observer();
+      `);
+      for (const [mode,enableSql] of [['O','enable'],['R','enable replica'],['A','enable always'],['D','disable']]) {
+        await db.exec(`create trigger test_webhook_update_${mode} after update on public.rezervari
+          for each row execute function supabase_functions.http_request('https://fixture.invalid/update-${mode}');
+          alter table public.rezervari ${enableSql} trigger test_webhook_update_${mode};`);
+      }
+    };
+    const webhookSnapshot = async db => (await db.query(`
+      select t.oid,t.tgfoid,t.tgrelid,t.tgname,t.tgenabled::text as enabled,
+        pg_get_triggerdef(t.oid) as definition
+      from pg_trigger t where t.tgrelid='public.rezervari'::regclass
+        and t.tgname like 'test_%' order by t.tgname`)).rows;
+    const webhookEvents = async db => (await db.query('select trigger_name,operation,relation_name from public.test_webhook_events order by trigger_name')).rows;
+    const webhookDb = new PGlite();
+    try {
+      await prepareWebhookFixture(webhookDb);
+      const originalHooks=await webhookSnapshot(webhookDb);
+      await check('legacy UPDATE webhooks are silent in migration; exact states and objects survive', async () => {
+        await webhookDb.exec("select set_config('spotivity.test_forbid_http','on',false)");
+        await webhookDb.exec(migration);
+        assert.deepEqual(await webhookSnapshot(webhookDb),originalHooks);
+        assert.deepEqual(await webhookEvents(webhookDb),[]);
+        assert.ok((await webhookDb.query('select count(*)::integer as n from public.test_observed_updates')).rows[0].n>0);
+        assert.equal((await webhookDb.query("select to_regclass('pg_temp.spotivity_migration_webhooks')::text as relation")).rows[0].relation,null);
+      });
+      await check('migration rerun keeps UPDATE webhooks silent and INSERT hook unchanged', async () => {
+        const observations=(await webhookDb.query('select count(*)::integer as n from public.test_observed_updates')).rows[0].n;
+        await webhookDb.exec(migration);
+        assert.deepEqual(await webhookSnapshot(webhookDb),originalHooks);
+        assert.deepEqual(await webhookEvents(webhookDb),[]);
+        assert.ok((await webhookDb.query('select count(*)::integer as n from public.test_observed_updates')).rows[0].n>observations);
+      });
+      await check('normal post-migration UPDATE fires origin and always webhooks only', async () => {
+        await webhookDb.exec("select set_config('spotivity.test_forbid_http','off',false); update public.rezervari set pret_total='999 RON'");
+        assert.deepEqual((await webhookEvents(webhookDb)).map(x=>[x.trigger_name,x.operation]),[
+          ['test_webhook_update_a','UPDATE'],['test_webhook_update_o','UPDATE'],
+        ]);
+      });
+      await check('normal post-migration INSERT still fires the unchanged INSERT webhook', async () => {
+        await webhookDb.exec("truncate public.test_webhook_events; insert into public.rezervari(teren,data_str,ora,stare) values('Court A','2026-01-06','13:00','anulata')");
+        assert.deepEqual(await webhookEvents(webhookDb),[
+          {trigger_name:'test_webhook_insert',operation:'INSERT',relation_name:'rezervari'},
+        ]);
+        assert.deepEqual(await webhookSnapshot(webhookDb),originalHooks);
+      });
+      await check('replica writes preserve replica and always webhook behavior', async () => {
+        await webhookDb.exec("truncate public.test_webhook_events; set session_replication_role=replica; update public.rezervari set pret_total='998 RON' where ora='12:00'; set session_replication_role=origin");
+        assert.deepEqual((await webhookEvents(webhookDb)).map(x=>[x.trigger_name,x.operation]),[
+          ['test_webhook_update_a','UPDATE'],['test_webhook_update_r','UPDATE'],
+        ]);
+        assert.deepEqual(await webhookSnapshot(webhookDb),originalHooks);
+      });
+    } finally { await webhookDb.close(); }
+    await check('failed migration restores webhook states, definitions, and data atomically', async () => {
+      const isolated = new PGlite();
+      try {
+        await prepareWebhookFixture(isolated);
+        await isolated.exec("alter table public.rezervari disable trigger test_webhook_update_o; alter table public.rezervari disable trigger test_webhook_update_a; update public.rezervari set data_str='Mar, 05.01'; alter table public.rezervari enable trigger test_webhook_update_o; alter table public.rezervari enable always trigger test_webhook_update_a; truncate public.test_observed_updates");
+        const beforeHooks=await webhookSnapshot(isolated);
+        const beforeRows=(await isolated.query('select * from public.rezervari')).rows;
+        await isolated.exec("select set_config('spotivity.test_forbid_http','on',false)");
+        await assert.rejects(()=>isolated.exec(migration), /Legacy weekday\/year mismatch/);
+        await isolated.exec('rollback');
+        assert.deepEqual(await webhookSnapshot(isolated),beforeHooks);
+        assert.deepEqual((await isolated.query('select * from public.rezervari')).rows,beforeRows);
+        assert.deepEqual(await webhookEvents(isolated),[]);
+        assert.equal((await isolated.query('select count(*)::integer as n from public.test_observed_updates')).rows[0].n,0);
+        assert.equal((await isolated.query("select column_name from information_schema.columns where table_schema='public' and table_name='rezervari' and column_name='client_user_id'")).rows.length,0);
+        await isolated.exec("select set_config('spotivity.test_forbid_http','off',false); update public.rezervari set pret_total='997 RON'");
+        assert.deepEqual((await webhookEvents(isolated)).map(x=>x.trigger_name),['test_webhook_update_a','test_webhook_update_o']);
+      } finally { await isolated.close(); }
+    });
     const legacyAdminHelper = `
       create function auth.jwt() returns jsonb language sql stable as $$
         select jsonb_build_object('email',current_setting('request.jwt.claim.email',true))

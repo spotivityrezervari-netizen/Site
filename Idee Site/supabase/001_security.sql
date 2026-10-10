@@ -134,6 +134,28 @@ begin
   end if;
 end $$;
 
+-- Legacy reservation UPDATE webhooks must not send cancellation emails while
+-- IDs/dates are backfilled. Preserve the exact objects and enabled states;
+-- normal writes wait for this transaction and resume with webhooks restored.
+lock table public.rezervari in access exclusive mode;
+create temporary table spotivity_migration_webhooks on commit drop as
+select t.oid as trigger_oid, t.tgrelid as table_oid, t.tgfoid as function_oid,
+       t.tgname as trigger_name, t.tgenabled as enabled_state,
+       pg_get_triggerdef(t.oid) as definition
+from pg_trigger t join pg_proc p on p.oid = t.tgfoid
+join pg_namespace n on n.oid = p.pronamespace
+where t.tgrelid = 'public.rezervari'::regclass and not t.tgisinternal
+  and (t.tgtype::integer & 16) = 16 and (t.tgtype::integer & 66) = 0
+  and n.nspname = 'supabase_functions' and p.proname = 'http_request'
+  and p.pronargs = 0 and p.prorettype = 'trigger'::regtype;
+do $$
+declare item record;
+begin
+  for item in select * from pg_temp.spotivity_migration_webhooks loop
+    execute format('alter table public.rezervari disable trigger %I', item.trigger_name);
+  end loop;
+end $$;
+
 update public.clienti c set user_id = u.id, email = lower(btrim(u.email))
 from auth.users u where lower(btrim(c.email)) = lower(btrim(u.email)) and c.user_id is null
   and not exists (select 1 from spotivity_private.migrations where version = 1);
@@ -590,6 +612,27 @@ begin
       alter publication supabase_realtime add table public.rezervari_disponibilitate;
     end if;
   end if;
+end $$;
+-- Restore only the captured webhook objects, including replica/always/disabled
+-- states. Any unexpected change aborts the complete migration.
+do $$
+declare item record; mode_sql text;
+begin
+  for item in select * from pg_temp.spotivity_migration_webhooks loop
+    if not exists (
+      select 1 from pg_trigger t where t.oid = item.trigger_oid
+        and t.tgrelid = item.table_oid and t.tgfoid = item.function_oid
+        and t.tgname = item.trigger_name and pg_get_triggerdef(t.oid) = item.definition
+    ) then raise exception 'A captured reservation webhook changed during migration.'; end if;
+    mode_sql := case item.enabled_state
+      when 'O' then 'enable' when 'R' then 'enable replica'
+      when 'A' then 'enable always' when 'D' then 'disable' end;
+    if mode_sql is null then raise exception 'Unknown reservation webhook enabled state.'; end if;
+    execute format('alter table public.rezervari %s trigger %I', mode_sql, item.trigger_name);
+    if not exists (select 1 from pg_trigger t where t.oid = item.trigger_oid and t.tgenabled = item.enabled_state) then
+      raise exception 'A reservation webhook enabled state was not restored.';
+    end if;
+  end loop;
 end $$;
 insert into spotivity_private.migrations(version) values (1) on conflict (version) do nothing;
 commit;

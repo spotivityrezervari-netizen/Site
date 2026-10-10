@@ -1,6 +1,8 @@
 # Instalarea protecțiilor Supabase și a rolurilor Spotivity
 
-Acest pachet conține migrarea bazei de date și frontend-ul compatibil. Pregătirea fișierelor în GitHub nu execută automat SQL-ul în Supabase. Aplicarea în proiectul tău se face din Dashboard, în ordinea descrisă mai jos. Testele automate folosesc date fictive într-un PostgreSQL izolat; proiectul live nu a fost migrat prin aceste teste.
+Acest pachet conține migrarea bazei de date și frontend-ul compatibil. Pregătirea fișierelor în GitHub nu execută automat SQL-ul în Supabase. Instrucțiunile de mai jos permit aplicarea din Dashboard; accesul administrativ configurat separat permite și aplicarea asistată prin Management API. Testele automate folosesc date fictive într-un PostgreSQL izolat.
+
+Pe **10 octombrie 2026**, migrarea completă a fost aplicată în proiectul autorizat **Rendez-Vous**, referința `ndubcdwohqzgxpuiowye`, prin Management API. Au fost păstrate conturile Auth și datele existente; alocarea JSONB a superadminului a fost convertită la text și legată de UUID-ul Auth. Înainte de aplicare au trecut reproducerea izolată a structurii/datelor reale și o probă pe proiect închisă cu rollback. Copiile private ale datelor tabelelor aplicației și ale metadatelor nu sunt în Git și nu reprezintă un backup complet Supabase; fișierele Storage nu au fost modificate.
 
 ## 1. Ce va putea face fiecare rol
 
@@ -117,6 +119,7 @@ Migrarea face automat următoarele:
 - Publică numai disponibilitatea: ID opac, teren, dată și oră. Emailul, profilul și prețul clientului nu sunt publicate pentru a afișa orele ocupate.
 - Limitează chat-ul clientului la terenuri cu chat activ și o rezervare activă neîncheiată. Clienții și adminii obișnuiți pot marca mesajele primite drept citite, fără să le rescrie conținutul.
 - Creează schema internă `spotivity_private`. Nu o adăuga la schemele expuse de Data API.
+- Suspendă numai webhook-urile Supabase `AFTER UPDATE` ale rezervărilor în timpul conversiei interne, apoi restaurează exact obiectele și stările lor înainte de commit. Astfel, migrarea și reexecutarea ei nu trimit notificări de anulare pentru simple conversii de date. Webhook-urile de înregistrare, rezervare nouă și chat se păstrează.
 
 ### Dacă ai aplicat deja versiunea cu limita de 6 ore
 
@@ -192,7 +195,7 @@ SITE_BASE_URL=http://127.0.0.1:8002/ node supabase/tests/browser.test.cjs
 
 În mediul cloud curent, PGlite este instalat în `/workspace/shared/spotivity-rls-validation`; adaugă acel `node_modules` la `NODE_PATH` pentru a-l găsi. Testul browser necesită Playwright, Chromium și acces la baza de certificate de încredere. Aceste instalări nu modifică dependențele aplicației și nu sunt necesare pentru publicarea site-ului static.
 
-Rezultatele versiunii actualizate: **79 de verificări SQL pentru fiecare variantă de ID-uri, UUID și numerice, și 11 verificări în browser**, toate trecute în mediul izolat. Verificările includ conversia alocărilor JSON/JSONB, păstrarea identităților și a accesului la terenurile alocate, anularea conversiei pentru date sau dependențe incompatibile, conversia definiției vechi a `is_admin()` și blocarea altor funcții nerevizuite.
+Rezultatele versiunii actualizate: **85 de verificări SQL pentru fiecare variantă de ID-uri, UUID și numerice, și 11 verificări în browser**, toate trecute în mediul izolat. Verificările includ conversia alocărilor JSON/JSONB, păstrarea identităților și a accesului la terenurile alocate, anularea conversiei pentru date sau dependențe incompatibile, conversia definiției vechi a `is_admin()`, blocarea altor funcții nerevizuite și suspendarea/restaurarea exactă a webhook-urilor fără notificări la migrare.
 
 Testele SQL folosesc roluri PostgreSQL reale și verifică regulile RLS și trigger-ele pentru ID-uri UUID și numerice. Testele browser folosesc SDK-ul Supabase real și o simulare Auth/REST care execută cererile în aceeași bază izolată; cererile către proiectul găzduit sunt interceptate. Acoperă autentificarea, înregistrarea, rezervarea, anularea, logout-ul, rolurile, afișarea sigură a mesajelor și ecranul mobil.
 
