@@ -69,6 +69,50 @@ create table if not exists public.users_admin (
   is_super boolean not null default false,
   terenuri text not null default ''
 );
+
+-- Drop ALL old policies on the managed tables. Permissive policies combine with OR.
+do $$
+declare item record;
+begin
+  for item in select schemaname, tablename, policyname from pg_policies
+    where schemaname = 'public' and tablename in ('clienti','users_admin','terenuri','rezervari','mesaje_chat','rezervari_disponibilitate')
+  loop execute format('drop policy %I on %I.%I', item.policyname, item.schemaname, item.tablename); end loop;
+end $$;
+-- Match the frontend's CSV format when a legacy database stores assignments as
+-- JSON/JSONB strings or arrays. Never stringify an entire array or guess object
+-- meanings: that could change which courts an ordinary admin can manage.
+create or replace function spotivity_private.legacy_court_allocations(value jsonb)
+returns text language plpgsql immutable set search_path = '' as $$
+declare item jsonb; names text[] := array[]::text[];
+begin
+  if value is null or jsonb_typeof(value) = 'null' then return ''; end if;
+  if jsonb_typeof(value) = 'string' then return value #>> '{}'; end if;
+  if jsonb_typeof(value) <> 'array' then
+    raise exception 'users_admin.terenuri must be a JSON string or array of court names. Review allocations before migration.';
+  end if;
+  for item in select entry from jsonb_array_elements(value) as entries(entry) loop
+    if jsonb_typeof(item) <> 'string' or position(',' in (item #>> '{}')) > 0 then
+      raise exception 'users_admin.terenuri array elements must be court-name strings without commas. Review allocations before migration.';
+    end if;
+    names := array_append(names, item #>> '{}');
+  end loop;
+  return array_to_string(names, ',');
+end $$;
+do $$
+begin
+  if exists (
+    select 1 from pg_attribute
+    where attrelid = 'public.users_admin'::regclass and attname = 'terenuri'
+      and not attisdropped and atttypid in ('json'::regtype, 'jsonb'::regtype)
+  ) then
+    -- A JSON default cannot be implicitly cast to text. The empty default grants
+    -- no courts; guard_admin still requires explicit valid ordinary assignments.
+    alter table public.users_admin alter column terenuri drop default;
+    alter table public.users_admin alter column terenuri type text
+      using spotivity_private.legacy_court_allocations(terenuri::jsonb);
+    alter table public.users_admin alter column terenuri set default '';
+  end if;
+end $$;
 alter table public.clienti add column if not exists user_id uuid references auth.users(id) on delete cascade;
 alter table public.users_admin add column if not exists user_id uuid references auth.users(id) on delete cascade;
 alter table public.rezervari add column if not exists client_user_id uuid references auth.users(id) on delete set null;
@@ -432,14 +476,6 @@ drop trigger if exists spotivity_auth_email on auth.users;
 create trigger spotivity_auth_email after update of email on auth.users
 for each row when (old.email is distinct from new.email) execute function spotivity_private.sync_auth_email();
 
--- Drop ALL old policies on the managed tables. Permissive policies combine with OR.
-do $$
-declare item record;
-begin
-  for item in select schemaname, tablename, policyname from pg_policies
-    where schemaname = 'public' and tablename in ('clienti','users_admin','terenuri','rezervari','mesaje_chat','rezervari_disponibilitate')
-  loop execute format('drop policy %I on %I.%I', item.policyname, item.schemaname, item.tablename); end loop;
-end $$;
 alter table public.clienti enable row level security;
 alter table public.users_admin enable row level security;
 alter table public.terenuri enable row level security;

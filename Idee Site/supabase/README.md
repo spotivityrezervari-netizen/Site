@@ -67,6 +67,28 @@ Pentru alte funcții care declanșează această eroare:
 
 Nu elimina verificarea din migrare pentru a forța aplicarea. Dacă o interogare ulterioară afișează `25P02`/„current transaction is aborted”, rulează separat `ROLLBACK;`, apoi repetă diagnosticul; această comandă închide tranzacția eșuată.
 
+### Eroarea „string_to_array(jsonb, unknown) does not exist”
+
+Această eroare arată că `users_admin.terenuri` este JSONB în proiectul existent, în timp ce frontend-ul și regulile noi folosesc o listă text separată prin virgule. Versiunea actualizată a `001_security.sql` convertește automat coloanele JSON/JSONB la text în aceeași tranzacție cu migrarea:
+
+- Un string JSON, de exemplu `"Bernabeu,Wimbledon"`, devine `Bernabeu,Wimbledon`.
+- Un array de nume, de exemplu `["Bernabeu", "Wimbledon"]`, devine aceeași listă text. Elementele trebuie să fie stringuri fără virgule.
+- Valorile `is_super` se păstrează, iar alocările se verifică față de terenurile existente. Obiectele, numerele, valorile booleene și array-urile cu elemente nevalide opresc întreaga migrare. O alocare goală nu este acceptată pentru un admin obișnuit.
+
+Default-ul JSON este înlocuit cu textul gol; acesta nu acordă acces la terenuri. Politicile gestionate se înlocuiesc în aceeași tranzacție înainte de conversie, pentru a permite schimbarea tipului. Alte constrângeri sau dependențe incompatibile opresc migrarea și se revizuiesc separat, fără ștergere automată. La o eroare, conversia, datele și politicile revin la starea dinaintea rulării.
+
+După backup și verificare în proiectul de test, ia **întregul `001_security.sql` actualizat** din GitHub → **Raw**, înlocuiește tot codul vechi din SQL Editor și apasă **Run**. Nu folosi doar un cast `terenuri::text`: un array JSON ar păstra parantezele și ghilimelele, schimbând interpretarea alocărilor.
+
+### Acces Supabase pentru lucrul asistat în Codex
+
+În mediul cloud al acestei conversații, accesul administrativ se configurează prin Management API:
+
+1. În [Supabase Account → Access Tokens](https://supabase.com/dashboard/account/tokens), generează un token.
+2. În setările securizate ale mediului Codex, introdu valoarea la secretul `SUPABASE_ACCESS_TOKEN`, permis numai pentru domeniul HTTPS `api.supabase.com`. Nu pune valoarea în chat, în GitHub sau în frontend.
+3. Setează variabila nesensibilă `SUPABASE_PROJECT_REF` la referința proiectului corect. Proiectul folosit în `js/db.js` este `ndubcdwohqzgxpuiowye`.
+4. Salvează și publică configurația mediului. Declararea secretului fără valoare nu oferă acces, iar salvarea configurației nu execută migrarea bazei.
+5. După configurare, accesul și schema reală trebuie verificate înainte de aplicarea SQL-ului. Revocă tokenul din Supabase când lucrul administrativ s-a încheiat.
+
 ## 5. Configurează autentificarea
 
 În Dashboard, denumirile paginilor pot varia puțin între versiunile Supabase:
@@ -170,7 +192,7 @@ SITE_BASE_URL=http://127.0.0.1:8002/ node supabase/tests/browser.test.cjs
 
 În mediul cloud curent, PGlite este instalat în `/workspace/shared/spotivity-rls-validation`; adaugă acel `node_modules` la `NODE_PATH` pentru a-l găsi. Testul browser necesită Playwright, Chromium și acces la baza de certificate de încredere. Aceste instalări nu modifică dependențele aplicației și nu sunt necesare pentru publicarea site-ului static.
 
-Rezultatele versiunii actualizate: **57 de verificări SQL pentru fiecare variantă de ID-uri, UUID și numerice, și 11 verificări în browser**, toate trecute în mediul izolat. Verificările includ conversia definiției vechi a `is_admin()`, păstrarea politicilor dependente și anularea tranzacției pentru alte funcții nerevizuite.
+Rezultatele versiunii actualizate: **79 de verificări SQL pentru fiecare variantă de ID-uri, UUID și numerice, și 11 verificări în browser**, toate trecute în mediul izolat. Verificările includ conversia alocărilor JSON/JSONB, păstrarea identităților și a accesului la terenurile alocate, anularea conversiei pentru date sau dependențe incompatibile, conversia definiției vechi a `is_admin()` și blocarea altor funcții nerevizuite.
 
 Testele SQL folosesc roluri PostgreSQL reale și verifică regulile RLS și trigger-ele pentru ID-uri UUID și numerice. Testele browser folosesc SDK-ul Supabase real și o simulare Auth/REST care execută cererile în aceeași bază izolată; cererile către proiectul găzduit sunt interceptate. Acoperă autentificarea, înregistrarea, rezervarea, anularea, logout-ul, rolurile, afișarea sigură a mesajelor și ecranul mobil.
 

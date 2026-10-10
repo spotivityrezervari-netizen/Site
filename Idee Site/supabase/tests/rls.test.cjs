@@ -207,6 +207,120 @@ let passed = 0;
       assert.equal((await as('authenticated',6,'select * from public.rezervari')).rows.length,0);
       assert.equal((await as('authenticated',6,'select * from public.mesaje_chat')).rows.length,0);
     });
+    // Some live schemas used JSON/JSONB allocations instead of the documented
+    // CSV text. Test the real ALTER COLUMN, its policy dependencies, and rollback.
+    const sqlJson = value => value === undefined ? 'null' : `'${JSON.stringify(value).replaceAll("'", "''")}'`;
+    const prepareJsonAdmins = async (db, type, ordinary, superAllocation, defaultAllocation) => {
+      await db.exec(schema);
+      await db.exec(`alter table public.users_admin add column user_id uuid references auth.users(id);
+        update public.users_admin a set user_id=u.id from auth.users u where a.email=u.email;
+        alter table public.users_admin alter column terenuri type ${type} using to_jsonb(terenuri)::${type};
+        alter table public.users_admin alter column terenuri set default ${sqlJson(defaultAllocation)}::${type};
+        update public.users_admin set terenuri=${sqlJson(ordinary)}::${type} where is_super=false;
+        update public.users_admin set terenuri=${sqlJson(superAllocation)}::${type} where is_super=true;
+        create policy legacy_json_admin_policy on public.users_admin for select to authenticated
+          using (terenuri::jsonb @> '["Court A"]'::jsonb);`);
+    };
+    const adminState = async db => ({
+      rows: (await db.query('select id::text,user_id::text,email,is_super,terenuri::text as allocated from public.users_admin order by email')).rows,
+      column: (await db.query("select data_type,column_default,is_nullable from information_schema.columns where table_schema='public' and table_name='users_admin' and column_name='terenuri'")).rows[0],
+      policies: (await db.query("select polname,pg_get_expr(polqual,polrelid) as using_rule,pg_get_expr(polwithcheck,polrelid) as check_rule from pg_policy where polrelid='public.users_admin'::regclass order by polname")).rows,
+    });
+    for (const [label,type,ordinary,superAllocation,defaultAllocation] of [
+      ['JSONB string array and array default','jsonb',[' Court A '],'ALL',[]],
+      ['JSONB CSV scalar and scalar default','jsonb',' Court A ','ALL','Court B'],
+      ['JSON string array','json',['Court A'],'ALL',[]],
+      ['JSON CSV scalar with JSON null default','json','Court A','ALL',null],
+      ['JSONB superadmin empty array with SQL null default','jsonb',['Court A'],[],undefined],
+      ['JSONB superadmin JSON null','jsonb',['Court A'],null,null],
+      ['JSONB superadmin SQL null','jsonb',['Court A'],undefined,[]],
+    ]) {
+      await check(`legacy allocations migrate safely: ${label}`, async () => {
+        const isolated = new PGlite();
+        try {
+          await prepareJsonAdmins(isolated,type,ordinary,superAllocation,defaultAllocation);
+          const before=await adminState(isolated);
+          await isolated.exec(migration);
+          const after=await adminState(isolated);
+          assert.equal(after.column.data_type,'text');
+          assert.equal(after.column.column_default,"''::text");
+          assert.deepEqual(after.rows.map(({allocated,...identity})=>identity),before.rows.map(({allocated,...identity})=>identity));
+          assert.deepEqual(after.rows.map(x=>x.allocated),['Court A','ALL']);
+          assert.equal(after.policies.some(x=>x.polname==='legacy_json_admin_policy'),false);
+          await isolated.exec(`select set_config('request.jwt.claim.sub','${uid(3)}',false); set role authenticated;`);
+          assert.equal((await isolated.query("update public.terenuri set pret=321 where nume='Court A' returning pret")).rows.length,1);
+          assert.equal((await isolated.query("update public.terenuri set pret=1 where nume='Court B' returning pret")).rows.length,0);
+          assert.equal((await isolated.query("update public.users_admin set terenuri='Court B' where user_id=auth.uid() returning *")).rows.length,0);
+          await isolated.exec(`reset role; select set_config('request.jwt.claim.sub','${uid(4)}',false); set role authenticated;`);
+          await denied(()=>isolated.query("insert into public.users_admin(nume_admin,email,is_super) values('Unassigned','bob@example.test',false)"));
+          assert.deepEqual((await isolated.query("insert into public.users_admin(nume_admin,email,is_super) values('New Super','bob@example.test',true) returning user_id::text,is_super,terenuri")).rows[0],
+            {user_id:uid(2),is_super:true,terenuri:'ALL'});
+          await isolated.query("delete from public.users_admin where email='bob@example.test'");
+          assert.equal((await isolated.query("update public.users_admin set terenuri='Court B' where email='admin@example.test' returning terenuri")).rows[0].terenuri,'Court B');
+          await isolated.exec(`reset role; select set_config('request.jwt.claim.sub','${uid(3)}',false); set role authenticated;`);
+          assert.equal((await isolated.query("update public.terenuri set pret=1 where nume='Court A' returning pret")).rows.length,0);
+          assert.equal((await isolated.query("update public.terenuri set pret=321 where nume='Court B' returning pret")).rows.length,1);
+          await isolated.exec("reset role; select set_config('request.jwt.claim.sub','',false)");
+          await isolated.exec(migration);
+          assert.deepEqual((await isolated.query('select user_id::text,is_super,terenuri from public.users_admin order by email')).rows,[
+            {user_id:uid(3),is_super:false,terenuri:'Court B'},
+            {user_id:uid(4),is_super:true,terenuri:'ALL'},
+          ]);
+        } finally { await isolated.close(); }
+      });
+    }
+    for (const [label,type,allocation] of [
+      ['JSONB object','jsonb',{court:'Court A'}],
+      ['JSON object','json',{court:'Court A'}],
+      ['JSONB number','jsonb',7],
+      ['JSONB boolean','jsonb',true],
+      ['JSONB mixed array','jsonb',['Court A',7]],
+      ['JSONB null array member','jsonb',['Court A',null]],
+      ['JSONB nested array','jsonb',[['Court A']]],
+      ['JSONB object array member','jsonb',[{court:'Court A'}]],
+      ['JSONB array element containing a comma','jsonb',['Court A,Court B']],
+      ['JSONB empty ordinary-admin array','jsonb',[]],
+      ['JSONB ordinary-admin JSON null','jsonb',null],
+      ['JSONB ordinary-admin SQL null','jsonb',undefined],
+      ['JSONB scalar for unknown court','jsonb','Missing Court'],
+    ]) {
+      await check(`unsafe allocation conversion aborts atomically: ${label}`, async () => {
+        const isolated = new PGlite();
+        try {
+          await prepareJsonAdmins(isolated,type,allocation,'ALL',[]);
+          const before=await adminState(isolated);
+          await denied(()=>isolated.exec(migration));
+          await isolated.exec('rollback');
+          assert.deepEqual(await adminState(isolated),before);
+          assert.equal((await isolated.query("select column_name from information_schema.columns where table_schema='public' and table_name='clienti' and column_name='user_id'")).rows.length,0);
+        } finally { await isolated.close(); }
+      });
+    }
+    await check('unknown JSONB CHECK dependencies are preserved on migration failure', async () => {
+      const isolated = new PGlite();
+      try {
+        await prepareJsonAdmins(isolated,'jsonb',['Court A'],'ALL',[]);
+        await isolated.exec("alter table public.users_admin add constraint legacy_json_shape check (jsonb_typeof(terenuri) in ('array','string'))");
+        const before=await adminState(isolated);
+        await denied(()=>isolated.exec(migration));
+        await isolated.exec('rollback');
+        assert.deepEqual(await adminState(isolated),before);
+        assert.equal((await isolated.query("select conname from pg_constraint where conrelid='public.users_admin'::regclass and conname='legacy_json_shape'")).rows.length,1);
+      } finally { await isolated.close(); }
+    });
+    await check('unknown JSONB view dependencies are preserved on migration failure', async () => {
+      const isolated = new PGlite();
+      try {
+        await prepareJsonAdmins(isolated,'jsonb',['Court A'],'ALL',[]);
+        await isolated.exec('create view public.legacy_json_admin_view as select terenuri from public.users_admin');
+        const before=await adminState(isolated);
+        const viewBefore=(await isolated.query("select 'public.legacy_json_admin_view'::regclass::oid as oid,pg_get_viewdef('public.legacy_json_admin_view'::regclass) as definition")).rows[0];
+        await denied(()=>isolated.exec(migration));
+        await isolated.exec('rollback');
+        assert.deepEqual(await adminState(isolated),before);
+        assert.deepEqual((await isolated.query("select 'public.legacy_json_admin_view'::regclass::oid as oid,pg_get_viewdef('public.legacy_json_admin_view'::regclass) as definition")).rows[0],viewBefore);
+      } finally { await isolated.close(); }
+    });
     const legacyAdminHelper = `
       create function auth.jwt() returns jsonb language sql stable as $$
         select jsonb_build_object('email',current_setting('request.jwt.claim.email',true))
