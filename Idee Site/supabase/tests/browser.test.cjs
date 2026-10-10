@@ -151,6 +151,37 @@ let checks = 0;
       assert.ok(rows.every(r=>r.client_user_id===uid(1)));
     });
     pass('real SDK login and two-hour booking work with RLS and server pricing');
+    const futureId=await serial(async () => {
+      await pg.exec('reset role');
+      return (await pg.query("select id from public.rezervari where stare='activa' and ora='13:00'")).rows[0].id;
+    });
+    await page.locator('#btn-top-cont').click();
+    await page.locator('#btn-vezi-active').click();
+    await page.locator(`.anulare-client[data-id="${futureId}"]`).click();
+    await page.locator(`.anulare-client[data-id="${futureId}"]`).waitFor({state:'hidden'});
+    await serial(async () => {
+      await pg.exec('reset role');
+      assert.equal((await pg.query('select stare from public.rezervari where id=$1',[futureId])).rows[0].stare,'anulata');
+      assert.equal((await pg.query('select * from public.rezervari_disponibilitate where id=$1',[String(futureId)])).rows.length,0);
+    });
+    pass('client can cancel an upcoming booking and the public slot is released');
+    const pastId=await serial(async () => {
+      await pg.exec('reset role');
+      await pg.query("select set_config('request.jwt.claim.sub','',false)");
+      return (await pg.query("insert into public.rezervari(email_client,client_user_id,teren,data_str,ora,stare) values('alice@example.test',$1,'Court A','2000-01-01','16:00','activa') returning id",[uid(1)])).rows[0].id;
+    });
+    await page.locator('#inapoi-la-profil').click();
+    await page.locator('#btn-vezi-istoric').click();
+    await page.locator(`.anulare-client[data-id="${pastId}"]`).click();
+    await page.locator(`.anulare-client[data-id="${pastId}"]`).waitFor({state:'hidden'});
+    assert.equal(await page.evaluate(()=>window.tipIstoricDeschis),'istoric');
+    assert.equal(await page.locator('#titlu-lista-rezervari').innerText(),'Istoric Rezervări');
+    await serial(async () => {
+      await pg.exec('reset role');
+      assert.equal((await pg.query('select stare from public.rezervari where id=$1',[pastId])).rows[0].stare,'anulata');
+    });
+    pass('client can cancel a finished booking from history and stays in the history view');
+    await page.locator('#inchide-istoric-client').click();
     await page.locator('#btn-top-cont').click();
     await page.locator('#btn-logout').click();
     await page.locator('#modal-profil').waitFor({state:'hidden'});

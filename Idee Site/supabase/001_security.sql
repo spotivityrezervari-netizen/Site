@@ -305,9 +305,8 @@ begin
   if tg_op = 'UPDATE' and auth.uid() is not null and pg_trigger_depth() = 1 and not spotivity_private.manages_court(old.teren) then
     if old.client_user_id is distinct from auth.uid()
        or (to_jsonb(new) - 'stare') is distinct from (to_jsonb(old) - 'stare')
-       or old.stare <> 'activa' or new.stare <> 'anulata'
-       or old.starts_at < now() + interval '6 hours' then
-      raise exception 'Only cancellation of your own booking at least 6 hours ahead is allowed.';
+       or old.stare <> 'activa' or new.stare <> 'anulata' then
+      raise exception 'Only cancellation of your own active booking is allowed.';
     end if;
     return new;
   end if;

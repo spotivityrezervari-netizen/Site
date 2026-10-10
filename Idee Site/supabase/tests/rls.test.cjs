@@ -95,14 +95,31 @@ let passed = 0;
       for (const day of ['2000-01-01','2100-01-01']) await denied(() => as('authenticated',1,
         `insert into public.rezervari(email_client,teren,data_str,ora,stare) values('alice@example.test','Court A','${day}','15:00','activa')`));
     });
-    await check('client cancellation within 6h denied by DB', async () => {
+    for (const [label, offset, hour] of [
+      ['just before the start', "interval '1 minute'", '16:00'],
+      ['during the booked hour', "-interval '30 minutes'", '17:00'],
+      ['after the booking has ended', "-interval '2 hours'", '18:00']
+    ]) await check(`client can cancel ${label}, without changing booking details`, async () => {
       await root('select 1');
       await pg.exec(`insert into public.rezervari(email_client,client_user_id,teren,data_str,ora,stare) values
-        ('alice@example.test','${uid(1)}','Court A','${tomorrow}','16:00','activa');
+        ('alice@example.test','${uid(1)}','Court A','${tomorrow}','${hour}','activa');
         alter table public.rezervari disable trigger spotivity_booking_guard;
-        update public.rezervari set starts_at=now()+interval '2 hours' where ora='16:00';
+        update public.rezervari set starts_at=now()+${offset} where ora='${hour}';
         alter table public.rezervari enable trigger spotivity_booking_guard;`);
-      await denied(() => as('authenticated',1,"update public.rezervari set stare='anulata' where ora='16:00'"));
+      const before=(await root(`select * from public.rezervari where ora='${hour}'`)).rows[0];
+      const changed=(await as('authenticated',1,
+        `update public.rezervari set stare='anulata' where ora='${hour}' returning *`)).rows;
+      assert.equal(changed.length,1);
+      assert.deepEqual(changed[0],{...before,stare:'anulata'});
+      assert.equal((await as('anon',null,
+        `select * from public.rezervari_disponibilitate where ora='${hour}'`)).rows.length,0);
+    });
+    await check('unlimited cancellation still cannot cancel another client booking', async () => {
+      const rows=(await as('authenticated',1,
+        "update public.rezervari set stare='anulata' where email_client='bob@example.test' returning *")).rows;
+      assert.equal(rows.length,0);
+      assert.equal((await as('authenticated',2,
+        "select stare from public.rezervari where teren='Court B' and ora='14:00'")).rows[0].stare,'activa');
     });
     await check('client sends only own chat with a booking', async () => {
       await as('authenticated',1,"insert into public.mesaje_chat(email_client,teren,expeditor,mesaj) values('alice@example.test','Court A','client','Hello')");

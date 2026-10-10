@@ -61,7 +61,7 @@ window.dict = {
         'istoric': 'Istoric Rezervări', 'deconectare': 'Deconectare', 'inapoi_profil': 'Înapoi la Profil', 'alege_terenul': 'Alege Terenul',
         'data_dorita': 'Data Dorită', 'ora_dorita': 'Ora Dorită', 'toate_orele': 'Toate Orele', 'inapoi': 'Înapoi',
         'finalizare_rezervare': 'Finalizare Rezervare', 'nevoie_minge': 'Ai nevoie de minge?', 'alege_ziua': 'Alege Ziua', 
-        'alege_ora': 'Alege Ora (Poți selecta mai multe)', 'disclaimer': '⚠️ Atenție: Rezervarea poate fi anulată gratuit doar cu cel puțin 6 ore înainte de ora începerii.',
+        'alege_ora': 'Alege Ora (Poți selecta mai multe)', 'disclaimer': 'Rezervarea poate fi anulată gratuit oricând.',
         'vezi_locatia': 'Vezi Locația (Hartă)', 'alegeti_o_ora': 'Alegeți o oră', 'zile': ["Dum", "Lun", "Mar", "Mie", "Joi", "Vin", "Sâm"], 'azi': 'Azi', 'maine': 'Mâine',
         'lei_ora': 'Lei/oră', 'ocupat': 'Ocupat', 'trecut': 'Trecut', 'rezerva': 'Rezervă', 'se_cauta': 'Se caută terenuri disponibile...',
         'fara_rezervari': 'Nu ai rezervări momentan.', 'anuleaza': '❌ Anulează (Gratuit)',
@@ -83,7 +83,7 @@ window.dict = {
         'istoric': 'Foglalási előzmények', 'deconectare': 'Kijelentkezés', 'inapoi_profil': 'Vissza a profilhoz', 'alege_terenul': 'Pálya kiválasztása',
         'data_dorita': 'Kívánt dátum', 'ora_dorita': 'Kívánt időpont', 'toate_orele': 'Minden időpont', 'inapoi': 'Vissza',
         'finalizare_rezervare': 'Foglalás véglegesítése', 'nevoie_minge': 'Szükséged van labdára?', 'alege_ziua': 'Válassz napot', 
-        'alege_ora': 'Válassz időpontot (többet is lehet)', 'disclaimer': '⚠️ Figyelem: A foglalás ingyenesen lemondható a kezdés előtt legalább 6 órával.',
+        'alege_ora': 'Válassz időpontot (többet is lehet)', 'disclaimer': 'A foglalás bármikor ingyenesen lemondható.',
         'vezi_locatia': 'Helyszín (Térkép)', 'alegeti_o_ora': 'Válassz időpontot', 'zile': ["Vas", "Hét", "Ked", "Sze", "Csü", "Pén", "Szo"], 'azi': 'Ma', 'maine': 'Holnap',
         'lei_ora': 'RON/óra', 'ocupat': 'Foglalt', 'trecut': 'Elmúlt', 'rezerva': 'Foglalás', 'se_cauta': 'Szabad pályák keresése...',
         'fara_rezervari': 'Jelenleg nincsenek foglalásaid.', 'anuleaza': '❌ Lemondás (Ingyenes)',
@@ -105,7 +105,7 @@ window.dict = {
         'istoric': 'Booking History', 'deconectare': 'Logout', 'inapoi_profil': 'Back to Profile', 'alege_terenul': 'Choose Court',
         'data_dorita': 'Desired Date', 'ora_dorita': 'Desired Time', 'toate_orele': 'All Hours', 'inapoi': 'Back',
         'finalizare_rezervare': 'Finalize Booking', 'nevoie_minge': 'Need a ball?', 'alege_ziua': 'Choose Day', 
-        'alege_ora': 'Choose Time (Select multiple)', 'disclaimer': '⚠️ Warning: Free cancellation is only available up to 6 hours before start time.',
+        'alege_ora': 'Choose Time (Select multiple)', 'disclaimer': 'You can cancel your booking for free at any time.',
         'vezi_locatia': 'View Location (Map)', 'alegeti_o_ora': 'Choose a time', 'zile': ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], 'azi': 'Today', 'maine': 'Tomorrow',
         'lei_ora': 'RON/hour', 'ocupat': 'Booked', 'trecut': 'Passed', 'rezerva': 'Book', 'se_cauta': 'Searching for available courts...',
         'fara_rezervari': 'You have no bookings at the moment.', 'anuleaza': '❌ Cancel (Free)',
@@ -471,10 +471,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else if (esteTrecuta) {
                 culoareBorder = '#6b7280'; culoareTitlu = '#9ca3af'; opacitate = '0.85';
                 textExtra = '<span style="color: #9ca3af; font-weight: bold;">[FINALIZED]</span>';
-            } else {
-                if (tip === 'active') {
-                    butonAnulare = `<button class="btn-anulare anulare-client" data-id="${r.id}" style="margin-top: 10px; background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer;">${window.dict[window.lang]['anuleaza']}</button>`;
-                }
+            }
+            if (r.stare !== 'anulata') {
+                butonAnulare = `<button class="btn-anulare anulare-client" data-id="${window.escapeHtml(r.id)}" style="margin-top: 10px; background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer;">${window.dict[window.lang]['anuleaza']}</button>`;
             }
 
             const terenAsociat = terenuriDinDB.find(t => t.nume === r.teren);
@@ -520,7 +519,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (confirm("Confirm?")) {
                 const { error } = await db.from('rezervari').update({ stare: 'anulata' }).eq('id', idRez);
                 if (error) return alert('Anularea a fost respinsă: ' + error.message);
-                deschideIstoric("active"); 
+                deschideIstoric(window.tipIstoricDeschis || "active");
             }
         }
         
