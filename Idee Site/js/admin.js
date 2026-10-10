@@ -114,12 +114,12 @@ window.initializeazaTabel = function(terenuriArray) {
     }
     
     terenuriArray.forEach(t => {
-        select.innerHTML += `<option value="${t}">${t}</option>`;
+        select.innerHTML += `<option value="${window.escapeHtml(t)}">${window.escapeHtml(t)}</option>`;
     });
     
     const dataInput = document.getElementById('tabel-data');
     if (!dataInput.value) {
-        dataInput.value = new Date().toISOString().split('T')[0];
+        dataInput.value = window.siteDate();
     }
     
     dataInput.addEventListener('change', window.incarcaTabelProgram);
@@ -137,7 +137,7 @@ window.incarcaTabelProgram = async function() {
 
     const d = new Date(dataInput);
     const zile = ["Dum", "Lun", "Mar", "Mie", "Joi", "Vin", "Sâm"];
-    const dataFormata = `${zile[d.getDay()]}, ${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const dataFormata = dataInput;
 
     const { data: rezervari, error } = await db.from('rezervari')
         .select('*')
@@ -175,7 +175,7 @@ window.incarcaTabelProgram = async function() {
             col1 += `<br><button onclick="window.anulareDublaAdmin('${rGasita.id}', '${ora}')" style="background: #ef4444; color: white; border: none; padding: 4px 6px; border-radius: 4px; font-size: 11px; cursor: pointer; margin-top: 8px; width: 100%;">❌ Anulează</button>`;
 
             col2 = `
-                <select onchange="window.schimbaStareExistenta(this, '${rGasita.id}', '${ora}', '${terenAles}', '${dataFormata}')" style="background: #1f2937; color: white; border: 1px solid ${eBlocat ? '#ef4444' : '#f59e0b'}; border-radius: 5px; padding: 6px; font-weight: bold; cursor: pointer; width: 100%;">
+                <select onchange="window.schimbaStareExistenta(this, '${rGasita.id}', '${ora}', '${window.escapeJs(terenAles)}', '${dataFormata}')" style="background: #1f2937; color: white; border: 1px solid ${eBlocat ? '#ef4444' : '#f59e0b'}; border-radius: 5px; padding: 6px; font-weight: bold; cursor: pointer; width: 100%;">
                     <option value="liber">LIBER</option>
                     <option value="ocupat" ${!eBlocat ? 'selected' : ''}>OCUPAT</option>
                     <option value="blocat" ${eBlocat ? 'selected' : ''}>BLOCAT</option>
@@ -189,27 +189,27 @@ window.incarcaTabelProgram = async function() {
                 let contClient = clientiAsociati.find(c => c.email === rGasita.email_client);
                 
                 if (contClient) {
-                    let cNume = contClient.nume ? `👤 Nume: ${contClient.nume}<br>` : '';
-                    let cTel = contClient.telefon ? `📞 Tel: ${contClient.telefon}<br>` : '';
-                    let cMail = `📧 Email: ${contClient.email}`;
+                    let cNume = contClient.nume ? `👤 Nume: ${window.escapeHtml(contClient.nume)}<br>` : '';
+                    let cTel = contClient.telefon ? `📞 Tel: ${window.escapeHtml(contClient.telefon)}<br>` : '';
+                    let cMail = `📧 Email: ${window.escapeHtml(contClient.email)}`;
                     infoClient = `${cNume}${cTel}${cMail}`;
                 } else {
-                    infoClient = `👤 Detalii (Manual): ${rGasita.email_client}`;
+                    infoClient = `👤 Detalii (Manual): ${window.escapeHtml(rGasita.email_client)}`;
                 }
 
                 let chatBtnStr = "";
                 if (terenAreChatActivat) {
                     const clientName = contClient ? (contClient.nume || contClient.email.split('@')[0]) : (rGasita.email_client.split('@')[0]);
                     const emailParam = contClient ? contClient.email : rGasita.email_client;
-                    chatBtnStr = `<button class="btn-tabel-chat" onclick="deschideChatDinTabel('${emailParam}', '${terenAles}', '${clientName}')" style="background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.5); color: #3b82f6; border-radius: 8px; padding: 4px 10px; font-size: 11px; font-weight: bold; cursor: pointer; margin-left: 10px; transition: 0.3s; vertical-align: middle;">💬 Chat</button>`;
+                    chatBtnStr = `<button class="btn-tabel-chat" onclick="deschideChatDinTabel('${window.escapeJs(emailParam)}', '${window.escapeJs(terenAles)}', '${window.escapeJs(clientName)}')" style="background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.5); color: #3b82f6; border-radius: 8px; padding: 4px 10px; font-size: 11px; font-weight: bold; cursor: pointer; margin-left: 10px; transition: 0.3s; vertical-align: middle;">💬 Chat</button>`;
                 }
 
-                col3 = `<span style="color:white; font-size:13px; line-height:1.4;">${infoClient}</span> <br><div style="margin-top: 5px; display: flex; align-items: center;"><span style="font-size:12px; color:#aaa;">💰 ${rGasita.pret_total}</span>${chatBtnStr}</div>`;
+                col3 = `<span style="color:white; font-size:13px; line-height:1.4;">${infoClient}</span> <br><div style="margin-top: 5px; display: flex; align-items: center;"><span style="font-size:12px; color:#aaa;">💰 ${window.escapeHtml(rGasita.pret_total)}</span>${chatBtnStr}</div>`;
             }
         } else {
             const oraId = ora.replace(':', '');
             col2 = `
-                <select onchange="window.schimbaStareNoua(this, '${terenAles}', '${dataFormata}', '${ora}')" id="select-stare-${oraId}" style="background: #1f2937; color: white; border: 1px solid #22c55e; border-radius: 5px; padding: 6px; font-weight: bold; cursor: pointer; width: 100%;">
+                <select onchange="window.schimbaStareNoua(this, '${window.escapeJs(terenAles)}', '${dataFormata}', '${ora}')" id="select-stare-${oraId}" style="background: #1f2937; color: white; border: 1px solid #22c55e; border-radius: 5px; padding: 6px; font-weight: bold; cursor: pointer; width: 100%;">
                     <option value="liber" selected>LIBER</option>
                     <option value="ocupat">OCUPAT (Date ➔)</option>
                     <option value="blocat">BLOCAT</option>
@@ -220,7 +220,7 @@ window.incarcaTabelProgram = async function() {
                 <div id="form-inline-${oraId}" style="display: none; flex-direction: column; gap: 5px; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 5px; border: 1px dashed #f59e0b;">
                     <input type="text" id="inline-nume-${oraId}" placeholder="Nume Client / Telefon" style="padding: 6px; border-radius: 3px; border: 1px solid #444; background: #222; color: white; font-size: 12px; width: 100%; box-sizing: border-box;">
                     <input type="text" id="inline-pret-${oraId}" placeholder="Detalii" style="padding: 6px; border-radius: 3px; border: 1px solid #444; background: #222; color: white; font-size: 12px; width: 100%; box-sizing: border-box;">
-                    <button onclick="window.salveazaRezervareInlineAdmin('${terenAles}', '${dataFormata}', '${ora}')" style="background: #22c55e; color: black; border: none; padding: 6px; border-radius: 3px; font-weight: bold; cursor: pointer; font-size: 12px;">✔️ Salvează Rezervarea</button>
+                    <button onclick="window.salveazaRezervareInlineAdmin('${window.escapeJs(terenAles)}', '${dataFormata}', '${ora}')" style="background: #22c55e; color: black; border: none; padding: 6px; border-radius: 3px; font-weight: bold; cursor: pointer; font-size: 12px;">✔️ Salvează Rezervarea</button>
                 </div>
                 <span id="text-liber-${oraId}" style="color:#888;">-</span>
             `;
@@ -243,7 +243,7 @@ window.actualizeazaBifeTerenuri = async function() {
     `;
     const { data } = await db.from('terenuri').select('nume, sport');
     if (data) {
-        data.forEach(t => { container.innerHTML += `<label style="display: flex; align-items: center; gap: 10px; cursor: pointer;"><input type="checkbox" class="check-teren-alocat" value="${t.nume}" style="margin-right: 5px; width: 20px; height: 20px; flex-shrink: 0;"> ${t.nume} (${t.sport})</label>`; });
+        data.forEach(t => { container.innerHTML += `<label style="display: flex; align-items: center; gap: 10px; cursor: pointer;"><input type="checkbox" class="check-teren-alocat" value="${window.escapeHtml(t.nume)}" style="margin-right: 5px; width: 20px; height: 20px; flex-shrink: 0;"> ${window.escapeHtml(t.nume)} (${window.escapeHtml(t.sport)})</label>`; });
     }
 };
 
@@ -261,13 +261,13 @@ window.incarcaTerenuriAdmin = async function() {
         html += `
             <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; color: white; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                 <div style="display: flex; gap: 15px; align-items: center;">
-                    <img src="${t.poza || 'assets/imagini/default.png'}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 5px;">
+                    <img src="${window.escapeHtml(window.safeUrl(t.poza || 'assets/imagini/avatar2.png', true))}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 5px;">
                     <div>
-                        <h4 style="margin: 0 0 5px 0; color: #f59e0b;">${t.sport} - ${t.nume}</h4>
+                        <h4 style="margin: 0 0 5px 0; color: #f59e0b;">${window.escapeHtml(t.sport)} - ${window.escapeHtml(t.nume)}</h4>
                         <p style="margin: 0; font-size: 13px; color: #ccc;">Preț: ${t.pret} Lei/oră | Minge: ${textMinge}</p>
                     </div>
                 </div>
-                <button onclick="stergeTerenAdmin(${t.id})" style="background: #ef4444; color: white; border: none; padding: 6px 10px; border-radius: 5px; cursor: pointer;">❌ Șterge</button>
+                <button onclick="stergeTerenAdmin('${window.escapeJs(t.id)}')" style="background: #ef4444; color: white; border: none; padding: 6px 10px; border-radius: 5px; cursor: pointer;">❌ Șterge</button>
             </div>
         `;
     });
@@ -296,8 +296,10 @@ window.anuleazaRezervareAdmin = async function(id) {
 // --- LOGICA PRINCIPALĂ A PAGINII ---
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-logout-admin')?.addEventListener('click', async () => {
+        const { error } = await db.auth.signOut();
+        if (error) return alert('Deconectarea a eșuat: ' + error.message);
+        contLogatGlobal = null;
         localStorage.removeItem('admin_session');
-        if(window.db && window.db.auth) { await db.auth.signOut(); }
         window.location.reload();
     });
 
@@ -345,7 +347,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('login-admin-btn')?.addEventListener('click', async () => {
         const email = document.getElementById('login-email-admin').value.trim().replace(/\.$/, '');
-        const parola = document.getElementById('login-parola').value.trim().replace(/\.$/, '');
+        const parola = document.getElementById('login-parola').value;
         if (!email || !parola) return alert("Introdu adresa de email și parola!");
 
         const btn = document.getElementById('login-admin-btn');
@@ -365,7 +367,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // 2. Extragere rol din tabelul users_admin pe baza email-ului
-        const { data, error } = await db.from('users_admin').select('*').eq('email', email).single();
+        const { data, error } = await db.from('users_admin').select('*').eq('user_id', authData.user.id).single();
         
         if (data && !error) {
             contLogatGlobal = data;
@@ -394,7 +396,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.querySelectorAll('.super-admin-only').forEach(el => el.style.display = 'none');
                 document.querySelectorAll('.admin-comun').forEach(el => el.style.display = 'flex');
 
-                listaTerenuriAlocate = contLogatGlobal.terenuri ? contLogatGlobal.terenuri.split(',') : []; 
+                listaTerenuriAlocate = contLogatGlobal.terenuri ? contLogatGlobal.terenuri.split(',').map(n => n.trim()).filter(Boolean) : [];
                 terenuriPtTabel = listaTerenuriAlocate.filter(n => n); 
             }
 
@@ -416,7 +418,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if(!numeT) continue;
                     const { data: terenDB } = await db.from('terenuri').select('*').eq('nume', numeT).single();
                     if (terenDB) {
-                        selectManualTeren.innerHTML += `<option value="${terenDB.nume}" data-sport="${terenDB.sport}">${terenDB.nume}</option>`;
+                        selectManualTeren.innerHTML += `<option value="${window.escapeHtml(terenDB.nume)}" data-sport="${window.escapeHtml(terenDB.sport)}">${window.escapeHtml(terenDB.nume)}</option>`;
                         
                         let orasul = terenDB.oras || 'Altele';
                         orasul = orasul.trim().replace(/\.+$/, ''); // STRIP TRAILING DOTS OVERALL
@@ -457,7 +459,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     htmlMeniu += `
                         <div class="card-sport admin-comun" style="padding: 20px; display: flex;" onclick="document.getElementById('container-meniu-terenuri').parentElement.style.display='none'; document.getElementById('pagina-oras-${safeOras}').style.display='block';">
-                            <h2 style="font-size: 18px;">⚙️<br><br>Setări Terenuri<br>${oras}</h2>
+                            <h2 style="font-size: 18px;">⚙️<br><br>Setări Terenuri<br>${window.escapeHtml(oras)}</h2>
                         </div>
                     `;
 
@@ -467,7 +469,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         
                         carduriTerenuri += `
                             <div class="card-sport admin-comun" style="padding: 20px; display: flex;" onclick="document.getElementById('modal-setari-${terenDB.id}').style.display='flex'">
-                                <h2 style="font-size: 18px;">⚙️<br><br>Setări<br>${terenDB.nume}</h2>
+                                <h2 style="font-size: 18px;">⚙️<br><br>Setări<br>${window.escapeHtml(terenDB.nume)}</h2>
                             </div>
                         `;
 
@@ -476,7 +478,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <div class="modal-continut modal-mare" style="border-color: ${culoareTeren}; width: 100%; max-width: 550px;">
                                     <button class="buton-inchidere" onclick="this.parentElement.parentElement.style.display='none'">X</button>
                                     <div>
-                                        <h2 class="titlu-modal" style="font-size: 20px; text-align: left; color: ${culoareTeren};">⚙️ Setări (${terenDB.nume})</h2>
+                                        <h2 class="titlu-modal" style="font-size: 20px; text-align: left; color: ${culoareTeren};">⚙️ Setări (${window.escapeHtml(terenDB.nume)})</h2>
                                     </div>
                                     
                                     <div class="formular-auth" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; display: flex; flex-direction: column; flex: 1;">
@@ -495,20 +497,20 @@ document.addEventListener('DOMContentLoaded', () => {
                                             <label style="color: #ef4444; font-weight: bold; font-size: 15px;">🔒 Blochează / Deblochează o zi</label>
                                             <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px;">
                                                 <input type="date" id="data-blocare-${terenDB.id}" style="background: rgba(0,0,0,0.5); color: white; padding: 8px; border-radius: 5px; flex: 1; min-width: 120px;">
-                                                <button type="button" onclick="blocheazaZiuaIntreaga('${terenDB.nume}', ${terenDB.id}, event)" style="background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold;">Închide</button>
-                                                <button type="button" onclick="deblocheazaZiua('${terenDB.nume}', ${terenDB.id}, event)" style="background: #22c55e; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold;">Deblochează</button>
+                                                <button type="button" onclick="blocheazaZiuaIntreaga('${window.escapeJs(terenDB.nume)}', '${window.escapeJs(terenDB.id)}', event)" style="background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold;">Închide</button>
+                                                <button type="button" onclick="deblocheazaZiua('${window.escapeJs(terenDB.nume)}', '${window.escapeJs(terenDB.id)}', event)" style="background: #22c55e; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold;">Deblochează</button>
                                             </div>
                                         </div>
 
                                         <div class="grup-input" style="margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden; width: 100%; box-sizing: border-box;">
                                             <label style="margin-bottom: 8px; display: block; color: #a1eafb;">📷 Schimbă Poza Terenului</label>
                                             <div style="display: flex; gap: 10px; align-items: center; width: 100%;">
-                                                <img src="${terenDB.poza || 'assets/imagini/default.png'}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); flex-shrink: 0;">
+                                                <img src="${window.escapeHtml(window.safeUrl(terenDB.poza || 'assets/imagini/avatar2.png', true))}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); flex-shrink: 0;">
                                                 <input type="file" id="poza-${terenDB.id}" accept="image/*" style="background: rgba(0,0,0,0.5); color: white; padding: 8px; border-radius: 5px; flex: 1; min-width: 0; cursor: pointer; border: 1px dashed rgba(255,255,255,0.2);">
                                             </div>
                                         </div>
 
-                                        <div class="grup-input" style="margin-bottom: 15px;"><label>Oraș</label><input type="text" id="oras-${terenDB.id}" value="${terenDB.oras ? terenDB.oras.trim().replace(/\.+$/, '') : ''}" placeholder="Ex: București"></div>
+                                        <div class="grup-input" style="margin-bottom: 15px;"><label>Oraș</label><input type="text" id="oras-${terenDB.id}" value="${window.escapeHtml(terenDB.oras ? terenDB.oras.trim().replace(/\.+$/, '') : '')}" placeholder="Ex: București"></div>
                                         <div class="grup-input"><label>Preț Teren (Lei)</label><input type="number" id="pret-${terenDB.id}" value="${terenDB.pret}"></div>
                                         <div class="grup-input" style="display:flex; justify-content:space-between; margin-top:10px;"><label>Ofertă Minge?</label><input type="checkbox" id="minge-${terenDB.id}" ${terenDB.optiune_minge ? 'checked' : ''} style="width:20px;height:20px;"></div>
                                         <div class="grup-input" style="margin-top:10px;"><label>Preț Minge (Lei)</label><input type="number" id="pret-minge-${terenDB.id}" value="${terenDB.pret_minge || 15}"></div>
@@ -518,8 +520,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                         </div>
                                         
                                         <div style="flex: 1;"></div>
-                                        <button id="btn-save-${terenDB.id}" type="button" onclick="salveazaSetariTeren(${terenDB.id}, '${terenDB.nume}')" class="buton-rezervare" style="background: #3b82f6; margin-top: 15px;">💾 Salvează Setările pt ${terenDB.nume}</button>
-                                        <button type="button" onclick="stergeTerenDublaConfirmare(${terenDB.id}, '${terenDB.nume}')" class="buton-rezervare" style="background: #ef4444; margin-top: 10px;">🗑️ Șterge Terenul</button>
+                                        <button id="btn-save-${terenDB.id}" type="button" onclick="salveazaSetariTeren('${window.escapeJs(terenDB.id)}', '${window.escapeJs(terenDB.nume)}')" class="buton-rezervare" style="background: #3b82f6; margin-top: 15px;">💾 Salvează Setările pt ${window.escapeHtml(terenDB.nume)}</button>
+                                        <button ${contLogatGlobal.is_super ? '' : 'hidden'} type="button" onclick="stergeTerenDublaConfirmare('${window.escapeJs(terenDB.id)}', '${window.escapeJs(terenDB.nume)}')" class="buton-rezervare" style="background: #ef4444; margin-top: 10px;">🗑️ Șterge Terenul</button>
                                     </div>
                                 </div>
                             </div>
@@ -532,7 +534,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <button class="btn-cont" onclick="window.inchideSubPaginaOras()">
                                     ⬅️ Înapoi
                                 </button>
-                                <h1 style="color: white; margin: 0; margin-left: 20px; font-size: 24px;">🌍 Terenuri din ${oras}</h1>
+                                <h1 style="color: white; margin: 0; margin-left: 20px; font-size: 24px;">🌍 Terenuri din ${window.escapeHtml(oras)}</h1>
                             </div>
                             <div class="grila-sporturi" style="display: grid; gap: 20px;">
                                 ${carduriTerenuri}
@@ -564,6 +566,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await db.auth.signOut();
         }
         btn.innerText = "Intră în Sistem";
+        btn.disabled = false;
     });
 
     window.blocheazaZiuaIntreaga = async function(numeTeren, idTeren, event) {
@@ -571,7 +574,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!dataInput) return alert("Alege o dată din calendar mai întâi!");
         const d = new Date(dataInput);
         const zile = ["Dum", "Lun", "Mar", "Mie", "Joi", "Vin", "Sâm"];
-        const dataFormata = `${zile[d.getDay()]}, ${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+        const dataFormata = dataInput;
         if (!confirm(`Ești sigur că blochezi complet terenul ${numeTeren} pe data de ${dataFormata}?`)) return;
 
         const btn = event.target; const textVechi = btn.innerText; btn.innerText = "Se blochează..."; btn.disabled = true;
@@ -600,7 +603,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!dataInput) return alert("Alege o dată!");
         const d = new Date(dataInput);
         const zile = ["Dum", "Lun", "Mar", "Mie", "Joi", "Vin", "Sâm"];
-        const dataFormata = `${zile[d.getDay()]}, ${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+        const dataFormata = dataInput;
         if (!confirm(`Deblochezi terenul ${numeTeren} pe ${dataFormata}?`)) return;
 
         const btn = event.target; const textVechi = btn.innerText; btn.innerText = "Așteaptă..."; btn.disabled = true;
@@ -630,7 +633,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (fileInput && fileInput.files && fileInput.files[0]) {
             const file = fileInput.files[0];
             const ext = file.name.split('.').pop();
-            const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${ext}`;
+            const { data: currentAuth } = await db.auth.getUser();
+            if (!currentAuth.user) { if (btnSave) btnSave.disabled = false; return alert('Autentifică-te din nou.'); }
+            const fileName = `${currentAuth.user.id}/${crypto.randomUUID()}.${ext}`;
             
             const { error: uploadError } = await db.storage.from('poze_terenuri').upload(fileName, file);
                 
@@ -663,7 +668,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!client || !dataInput || !pret) return alert("Completează câmpurile!");
         const d = new Date(dataInput);
         const zile = ["Dum", "Lun", "Mar", "Mie", "Joi", "Vin", "Sâm"];
-        const dataFormata = `${zile[d.getDay()]}, ${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+        const dataFormata = dataInput;
 
         document.getElementById('btn-rezervare-manuala').innerText = "Se verifică...";
         const { data: dublura } = await db.from('rezervari').select('id').eq('teren', terenAles).eq('data_str', dataFormata).eq('ora', oraAlesa).neq('stare', 'anulata');
@@ -712,7 +717,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (fileInput && fileInput.files && fileInput.files[0]) {
             const file = fileInput.files[0];
             const ext = file.name.split('.').pop();
-            const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${ext}`;
+            const { data: currentAuth } = await db.auth.getUser();
+            if (!currentAuth.user) { btn.disabled = false; return alert('Autentifică-te din nou.'); }
+            const fileName = `${currentAuth.user.id}/${crypto.randomUUID()}.${ext}`;
             
             // Urcăm fișierul fizic în Storage (Bucket: poze_terenuri)
             const { data: uploadData, error: uploadError } = await db.storage
@@ -756,7 +763,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const { error } = await db.from('users_admin').insert([{ nume_admin: nume, email: email, is_super: esteSuper, terenuri: esteSuper ? "ALL" : listaTerenuri }]);
         if (!error) { 
-            alert(`✅ Rol și Terenuri alocate cu succes! Nu uita să creezi parola pentru ${email} din contul tău Supabase.`); 
+            alert(`✅ Rol și terenuri alocate pentru contul Auth existent: ${email}.`);
             document.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false); 
             document.getElementById('super-nume').value = "";
             document.getElementById('super-email').value = "";
@@ -783,7 +790,7 @@ document.addEventListener('DOMContentLoaded', () => {
         data.sort((a, b) => b.id - a.id);
         let html = ""; let rezervariGasite = 0;
 
-        const terenurileLui = contLogatGlobal.is_super ? [] : (contLogatGlobal.terenuri ? contLogatGlobal.terenuri.split(',') : []);
+        const terenurileLui = contLogatGlobal.is_super ? [] : (contLogatGlobal.terenuri ? contLogatGlobal.terenuri.split(',').map(n => n.trim()).filter(Boolean) : []);
         const acum = new Date();
 
         const txtActiva = window.lang === 'hu' ? 'AKTÍV' : 'ACTIVĂ';
@@ -798,22 +805,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!contLogatGlobal.is_super && !terenurileLui.includes(r.teren)) return;
             rezervariGasite++;
 
-            let esteTrecuta = false;
-            const matchData = r.data_str.match(/\d{1,2}\.\d{1,2}/); 
-            if (matchData && r.stare !== 'anulata') {
-                const [zi, luna] = matchData[0].split('.');
-                const oraRezervareNumar = parseInt(r.ora.split(':')[0]);
-                let anCurent = acum.getFullYear();
-                if (r.timestamp_start) {
-                    const dataCreare = new Date(r.timestamp_start);
-                    anCurent = dataCreare.getFullYear();
-                    if (dataCreare.getMonth() === 11 && parseInt(luna) === 1) anCurent++;
-                } else {
-                    if (acum.getMonth() === 11 && parseInt(luna) === 1) anCurent++;
-                }
-                const dataTerminarii = new Date(anCurent, parseInt(luna) - 1, parseInt(zi), oraRezervareNumar, 59, 59);
-                if (dataTerminarii < acum) esteTrecuta = true;
-            }
+            const esteTrecuta = window.bookingEnded(r.data_str, r.ora);
 
             const eAnulata = r.stare === 'anulata';
             const eBlocaj = r.email_client === 'Teren Blocat';
@@ -825,7 +817,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (eAnulata) { culoareBorder = '#ef4444'; culoareTitlu = '#ef4444'; opacitate = '0.7'; textStare = `<span style="color: #ef4444; font-weight: bold;">[${txtAnulata}]</span>`; } 
             else if (eBlocaj) { culoareBorder = '#ef4444'; culoareTitlu = '#ef4444'; textStare = `<span style="color: #ef4444; font-weight: bold;">[${txtBlocata}]</span>`; } 
             else if (esteTrecuta) { culoareBorder = '#6b7280'; culoareTitlu = '#9ca3af'; opacitate = '0.85'; textStare = `<span style="color: #9ca3af; font-weight: bold;">[${txtFinalizata}]</span>`; } 
-            else { butonAnulare = `<button onclick="anuleazaRezervareAdmin(${r.id})" style="margin-top: 10px; background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; width: 100%;">${txtBtnAnuleaza}</button>`; }
+            else { butonAnulare = `<button onclick="anuleazaRezervareAdmin('${window.escapeJs(r.id)}')" style="margin-top: 10px; background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; width: 100%;">${txtBtnAnuleaza}</button>`; }
 
             const dataTradusa = (typeof window.traduData === 'function') ? window.traduData(r.data_str) : r.data_str;
 
@@ -834,12 +826,12 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (contGasit) {
                 let infoClientList = [];
-                if(contGasit.nume) infoClientList.push(`Nume: ${contGasit.nume}`);
-                if(contGasit.telefon) infoClientList.push(`Tel: ${contGasit.telefon}`);
-                infoClientList.push(`Email: ${contGasit.email}`);
+                if(contGasit.nume) infoClientList.push(`Nume: ${window.escapeHtml(contGasit.nume)}`);
+                if(contGasit.telefon) infoClientList.push(`Tel: ${window.escapeHtml(contGasit.telefon)}`);
+                infoClientList.push(`Email: ${window.escapeHtml(contGasit.email)}`);
                 textClientAfisat = infoClientList.join(' | ');
             } else if (!eBlocaj) {
-                textClientAfisat = `${r.email_client} (Manual)`;
+                textClientAfisat = `${window.escapeHtml(r.email_client)} (Manual)`;
             } else {
                 textClientAfisat = "Sistem Blocare";
             }
@@ -847,10 +839,10 @@ document.addEventListener('DOMContentLoaded', () => {
             html += `
                 <div style="background: rgba(255,255,255,0.1); border: 1px solid ${culoareBorder}; padding: 15px; margin: 0; border-radius: 8px; color: white; opacity: ${opacitate}; display: flex; flex-direction: column; justify-content: space-between;">
                     <div>
-                        <h4 style="margin: 0 0 10px 0; color: ${culoareTitlu};">⚽ ${r.sport} - ${r.teren} ${textStare}</h4>
+                        <h4 style="margin: 0 0 10px 0; color: ${culoareTitlu};">⚽ ${window.escapeHtml(r.sport)} - ${window.escapeHtml(r.teren)} ${textStare}</h4>
                         <p style="margin: 5px 0;"><strong>📅 ${txtCand}:</strong> ${dataTradusa} ( ${r.ora} )</p>
                         <p style="margin: 5px 0; font-size: 13px;"><strong>👤 Client:</strong> ${textClientAfisat}</p>
-                        <p style="margin: 5px 0;"><strong>💰 ${txtPret}:</strong> ${r.pret_total}</p>
+                        <p style="margin: 5px 0;"><strong>💰 ${txtPret}:</strong> ${window.escapeHtml(r.pret_total)}</p>
                     </div>
                     ${butonAnulare}
                 </div>`;
@@ -888,7 +880,7 @@ document.addEventListener('DOMContentLoaded', () => {
         chatAdminRealtime = db.channel('mesaje_chat_admin')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'mesaje_chat' }, payload => {
                 const terenMesaj = payload.new ? payload.new.teren : null;
-                const terenurileAdmin = contLogatGlobal.is_super ? [] : (contLogatGlobal.terenuri ? contLogatGlobal.terenuri.split(',') : []);
+                const terenurileAdmin = contLogatGlobal.is_super ? [] : (contLogatGlobal.terenuri ? contLogatGlobal.terenuri.split(',').map(n => n.trim()).filter(Boolean) : []);
                 
                 // Dacă adminul e superadmin SAU are acces la terenul din mesaj
                 if (contLogatGlobal.is_super || terenurileAdmin.includes(terenMesaj)) {
@@ -914,7 +906,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let query = db.from('mesaje_chat').select('*').order('created_at', { ascending: true });
         
         if (!contLogatGlobal.is_super) {
-            const terenurileAdmin = contLogatGlobal.terenuri ? contLogatGlobal.terenuri.split(',') : [];
+            const terenurileAdmin = contLogatGlobal.terenuri ? contLogatGlobal.terenuri.split(',').map(n => n.trim()).filter(Boolean) : [];
             query = query.in('teren', terenurileAdmin);
         }
 
@@ -987,8 +979,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (esteSelectat) card.style.borderColor = 'white';
             
             card.innerHTML = `
-                <h4>👤 ${numeAfisat} <span style="font-size: 11px; color:#aaa; font-weight:normal;">(${conv.teren})</span></h4>
-                <p>${ultimulMesaj}</p>
+                <h4>👤 ${window.escapeHtml(numeAfisat)} <span style="font-size: 11px; color:#aaa; font-weight:normal;">(${window.escapeHtml(conv.teren)})</span></h4>
+                <p>${window.escapeHtml(ultimulMesaj)}</p>
             `;
             
             card.addEventListener('click', () => {
@@ -1055,10 +1047,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (m.expeditor === 'admin') {
                 bula.className = 'mesaj-bula mesaj-trimis';
                 let culoareBife = m.citit ? 'bife-albastre' : 'bife-gri';
-                bula.innerHTML = `${m.mesaj} <span class="mesaj-timestamp">${dataOraFormata} <span class="bife-citit ${culoareBife}">✓✓</span></span>`;
+                bula.innerHTML = `${window.escapeHtml(m.mesaj)} <span class="mesaj-timestamp">${dataOraFormata} <span class="bife-citit ${culoareBife}">✓✓</span></span>`;
             } else {
                 bula.className = 'mesaj-bula mesaj-primit';
-                bula.innerHTML = `${m.mesaj} <span class="mesaj-timestamp">${dataOraFormata}</span>`;
+                bula.innerHTML = `${window.escapeHtml(m.mesaj)} <span class="mesaj-timestamp">${dataOraFormata}</span>`;
                 if (!m.citit) idUriDeMarcat.push(m.id);
             }
             container.appendChild(bula);
@@ -1201,16 +1193,12 @@ window.schimbaStareNoua = function(select, teren, data, ora) {
         select.style.borderColor = '#f59e0b';
     } else if (val === 'blocat') {
         form.style.display = 'none';
-                if (m.id === 'modal-chat-admin') { const inp = document.getElementById('chat-admin-input'); if (inp) inp.value = ''; }
-                if (m.id === 'modal-adauga-teren') { window.deschideModalAdaugaTeren(); m.style.display = 'none'; }
         txtLiber.style.display = 'inline-block';
         select.style.borderColor = '#ef4444';
         window.blocheazaOraSinguraAdmin(teren, data, ora);
         select.value = 'liber'; 
     } else {
         form.style.display = 'none';
-                if (m.id === 'modal-chat-admin') { const inp = document.getElementById('chat-admin-input'); if (inp) inp.value = ''; }
-                if (m.id === 'modal-adauga-teren') { window.deschideModalAdaugaTeren(); m.style.display = 'none'; }
         txtLiber.style.display = 'inline-block';
         select.style.borderColor = '#22c55e';
     }
