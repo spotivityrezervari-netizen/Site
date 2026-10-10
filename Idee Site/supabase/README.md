@@ -4,6 +4,10 @@ Acest pachet conține migrarea bazei de date și frontend-ul compatibil. Pregăt
 
 Pe **10 octombrie 2026**, migrarea completă a fost aplicată în proiectul autorizat **Rendez-Vous**, referința `ndubcdwohqzgxpuiowye`, prin Management API. Au fost păstrate conturile Auth și datele existente; alocarea JSONB a superadminului a fost convertită la text și legată de UUID-ul Auth. Înainte de aplicare au trecut reproducerea izolată a structurii/datelor reale și o probă pe proiect închisă cu rollback. Copiile private ale datelor tabelelor aplicației și ale metadatelor nu sunt în Git și nu reprezintă un backup complet Supabase; fișierele Storage nu au fost modificate.
 
+Verificările după aplicare au confirmat RLS pe cele șase tabele gestionate, refuzarea citirii anonime a datelor private, accesul propriu pentru cele patru conturi de client, accesul superadminului și accesul limitat al unui admin alocat. Proba pentru adminul alocat s-a închis cu rollback și nu a schimbat rolul existent. Au rămas **4 profile, 1 superadmin, 5 terenuri, 43 rezervări, 12 mesaje și 8 obiecte Storage**; conturile Auth și definițiile/stările webhook-urilor originale au rămas neschimbate. Citirile publice ale terenurilor/disponibilității și încărcarea imaginilor din Supabase au trecut și în browserul local.
+
+Frontend-ul compatibil și SQL-ul sunt acum în **`main`**. Repository-ul nu conține configurarea hostingului; versiunea efectiv servită de domeniul public trebuie verificată pe serviciul de găzduire. Configurația Auth existentă a fost păstrată: înregistrarea este activă, emailurile sunt confirmate automat, iar SMTP personalizat nu este configurat. Pentru emailurile de confirmare/resetare în producție, configurează și testează SMTP în Supabase înainte de a activa confirmarea obligatorie a emailului.
+
 ## 1. Ce va putea face fiecare rol
 
 | Rol | Date și operații permise |
