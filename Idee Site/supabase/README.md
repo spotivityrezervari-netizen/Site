@@ -20,6 +20,7 @@ Superadminul este un rol al aplicației, nu proprietarul proiectului Supabase. N
 Deschide ramura `codex/spotivity-rls-security` în GitHub, apoi folderul `Idee Site/supabase`:
 
 - [000_preflight.sql](000_preflight.sql): inventar fără modificări, pentru verificarea bazei existente.
+- [000_rpc_review.sql](000_rpc_review.sql): diagnostic fără modificări dacă migrarea se oprește pentru funcții publice `SECURITY DEFINER`.
 - [001_security.sql](001_security.sql): migrarea completă, inclusiv RLS, funcții, trigger-e, Storage și disponibilitate.
 - [002_admin_examples.sql](002_admin_examples.sql): exemple pentru primul superadmin și adminii alocați.
 
@@ -47,6 +48,18 @@ Verifică înainte de migrare:
 - Funcțiile RPC publice `SECURITY DEFINER` și view-urile/materialized view-urile expuse. Migrarea refuză funcții apelabile sau view-uri care pot ocoli RLS pe datele private. Analizează fiecare caz separat; nu elimina verificarea pentru a forța aplicarea. Un view poate necesita `security_invoker = true` și grant-uri potrivite; un materialized view necesită un design separat.
 
 Dacă primești o eroare pe care nu o înțelegi, păstrează mesajul exact și verifică problema în proiectul de test înainte de a modifica proiectul real.
+
+### Eroarea „Review exposed public SECURITY DEFINER RPCs”
+
+Această verificare se execută înainte de modificările bazei din `001_security.sql`. Mesajul arată că există funcții publice care rulează cu drepturile proprietarului și pot fi apelate de vizitatori sau utilizatori autentificați; nu demonstrează singur că fiecare funcție este nesigură.
+
+1. Deschide `000_rpc_review.sql` în GitHub, apasă **Raw** și copiază tot codul.
+2. În **SQL Editor → New query**, rulează acest diagnostic separat ca `postgres`. Afișează doar funcțiile care declanșează blocajul, semnăturile lor exacte, permisiunile și codul SQL. Nu schimbă date sau permisiuni.
+3. Verifică definițiile și utilizarea în site, politici, trigger-e și integrări. Păstrează acest rezultat pentru revizuire înainte de a decide ce acces retragi. Dacă o definiție conține chei sau parole, elimină-le din copia pe care o distribui.
+4. Pentru o funcție identificată și confirmată ca nefolosită de clienții API, se poate retrage punctual dreptul `EXECUTE` de la `PUBLIC`, `anon` și `authenticated`, fără ștergerea funcției. Includerea `PUBLIC` contează deoarece permisiunea implicită poate fi moștenită. Funcțiile necesare trebuie adaptate după analizarea codului și a dependențelor, nu dezactivate în bloc.
+5. Repetă diagnosticul după corecție. Dacă nu mai există funcții care declanșează această verificare, rulează din nou întregul `001_security.sql`; celelalte verificări ale migrării se aplică în continuare.
+
+Nu elimina verificarea din migrare pentru a forța aplicarea. Dacă o interogare ulterioară afișează `25P02`/„current transaction is aborted”, rulează separat `ROLLBACK;`, apoi repetă diagnosticul; această comandă închide tranzacția eșuată.
 
 ## 5. Configurează autentificarea
 
