@@ -51,7 +51,13 @@ Dacă primești o eroare pe care nu o înțelegi, păstrează mesajul exact și 
 
 ### Eroarea „Review exposed public SECURITY DEFINER RPCs”
 
-Această verificare se execută înainte de modificările bazei din `001_security.sql`. Mesajul arată că există funcții publice care rulează cu drepturile proprietarului și pot fi apelate de vizitatori sau utilizatori autentificați; nu demonstrează singur că fiecare funcție este nesigură.
+Mesajul arată că există funcții publice care rulează cu drepturile proprietarului și pot fi apelate de vizitatori sau utilizatori autentificați; nu demonstrează singur că fiecare funcție este nesigură. Dacă această verificare oprește migrarea, nicio modificare din tranzacția ei nu se aplică.
+
+Definiția veche a `public.is_admin()` trimisă în CSV a fost verificată: testa apartenența la `users_admin` prin emailul din JWT. Versiunea actualizată a `001_security.sql` recunoaște strict această definiție și o convertește în aceeași tranzacție la `SECURITY INVOKER`, cu `search_path` fix și verificare prin `auth.uid()`/`user_id`. Păstrează funcția și referințele politicilor existente. Pentru vizitatori returnează `false` fără să citească tabelul privat; pentru utilizatorii autentificați respectă RLS. Nu este necesară ștergerea funcției sau retragerea separată a permisiunilor.
+
+**Pentru acest caz:** deschide versiunea actualizată a `001_security.sql` în GitHub, apasă **Raw**, înlocuiește întregul conținut al interogării vechi din SQL Editor și rulează întregul script după backup/verificarea în test. Conversia funcției și migrarea se confirmă împreună; o eroare ulterioară le anulează pe ambele. Orice altă definiție `SECURITY DEFINER` sau alt RPC rămâne blocat pentru revizuire.
+
+Pentru alte funcții care declanșează această eroare:
 
 1. Deschide `000_rpc_review.sql` în GitHub, apasă **Raw** și copiază tot codul.
 2. În **SQL Editor → New query**, rulează acest diagnostic separat ca `postgres`. Afișează doar funcțiile care declanșează blocajul, semnăturile lor exacte, permisiunile și codul SQL. Nu schimbă date sau permisiuni.
@@ -164,7 +170,7 @@ SITE_BASE_URL=http://127.0.0.1:8002/ node supabase/tests/browser.test.cjs
 
 În mediul cloud curent, PGlite este instalat în `/workspace/shared/spotivity-rls-validation`; adaugă acel `node_modules` la `NODE_PATH` pentru a-l găsi. Testul browser necesită Playwright, Chromium și acces la baza de certificate de încredere. Aceste instalări nu modifică dependențele aplicației și nu sunt necesare pentru publicarea site-ului static.
 
-Rezultatele versiunii actualizate: **50 de verificări SQL pentru fiecare variantă de ID-uri, UUID și numerice, și 11 verificări în browser**, toate trecute în mediul izolat.
+Rezultatele versiunii actualizate: **57 de verificări SQL pentru fiecare variantă de ID-uri, UUID și numerice, și 11 verificări în browser**, toate trecute în mediul izolat. Verificările includ conversia definiției vechi a `is_admin()`, păstrarea politicilor dependente și anularea tranzacției pentru alte funcții nerevizuite.
 
 Testele SQL folosesc roluri PostgreSQL reale și verifică regulile RLS și trigger-ele pentru ID-uri UUID și numerice. Testele browser folosesc SDK-ul Supabase real și o simulare Auth/REST care execută cererile în aceeași bază izolată; cererile către proiectul găzduit sunt interceptate. Acoperă autentificarea, înregistrarea, rezervarea, anularea, logout-ul, rolurile, afișarea sigură a mesajelor și ecranul mobil.
 

@@ -207,6 +207,83 @@ let passed = 0;
       assert.equal((await as('authenticated',6,'select * from public.rezervari')).rows.length,0);
       assert.equal((await as('authenticated',6,'select * from public.mesaje_chat')).rows.length,0);
     });
+    const legacyAdminHelper = `
+      create function auth.jwt() returns jsonb language sql stable as $$
+        select jsonb_build_object('email',current_setting('request.jwt.claim.email',true))
+      $$;
+      create function public.is_admin() returns boolean language plpgsql security definer as $$
+      BEGIN
+        RETURN EXISTS (
+          SELECT 1 FROM public.users_admin WHERE lower(email) = lower(auth.jwt() ->> 'email')
+        );
+      END;
+      $$;
+      create policy legacy_admin_images on storage.objects for insert to authenticated
+        with check (bucket_id = 'poze_terenuri' and public.is_admin());
+    `.replaceAll('\n','\r\n');
+    const reviewed = new PGlite();
+    try {
+      await reviewed.exec(schema);
+      await reviewed.exec(legacyAdminHelper);
+      const oldFunctionOid=(await reviewed.query("select 'public.is_admin()'::regprocedure::oid as oid")).rows[0].oid;
+      const oldPolicyOid=(await reviewed.query("select oid from pg_policy where polname='legacy_admin_images'")).rows[0].oid;
+      const reviewedAs = async (role, person, email, sql) => {
+        await reviewed.exec(`reset role;
+          select set_config('request.jwt.claim.sub','${person ? uid(person) : ''}',false);
+          select set_config('request.jwt.claim.email','${email}',false);
+          set role ${role};`);
+        return reviewed.query(sql);
+      };
+      await check('reviewed legacy is_admin becomes an invoker without losing its OID', async () => {
+        await reviewed.exec(migration);
+        const fn=(await reviewed.query("select oid,prosecdef,provolatile,proconfig from pg_proc where oid='public.is_admin()'::regprocedure")).rows[0];
+        assert.equal(fn.oid,oldFunctionOid);
+        assert.equal(fn.prosecdef,false);
+        assert.equal(fn.provolatile,'s');
+        assert.ok(fn.proconfig.includes('search_path=""'));
+      });
+      await check('reviewed helper returns false to anonymous without private table grants', async () => {
+        assert.equal((await reviewedAs('anon',null,'admin@example.test','select public.is_admin() as allowed')).rows[0].allowed,false);
+      });
+      await check('reviewed helper uses UUID instead of an admin email claim', async () => {
+        assert.equal((await reviewedAs('authenticated',1,'admin@example.test','select public.is_admin() as allowed')).rows[0].allowed,false);
+        for (const person of [3,4]) {
+          assert.equal((await reviewedAs('authenticated',person,'alice@example.test','select public.is_admin() as allowed')).rows[0].allowed,true);
+        }
+      });
+      await check('dependent legacy image policy survives with scoped write guards', async () => {
+        await reviewed.exec('reset role');
+        assert.equal((await reviewed.query("select oid from pg_policy where polname='legacy_admin_images'")).rows[0].oid,oldPolicyOid);
+        assert.equal((await reviewed.query("select count(*)::integer as n from pg_depend where classid='pg_policy'::regclass and objid=$1 and refclassid='pg_proc'::regclass and refobjid=$2",[oldPolicyOid,oldFunctionOid])).rows[0].n,1);
+        await reviewedAs('authenticated',3,'alice@example.test',`insert into storage.objects(bucket_id,name) values('poze_terenuri','${uid(3)}/legacy-policy.png')`);
+        await denied(() => reviewedAs('authenticated',3,'alice@example.test',`insert into storage.objects(bucket_id,name) values('poze_terenuri','${uid(4)}/outside-scope.png')`));
+        await denied(() => reviewedAs('authenticated',1,'admin@example.test',`insert into storage.objects(bucket_id,name) values('poze_terenuri','${uid(1)}/spoofed-email.png')`));
+      });
+      await check('reviewed helper migration reruns without changing its identity', async () => {
+        await reviewed.exec("reset role; select set_config('request.jwt.claim.sub','',false)");
+        await reviewed.exec(migration);
+        assert.equal((await reviewed.query("select 'public.is_admin()'::regprocedure::oid as oid")).rows[0].oid,oldFunctionOid);
+        assert.equal((await reviewedAs('authenticated',3,'alice@example.test','select public.is_admin() as allowed')).rows[0].allowed,true);
+      });
+    } finally { await reviewed.close(); }
+    for (const [label, setup] of [
+      ['another public definer RPC', "create function public.other_unsafe_rpc() returns text language sql security definer as $$ select 'unsafe' $$"],
+      ['an unreviewed is_admin body', "create or replace function public.is_admin() returns boolean language plpgsql security definer as $$ begin return true; end; $$"],
+    ]) {
+      await check(`legacy helper repair aborts atomically: ${label}`, async () => {
+        const isolated = new PGlite();
+        try {
+          await isolated.exec(schema);
+          await isolated.exec(legacyAdminHelper);
+          await isolated.exec(setup);
+          const before=(await isolated.query("select oid,prosecdef,prosrc from pg_proc where oid='public.is_admin()'::regprocedure")).rows[0];
+          await denied(() => isolated.exec(migration));
+          await isolated.exec('rollback');
+          assert.deepEqual((await isolated.query("select oid,prosecdef,prosrc from pg_proc where oid='public.is_admin()'::regprocedure")).rows[0],before);
+          assert.equal((await isolated.query("select column_name from information_schema.columns where table_schema='public' and table_name='users_admin' and column_name='user_id'")).rows.length,0);
+        } finally { await isolated.close(); }
+      });
+    }
     for (const [label, setup] of [
       ['duplicate profile emails', "insert into public.clienti(nume,email) values('Duplicate','ALICE@example.test')"],
       ['unbound privileged roles', "insert into public.users_admin(nume_admin,email,is_super,terenuri) values('Unknown','missing@example.test',true,'ALL')"],

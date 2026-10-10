@@ -3,6 +3,36 @@
 begin;
 set local datestyle = 'ISO, YMD';
 
+-- Compatibility for the exact legacy is_admin() definition reviewed from the
+-- supplied CSV. Keep its OID/old policy references, but use UUID ownership and
+-- the caller's RLS. This conversion commits only with the complete migration.
+-- Any different SECURITY DEFINER body still reaches the review guard below.
+do $reviewed_is_admin$
+begin
+  if exists (
+    select 1 from pg_proc p join pg_language l on l.oid = p.prolang
+    where p.oid = to_regprocedure('public.is_admin()')
+      and p.prokind = 'f' and p.pronargs = 0 and not p.proretset
+      and p.prorettype = 'boolean'::regtype and l.lanname = 'plpgsql'
+      and p.prosecdef
+      and lower(regexp_replace(p.prosrc, '[[:space:]]+', '', 'g')) =
+        'beginreturnexists(select1frompublic.users_adminwherelower(email)=lower(auth.jwt()->>''email''));end;'
+  ) then
+    execute $replacement$
+      create or replace function public.is_admin() returns boolean
+      language plpgsql stable security invoker set search_path = '' as $body$
+      begin
+        if auth.uid() is null then return false; end if;
+        return exists (
+          select 1 from public.users_admin where user_id = auth.uid()
+        );
+      end;
+      $body$
+    $replacement$;
+  end if;
+end;
+$reviewed_is_admin$;
+
 -- An existing public definer RPC or owner-run view can bypass table RLS.
 -- Stop for review instead of silently breaking or trusting unknown interfaces.
 do $$
