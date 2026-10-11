@@ -315,13 +315,13 @@ html, body {
     .filtre-terenuri { grid-template-columns: minmax(0, 1fr); }
 }
 
-.grila-terenuri { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; align-items: start; }
+.grila-terenuri { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; align-items: start; }
 
-.card-teren-poza { padding: 15px; background: rgba(0, 0, 0, 0.4); border-radius: 20px; overflow: hidden; cursor: pointer; transition: 0.3s; border: 1px solid rgba(255,255,255,0.1); }
+.card-teren-poza { min-width: 0; padding: 15px; background: rgba(0, 0, 0, 0.4); border-radius: 20px; overflow: hidden; cursor: pointer; transition: 0.3s; border: 1px solid rgba(255,255,255,0.1); }
 
 .card-teren-poza:hover { transform: translateY(-3px); border-color: rgba(255,255,255,0.4); }
 
-.card-teren-poza img { display: block; width: 100%; height: auto; object-fit: contain; border-radius: 10px; background: rgba(0, 0, 0, 0.2); }
+.card-teren-poza img { display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: cover; border-radius: 10px; background: rgba(0, 0, 0, 0.2); }
 
 .info-teren-poza { padding: 15px 0 0; text-align: center; }
 
@@ -1147,4 +1147,24 @@ body.fara-scroll {
 
 @media (prefers-reduced-motion: reduce) {
     .notificare-rezervare { animation: none; }
+}
+
+/* Choose the image on its own element so resizing also updates open dialogs. */
+.bg-quad, #fundal-imagine-sport,
+#modal-terenuri .modal-continut, #modal-rezervare .modal-continut {
+    --fundal-ales: var(--fundal-desktop);
+}
+
+@media (max-width: 768px) {
+    .bg-quad, #fundal-imagine-sport,
+    #modal-terenuri .modal-continut, #modal-rezervare .modal-continut {
+        --fundal-ales: var(--fundal-mobil, var(--fundal-desktop));
+    }
+}
+
+/* Keep the sport dialog and the surrounding screen in the same neutral tone. */
+#modal-terenuri, #modal-rezervare { background: rgba(60, 60, 64, 0.7); }
+#modal-terenuri .modal-continut, #modal-rezervare .modal-continut {
+    background-color: rgba(60, 60, 64, 0.7);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.16);
 }

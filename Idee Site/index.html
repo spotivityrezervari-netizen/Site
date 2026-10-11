@@ -9,11 +9,11 @@
     <link rel="icon" type="image/png" href="assets/imagini/avatar2.png">
     <title>Rezervari Sport</title>
     
-    <link rel="stylesheet" href="css/style.css?v=36">
+    <link rel="stylesheet" href="css/style.css?v=38">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/db.js"></script>
     <script src="js/security.js"></script>
-    <script src="js/app.js?v=19" defer></script>
+    <script src="js/app.js?v=20" defer></script>
     <style>
 
         /* Fundal pagina */
@@ -310,6 +310,7 @@
         .bg-quad {
             position: absolute !important;
             background-color: #0f172a;
+            background-image: linear-gradient(rgba(2,6,23,0.6), rgba(2,6,23,0.6)), var(--fundal-ales);
             background-size: 100% 100%, cover !important;
             background-position: center !important;
             background-repeat: no-repeat;
@@ -318,10 +319,10 @@
             width: 50%;
             height: 50%;
         }
-        .bg-quad-1 { top: 0; left: 0; background-image: linear-gradient(rgba(2,6,23,0.6), rgba(2,6,23,0.6)), url('assets/imagini/fundal_fotbal.jpg'); }
-        .bg-quad-2 { top: 0; right: 0; background-image: linear-gradient(rgba(2,6,23,0.6), rgba(2,6,23,0.6)), url('assets/imagini/fundal_baschet.jpg'); }
-        .bg-quad-3 { bottom: 0; left: 0; background-image: linear-gradient(rgba(2,6,23,0.6), rgba(2,6,23,0.6)), url('assets/imagini/fundal_tenis.jpg'); }
-        .bg-quad-4 { bottom: 0; right: 0; background-image: linear-gradient(rgba(2,6,23,0.6), rgba(2,6,23,0.6)), url('assets/imagini/fundal_volei.jpg'); }
+        .bg-quad-1 { top: 0; left: 0; --fundal-desktop: url('assets/imagini/fundal_fotbal.jpg'); --fundal-mobil: url('assets/imagini/fundal_fotbal2p2.png'); }
+        .bg-quad-2 { top: 0; right: 0; --fundal-desktop: url('assets/imagini/fundal_baschet.jpg'); --fundal-mobil: url('assets/imagini/fundal_baschet2p2.png'); }
+        .bg-quad-3 { bottom: 0; left: 0; --fundal-desktop: url('assets/imagini/fundal_tenis.jpg'); --fundal-mobil: url('assets/imagini/fundal_tenis2p2.png'); }
+        .bg-quad-4 { bottom: 0; right: 0; --fundal-desktop: url('assets/imagini/fundal_volei.jpg'); --fundal-mobil: url('assets/imagini/fundal_volei2p2.png'); }
 
         @media (max-width: 768px) {
             /* Revenim la grila in cruce 2x2 pe telefon */

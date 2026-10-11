@@ -555,11 +555,27 @@ document.addEventListener('DOMContentLoaded', async () => {
             ? valoare.split('-').reverse().join('.') : '';
     }
 
+    function seteazaFundalSport(element, sport, suprapunere = false) {
+        if (!element) return;
+        const baza = `assets/imagini/fundal_${sport}`;
+        element.style.setProperty('--fundal-desktop', `url("${new URL(baza + '.jpg', document.baseURI).href}")`);
+        element.style.setProperty('--fundal-mobil', `url("${new URL(baza + '2p2.png', document.baseURI).href}")`);
+        const stratGri = 'linear-gradient(rgba(60, 60, 64, 0.7), rgba(60, 60, 64, 0.7)), ';
+        element.style.backgroundImage = (suprapunere ? stratGri : '') + 'var(--fundal-ales)';
+        element.style.backgroundSize = suprapunere ? '100% 100%, cover' : 'cover';
+        element.style.backgroundRepeat = 'no-repeat';
+        element.style.backgroundPosition = 'center';
+    }
+
     function reseteazaFundalSport() {
         const fundal = document.getElementById('fundal-imagine-sport');
         if (fundal) fundal.style.opacity = '0';
         document.querySelectorAll('#modal-terenuri .modal-continut, #modal-rezervare .modal-continut')
-            .forEach(modal => { modal.style.backgroundImage = ''; });
+            .forEach(modal => {
+                modal.style.backgroundImage = '';
+                modal.style.removeProperty('--fundal-desktop');
+                modal.style.removeProperty('--fundal-mobil');
+            });
     }
 
     let temporizatorNotificareRezervare;
@@ -591,16 +607,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const bgStr = (sportStr === 'tenis_picior') ? 'fotbal' : sportStr;
                 
                 // Punem background-ul pe ecranul principal (in spatele modalului)
-                bgDiv.style.backgroundImage = `url('assets/imagini/fundal_${bgStr}.jpg')`;
-                bgDiv.style.opacity = '0.8';
+                seteazaFundalSport(bgDiv, bgStr);
+                bgDiv.style.opacity = '1';
                 
                 // Punem background-ul STRICT IN FEREASTRA (modal-continut)
                 const modalContinut = document.querySelector('#modal-terenuri .modal-continut');
                 if (modalContinut) {
-                    modalContinut.style.backgroundImage = `linear-gradient(rgba(10, 15, 30, 0.7), rgba(10, 15, 30, 0.7)), url('assets/imagini/fundal_${bgStr}.jpg')`;
-                    modalContinut.style.backgroundSize = '100% 100%, cover';
-                    modalContinut.style.backgroundRepeat = 'no-repeat';
-                    modalContinut.style.backgroundPosition = 'center';
+                    seteazaFundalSport(modalContinut, bgStr, true);
                 }
             }
             
@@ -687,10 +700,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (modalRezervare && sportCurent) {
             const sportStr = sportCurent.toLowerCase().replace(/\s+/g, '_');
             const bgStr = (sportStr === 'tenis_picior') ? 'fotbal' : sportStr;
-            modalRezervare.style.backgroundImage = `linear-gradient(rgba(10, 15, 30, 0.7), rgba(10, 15, 30, 0.7)), url('assets/imagini/fundal_${bgStr}.jpg')`;
-            modalRezervare.style.backgroundSize = '100% 100%, cover';
-            modalRezervare.style.backgroundRepeat = 'no-repeat';
-            modalRezervare.style.backgroundPosition = 'center';
+            seteazaFundalSport(modalRezervare, bgStr, true);
         }
         
         window.genereazaZile();
@@ -709,16 +719,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const bgStr = (sportStr === 'tenis_picior') ? 'fotbal' : sportStr;
                 
                 // Punem background-ul pe ecranul principal (in spatele modalului)
-                bgDiv.style.backgroundImage = `url('assets/imagini/fundal_${bgStr}.jpg')`;
-                bgDiv.style.opacity = '0.8';
+                seteazaFundalSport(bgDiv, bgStr);
+                bgDiv.style.opacity = '1';
                 
                 // Punem background-ul STRICT IN FEREASTRA (modal-continut)
                 const modalContinut = document.querySelector('#modal-terenuri .modal-continut');
                 if (modalContinut) {
-                    modalContinut.style.backgroundImage = `linear-gradient(rgba(10, 15, 30, 0.7), rgba(10, 15, 30, 0.7)), url('assets/imagini/fundal_${bgStr}.jpg')`;
-                    modalContinut.style.backgroundSize = '100% 100%, cover';
-                    modalContinut.style.backgroundRepeat = 'no-repeat';
-                    modalContinut.style.backgroundPosition = 'center';
+                    seteazaFundalSport(modalContinut, bgStr, true);
                 }
             } });
     document.getElementById('inchide-rezervare')?.addEventListener('click', () => {
