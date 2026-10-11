@@ -6,7 +6,9 @@ Pe **10 octombrie 2026**, migrarea completă a fost aplicată în proiectul auto
 
 Verificările după aplicare au confirmat RLS pe cele șase tabele gestionate, refuzarea citirii anonime a datelor private, accesul propriu pentru cele patru conturi de client, accesul superadminului și accesul limitat al unui admin alocat. Proba pentru adminul alocat s-a închis cu rollback și nu a schimbat rolul existent. Au rămas **4 profile, 1 superadmin, 5 terenuri, 43 rezervări, 12 mesaje și 8 obiecte Storage**; conturile Auth și definițiile/stările webhook-urilor originale au rămas neschimbate. Citirile publice ale terenurilor/disponibilității și încărcarea imaginilor din Supabase au trecut și în browserul local.
 
-Frontend-ul compatibil și SQL-ul sunt acum în **`main`**. Repository-ul nu conține configurarea hostingului; versiunea efectiv servită de domeniul public trebuie verificată pe serviciul de găzduire. Configurația Auth existentă a fost păstrată: înregistrarea este activă, emailurile sunt confirmate automat, iar SMTP personalizat nu este configurat. Pentru emailurile de confirmare/resetare în producție, configurează și testează SMTP în Supabase înainte de a activa confirmarea obligatorie a emailului.
+Frontend-ul compatibil și SQL-ul sunt acum în **`main`**. Site-ul indicat de utilizator este [luxury-flan-0eecf9.netlify.app](https://luxury-flan-0eecf9.netlify.app/). Fișierul `netlify.toml` din rădăcina repository-ului configurează publicarea folderului `Idee Site`, fără comandă de build. Accesul HTTPS la adresa Netlify a fost verificat pe 11 octombrie 2026. Versiunea publicată trebuie comparată cu ultimul commit din `main`; domeniul `spotivity.ro` nu a putut fi verificat din mediul cloud.
+
+**Site URL** și adresele de redirect Netlify au fost configurate în Supabase. Înregistrarea și recuperarea parolei trimit adresa originii curente a paginii, verificată de allowlist-ul Supabase. Configurația de confirmare email și SMTP existentă a fost păstrată: înregistrarea este activă, emailurile sunt confirmate automat, iar SMTP personalizat nu este configurat. Pentru emailurile de confirmare/resetare în producție, configurează și testează SMTP în Supabase înainte de a activa confirmarea obligatorie a emailului.
 
 ## 1. Ce va putea face fiecare rol
 
@@ -23,7 +25,7 @@ Superadminul este un rol al aplicației, nu proprietarul proiectului Supabase. N
 
 ## 2. Fișierele pe care le folosești
 
-Deschide ramura `codex/spotivity-rls-security` în GitHub, apoi folderul `Idee Site/supabase`:
+Deschide ramura `main` în GitHub, apoi folderul `Idee Site/supabase`:
 
 - [000_preflight.sql](000_preflight.sql): inventar fără modificări, pentru verificarea bazei existente.
 - [000_rpc_review.sql](000_rpc_review.sql): diagnostic fără modificări dacă migrarea se oprește pentru funcții publice `SECURITY DEFINER`.
@@ -100,8 +102,8 @@ După backup și verificare în proiectul de test, ia **întregul `001_security.
 În Dashboard, denumirile paginilor pot varia puțin între versiunile Supabase:
 
 1. În **Authentication → Sign In / Providers → Email**, păstrează autentificarea cu email/parolă și **Confirm email** activ. Un client înregistrat trebuie să confirme emailul înainte de autentificare.
-2. În **Authentication → URL Configuration**, setează **Site URL** la adresa HTTPS reală a site-ului, de exemplu `https://spotivity.ro/` dacă acesta este domeniul public folosit.
-3. La **Redirect URLs**, adaugă adresele exacte folosite de site pentru confirmare și resetare. Codul actual de resetare folosește `https://spotivity.ro/`; dacă publici pe alt domeniu, adaptează și `redirectTo` din `js/app.js`. Pentru proiectul de test, folosește adresa frontend-ului de test și un redirect de resetare corespunzător în copia de cod. Nu redirecționa utilizatorii de test către producție.
+2. În **Authentication → URL Configuration**, setează **Site URL** la adresa HTTPS reală a site-ului. Pentru site-ul actual este configurat `https://luxury-flan-0eecf9.netlify.app/`. Dacă activezi ulterior un domeniu propriu, actualizează acest câmp la adresa publicată.
+3. La **Redirect URLs**, adaugă adresele exacte folosite de site pentru confirmare și resetare. Adresa Netlify actuală este deja permisă; `js/app.js` trimite originea paginii cu `/` la final, astfel încât utilizatorul revine pe site-ul deschis. Pentru proiectul de test, configurează adresa frontend-ului de test în proiectul Supabase separat. Nu redirecționa utilizatorii de test către producție.
 4. Verifică politica de parole, limitele de autentificare și livrarea mesajelor de confirmare/resetare. Pentru lansare, configurează serviciul de email/SMTP potrivit proiectului și testează efectiv livrarea, inclusiv folderul Spam.
 
 Rolurile se citesc din `users_admin`, legat de UUID-ul Auth. Nu acorda privilegii prin `user_metadata.is_super`, `localStorage` sau un câmp trimis de browser. MFA necesită configurarea și verificarea unui flux separat; acest pachet nu implementează acel flux. Integrările Make.com/backend trebuie să folosească autentificare proprie cu privilegii potrivite.
@@ -167,11 +169,17 @@ Verifică disponibilitatea în două ferestre și chat-ul între client și admi
 
 1. Validează mai întâi proiectul Supabase de test și copia frontend-ului de test.
 2. Pentru producție, repetă preflight-ul, backup-ul, migrarea și verificarea rolurilor în proiectul real.
-3. În GitHub, compară ramura `codex/spotivity-rls-security` cu `main` și integrează modificările după ce baza reală este pregătită. Publicarea poate porni automat când actualizezi `main`, dacă hostingul urmărește acea ramură; verifică setarea hostingului înainte de integrare.
+3. Frontend-ul compatibil este deja în `main`. Pentru actualizări viitoare, compară ramura de lucru cu `main` și integrează modificările după ce baza reală este pregătită. Publicarea poate porni automat când actualizezi `main`, dacă hostingul urmărește acea ramură; verifică setarea hostingului înainte de integrare.
 4. Publică toate fișierele compatibile împreună: `index.html`, `admin.html`, `js/app.js`, `js/admin.js` și noul `js/security.js`. Dacă hostingul servește `Idee Site/`, păstrează acea rădăcină de publicare. Documentația și SQL-ul nu înlocuiesc fișierele frontend.
 5. Verifică în `js/db.js` publicat URL-ul și cheia publică ale proiectului real. Invalidează cache-ul/CDN dacă există și reîncarcă pagina; paginile actualizate folosesc versiuni noi pentru fișierele JS.
 
 Nu publica frontend-ul nou înainte de migrare: folosește coloane și tabelul de disponibilitate care lipsesc din vechea schemă. Revenirea la frontend-ul vechi nu anulează migrarea bazei; pentru o restaurare folosește un plan verificat și backup-ul corespunzător.
+
+### Verificarea publicării în Netlify
+
+În proiectul Netlify **`luxury-flan-0eecf9`**, verifică la configurarea deployment-ului că repository-ul este `spotivityrezervari-netizen/Site` și ramura este `main`. `netlify.toml` fixează baza la rădăcina repository-ului și directorul publicat la `Idee Site`, fără build. În **Deploys**, ultimul deployment de producție trebuie să fie **Published** și să corespundă ultimului commit din `main`. Dacă proiectul este publicat numai prin upload manual, actualizarea GitHub nu publică automat site-ul; conectează repository-ul sau publică folderul actualizat prin mecanismul folosit de proiect.
+
+Versiunea actuală încarcă `css/style.css?v=34`, `js/security.js`, `js/app.js?v=17` și `js/admin.js?v=17`. Verifică pagina principală și `/admin.html`, imaginile publice și disponibilitatea. Pentru autentificare, rezervări, anulări și chat în mediul public, folosește conturi/date de test și verifică refuzul operațiilor nepermise. Testele izolate nu înlocuiesc verificarea unui deployment real.
 
 ## 10. Verificări înainte de lansare
 
@@ -199,7 +207,7 @@ SITE_BASE_URL=http://127.0.0.1:8002/ node supabase/tests/browser.test.cjs
 
 În mediul cloud curent, PGlite este instalat în `/workspace/shared/spotivity-rls-validation`; adaugă acel `node_modules` la `NODE_PATH` pentru a-l găsi. Testul browser necesită Playwright, Chromium și acces la baza de certificate de încredere. Aceste instalări nu modifică dependențele aplicației și nu sunt necesare pentru publicarea site-ului static.
 
-Rezultatele versiunii actualizate: **85 de verificări SQL pentru fiecare variantă de ID-uri, UUID și numerice, și 11 verificări în browser**, toate trecute în mediul izolat. Verificările includ conversia alocărilor JSON/JSONB, păstrarea identităților și a accesului la terenurile alocate, anularea conversiei pentru date sau dependențe incompatibile, conversia definiției vechi a `is_admin()`, blocarea altor funcții nerevizuite și suspendarea/restaurarea exactă a webhook-urilor fără notificări la migrare.
+Rezultatele versiunii actualizate: **85 de verificări SQL pentru fiecare variantă de ID-uri, UUID și numerice, și 13 verificări în browser**, toate trecute în mediul izolat. Verificările includ conversia alocărilor JSON/JSONB, păstrarea identităților și a accesului la terenurile alocate, anularea conversiei pentru date sau dependențe incompatibile, conversia definiției vechi a `is_admin()`, blocarea altor funcții nerevizuite și suspendarea/restaurarea exactă a webhook-urilor fără notificări la migrare. Testele browser verifică și adresa de redirect trimisă prin SDK pentru înregistrare și recuperarea parolei. Afișarea câmpurilor de dată/oră a fost verificată separat în Chromium la șapte dimensiuni de ecran, inclusiv 320–430 px pe mobil și orientare landscape: înălțime de 48 px, lățimi egale, fără depășire orizontală. Data afișată are formatul comun `DD.MM.YYYY`, iar selectorul nativ rămâne funcțional. Fundalurile și fotografiile terenurilor păstrează proporțiile și se afișează integral, cu spațiul liber în culorile existente. Verificarea pe un iPhone real în Safari/DuckDuckGo rămâne necesară; motorul WebKit nu este disponibil în acest mediu.
 
 Testele SQL folosesc roluri PostgreSQL reale și verifică regulile RLS și trigger-ele pentru ID-uri UUID și numerice. Testele browser folosesc SDK-ul Supabase real și o simulare Auth/REST care execută cererile în aceeași bază izolată; cererile către proiectul găzduit sunt interceptate. Acoperă autentificarea, înregistrarea, rezervarea, anularea, logout-ul, rolurile, afișarea sigură a mesajelor și ecranul mobil.
 

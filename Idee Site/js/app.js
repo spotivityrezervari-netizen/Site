@@ -411,7 +411,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const { data: authData, error: authError } = await db.auth.signUp({
             email: email,
             password: parola,
-            options: { data: { nume, telefon } },
+            options: { data: { nume, telefon }, emailRedirectTo: window.location.origin + '/' },
         });
 
         if (authError) {
@@ -545,6 +545,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    function actualizeazaDataFiltrului() {
+        const valoare = document.getElementById('filtru-data')?.value || '';
+        const afisaj = document.getElementById('filtru-data-afisata');
+        if (afisaj) afisaj.textContent = /^\d{4}-\d{2}-\d{2}$/.test(valoare)
+            ? valoare.split('-').reverse().join('.') : '';
+    }
+
     // --- LOGICA TERENURI ---
     document.querySelectorAll('.card-sport').forEach(card => {
         card.addEventListener('click', async () => {
@@ -568,7 +575,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const modalContinut = document.querySelector('#modal-terenuri .modal-continut');
                 if (modalContinut) {
                     modalContinut.style.backgroundImage = `linear-gradient(rgba(10, 15, 30, 0.7), rgba(10, 15, 30, 0.7)), url('assets/imagini/fundal_${bgStr}.jpg')`;
-                    modalContinut.style.backgroundSize = 'cover';
+                    modalContinut.style.backgroundSize = '100% 100%, contain';
+                    modalContinut.style.backgroundRepeat = 'no-repeat';
                     modalContinut.style.backgroundPosition = 'center';
                 }
             }
@@ -576,6 +584,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const aziFormatStandard = window.siteDate();
             const filtruData = document.getElementById('filtru-data');
             if(filtruData) filtruData.value = aziFormatStandard;
+            actualizeazaDataFiltrului();
             const filtruOra = document.getElementById('filtru-ora');
             if(filtruOra) filtruOra.value = 'ALL'; 
             
@@ -630,7 +639,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    document.getElementById('filtru-data')?.addEventListener('change', aplicaFiltruSiDeseneazaTerenuri);
+    document.getElementById('filtru-data')?.addEventListener('input', actualizeazaDataFiltrului);
+    document.getElementById('filtru-data')?.addEventListener('change', () => {
+        actualizeazaDataFiltrului();
+        aplicaFiltruSiDeseneazaTerenuri();
+    });
     document.getElementById('filtru-ora')?.addEventListener('change', aplicaFiltruSiDeseneazaTerenuri);
 
     function incarcaInterfataRezervare(terenDinDB) {
@@ -652,7 +665,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const sportStr = sportCurent.toLowerCase().replace(/\s+/g, '_');
             const bgStr = (sportStr === 'tenis_picior') ? 'fotbal' : sportStr;
             modalRezervare.style.backgroundImage = `linear-gradient(rgba(10, 15, 30, 0.7), rgba(10, 15, 30, 0.7)), url('assets/imagini/fundal_${bgStr}.jpg')`;
-            modalRezervare.style.backgroundSize = 'cover';
+            modalRezervare.style.backgroundSize = '100% 100%, contain';
+            modalRezervare.style.backgroundRepeat = 'no-repeat';
             modalRezervare.style.backgroundPosition = 'center';
         }
         
@@ -680,7 +694,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const modalContinut = document.querySelector('#modal-terenuri .modal-continut');
                 if (modalContinut) {
                     modalContinut.style.backgroundImage = `linear-gradient(rgba(10, 15, 30, 0.7), rgba(10, 15, 30, 0.7)), url('assets/imagini/fundal_${bgStr}.jpg')`;
-                    modalContinut.style.backgroundSize = 'cover';
+                    modalContinut.style.backgroundSize = '100% 100%, contain';
+                    modalContinut.style.backgroundRepeat = 'no-repeat';
                     modalContinut.style.backgroundPosition = 'center';
                 }
             } });
@@ -1214,7 +1229,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             nouBtnUitat.style.pointerEvents = "none";
 
             const { error } = await db.auth.resetPasswordForEmail(email.trim(), {
-                redirectTo: 'https://spotivity.ro/',
+                redirectTo: window.location.origin + '/',
             });
 
             nouBtnUitat.innerText = textInitial; 

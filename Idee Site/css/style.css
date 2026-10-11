@@ -4,6 +4,9 @@
 
 html, body {
 
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+
     background-color: #030303; /* Previne apariția spațiilor albe la scroll/safari */
 
     color: white;
@@ -218,13 +221,107 @@ html, body {
 
 
 
+/* Date and time share geometry; keep the native calendar and option picker. */
+.filtre-terenuri {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 25px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 15px;
+    border-radius: 10px;
+}
+
+.filtre-terenuri .grup-input {
+    min-width: 0;
+    margin: 0;
+    position: relative;
+}
+
+#filtru-data, #filtru-ora {
+    -webkit-appearance: none;
+    appearance: none;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    height: 48px;
+    margin: 0;
+    padding: 0 10px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.4);
+    color: white;
+    color-scheme: dark;
+    font: inherit;
+    font-size: 16px;
+    line-height: normal;
+    cursor: pointer;
+}
+
+/* The date stays native; a shared numeric label avoids browser locale differences. */
+.filtru-data-control { position: relative; height: 48px; }
+.filtru-data-control::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.4);
+    pointer-events: none;
+}
+.filtru-data-control:focus-within::before { outline: 2px solid rgba(255, 255, 255, 0.6); outline-offset: 2px; }
+#filtru-data { position: absolute; inset: 0; opacity: 0; }
+#filtru-data::-webkit-calendar-picker-indicator { margin: 0; padding: 0; width: 16px; }
+#filtru-data-afisata {
+    position: absolute;
+    top: 50%;
+    left: 10px;
+    right: 32px;
+    transform: translateY(-50%);
+    font-size: 16px;
+    white-space: nowrap;
+    pointer-events: none;
+}
+.filtru-calendar {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    width: 16px;
+    height: 16px;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+#filtru-ora { padding-right: 28px; }
+
+.filtru-select::after {
+    content: "";
+    position: absolute;
+    right: 13px;
+    bottom: 22px;
+    width: 6px;
+    height: 6px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg);
+    pointer-events: none;
+}
+
+@media (max-width: 600px) {
+    .filtre-terenuri { padding: 12px 10px; }
+}
+
+@media (max-width: 360px) {
+    .filtre-terenuri { grid-template-columns: minmax(0, 1fr); }
+}
+
 .grila-terenuri { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 
 .card-teren-poza { background: rgba(0, 0, 0, 0.4); border-radius: 20px; overflow: hidden; cursor: pointer; transition: 0.3s; border: 1px solid rgba(255,255,255,0.1); }
 
 .card-teren-poza:hover { transform: translateY(-3px); border-color: rgba(255,255,255,0.4); }
 
-.card-teren-poza img { width: 100%; height: 120px; object-fit: cover; }
+.card-teren-poza img { display: block; width: 100%; height: 120px; object-fit: contain; background: rgba(0, 0, 0, 0.2); }
 
 .info-teren-poza { padding: 15px; text-align: center; }
 

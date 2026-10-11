@@ -33,7 +33,8 @@ let checks = 0;
       const request=route.request(), url=new URL(request.url());
       const person=tokens.get((request.headers().authorization || '').replace(/^Bearer /,''));
       const reply=(status,data) => route.fulfill({status,contentType:'application/json',body:data===undefined ? '' : JSON.stringify(data)});
-      requests.push({path:url.pathname,method:request.method(),person,search:url.search});
+      const recorded={path:url.pathname,method:request.method(),person,search:url.search};
+      requests.push(recorded);
       try {
         await pg.exec('reset role');
         await pg.query("select set_config('request.jwt.claim.sub',$1,false)",[person ? uid(person) : '']);
@@ -41,9 +42,14 @@ let checks = 0;
           if (url.pathname.endsWith('/logout')) { logoutCount++; return reply(204); }
           if (url.pathname.endsWith('/signup')) {
             const body=request.postDataJSON();
+            recorded.body=body;
             assert.equal(body.password,' test-password. ');
             const result=await pg.query('insert into auth.users(id,email,raw_user_meta_data) values($1,$2,$3) returning *',[uid(5),body.email,body.data]);
             return reply(200,{...result.rows[0],app_metadata:{provider:'email'},user_metadata:body.data,identities:[]});
+          }
+          if (url.pathname.endsWith('/recover')) {
+            recorded.body=request.postDataJSON();
+            return reply(200,{});
           }
           if (url.pathname.endsWith('/token')) {
             const body=request.postDataJSON();
@@ -188,6 +194,19 @@ let checks = 0;
     assert.equal(logoutCount,1);
     pass('logout signs out of Supabase, not just the UI');
     await page.locator('#btn-top-cont').click();
+    await page.locator('#login-email').fill(' alice@example.test ');
+    const recoveryResponse=page.waitForResponse(response=>{
+      const url=new URL(response.url());
+      return url.hostname===host && url.pathname==='/auth/v1/recover' && response.request().method()==='POST';
+    });
+    await page.locator('#btn-forgot-password').click();
+    assert.equal((await recoveryResponse).status(),200);
+    await page.waitForFunction(()=>document.getElementById('btn-forgot-password').style.pointerEvents==='auto');
+    const recover=requests.find(r=>r.path==='/auth/v1/recover');
+    assert.equal(recover.method,'POST');
+    assert.equal(recover.body.email,'alice@example.test');
+    assert.equal(new URLSearchParams(recover.search).get('redirect_to'),new URL(base).origin+'/');
+    pass('password recovery sends the entered email and current site origin through the real SDK');
     await page.locator('#tab-register').click();
     await page.locator('#reg-nume').fill('New Client');
     await page.locator('#reg-email').fill('new@example.test');
@@ -201,6 +220,11 @@ let checks = 0;
     });
     assert.ok(!requests.some(r=>r.path.endsWith('/clienti') && r.method==='POST'));
     pass('signup passes metadata to Auth; the trigger creates an unconfirmed private profile');
+    const signup=requests.find(r=>r.path==='/auth/v1/signup');
+    assert.equal(signup.method,'POST');
+    assert.equal(signup.body.email,'new@example.test');
+    assert.equal(new URLSearchParams(signup.search).get('redirect_to'),new URL(base).origin+'/');
+    pass('signup confirmation redirects to the current site origin through the real SDK');
     await serial(async () => {
       await pg.exec('reset role');
       await pg.query("update public.clienti set nume=$1 where user_id=$2",['<img src=x onerror="window.__xss=true">',uid(1)]);
