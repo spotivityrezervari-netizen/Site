@@ -598,7 +598,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const modalContinut = document.querySelector('#modal-terenuri .modal-continut');
                 if (modalContinut) {
                     modalContinut.style.backgroundImage = `linear-gradient(rgba(10, 15, 30, 0.7), rgba(10, 15, 30, 0.7)), url('assets/imagini/fundal_${bgStr}.jpg')`;
-                    modalContinut.style.backgroundSize = '100% 100%, contain';
+                    modalContinut.style.backgroundSize = '100% 100%, cover';
                     modalContinut.style.backgroundRepeat = 'no-repeat';
                     modalContinut.style.backgroundPosition = 'center';
                 }
@@ -688,7 +688,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const sportStr = sportCurent.toLowerCase().replace(/\s+/g, '_');
             const bgStr = (sportStr === 'tenis_picior') ? 'fotbal' : sportStr;
             modalRezervare.style.backgroundImage = `linear-gradient(rgba(10, 15, 30, 0.7), rgba(10, 15, 30, 0.7)), url('assets/imagini/fundal_${bgStr}.jpg')`;
-            modalRezervare.style.backgroundSize = '100% 100%, contain';
+            modalRezervare.style.backgroundSize = '100% 100%, cover';
             modalRezervare.style.backgroundRepeat = 'no-repeat';
             modalRezervare.style.backgroundPosition = 'center';
         }
@@ -716,7 +716,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const modalContinut = document.querySelector('#modal-terenuri .modal-continut');
                 if (modalContinut) {
                     modalContinut.style.backgroundImage = `linear-gradient(rgba(10, 15, 30, 0.7), rgba(10, 15, 30, 0.7)), url('assets/imagini/fundal_${bgStr}.jpg')`;
-                    modalContinut.style.backgroundSize = '100% 100%, contain';
+                    modalContinut.style.backgroundSize = '100% 100%, cover';
                     modalContinut.style.backgroundRepeat = 'no-repeat';
                     modalContinut.style.backgroundPosition = 'center';
                 }
