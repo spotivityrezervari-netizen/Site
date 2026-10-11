@@ -126,12 +126,12 @@ let checks = 0;
     assert.match(await page.locator('#text-top-cont').innerText(),/Login/);
     assert.equal(await page.evaluate(()=>localStorage.getItem('user_session')),null);
     pass('a forged localStorage profile grants no login or permissions');
-    const chooseSlot = async () => {
+    const chooseSlot = async (hour='12:00') => {
       await page.locator('.card-sport[data-sport="Fotbal"]').click();
       await page.locator('#filtru-data').fill(tomorrow);
       await page.locator('#filtru-data').dispatchEvent('change');
       await page.locator('.btn-teren').first().click();
-      await page.locator('.btn-ora').filter({hasText:/^12:00$/}).click();
+      await page.locator('.btn-ora').filter({hasText:new RegExp(`^${hour}$`)}).click();
     };
     await chooseSlot();
     assert.ok(requests.some(r=>r.path.endsWith('/rezervari_disponibilitate') && !r.person));
@@ -139,6 +139,10 @@ let checks = 0;
     pass('public booking screen uses only the safe availability table');
     await page.locator('#buton-confirma').click();
     await page.locator('#modal-auth').waitFor({state:'visible'});
+    assert.equal(await page.locator('#modal-rezervare').isVisible(),false);
+    assert.equal(await page.locator('#modal-terenuri').isVisible(),false);
+    assert.equal(await page.locator('#fundal-imagine-sport').evaluate(node=>node.style.opacity),'0');
+    pass('guest booking transfers to login with both sport dialogs closed and homepage background reset');
     await page.locator('#login-email').fill('alice@example.test');
     await page.locator('#login-parola').fill(' test-password. ');
     await page.locator('#btn-executa-login').click();
@@ -147,8 +151,16 @@ let checks = 0;
     await page.locator('.btn-ora').filter({hasText:/^13:00$/}).click();
     await page.locator('#container-minge label').click();
     assert.equal(await page.locator('#checkbox-minge').isChecked(),true);
+    await page.clock.install();
+    await page.clock.pauseAt(new Date(Date.now()+5000));
     await page.locator('#buton-confirma').click();
     await page.locator('#modal-rezervare').waitFor({state:'hidden'});
+    assert.equal(await page.locator('#modal-terenuri').isVisible(),false);
+    assert.equal(await page.locator('#fundal-imagine-sport').evaluate(node=>node.style.opacity),'0');
+    const notice=page.locator('#notificare-rezervare');
+    await notice.waitFor({state:'visible'});
+    assert.equal(await notice.getAttribute('role'),'status');
+    assert.equal(await page.locator('#notificare-rezervare-text').innerText(),'Rezervarea a fost realizată cu succes.');
     await serial(async () => {
       await pg.exec('reset role');
       const rows=(await pg.query("select * from public.rezervari where stare='activa' order by ora")).rows;
@@ -157,6 +169,32 @@ let checks = 0;
       assert.ok(rows.every(r=>r.client_user_id===uid(1)));
     });
     pass('real SDK login and two-hour booking work with RLS and server pricing');
+    await page.clock.runFor(1999);
+    assert.equal(await notice.isVisible(),true);
+    await page.clock.runFor(1);
+    await notice.waitFor({state:'hidden'});
+    await page.clock.resume();
+    pass('successful booking restores the homepage and shows an accessible notice for two seconds');
+    await chooseSlot('15:00');
+    await serial(async () => {
+      await pg.exec("reset role; select set_config('request.jwt.claim.sub','',false); update public.terenuri set este_activ=false where nume='Court A'");
+    });
+    const failedBookingResponse=page.waitForResponse(response=>{
+      const url=new URL(response.url());
+      return url.hostname===host && url.pathname==='/rest/v1/rezervari' && response.request().method()==='POST';
+    });
+    await page.locator('#buton-confirma').click();
+    assert.equal((await failedBookingResponse).status(),403);
+    await page.waitForFunction(()=>document.getElementById('buton-confirma').disabled===false);
+    assert.equal(await notice.isVisible(),false);
+    assert.equal(await page.locator('#modal-rezervare').isVisible(),true);
+    await serial(async () => {
+      await pg.exec("reset role; select set_config('request.jwt.claim.sub','',false)");
+      assert.equal((await pg.query("select * from public.rezervari where teren='Court A' and ora='15:00'")).rows.length,0);
+      await pg.exec("update public.terenuri set este_activ=true where nume='Court A'");
+    });
+    await page.locator('#inchide-rezervare').click();
+    pass('a booking rejected by PostgreSQL keeps the dialog open without displaying a success notice');
     const futureId=await serial(async () => {
       await pg.exec('reset role');
       return (await pg.query("select id from public.rezervari where stare='activa' and ora='13:00'")).rows[0].id;

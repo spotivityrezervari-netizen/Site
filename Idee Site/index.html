@@ -9,11 +9,11 @@
     <link rel="icon" type="image/png" href="assets/imagini/avatar2.png">
     <title>Rezervari Sport</title>
     
-    <link rel="stylesheet" href="css/style.css?v=34">
+    <link rel="stylesheet" href="css/style.css?v=35">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/db.js"></script>
     <script src="js/security.js"></script>
-    <script src="js/app.js?v=17" defer></script>
+    <script src="js/app.js?v=18" defer></script>
     <style>
 
         /* Fundal pagina */
@@ -626,6 +626,11 @@
     <!-- LEGAL INFO - Buton discret + Modal -->
     <div id="btn-legal" onclick="document.getElementById('modal-legal').style.display='flex'" style="position: fixed; bottom: 8px; left: 50%; transform: translateX(-50%); z-index: 9998; cursor: pointer; font-size: 11px; color: rgba(255,255,255,0.4); font-family: sans-serif; letter-spacing: 0.5px; transition: color 0.3s; text-align: center; white-space: nowrap;">
         <span data-i18n="copyright_text">&copy; 2026 Numele SRL</span> &bull; <span data-i18n="drepturi_rezervate">Toate drepturile rezervate</span> &bull; <span style="text-decoration: underline;" data-i18n="info_legale">Info Legale</span>
+    </div>
+
+    <div id="notificare-rezervare" class="notificare-rezervare" role="status" aria-live="polite" aria-atomic="true" hidden>
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>
+        <span id="notificare-rezervare-text"></span>
     </div>
 
     <div id="modal-legal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100000; justify-content: center; align-items: center;">

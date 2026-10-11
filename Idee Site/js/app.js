@@ -54,6 +54,7 @@ db.auth.onAuthStateChange(async (event, session) => {
 // ==========================================
 window.dict = {
     'ro': {
+        'rezervare_succes': 'Rezervarea a fost realizată cu succes.',
         'contul_meu': 'Contul Meu', 'login_cont': 'Login / Cont', 'fotbal': 'Fotbal', 'baschet': 'Baschet', 'tenis': 'Tenis', 'volei': 'Volei',
         'autentificare': 'Autentificare', 'creare_cont': 'Creare Cont', 'email': 'Adresă Email', 'parola': 'Parolă', 'telefon': 'Număr de Telefon',
         'nume_complet': 'Nume Complet (Username)',
@@ -76,6 +77,7 @@ window.dict = {
         'copyright_footer': '© 2026 Numele SRL. Toate drepturile rezervate.', 'toate_orasele': 'Toate Orașele'
     },
     'hu': {
+        'rezervare_succes': 'A foglalás sikeresen megtörtént.',
         'contul_meu': 'Fiókom', 'login_cont': 'Belépés / Fiók', 'fotbal': 'Foci', 'baschet': 'Kosárlabda', 'tenis': 'Tenisz', 'volei': 'Röplabda',
         'autentificare': 'Bejelentkezés', 'creare_cont': 'Regisztráció', 'email': 'E-mail cím', 'parola': 'Jelszó', 'telefon': 'Telefonszám',
         'nume_complet': 'Teljes Név (Felhasználónév)',
@@ -98,6 +100,7 @@ window.dict = {
         'copyright_footer': '© 2026 Numele SRL. Minden jog fenntartva.', 'toate_orasele': 'Minden Város'
     },
     'en': {
+        'rezervare_succes': 'Booking completed successfully.',
         'contul_meu': 'My Account', 'login_cont': 'Login / Account', 'fotbal': 'Football', 'baschet': 'Basketball', 'tenis': 'Tennis', 'volei': 'Volleyball',
         'autentificare': 'Login', 'creare_cont': 'Register', 'email': 'Email Address', 'parola': 'Password', 'telefon': 'Phone Number',
         'nume_complet': 'Full Name (Username)',
@@ -304,7 +307,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             modals.forEach(id => {
                 const el = document.getElementById(id);
                 if (el && el.style.display !== 'none') { el.style.display = 'none'; 
-                    if(id === 'modal-terenuri' || id === 'modal-rezervare') { const bgDiv = document.getElementById('fundal-imagine-sport'); if(bgDiv) bgDiv.style.opacity = '0'; const modalRez = document.querySelector('#modal-rezervare .modal-continut'); if(modalRez) { modalRez.style.backgroundImage = ''; } } if (id === 'modal-chat-client') { const inp = document.getElementById('chat-client-input'); if (inp) inp.value = ''; } }
+                    if(id === 'modal-terenuri' || id === 'modal-rezervare') reseteazaFundalSport(); if (id === 'modal-chat-client') { const inp = document.getElementById('chat-client-input'); if (inp) inp.value = ''; } }
             });
         }
     });
@@ -552,6 +555,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             ? valoare.split('-').reverse().join('.') : '';
     }
 
+    function reseteazaFundalSport() {
+        const fundal = document.getElementById('fundal-imagine-sport');
+        if (fundal) fundal.style.opacity = '0';
+        document.querySelectorAll('#modal-terenuri .modal-continut, #modal-rezervare .modal-continut')
+            .forEach(modal => { modal.style.backgroundImage = ''; });
+    }
+
+    let temporizatorNotificareRezervare;
+    function afiseazaSuccesRezervare() {
+        const notificare = document.getElementById('notificare-rezervare');
+        const mesaj = document.getElementById('notificare-rezervare-text');
+        if (!notificare || !mesaj) return;
+        clearTimeout(temporizatorNotificareRezervare);
+        mesaj.textContent = window.dict[window.lang]['rezervare_succes'];
+        notificare.hidden = false;
+        temporizatorNotificareRezervare = setTimeout(() => {
+            notificare.hidden = true;
+        }, 2000);
+    }
+
     // --- LOGICA TERENURI ---
     document.querySelectorAll('.card-sport').forEach(card => {
         card.addEventListener('click', async () => {
@@ -675,8 +698,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('inchide-terenuri')?.addEventListener('click', () => {
         document.getElementById('modal-terenuri').style.display = 'none';
-        const bgDiv = document.getElementById('fundal-imagine-sport');
-        if(bgDiv) bgDiv.style.opacity = '0';
+        reseteazaFundalSport();
     });
     document.getElementById('inapoi-la-terenuri')?.addEventListener('click', () => { document.getElementById('modal-rezervare').style.display = 'none'; document.getElementById('modal-terenuri').style.display = 'flex';
             
@@ -701,8 +723,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             } });
     document.getElementById('inchide-rezervare')?.addEventListener('click', () => {
     document.getElementById('modal-rezervare').style.display = 'none';
-    const bgDiv = document.getElementById('fundal-imagine-sport');
-    if(bgDiv) bgDiv.style.opacity = '0';
+    reseteazaFundalSport();
 });
     document.getElementById('checkbox-minge')?.addEventListener('change', (e) => { mingeBifata = e.target.checked; actualizeazaButonFinal(); });
 
@@ -840,7 +861,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('buton-confirma')?.addEventListener('click', async () => {
         if (!loggedInUser) {
-            document.getElementById('modal-rezervare').style.display = 'none'; document.getElementById('modal-auth').style.display = 'flex'; return;
+            document.getElementById('modal-rezervare').style.display = 'none'; reseteazaFundalSport(); document.getElementById('modal-auth').style.display = 'flex'; return;
         }
 
         const butonConfirma = document.getElementById('buton-confirma');
@@ -889,8 +910,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             alert("Eroare la salvarea rezervării: " + error.message);
         }
 
-        if (erori === 0) { 
-            document.getElementById('modal-rezervare').style.display = 'none'; 
+        if (erori === 0) {
+            document.getElementById('modal-rezervare').style.display = 'none';
+            document.getElementById('modal-terenuri').style.display = 'none';
+            reseteazaFundalSport();
+            afiseazaSuccesRezervare();
         } 
         
         butonConfirma.innerText = textButonInitial;
