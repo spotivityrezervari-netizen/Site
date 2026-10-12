@@ -1180,6 +1180,9 @@ body.fara-scroll {
 #modal-terenuri, #modal-rezervare { background: rgba(60, 60, 64, 0.7); }
 #modal-terenuri .modal-continut, #modal-rezervare .modal-continut {
     background-color: rgba(60, 60, 64, 0.7);
+    /* Keep the photo inside a continuous rounded outline. */
+    background-clip: padding-box;
+    border-color: rgba(255, 255, 255, 0.32);
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.16);
 }
 
