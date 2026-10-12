@@ -115,7 +115,8 @@ html, body {
     background: rgba(0, 0, 0, 0.75);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    z-index: 100;
+    /* Cover the page header and legal footer as part of the same backdrop. */
+    z-index: 10000;
     align-items: center;
     justify-content: center;
 }

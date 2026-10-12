@@ -197,7 +197,7 @@ Nu publica frontend-ul nou înainte de migrare: folosește coloane și tabelul d
 
 În repository-ul `spotivityrezervari-netizen/Site`, verifică **Settings → Pages** și ultimul deployment **github-pages** din **Actions** / **Deployments**. Publicarea trebuie să corespundă ultimului commit din `main`. Adresa paginii principale este `https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/`, iar adminul este în același folder, la `admin.html`.
 
-Versiunea actuală încarcă `css/style.css?v=39`, `js/security.js?v=2`, `js/app.js?v=21`, `css/admin.css?v=1` și `js/admin.js?v=18`. Reîncarcă pagina după terminarea deployment-ului. Actualizarea ramurii GitHub nu demonstrează singură terminarea publicării; testele izolate nu înlocuiesc verificarea site-ului publicat.
+Versiunea actuală încarcă `css/style.css?v=40`, `js/security.js?v=2`, `js/app.js?v=21`, `css/admin.css?v=1` și `js/admin.js?v=18`. Reîncarcă pagina după terminarea deployment-ului. Actualizarea ramurii GitHub nu demonstrează singură terminarea publicării; testele izolate nu înlocuiesc verificarea site-ului publicat.
 
 ## 10. Verificări înainte de lansare
 
