@@ -4,6 +4,17 @@ let manualHoursRequestGeneration = 0;
 let adminAuthGeneration = 0;
 let activeAdminAuthUserId = null;
 
+// Sport icons are chosen from fixed local assets; court data never becomes a URL.
+function adminSportIconMarkup(sport) {
+    const icons = new Map([
+        ['fotbal', 'fotbal'], ['baschet', 'baschet'], ['tenis', 'tenis'],
+        ['volei', 'volei'], ['tenis picior', 'fotbal'], ['tenis de picior', 'fotbal']
+    ]);
+    const key = String(sport || '').trim().toLocaleLowerCase('ro').replace(/\s+/g, ' ');
+    const asset = icons.get(key) || 'fotbal';
+    return `<img class="admin-sport-icon" src="assets/imagini/${asset}.png" alt="${window.escapeHtml(sport || 'Sport')}" width="44" height="44">`;
+}
+
 async function adminHourIsAllowed(courtName, hour) {
     const { data: court, error } = await db.from('terenuri').select('*').eq('nume', courtName).single();
     if (error || !court) {
@@ -56,54 +67,54 @@ window.setLangAdmin = function(limba) {
 
     const dict = {
         'ro': {
-            't-logare': '🔐 Logare Panou Control',
+            't-logare': 'Logare Panou Control',
             't-logout': 'Deconectare',
             't-rez-man-scurt': 'Rezervare Manuală',
             't-prog-scurt': 'Program & Active',
             't-istoric-titlu-scurt': 'Toate Rezervările',
-            't-rez-man': '📝 Adaugă Rezervare Manuală',
+            't-rez-man': 'Adaugă Rezervare Manuală',
             't-rez-desc': '(Dacă e ocupată, sistemul blochează)',
             't-pt-ce-teren': 'Pentru ce teren?',
             't-nume': 'Nume Client (sau Telefon)',
             't-data-cal': 'Data calendaristică',
             't-ora': 'Ora',
             't-pret-incasat': 'Preț Încasat',
-            't-btn-salv': '➕ Salvează',
-            't-istoric-titlu': '📅 Lista Detaliată a Rezervărilor',
-            't-istoric-btn': '🔄 Descarcă Rezervările',
-            't-prog': '📋 Program & Disponibilitate',
+            't-btn-salv': 'Salvează',
+            't-istoric-titlu': 'Lista Detaliată a Rezervărilor',
+            't-istoric-btn': 'Descarcă Rezervările',
+            't-prog': 'Program & Disponibilitate',
             't-alege': 'Alege Terenul',
             't-data': 'Data Dorită',
             't-ora-th': 'Ora',
             't-status': 'Status',
             't-detalii': 'Client / Detalii',
-            't-reincarca': '🔄 Reîncarcă Programul',
-            't-inchis-admin': '⛔ Închis de Admin'
+            't-reincarca': 'Reîncarcă Programul',
+            't-inchis-admin': 'Închis de Admin'
         },
         'hu': {
-            't-logare': '🔐 Vezérlőpult Bejelentkezés',
+            't-logare': 'Vezérlőpult Bejelentkezés',
             't-logout': 'Kijelentkezés',
             't-rez-man-scurt': 'Kézi Foglalás',
             't-prog-scurt': 'Program és Aktív',
             't-istoric-titlu-scurt': 'Összes Foglalás',
-            't-rez-man': '📝 Kézi Foglalás Hozzáadása',
+            't-rez-man': 'Kézi Foglalás Hozzáadása',
             't-rez-desc': '(Ha foglalt, a rendszer blokkolja)',
             't-pt-ce-teren': 'Melyik pályára?',
             't-nume': 'Ügyfél neve (vagy Telefon)',
             't-data-cal': 'Naptári dátum',
             't-ora': 'Óra',
             't-pret-incasat': 'Beszedett Ár',
-            't-btn-salv': '➕ Mentés',
-            't-istoric-titlu': '📅 Foglalások Részletes Listája',
-            't-istoric-btn': '🔄 Foglalások Letöltése',
-            't-prog': '📋 Program és Elérhetőség',
+            't-btn-salv': 'Mentés',
+            't-istoric-titlu': 'Foglalások Részletes Listája',
+            't-istoric-btn': 'Foglalások Letöltése',
+            't-prog': 'Program és Elérhetőség',
             't-alege': 'Válassz Pályát',
             't-data': 'Kívánt Dátum',
             't-ora-th': 'Óra',
             't-status': 'Állapot',
             't-detalii': 'Ügyfél / Részletek',
-            't-reincarca': '🔄 Program Újratöltése',
-            't-inchis-admin': '⛔ Admin által Zárva'
+            't-reincarca': 'Program Újratöltése',
+            't-inchis-admin': 'Admin által Zárva'
         }
     };
 
@@ -182,7 +193,7 @@ window.incarcaTabelProgram = async function() {
     const tbody = document.getElementById('tabel-corp-program');
     
     if (!terenAles || !dataInput) return;
-    tbody.innerHTML = '<tr><td colspan="3" style="padding:15px; text-align:center;">Se Încarcă datele... ⏳</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="3" style="padding:15px; text-align:center;">Se Încarcă datele...</td></tr>';
 
     const d = new Date(dataInput);
     const zile = ["Dum", "Lun", "Mar", "Mie", "Joi", "Vin", "Sâm"];
@@ -249,35 +260,35 @@ window.incarcaTabelProgram = async function() {
             }
 
             if (eBlocat) {
-                col3 = `<span style="color:#ef4444; font-weight:bold;">⛔ Închis de Admin</span>`;
+                col3 = `<span style="color:#ef4444; font-weight:bold;">Închis de Admin</span>`;
             } else {
                 let infoClient = rGasita.email_client;
                 let contClient = clientiAsociati.find(c => c.email === rGasita.email_client);
                 
                 if (contClient) {
-                    let cNume = contClient.nume ? `👤 Nume: ${window.escapeHtml(contClient.nume)}<br>` : '';
-                    let cTel = contClient.telefon ? `📞 Tel: ${window.escapeHtml(contClient.telefon)}<br>` : '';
-                    let cMail = `📧 Email: ${window.escapeHtml(contClient.email)}`;
+                    let cNume = contClient.nume ? `Nume: ${window.escapeHtml(contClient.nume)}<br>` : '';
+                    let cTel = contClient.telefon ? `Tel: ${window.escapeHtml(contClient.telefon)}<br>` : '';
+                    let cMail = `Email: ${window.escapeHtml(contClient.email)}`;
                     infoClient = `${cNume}${cTel}${cMail}`;
                 } else {
-                    infoClient = `👤 Detalii (Manual): ${window.escapeHtml(rGasita.email_client)}`;
+                    infoClient = `Detalii (Manual): ${window.escapeHtml(rGasita.email_client)}`;
                 }
 
                 let chatBtnStr = "";
                 if (terenAreChatActivat) {
                     const clientName = contClient ? (contClient.nume || contClient.email.split('@')[0]) : (rGasita.email_client.split('@')[0]);
                     const emailParam = contClient ? contClient.email : rGasita.email_client;
-                    chatBtnStr = `<button class="btn-tabel-chat" onclick="deschideChatDinTabel('${window.escapeJs(emailParam)}', '${window.escapeJs(terenAles)}', '${window.escapeJs(clientName)}')" style="background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.5); color: #3b82f6; border-radius: 8px; padding: 4px 10px; font-size: 11px; font-weight: bold; cursor: pointer; margin-left: 10px; transition: 0.3s; vertical-align: middle;">💬 Chat</button>`;
+                    chatBtnStr = `<button class="btn-tabel-chat" onclick="deschideChatDinTabel('${window.escapeJs(emailParam)}', '${window.escapeJs(terenAles)}', '${window.escapeJs(clientName)}')" style="background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.5); color: #3b82f6; border-radius: 8px; padding: 4px 10px; font-size: 11px; font-weight: bold; cursor: pointer; margin-left: 10px; transition: 0.3s; vertical-align: middle;">Chat</button>`;
                 }
 
-                col3 = `<span style="color:white; font-size:12px; line-height:1.4;">${infoClient}</span><div class="program-detalii-footer"><span style="font-size:12px; color:#aaa;">💰 ${window.escapeHtml(rGasita.pret_total)}</span>${chatBtnStr}</div>`;
+                col3 = `<span style="color:white; font-size:12px; line-height:1.4;">${infoClient}</span><div class="program-detalii-footer"><span style="font-size:12px; color:#aaa;">${window.escapeHtml(rGasita.pret_total)}</span>${chatBtnStr}</div>`;
             }
         } else {
             const oraId = ora.replace(':', '');
             col2 = `
                 <select onchange="window.schimbaStareNoua(this, '${window.escapeJs(terenAles)}', '${dataFormata}', '${ora}')" id="select-stare-${oraId}" style="background: #1f2937; color: white; border: 1px solid #22c55e; border-radius: 5px; padding: 6px; font-weight: bold; cursor: pointer; width: 100%;">
                     <option value="liber" selected>LIBER</option>
-                    <option value="ocupat">OCUPAT (Date ➔)</option>
+                    <option value="ocupat">OCUPAT</option>
                     <option value="blocat">BLOCAT</option>
                 </select>
             `;
@@ -286,7 +297,7 @@ window.incarcaTabelProgram = async function() {
                 <div id="form-inline-${oraId}" style="display: none; flex-direction: column; gap: 5px; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 5px; border: 1px dashed #f59e0b;">
                     <input type="text" id="inline-nume-${oraId}" placeholder="Nume Client / Telefon" style="padding: 6px; border-radius: 3px; border: 1px solid #444; background: #222; color: white; font-size: 12px; width: 100%; box-sizing: border-box;">
                     <input type="text" id="inline-pret-${oraId}" placeholder="Detalii" style="padding: 6px; border-radius: 3px; border: 1px solid #444; background: #222; color: white; font-size: 12px; width: 100%; box-sizing: border-box;">
-                    <button onclick="window.salveazaRezervareInlineAdmin('${window.escapeJs(terenAles)}', '${dataFormata}', '${ora}')" style="background: #22c55e; color: black; border: none; padding: 6px; border-radius: 3px; font-weight: bold; cursor: pointer; font-size: 12px;">✔️ Salvează Rezervarea</button>
+                    <button onclick="window.salveazaRezervareInlineAdmin('${window.escapeJs(terenAles)}', '${dataFormata}', '${ora}')" style="background: #22c55e; color: black; border: none; padding: 6px; border-radius: 3px; font-weight: bold; cursor: pointer; font-size: 12px;">Salvează Rezervarea</button>
                 </div>
                 <span id="text-liber-${oraId}" style="color:#888;">-</span>
             `;
@@ -305,13 +316,13 @@ window.actualizeazaBifeTerenuri = async function() {
     const container = document.getElementById('container-checkbox-terenuri');
     if (!container) return;
     container.innerHTML = `
-        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;"><input type="checkbox" id="check-super-admin" value="ALL" style="margin-right: 5px; width: 20px; height: 20px; flex-shrink: 0;"> 👑 SUPER ADMIN (Acces Total)</label>
+        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;"><input type="checkbox" id="check-super-admin" value="ALL" style="margin-right: 5px; width: 20px; height: 20px; flex-shrink: 0;"> SUPER ADMIN (Acces Total)</label>
         <hr style="border-color: rgba(255,255,255,0.1); width: 100%; margin: 5px 0;">
     `;
     const { data } = await db.from('terenuri').select('nume, sport');
     if (authRequest !== adminAuthGeneration) return;
     if (data) {
-        data.forEach(t => { container.innerHTML += `<label style="display: flex; align-items: center; gap: 10px; cursor: pointer;"><input type="checkbox" class="check-teren-alocat" value="${window.escapeHtml(t.nume)}" style="margin-right: 5px; width: 20px; height: 20px; flex-shrink: 0;"> ${window.escapeHtml(t.nume)} (${window.escapeHtml(t.sport)})</label>`; });
+        data.forEach(t => { container.innerHTML += `<label style="display: flex; align-items: center; gap: 10px; cursor: pointer;"><input type="checkbox" class="check-teren-alocat" value="${window.escapeHtml(t.nume)}" style="margin-right: 5px; width: 20px; height: 20px; flex-shrink: 0;">${window.escapeHtml(t.nume)} (${window.escapeHtml(t.sport)})</label>`; });
     }
 };
 
@@ -327,9 +338,9 @@ window.incarcaTerenuriAdmin = async function() {
     
     let html = "";
     data.forEach(t => {
-        let textMinge = t.optiune_minge ? `Da (${t.pret_minge || 15} Lei)` : 'Nu';
+        let textMinge = t.optiune_minge ? `Da (${t.pret_minge ?? 15} Lei)` : 'Nu';
         html += `
-            <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; color: white; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <div class="admin-existing-court" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; color: white; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                 <div style="display: flex; gap: 15px; align-items: center;">
                     <img src="${window.escapeHtml(window.safeUrl(t.poza || 'assets/imagini/avatar2.png', true))}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 5px;">
                     <div>
@@ -337,7 +348,7 @@ window.incarcaTerenuriAdmin = async function() {
                         <p style="margin: 0; font-size: 13px; color: #ccc;">Preț: ${t.pret} Lei/oră | Minge: ${textMinge}</p>
                     </div>
                 </div>
-                <button onclick="stergeTerenAdmin('${window.escapeJs(t.id)}')" style="background: #ef4444; color: white; border: none; padding: 6px 10px; border-radius: 5px; cursor: pointer;">❌ Șterge</button>
+                <button onclick="stergeTerenAdmin('${window.escapeJs(t.id)}')" style="background: #ef4444; color: white; border: none; padding: 6px 10px; border-radius: 5px; cursor: pointer;">Șterge</button>
             </div>
         `;
     });
@@ -376,6 +387,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // NOU: Închide modalele cu tasta ESC în Admin
     document.addEventListener('keydown', function(event) {
         if (event.key === "Escape") {
+            window.inchideSubPaginaOras?.();
             document.querySelectorAll('.modal').forEach(m => {
                 m.style.display = 'none';
                 if (m.id === 'modal-chat-admin') { const inp = document.getElementById('chat-admin-input'); if (inp) inp.value = ''; }
@@ -433,7 +445,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (authError) {
             btn.innerText = textVechi; btn.disabled = false;
-            return alert("⛔ Acces respins! Email sau parolă greșită.");
+            return alert("Acces respins! Email sau parolă greșită.");
         }
         const authRequest = adminAuthGeneration;
         
@@ -486,7 +498,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 let htmlModale = "";
 
                 
-                const oraseTerenuri = {};
+                const oraseTerenuri = Object.create(null);
 
                 for (let numeT of listaTerenuriAlocate) {
                     if(!numeT) continue;
@@ -496,7 +508,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         selectManualTeren.innerHTML += `<option value="${window.escapeHtml(terenDB.nume)}" data-sport="${window.escapeHtml(terenDB.sport)}">${window.escapeHtml(terenDB.nume)}</option>`;
                         
                         let orasul = terenDB.oras || 'Altele';
-                        orasul = orasul.trim().replace(/\.+$/, ''); // STRIP TRAILING DOTS OVERALL
+                        orasul = orasul.trim().replace(/\.+$/, '') || 'Altele';
                         if (!oraseTerenuri[orasul]) oraseTerenuri[orasul] = [];
                         oraseTerenuri[orasul].push(terenDB);
                     }
@@ -519,104 +531,102 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.getElementById('container-meniu-terenuri').parentElement.style.display = ''; // Show main grila
                 };
 
-                // ESC listener for sub-pages
-                document.addEventListener('keydown', function(e) {
-                    if (e.key === 'Escape') {
-                        const activeSubPage = Array.from(document.querySelectorAll('.sub-pagina-oras')).find(p => p.style.display === 'block');
-                        if (activeSubPage) {
-                            window.inchideSubPaginaOras();
-                        }
+                for (const [cityIndex, [oras, courts]] of Object.entries(oraseTerenuri).entries()) {
+                    const safeOras = `oras-${cityIndex}`;
+                    // Only the superadmin navigates through city groups.
+                    if (contLogatGlobal.is_super) {
+                        htmlMeniu += `
+                            <button type="button" class="card-sport admin-menu-card admin-city-card admin-comun" onclick="document.getElementById('container-meniu-terenuri').parentElement.style.display='none'; document.getElementById('pagina-oras-${safeOras}').style.display='block';">
+                                <h2>Setări <span class="admin-card-name">${window.escapeHtml(oras)}</span></h2>
+                                <span class="admin-card-detail">${courts.length} ${courts.length === 1 ? 'teren' : 'terenuri'}</span>
+                            </button>
+                        `;
                     }
-                });
-
-                for (const oras in oraseTerenuri) {
-                    const safeOras = oras.replace(/[^a-zA-Z0-9]/g, '') || 'Unknown';
-                    
-                    htmlMeniu += `
-                        <div class="card-sport admin-comun" style="padding: 20px; display: flex;" onclick="document.getElementById('container-meniu-terenuri').parentElement.style.display='none'; document.getElementById('pagina-oras-${safeOras}').style.display='block';">
-                            <h2 style="font-size: 18px;">⚙️<br><br>Setări Terenuri<br>${window.escapeHtml(oras)}</h2>
-                        </div>
-                    `;
 
                     let carduriTerenuri = '';
-                    for (const terenDB of oraseTerenuri[oras]) {
+                    for (const terenDB of courts) {
+                        const courtId = window.escapeHtml(terenDB.id);
+                        const courtJsId = window.escapeJs(terenDB.id);
+                        const sportIcon = adminSportIconMarkup(terenDB.sport);
                         let culoareTeren = terenDB.este_activ !== false ? '#3b82f6' : '#ef4444';
                         
                         carduriTerenuri += `
-                            <div class="card-sport admin-comun" style="padding: 20px; display: flex;" onclick="document.getElementById('modal-setari-${terenDB.id}').style.display='flex'">
-                                <h2 style="font-size: 18px;">⚙️<br><br>Setări<br>${window.escapeHtml(terenDB.nume)}</h2>
-                            </div>
+                            <button type="button" class="card-sport admin-menu-card admin-court-card admin-comun" onclick="document.getElementById('modal-setari-${courtJsId}').style.display='flex'">
+                                ${sportIcon}
+                                <h2>Setări <span class="admin-card-name">${window.escapeHtml(terenDB.nume)}</span></h2>
+                            </button>
                         `;
 
                         htmlModale += `
-                            <div class="modal" id="modal-setari-${terenDB.id}">
+                            <div class="modal" id="modal-setari-${courtId}">
                                 <div class="modal-continut modal-mare" style="border-color: ${culoareTeren}; width: 100%; max-width: 550px;">
-                                    <button class="buton-inchidere" onclick="this.parentElement.parentElement.style.display='none'">X</button>
-                                    <div>
-                                        <h2 class="titlu-modal" style="font-size: 20px; text-align: left; color: ${culoareTeren};">⚙️ Setări (${window.escapeHtml(terenDB.nume)})</h2>
+                                    <button class="buton-inchidere" aria-label="Închide" onclick="this.parentElement.parentElement.style.display='none'">X</button>
+                                    <div class="admin-settings-header">
+                                        ${sportIcon}
+                                        <h2 class="titlu-modal" style="font-size: 20px; text-align: left; color: ${culoareTeren};">Setări ${window.escapeHtml(terenDB.nume)}</h2>
                                     </div>
                                     
                                     <div class="formular-auth" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; display: flex; flex-direction: column; flex: 1;">
                                         
                                         <div class="grup-input" style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.1);">
-                                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                            <div class="admin-toggle-row" style="display:flex; justify-content:space-between; align-items:center;">
                                                 <label style="margin:0; font-weight:bold; color: ${terenDB.este_activ !== false ? '#22c55e' : '#ef4444'};">
-                                                    ${terenDB.este_activ !== false ? '✅ Terenul este Vizibil' : '❌ Terenul este Ascuns'}
+                                                    ${terenDB.este_activ !== false ? 'Terenul este Vizibil' : 'Terenul este Ascuns'}
                                                 </label>
-                                                <input type="checkbox" id="activ-${terenDB.id}" ${terenDB.este_activ !== false ? 'checked' : ''} style="width:20px;height:20px; cursor:pointer;">
+                                                <input type="checkbox" id="activ-${courtId}" ${terenDB.este_activ !== false ? 'checked' : ''} style="width:20px;height:20px; cursor:pointer;">
                                             </div>
                                             <p style="margin: 5px 0 0 0; font-size: 12px; color: #ccc;">Debifează pentru a ascunde complet terenul de clienți.</p>
                                         </div>
 
                                         <div class="grup-input" style="background: rgba(239, 68, 68, 0.1); padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(239, 68, 68, 0.3);">
-                                            <label style="color: #ef4444; font-weight: bold; font-size: 15px;">🔒 Blochează / Deblochează o zi</label>
-                                            <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px;">
-                                                <input type="date" id="data-blocare-${terenDB.id}" style="background: rgba(0,0,0,0.5); color: white; padding: 8px; border-radius: 5px; flex: 1; min-width: 120px;">
+                                            <label style="color: #ef4444; font-weight: bold; font-size: 15px;">Blochează / Deblochează o zi</label>
+                                            <div class="admin-day-actions" style="display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px;">
+                                                <input type="date" id="data-blocare-${courtId}" style="background: rgba(0,0,0,0.5); color: white; padding: 8px; border-radius: 5px; flex: 1; min-width: 120px;">
                                                 <button type="button" onclick="blocheazaZiuaIntreaga('${window.escapeJs(terenDB.nume)}', '${window.escapeJs(terenDB.id)}', event)" style="background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold;">Închide</button>
                                                 <button type="button" onclick="deblocheazaZiua('${window.escapeJs(terenDB.nume)}', '${window.escapeJs(terenDB.id)}', event)" style="background: #22c55e; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold;">Deblochează</button>
                                             </div>
                                         </div>
 
                                         <div class="grup-input" style="margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden; width: 100%; box-sizing: border-box;">
-                                            <label style="margin-bottom: 8px; display: block; color: #a1eafb;">📷 Schimbă Poza Terenului</label>
+                                            <label style="margin-bottom: 8px; display: block; color: #a1eafb;">Schimbă Poza Terenului</label>
                                             <div style="display: flex; gap: 10px; align-items: center; width: 100%;">
                                                 <img src="${window.escapeHtml(window.safeUrl(terenDB.poza || 'assets/imagini/avatar2.png', true))}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); flex-shrink: 0;">
-                                                <input type="file" id="poza-${terenDB.id}" accept="image/*" style="background: rgba(0,0,0,0.5); color: white; padding: 8px; border-radius: 5px; flex: 1; min-width: 0; cursor: pointer; border: 1px dashed rgba(255,255,255,0.2);">
+                                                <input type="file" id="poza-${courtId}" accept="image/*" style="background: rgba(0,0,0,0.5); color: white; padding: 8px; border-radius: 5px; flex: 1; min-width: 0; cursor: pointer; border: 1px dashed rgba(255,255,255,0.2);">
                                             </div>
                                         </div>
 
-                                        <div class="grup-input" style="margin-bottom: 15px;"><label>Oraș</label><input type="text" id="oras-${terenDB.id}" value="${window.escapeHtml(terenDB.oras ? terenDB.oras.trim().replace(/\.+$/, '') : '')}" placeholder="Ex: București"></div>
-                                        <fieldset class="ore-teren-setari" id="ore-rezervabile-${terenDB.id}">
+                                        <div class="grup-input" style="margin-bottom: 15px;"><label>Oraș</label><input type="text" id="oras-${courtId}" value="${window.escapeHtml(terenDB.oras ? terenDB.oras.trim().replace(/\.+$/, '') : '')}" placeholder="Ex: București"></div>
+                                        <fieldset class="ore-teren-setari" id="ore-rezervabile-${courtId}">
                                             <legend>Ore rezervabile</legend>
                                             <p>Bifează orele de început, între 09:00 și 22:00. Ora 22:00 acoperă intervalul 22:00–23:00. Fără bife, rezervările noi sunt oprite; cele existente rămân vizibile în program.</p>
                                             <div class="ore-teren-grid">
                                                 ${window.bookingHourOptions.map(hour => `<label><input type="checkbox" class="ora-rezervabila" value="${hour}" ${window.getCourtBookingHours(terenDB).includes(hour) ? 'checked' : ''}><span>${hour}</span></label>`).join('')}
                                             </div>
                                         </fieldset>
-                                        <div class="grup-input"><label>Preț Teren (Lei)</label><input type="number" id="pret-${terenDB.id}" value="${terenDB.pret}"></div>
-                                        <div class="grup-input" style="display:flex; justify-content:space-between; margin-top:10px;"><label>Ofertă Minge?</label><input type="checkbox" id="minge-${terenDB.id}" ${terenDB.optiune_minge ? 'checked' : ''} style="width:20px;height:20px;"></div>
-                                        <div class="grup-input" style="margin-top:10px;"><label>Preț Minge (Lei)</label><input type="number" id="pret-minge-${terenDB.id}" value="${terenDB.pret_minge || 15}"></div>
-                                        <div class="grup-input" style="display:flex; justify-content:space-between; margin-top:10px; background: rgba(59, 130, 246, 0.1); padding: 10px; border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.3);">
-                                            <label style="color: #a1eafb; font-weight: bold;">💬 Activează Chat (pt acest teren)</label>
-                                            <input type="checkbox" id="are-chat-${terenDB.id}" ${terenDB.are_chat !== false ? 'checked' : ''} style="width:20px;height:20px; cursor: pointer;">
+                                        <div class="grup-input"><label>Preț Teren (Lei)</label><input type="number" id="pret-${courtId}" value="${window.escapeHtml(terenDB.pret)}"></div>
+                                        <div class="grup-input admin-toggle-row" style="display:flex; justify-content:space-between; margin-top:10px;"><label>Ofertă Minge?</label><input type="checkbox" id="minge-${courtId}" ${terenDB.optiune_minge ? 'checked' : ''} style="width:20px;height:20px;"></div>
+                                        <div class="grup-input" style="margin-top:10px;"><label>Preț Minge (Lei)</label><input type="number" id="pret-minge-${courtId}" value="${window.escapeHtml(terenDB.pret_minge ?? 15)}"></div>
+                                        <div class="grup-input admin-toggle-row" style="display:flex; justify-content:space-between; margin-top:10px; background: rgba(59, 130, 246, 0.1); padding: 10px; border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.3);">
+                                            <label style="color: #a1eafb; font-weight: bold;">Activează Chat (pt acest teren)</label>
+                                            <input type="checkbox" id="are-chat-${courtId}" ${terenDB.are_chat !== false ? 'checked' : ''} style="width:20px;height:20px; cursor: pointer;">
                                         </div>
                                         
-                                        <div style="flex: 1;"></div>
-                                        <button id="btn-save-${terenDB.id}" type="button" onclick="salveazaSetariTeren('${window.escapeJs(terenDB.id)}', '${window.escapeJs(terenDB.nume)}')" class="buton-rezervare" style="background: #3b82f6; margin-top: 15px;">💾 Salvează Setările pt ${window.escapeHtml(terenDB.nume)}</button>
-                                        <button ${contLogatGlobal.is_super ? '' : 'hidden'} type="button" onclick="stergeTerenDublaConfirmare('${window.escapeJs(terenDB.id)}', '${window.escapeJs(terenDB.nume)}')" class="buton-rezervare" style="background: #ef4444; margin-top: 10px;">🗑️ Șterge Terenul</button>
+                                        <button id="btn-save-${courtId}" type="button" onclick="salveazaSetariTeren('${window.escapeJs(terenDB.id)}', '${window.escapeJs(terenDB.nume)}')" class="buton-rezervare" style="background: #3b82f6; margin-top: 15px;">Salvează Setările pt ${window.escapeHtml(terenDB.nume)}</button>
+                                        <button ${contLogatGlobal.is_super ? '' : 'hidden'} type="button" onclick="stergeTerenDublaConfirmare('${window.escapeJs(terenDB.id)}', '${window.escapeJs(terenDB.nume)}')" class="buton-rezervare" style="background: #ef4444; margin-top: 10px;">Șterge Terenul</button>
                                     </div>
                                 </div>
                             </div>
                         `;
                     }
 
+                    if (contLogatGlobal.is_super) {
                     const pageHtml = `
                         <div id="pagina-oras-${safeOras}" class="sub-pagina-oras" style="display: none; width: 100%; margin-top: 20px;">
-                            <div style="display: flex; align-items: center; justify-content: flex-start; margin-bottom: 20px; width: 100%;">
+                            <div class="admin-city-header" style="display: flex; align-items: center; justify-content: flex-start; margin-bottom: 20px; width: 100%;">
                                 <button class="btn-cont" onclick="window.inchideSubPaginaOras()">
-                                    ⬅️ Înapoi
+                                    Înapoi
                                 </button>
-                                <h1 style="color: white; margin: 0; margin-left: 20px; font-size: 24px;">🌍 Terenuri din ${window.escapeHtml(oras)}</h1>
+                                <h1 style="color: white; margin: 0; margin-left: 20px; font-size: 24px;">Setări ${window.escapeHtml(oras)}</h1>
                             </div>
                             <div class="grila-sporturi" style="display: grid; gap: 20px;">
                                 ${carduriTerenuri}
@@ -624,6 +634,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     `;
                     subPagesContainer.innerHTML += pageHtml;
+                    } else {
+                        htmlMeniu += carduriTerenuri;
+                    }
                 }
 
                 containerMeniu.innerHTML = htmlMeniu;
@@ -646,7 +659,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => { initializareRealtimeChatAdmin(); }, 1000);
 
         } else {
-            alert("⛔ Ești logat, dar contul tău nu are profil de Admin setat în baza de date!");
+            alert("Ești logat, dar contul tău nu are profil de Admin setat în baza de date!");
             await db.auth.signOut();
         }
         btn.innerText = "Intră în Sistem";
@@ -685,7 +698,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (error) { alert("Eroare: " + error.message); btn.innerText = textVechi; btn.disabled = false; return; }
         }
         
-        alert(`✅ Ziua a fost blocată!`); btn.innerText = textVechi; btn.disabled = false;
+        alert(`Ziua a fost blocată!`); btn.innerText = textVechi; btn.disabled = false;
         if (typeof window.reincarcaIstoricAdmin === 'function') window.reincarcaIstoricAdmin(); 
         if (typeof window.incarcaTabelProgram === 'function') window.incarcaTabelProgram(); 
     };
@@ -701,7 +714,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const btn = event.target; const textVechi = btn.innerText; btn.innerText = "Așteaptă..."; btn.disabled = true;
         const { error } = await db.from('rezervari').delete().eq('teren', numeTeren).eq('data_str', dataFormata).eq('email_client', 'Teren Blocat');
         if (!error) { 
-            alert(`✅ Ziua deblocată!`); 
+            alert(`Ziua deblocată!`);
             if (typeof window.reincarcaIstoricAdmin === 'function') window.reincarcaIstoricAdmin(); 
             if (typeof window.incarcaTabelProgram === 'function') window.incarcaTabelProgram(); 
         } 
@@ -711,7 +724,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.salveazaSetariTeren = async function(idDB, numeTeren) {
         const btnSave = document.getElementById(`btn-save-${idDB}`);
-        if(btnSave) { btnSave.innerText = "⏳ Se salvează..."; btnSave.disabled = true; }
+        if(btnSave) { btnSave.innerText = "Se salvează..."; btnSave.disabled = true; }
 
         const pret = document.getElementById(`pret-${idDB}`).value;
         const oras = document.getElementById(`oras-${idDB}`).value.trim();
@@ -722,7 +735,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const fileInput = document.getElementById(`poza-${idDB}`);
         const selectedHours = Array.from(document.getElementById(`ore-rezervabile-${idDB}`).querySelectorAll('.ora-rezervabila:checked')).map(input => input.value);
         if (selectedHours.some(hour => !window.bookingHourOptions.includes(hour)) || new Set(selectedHours).size !== selectedHours.length) {
-            if (btnSave) { btnSave.innerText = `💾 Salvează Setările pt ${numeTeren}`; btnSave.disabled = false; }
+            if (btnSave) { btnSave.innerText = `Salvează Setările pt ${numeTeren}`; btnSave.disabled = false; }
             return alert('Programul conține ore nevalide. Reîncarcă setările terenului.');
         }
         const oreRezervabile = window.bookingHourOptions.filter(hour => selectedHours.includes(hour));
@@ -739,7 +752,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const { error: uploadError } = await db.storage.from('poze_terenuri').upload(fileName, file);
                 
             if (uploadError) {
-                if(btnSave) { btnSave.innerText = `💾 Salvează Setările pt ${numeTeren}`; btnSave.disabled = false; }
+                if(btnSave) { btnSave.innerText = `Salvează Setările pt ${numeTeren}`; btnSave.disabled = false; }
                 return alert("Eroare la urcarea pozei: " + uploadError.message);
             }
             
@@ -749,10 +762,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const { error } = await db.from('terenuri').update(dateDeUpdatat).eq('id', idDB);
         
-        if (!error) { alert(`✅ Setări salvate!`); document.getElementById('login-admin-btn').click(); }
+        if (!error) { alert(`Setări salvate!`); document.getElementById('login-admin-btn').click(); }
         else alert("Eroare: " + error.message);
         
-        if(btnSave) { btnSave.innerText = `💾 Salvează Setările pt ${numeTeren}`; btnSave.disabled = false; }
+        if(btnSave) { btnSave.innerText = `Salvează Setările pt ${numeTeren}`; btnSave.disabled = false; }
     };
 
     document.getElementById('btn-rezervare-manuala')?.addEventListener('click', async () => {
@@ -788,18 +801,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const { data: dublura, error: availabilityError } = await db.from('rezervari').select('id').eq('teren', terenAles).eq('data_str', dataFormata).eq('ora', oraAlesa).neq('stare', 'anulata');
             if (!sameContext()) return;
             if (availabilityError) return alert('Rezervările existente nu pot fi verificate. Încearcă din nou.');
-            if (dublura && dublura.length > 0) return alert(`❌ Ora ${oraAlesa} pe ${dataFormata} este rezervată!`);
+            if (dublura && dublura.length > 0) return alert(`Ora ${oraAlesa} pe ${dataFormata} este rezervată!`);
             const { error } = await db.from('rezervari').insert([{
                 sport: sportAles, teren: terenAles, data_str: dataFormata, ora: oraAlesa,
                 pret_total: pret + (window.lang === 'hu' ? ' RON (Kézi)' : ' Lei (Manual)'), email_client: client, stare: 'activa', timestamp_start: Date.now()
             }]);
             if (!error) {
-                alert('✅ Rezervare adăugată!');
+                alert('Rezervare adăugată!');
                 if (typeof window.reincarcaIstoricAdmin === 'function') window.reincarcaIstoricAdmin();
                 if (typeof window.incarcaTabelProgram === 'function') window.incarcaTabelProgram();
             } else alert('Eroare: ' + error.message);
         } finally {
-            saveButton.innerText = window.lang === 'hu' ? '➕ Mentés' : '➕ Salvează';
+            saveButton.innerText = window.lang === 'hu' ? 'Mentés' : 'Salvează';
             saveButton.disabled = hourSelect.disabled || !hourSelect.value;
         }
     });
@@ -825,7 +838,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const fileInput = document.getElementById('teren-poza');
 
         if (!nume || !pret || !locatie) return alert("Completează câmpurile!");
-        const btn = document.getElementById('btn-adauga-teren'); btn.innerText = "⏳ Se salvează..."; btn.disabled = true;
+        const btn = document.getElementById('btn-adauga-teren'); btn.innerText = "Se salvează..."; btn.disabled = true;
 
         let urlPoza = null;
         if (fileInput && fileInput.files && fileInput.files[0]) {
@@ -842,7 +855,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
             if (uploadError) {
                 alert("Eroare la urcarea pozei: " + uploadError.message);
-                btn.innerText = "➕ Adaugă Teren"; btn.disabled = false; 
+                btn.innerText = "Adaugă Teren"; btn.disabled = false;
                 return;
             }
             
@@ -855,9 +868,9 @@ document.addEventListener('DOMContentLoaded', () => {
             nume, sport, oras, pret: parseInt(pret), optiune_minge: minge, pret_minge: parseInt(pretMinge), locatie, poza: urlPoza, este_activ: true
         }]);
         
-        if (error) alert("❌ Eroare DB: " + error.message);
-        else { alert("✅ Teren adăugat!"); document.getElementById('modal-adauga-teren').style.display='none'; window.incarcaTerenuriAdmin(); window.actualizeazaBifeTerenuri(); }
-        btn.innerText = "➕ Adaugă Teren"; btn.disabled = false;
+        if (error) alert("Eroare DB: " + error.message);
+        else { alert("Teren adăugat!"); document.getElementById('modal-adauga-teren').style.display='none'; window.incarcaTerenuriAdmin(); window.actualizeazaBifeTerenuri(); }
+        btn.innerText = "Adaugă Teren"; btn.disabled = false;
     });
 
     document.getElementById('creeaza-supervisor-btn')?.addEventListener('click', async () => {
@@ -873,11 +886,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Verifică dacă adresa e deja alocată
         const { data: verificare } = await db.from('users_admin').select('id').eq('email', email);
-        if (verificare && verificare.length > 0) { btn.innerText = "Alocă Terenuri"; return alert("❌ Acest E-mail este deja alocat unui angajat/admin!"); }
+        if (verificare && verificare.length > 0) { btn.innerText = "Alocă Terenuri"; return alert("Acest E-mail este deja alocat unui angajat/admin!"); }
 
         const { error } = await db.from('users_admin').insert([{ nume_admin: nume, email: email, is_super: esteSuper, terenuri: esteSuper ? "ALL" : listaTerenuri }]);
         if (!error) { 
-            alert(`✅ Rol și terenuri alocate pentru contul Auth existent: ${email}.`);
+            alert(`Rol și terenuri alocate pentru contul Auth existent: ${email}.`);
             document.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false); 
             document.getElementById('super-nume').value = "";
             document.getElementById('super-email').value = "";
@@ -894,7 +907,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.getElementById('container-istoric');
         if (!container) return;
         container.style.display = 'flex'; // Lista verticala cu scroll interior
-        container.innerHTML = "<p style='color: white; text-align: center;'>Se descarcă rezervările... ⏳</p>";
+        container.innerHTML = "<p style='color: white; text-align: center;'>Se descarcă rezervările...</p>";
         
         // Preluăm clienții pentru a corela datele (nume, telefon) cu rezervările web
         const { data: clientiDB } = await db.from('clienti').select('*');
@@ -917,7 +930,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const txtFinalizata = window.lang === 'hu' ? 'BEFEJEZVE' : 'FINALIZATĂ';
         const txtCand = window.lang === 'hu' ? 'Mikor' : 'Când';
         const txtPret = window.lang === 'hu' ? 'Ár' : 'Preț';
-        const txtBtnAnuleaza = window.lang === 'hu' ? '❌ Törlés' : '❌ Anulează';
+        const txtBtnAnuleaza = window.lang === 'hu' ? 'Törlés' : 'Anulează';
 
         data.forEach(r => {
             if (!contLogatGlobal.is_super && !terenurileLui.includes(r.teren)) return;
@@ -955,12 +968,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             html += `
-                <div style="background: rgba(255,255,255,0.1); border: 1px solid ${culoareBorder}; padding: 15px; margin: 0; border-radius: 8px; color: white; opacity: ${opacitate}; display: flex; flex-direction: column; justify-content: space-between;">
+                <div class="admin-history-card" style="background: rgba(255,255,255,0.1); border: 1px solid ${culoareBorder}; padding: 15px; margin: 0; border-radius: 8px; color: white; opacity: ${opacitate}; display: flex; flex-direction: column; justify-content: space-between;">
                     <div>
-                        <h4 style="margin: 0 0 10px 0; color: ${culoareTitlu};">⚽ ${window.escapeHtml(r.sport)} - ${window.escapeHtml(r.teren)} ${textStare}</h4>
-                        <p style="margin: 5px 0;"><strong>📅 ${txtCand}:</strong> ${dataTradusa} ( ${r.ora} )</p>
-                        <p style="margin: 5px 0; font-size: 13px;"><strong>👤 Client:</strong> ${textClientAfisat}</p>
-                        <p style="margin: 5px 0;"><strong>💰 ${txtPret}:</strong> ${window.escapeHtml(r.pret_total)}</p>
+                        <h4 style="margin: 0 0 10px 0; color: ${culoareTitlu};">${window.escapeHtml(r.sport)} - ${window.escapeHtml(r.teren)} ${textStare}</h4>
+                        <p style="margin: 5px 0;"><strong>${txtCand}:</strong> ${dataTradusa} ( ${r.ora} )</p>
+                        <p style="margin: 5px 0; font-size: 13px;"><strong>Client:</strong> ${textClientAfisat}</p>
+                        <p style="margin: 5px 0;"><strong>${txtPret}:</strong> ${window.escapeHtml(r.pret_total)}</p>
                     </div>
                     ${butonAnulare}
                 </div>`;
@@ -1105,7 +1118,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (esteSelectat) card.style.borderColor = 'white';
             
             card.innerHTML = `
-                <h4>👤 ${window.escapeHtml(numeAfisat)} <span style="font-size: 11px; color:#aaa; font-weight:normal;">(${window.escapeHtml(conv.teren)})</span></h4>
+                <h4>${window.escapeHtml(numeAfisat)} <span style="font-size: 11px; color:#aaa; font-weight:normal;">(${window.escapeHtml(conv.teren)})</span></h4>
                 <p>${window.escapeHtml(ultimulMesaj)}</p>
             `;
             

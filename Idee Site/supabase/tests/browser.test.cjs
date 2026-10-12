@@ -35,9 +35,14 @@ let checks = 0;
     let logoutCount=0;
     let availabilityGate=null;
     let chatGate=null;
-    const pauseChatPreflight=()=>{
-      let enter,release;const entered=new Promise(resolve=>enter=resolve),wait=new Promise(resolve=>release=resolve);
-      chatGate={enter,wait};return{entered,release};
+    const pauseChatPreflight=target=>{
+      let enter,release,timeout;
+      const entered=new Promise((resolve,reject)=>{
+        timeout=setTimeout(()=>reject(new Error('Sender preflight did not reach the fixture gate')),10000);
+        enter=()=>{clearTimeout(timeout);resolve();};
+      });
+      const wait=new Promise(resolve=>release=resolve);
+      chatGate={enter,wait,target};return{entered,release};
     };
     const pauseNextAvailability = () => {
       let enter,release;
@@ -57,6 +62,9 @@ let checks = 0;
         await gate.wait;
       }
       if (chatGate && pendingRequest.method()==='GET' && pendingUrl.pathname.endsWith('/rezervari')
+        && pendingRequest.frame().page()===chatGate.target
+        && pendingRequest.headers()['x-spotivity-fixture-chat-send']==='1'
+        && pendingUrl.searchParams.get('email_client')==='eq.alice@example.test'
         && pendingUrl.searchParams.get('teren')==='eq.Court A' && pendingUrl.searchParams.get('stare')==='eq.activa') {
         const gate=chatGate;chatGate=null;gate.enter();await gate.wait;
       }
@@ -85,7 +93,7 @@ let checks = 0;
           if (url.pathname.endsWith('/token')) {
             const body=request.postDataJSON();
             assert.equal(body.password,' test-password. ');
-            const n=body.email==='admin@example.test' ? 3 : 1;
+            const n=body.email==='admin@example.test' ? 3 : body.email==='super@example.test' ? 4 : 1;
             const user=(await pg.query('select * from auth.users where id=$1',[uid(n)])).rows[0];
             return reply(200,{access_token:token(n),token_type:'bearer',refresh_token:`fixture-refresh-${n}`,expires_in:3600,user:{...user,app_metadata:{provider:'email'},user_metadata:user.raw_user_meta_data}});
           }
@@ -151,6 +159,135 @@ let checks = 0;
       return page;
     };
     const pass = label => {checks++;console.log('PASS',label);};
+    const viewportWidths=[320,390,768,1440];
+    const assertPngLoaded=async locator=>{
+      const loaded=await locator.evaluate(async image=>{
+        try {await image.decode();} catch {}
+        return {src:image.getAttribute('src'),complete:image.complete,width:image.naturalWidth};
+      });
+      assert.match(loaded.src,/\.png(?:\?|$)/);
+      assert.ok(loaded.complete && loaded.width>0,`Sport PNG did not load: ${JSON.stringify(loaded)}`);
+    };
+    const assertFits = async (target,selector,label) => {
+      await target.waitForLoadState('networkidle');
+      const dimensions=await target.evaluate(selector=>{
+        const root=document.querySelector(selector),box=root.getBoundingClientRect();
+        const visible=node=>node.getClientRects().length && getComputedStyle(node).visibility!=='hidden';
+        const blocks=[root,...root.querySelectorAll('*')].filter(node=>visible(node)
+          && !['INPUT','SELECT','TEXTAREA','IMG','SVG','PATH','OPTION'].includes(node.tagName)
+          && !['inline','contents'].includes(getComputedStyle(node).display)
+          && getComputedStyle(node).textOverflow!=='ellipsis');
+        return {viewport:innerWidth,pageWidth:document.documentElement.scrollWidth,left:box.left,right:box.right,
+          outsideControls:[...root.querySelectorAll('input,select,textarea,button')].filter(visible).map(node=>({node,rect:node.getBoundingClientRect()}))
+            .filter(({rect})=>rect.left<box.left-1 || rect.right>box.right+1)
+            .map(({node,rect})=>({id:node.id,tag:node.tagName,left:rect.left,right:rect.right})),
+          overflow:blocks.filter(node=>node.clientWidth>0 && node.scrollWidth>node.clientWidth+1).map(node=>({
+            tag:node.tagName,id:node.id,classes:String(node.className),width:node.clientWidth,scroll:node.scrollWidth
+          })).slice(0,12)};
+      },selector);
+      if (screenshotDir && (dimensions.pageWidth>dimensions.viewport+1 || dimensions.left< -1
+        || dimensions.right>dimensions.viewport+1 || dimensions.outsideControls.length || dimensions.overflow.length)) {
+        await target.screenshot({path:join(screenshotDir,`layout-failure-${label.replace(/[^a-zA-Z0-9]+/g,'-').slice(0,120)}.png`)});
+      }
+      assert.ok(dimensions.pageWidth<=dimensions.viewport+1,`${label}: ${JSON.stringify(dimensions)}`);
+      assert.ok(dimensions.left>=-1 && dimensions.right<=dimensions.viewport+1,`${label}: ${JSON.stringify(dimensions)}`);
+      assert.deepEqual(dimensions.outsideControls,[],`${label}: ${JSON.stringify(dimensions)}`);
+      assert.deepEqual(dimensions.overflow,[],`${label}: ${JSON.stringify(dimensions)}`);
+    };
+    const assertBackdrop = async (target,id) => {
+      const result=await target.evaluate(id=>{
+        const modal=document.getElementById(id),box=modal.getBoundingClientRect();
+        const styles=[getComputedStyle(modal),getComputedStyle(modal,'::before'),getComputedStyle(modal,'::after')];
+        const background=document.querySelector('.fundal-water'),backgroundBox=background.getBoundingClientRect();
+        const fullBackgroundBlur=getComputedStyle(background).filter.includes('blur(')
+          && backgroundBox.left<=0 && backgroundBox.top<=0 && backgroundBox.right>=innerWidth && backgroundBox.bottom>=innerHeight;
+        return {width:innerWidth,height:innerHeight,left:box.left,top:box.top,right:box.right,bottom:box.bottom,
+          blurred:fullBackgroundBlur || styles.some(style=>[style.backdropFilter,style.webkitBackdropFilter].some(value=>value && value!=='none')),
+          corners:[[0,0],[innerWidth-1,0],[0,innerHeight-1],[innerWidth-1,innerHeight-1]]
+            .map(([x,y])=>Boolean(document.elementFromPoint(x,y)?.closest(`#${id}`)))};
+      },id);
+      assert.ok(result.left<=0 && result.top<=0 && result.right>=result.width && result.bottom>=result.height,JSON.stringify(result));
+      assert.equal(result.blurred,true,JSON.stringify(result));
+      assert.ok(result.corners.every(Boolean),JSON.stringify(result));
+    };
+    const assertCourtNames = async (target,names) => {
+      await target.waitForLoadState('networkidle');
+      await target.waitForFunction(expected=>{
+        const container=document.getElementById('container-dinamic-terenuri');
+        const actual=[...container.querySelectorAll('.btn-teren h3')].map(node=>node.textContent).sort();
+        const settledEmpty=container.textContent.trim() && container.textContent.trim()!==window.dict?.[window.lang]?.se_cauta;
+        return JSON.stringify(actual)===JSON.stringify([...expected].sort()) && (expected.length || settledEmpty);
+      },names);
+      assert.deepEqual(await target.locator('#container-dinamic-terenuri .btn-teren h3').allTextContents(),names);
+    };
+    // These courts and reservations exist only in this disposable PostgreSQL fixture.
+    const searchCourt='Ștrand Ștefănești <img src=x onerror="window.__courtXss=true">';
+    const secondSearchCourt='Ștrand Sud';
+    const followingDay=await serial(async()=>{
+      await pg.exec('reset role');
+      for (const [name,city] of [[searchCourt,'Târgu Mureș'],[secondSearchCourt,'București']]) {
+        await pg.query("insert into public.terenuri(nume,sport,oras,pret,optiune_minge,este_activ,poza,ore_rezervabile) values($1,'Fotbal',$2,100,false,true,'assets/imagini/avatar2.png',$3)",[name,city,['12:00','13:00']]);
+      }
+      await pg.query("insert into public.rezervari(email_client,teren,data_str,ora,stare) values('Teren Blocat',$1,$2,'12:00','activa')",[searchCourt,tomorrow]);
+      return (await pg.query("select ($1::date+1)::text as d",[tomorrow])).rows[0].d;
+    });
+    const searchPage=await pageFor();
+    await searchPage.goto(base,{waitUntil:'networkidle'});
+    assert.equal(await searchPage.evaluate(()=>typeof window.supabase?.createClient),'function','The pinned Supabase SDK must load with TLS and SRI verification before UI checks run.');
+    await searchPage.locator('.card-sport[data-sport="Fotbal"]').click();
+    await searchPage.locator('#filtru-nume').fill('sTrAnD StEfAnEsTi');
+    await assertCourtNames(searchPage,[searchCourt]);
+    assert.equal(await searchPage.evaluate(()=>window.__courtXss),undefined);
+    assert.equal(await searchPage.locator('img[src="x"]').count(),0);
+    await searchPage.locator('#filtru-nume').fill('<img src=x');
+    await assertCourtNames(searchPage,[searchCourt]);
+    await searchPage.locator('#filtru-nume').fill('no matching court');
+    await assertCourtNames(searchPage,[]);
+    assert.notEqual((await searchPage.locator('#container-dinamic-terenuri').innerText()).trim(),'0');
+    pass('court-name search matches case and Romanian diacritics and renders literal HTML as safe text');
+    await searchPage.locator('#filtru-nume').fill('strand');
+    await searchPage.locator('#filtru-data').fill(tomorrow);
+    await searchPage.locator('#filtru-data').dispatchEvent('change');
+    await searchPage.locator('#filtru-ora').selectOption('12:00');
+    await assertCourtNames(searchPage,[secondSearchCourt]);
+    await searchPage.locator('#filtru-data').fill(followingDay);
+    await searchPage.locator('#filtru-data').dispatchEvent('change');
+    await assertCourtNames(searchPage,[searchCourt,secondSearchCourt]);
+    await searchPage.locator('#filtru-nume').fill('');
+    await assertCourtNames(searchPage,['Court A',searchCourt,secondSearchCourt]);
+    assert.equal(await searchPage.locator('#filtru-data').inputValue(),followingDay);
+    assert.equal(await searchPage.locator('#filtru-ora').inputValue(),'12:00');
+    await searchPage.locator('#filtru-nume').fill('retained draft');
+    await searchPage.locator('#inchide-terenuri').click();
+    await searchPage.locator('#filtru-oras-global').selectOption('Târgu Mureș');
+    await searchPage.locator('.card-sport[data-sport="Fotbal"]').click();
+    assert.equal(await searchPage.locator('#filtru-nume').inputValue(),'');
+    await assertCourtNames(searchPage,[searchCourt]);
+    await searchPage.locator('#filtru-nume').fill('Sud');
+    await assertCourtNames(searchPage,[]);
+    await searchPage.locator('#filtru-nume').fill('');
+    await assertCourtNames(searchPage,[searchCourt]);
+    pass('name search combines city, date and hour availability, clears independently and resets on a newly opened chooser');
+    for (const width of viewportWidths) {
+      await searchPage.setViewportSize({width,height:844});
+      await assertFits(searchPage,'#modal-terenuri .modal-continut',`public chooser ${width}px`);
+      await assertBackdrop(searchPage,'modal-terenuri');
+      const header=await searchPage.locator('#inchide-terenuri').evaluate(button=>{
+        const title=document.getElementById('titlu-terenuri') || button.parentElement.querySelector('h2');
+        const close=button.getBoundingClientRect(),heading=title.getBoundingClientRect();
+        return {close:{left:close.left,top:close.top,right:close.right,bottom:close.bottom,width:close.width,height:close.height},
+          heading:{left:heading.left,top:heading.top,right:heading.right,bottom:heading.bottom}};
+      });
+      assert.ok(header.close.width>=40 && header.close.height>=40,JSON.stringify(header));
+      assert.ok(header.heading.right<=header.close.left+1 || header.heading.bottom<=header.close.top+1,JSON.stringify(header));
+      if (screenshotDir) await searchPage.screenshot({path:join(screenshotDir,`spotivity-search-${width}.png`)});
+      pass(`public court chooser and blurred backdrop fit the full ${width}px viewport`);
+    }
+    await serial(async()=>{
+      await pg.exec("reset role; select set_config('request.jwt.claim.sub','',false)");
+      await pg.query('delete from public.rezervari where teren=$1',[searchCourt]);
+      await pg.query('delete from public.terenuri where nume in ($1,$2)',[searchCourt,secondSearchCourt]);
+    });
     const page=await pageFor();
     await page.addInitScript(()=>localStorage.setItem('user_session',JSON.stringify({email:'super@example.test',id:'forged'})));
     await page.goto(base,{waitUntil:'networkidle'});
@@ -326,9 +463,11 @@ let checks = 0;
       await pg.exec('reset role');
       await pg.query("update public.clienti set nume=$1 where user_id=$2",['<img src=x onerror="window.__xss=true">',uid(1)]);
       await pg.query("insert into public.mesaje_chat(email_client,client_user_id,teren,expeditor,mesaj) values('alice@example.test',$1,'Court A','client',$2)",[uid(1),'<img src=x onerror="window.__xss=true">']);
+      await pg.query('update public.users_admin set nume_admin=$1 where user_id=$2',['Manager_'+'UnbrokenRoleName'.repeat(8),uid(3)]);
     });
     const admin=await pageFor();
     await admin.goto(new URL('admin.html',base).href,{waitUntil:'networkidle'});
+    assert.doesNotMatch(await admin.locator('#sectiune-login').innerText(),/\p{Extended_Pictographic}/u);
     await admin.locator('#login-email-admin').fill('admin@example.test');
     await admin.locator('#login-parola').fill(' test-password. ');
     await admin.locator('#login-admin-btn').click();
@@ -357,9 +496,19 @@ let checks = 0;
     assert.ok((await admin.locator('#chat-admin-mesaje').innerText()).includes('<img src=x'));
     pass('client names and chat messages render as text, without stored HTML execution');
     await admin.keyboard.press('Escape');
-    await admin.locator('#container-meniu-terenuri .card-sport').first().click();
-    await admin.locator('.card-sport[onclick*="modal-setari-"]').click();
+    assert.equal(await admin.locator('.sub-pagina-oras').count(),0);
+    assert.equal(await admin.locator('#container-meniu-terenuri .card-sport').count(),1);
+    const allocatedCard=admin.locator('#container-meniu-terenuri .card-sport[onclick*="modal-setari-"]');
+    assert.match(await allocatedCard.innerText(),/Court A/);
+    const allocatedIcon=allocatedCard.locator('img');
+    assert.equal(await allocatedIcon.count(),1);
+    assert.match(await allocatedIcon.getAttribute('src'),/fotbal\.png(?:\?|$)/);
+    await assertPngLoaded(allocatedIcon);
+    await allocatedCard.click();
+    pass('ordinary admin opens its allocated court settings directly with the matching PNG sport icon');
     const settingsId=(await admin.locator('[id^="modal-setari-"]').getAttribute('id')).slice('modal-setari-'.length);
+    assert.match(await admin.locator(`#modal-setari-${settingsId} .admin-settings-header img`).getAttribute('src'),/fotbal\.png(?:\?|$)/);
+    await assertPngLoaded(admin.locator(`#modal-setari-${settingsId} .admin-settings-header img`));
     const hourInputs=admin.locator(`#ore-rezervabile-${settingsId} input.ora-rezervabila`);
     const allHours=Array.from({length:14},(_,i)=>`${String(i+9).padStart(2,'0')}:00`);
     const enabledHours=['09:00','10:00','11:00'];
@@ -465,8 +614,12 @@ let checks = 0;
     pass('a client still sees and cancels an existing booking outside the revised court hours');
     await admin.locator('.program-reincarca').click();
     await admin.locator('#tabel-corp-program tr[data-ora="09:00"]').getByText(longManualName,{exact:false}).waitFor();
-    for (const width of [320,390]) {
+    await admin.locator('#select-stare-1100').selectOption('ocupat');
+    await admin.locator('#form-inline-1100').waitFor({state:'visible'});
+    await admin.locator('#inline-nume-1100').fill(longManualName);
+    for (const width of viewportWidths) {
       await admin.setViewportSize({width,height:844});
+      await assertFits(admin,'#modal-tabel-program .modal-continut',`admin schedule including inline booking ${width}px`);
       const dimensions=await admin.evaluate(()=>{
         const modal=document.querySelector('.program-modal');
         const box=modal.getBoundingClientRect();
@@ -485,6 +638,15 @@ let checks = 0;
       assert.ok(dimensions.controlHeights.every(height=>height>0 && height<=44.1),JSON.stringify(dimensions));
       assert.ok(dimensions.detailScroll<=dimensions.detailWidth+1,JSON.stringify(dimensions));
       assert.ok(dimensions.tableScroll<=dimensions.tableWidth+1,JSON.stringify(dimensions));
+      const statusLabels=await admin.locator('.program-tabel select').evaluateAll(nodes=>nodes.map(node=>{
+        const style=getComputedStyle(node),context=document.createElement('canvas').getContext('2d');
+        context.font=style.font;
+        const textWidth=Math.max(...[...node.options].map(option=>context.measureText(option.textContent).width));
+        return {id:node.id,width:node.getBoundingClientRect().width,textWidth,
+          required:textWidth+parseFloat(style.paddingLeft)+parseFloat(style.paddingRight)
+            +parseFloat(style.borderLeftWidth)+parseFloat(style.borderRightWidth)+18};
+      }));
+      assert.ok(statusLabels.every(label=>label.required<=label.width+1),JSON.stringify({width,statusLabels}));
       pass(`admin schedule fits a ${width}px mobile viewport with compact controls and wrapped customer details`);
     }
     const subpathPage=await pageFor();
@@ -512,27 +674,99 @@ let checks = 0;
       await pg.query("insert into public.rezervari(email_client,client_user_id,teren,data_str,ora,stare) values('alice@example.test',$2,'Court B',$1,'14:00','activa')",[tomorrow,uid(1)]);
     });
     const chatPage=await pageFor();await chatPage.goto(base,{waitUntil:'networkidle'});
+    // Identify the sender's actual preflight without pausing concurrent permission refreshes.
+    // This fixture-only metadata does not change filters, authentication, or application code.
+    await chatPage.evaluate(()=>{
+      const originalFrom=db.from.bind(db);
+      db.from=(table,...args)=>{
+        const query=originalFrom(table,...args);
+        if (table==='rezervari' && new Error().stack?.includes('trimiteMesajClient')) {
+          if (typeof query.headers?.set==='function') {
+            query.headers=new Headers(query.headers);
+            query.headers.set('x-spotivity-fixture-chat-send','1');
+          } else query.headers={...query.headers,'x-spotivity-fixture-chat-send':'1'};
+        }
+        return query;
+      };
+    });
+    const selectSettledClientCourt=async court=>{
+      // A card opens the conversation and then refreshes its list; both paths recheck permission.
+      // Wait for both actual responses before typing a draft that the list refresh would clear.
+      let complete,count=0;
+      const refreshed=new Promise((resolve,reject)=>{
+        complete={resolve,reject};
+      });
+      const timeout=setTimeout(()=>complete.reject(new Error(`Chat selection did not finish refreshing ${court}`)),10000);
+      const response=reply=>{
+        const url=new URL(reply.url());
+        if (reply.request().method()==='GET' && url.pathname.endsWith('/rezervari')
+          && url.searchParams.get('select')==='*' && url.searchParams.get('teren')===`eq.${court}`
+          && url.searchParams.get('stare')==='eq.activa' && ++count===2) complete.resolve();
+      };
+      chatPage.on('response',response);
+      try {
+        await chatPage.locator('#chat-client-lista-terenuri .card-conversatie').filter({hasText:court}).click();
+        await refreshed;
+        await chatPage.waitForLoadState('networkidle');
+        await chatPage.waitForFunction(court=>document.getElementById('chat-client-teren-titlu').innerText.includes(court)
+          && !document.getElementById('chat-client-input').disabled
+          && !document.getElementById('chat-client-btn-trimite').disabled,court);
+      } finally {clearTimeout(timeout);chatPage.off('response',response);}
+    };
     await chatPage.evaluate(async()=>{await db.auth.signInWithPassword({email:'alice@example.test',password:' test-password. '})});
     await chatPage.waitForFunction(()=>document.getElementById('btn-top-cont').innerText.includes('Contul'));
     await chatPage.locator('#btn-top-cont').click();await chatPage.locator('#modal-profil').waitFor({state:'visible'});
     await chatPage.locator('#btn-vezi-chat').click();await chatPage.locator('#modal-chat-client').waitFor({state:'visible'});
-    await chatPage.locator('#chat-client-lista-terenuri .card-conversatie').filter({hasText:'Court A'}).click();
-    await chatPage.waitForFunction(()=>!document.getElementById('chat-client-input').disabled);
-    const chatPause=pauseChatPreflight();await chatPage.locator('#chat-client-input').fill('Message intended for Court A');
+    await selectSettledClientCourt('Court A');
+    const chatPause=pauseChatPreflight(chatPage);await chatPage.locator('#chat-client-input').fill('Message intended for Court A');
     await chatPage.locator('#chat-client-btn-trimite').click();await chatPause.entered;
+    await serial(async()=>{await pg.exec('reset role');assert.equal((await pg.query("select id from public.mesaje_chat where mesaj='Message intended for Court A'")).rows.length,0)});
     await chatPage.locator('#chat-client-lista-terenuri .card-conversatie').filter({hasText:'Court B'}).click();
+    await chatPage.locator('#chat-client-teren-titlu').getByText('Court B',{exact:false}).waitFor();
     chatPause.release();await chatPage.waitForLoadState('networkidle');
     await serial(async()=>{await pg.exec('reset role');assert.equal((await pg.query("select id from public.mesaje_chat where mesaj='Message intended for Court A'")).rows.length,0)});
     pass('switching the chat court during preflight never sends the previous draft to another court');
-    await chatPage.locator('#chat-client-lista-terenuri .card-conversatie').filter({hasText:'Court A'}).click();
-    await chatPage.waitForFunction(()=>!document.getElementById('chat-client-input').disabled);
-    const logoutPause=pauseChatPreflight();await chatPage.locator('#chat-client-input').fill('Message cancelled by logout');
+    await selectSettledClientCourt('Court A');
+    const logoutPause=pauseChatPreflight(chatPage);await chatPage.locator('#chat-client-input').fill('Message cancelled by logout');
     await chatPage.locator('#chat-client-btn-trimite').click();await logoutPause.entered;
+    await serial(async()=>{await pg.exec('reset role');assert.equal((await pg.query("select id from public.mesaje_chat where mesaj='Message cancelled by logout'")).rows.length,0)});
     await chatPage.evaluate(async()=>{await db.auth.signOut({scope:'local'})});
     await chatPage.locator('#modal-chat-client').waitFor({state:'hidden'});logoutPause.release();await chatPage.waitForLoadState('networkidle');
     assert.equal(await chatPage.locator('#chat-client-mesaje').innerText(),'');
     await serial(async()=>{await pg.exec('reset role');assert.equal((await pg.query("select id from public.mesaje_chat where mesaj='Message cancelled by logout'")).rows.length,0)});
     pass('logout during chat preflight clears private messages and aborts sending');
+    await admin.keyboard.press('Escape');
+    // Open each screen through the role's real navigation, without submitting mutations.
+    const ordinaryScreens=['modal-rezervare-manuala','modal-tabel-program','modal-istoric','modal-chat-admin',`modal-setari-${settingsId}`];
+    for (const width of viewportWidths) {
+      await admin.setViewportSize({width,height:844});
+      await assertFits(admin,'#sectiune-dashboard',`ordinary dashboard ${width}px`);
+      assert.doesNotMatch(await admin.locator('#sectiune-dashboard').innerText(),/\p{Extended_Pictographic}/u);
+      if (screenshotDir) await admin.screenshot({path:join(screenshotDir,`spotivity-admin-dashboard-${width}.png`)});
+      for (const id of ordinaryScreens) {
+        if (id==='modal-chat-admin') await admin.locator('#btn-vezi-chat-admin').click();
+        else await admin.locator(`.card-sport[onclick*="${id}"]`).click();
+        await admin.locator(`#${id}`).waitFor({state:'visible'});
+        if (id==='modal-istoric') {
+          await admin.locator('#btn-istoric').click();
+          await admin.locator('#container-istoric').getByText(longManualName,{exact:false}).first().waitFor();
+        }
+        if (id==='modal-chat-admin') {
+          const conversation=admin.locator('#chat-admin-lista-conversații .card-conversatie').first();
+          if (!(await conversation.isVisible())) await admin.locator('#btn-inapoi-conversatie-admin').click();
+          await assertFits(admin,'#modal-chat-admin .modal-continut',`admin chat conversation list ${width}px`);
+          await conversation.click();
+          await admin.locator('#chat-admin-mesaje .mesaj-bula').first().waitFor();
+        }
+        await assertFits(admin,`#${id} .modal-continut`,`${id} ordinary ${width}px`);
+        await assertBackdrop(admin,id);
+        assert.doesNotMatch(await admin.locator(`#${id}`).innerText(),/\p{Extended_Pictographic}/u);
+        if (screenshotDir) await admin.screenshot({path:join(screenshotDir,`spotivity-admin-${id}-${width}.png`)});
+        await admin.keyboard.press('Escape');
+        await admin.locator(`#${id}`).waitFor({state:'hidden'});
+      }
+      pass(`ordinary admin dashboard, settings, manual booking, history and chat fit ${width}px without horizontal overflow or emojis`);
+    }
     // A sign-out from another tab must remove cached privileged data.
     await admin.evaluate(async()=>{await db.auth.signOut({scope:'local'})});
     await admin.locator('#sectiune-login').waitFor({state:'visible'});
@@ -541,14 +775,115 @@ let checks = 0;
     assert.equal(await admin.locator('#chat-admin-mesaje').innerText(),'');
     assert.equal(await admin.locator('[id^="modal-setari-"]').count(),0);
     pass('admin auth sign-out clears cached settings, program and private chat');
+    const longCity='Orașul_'+'UnbrokenCityName'.repeat(10);
+    const longCourt='Terenul_'+'UnbrokenCourtName'.repeat(10);
+    const superCourts=await serial(async()=>{
+      await pg.exec("reset role; select set_config('request.jwt.claim.sub','',false)");
+      await pg.query('update public.users_admin set nume_admin=$1 where user_id=$2',['Super_'+'UnbrokenRoleName'.repeat(8),uid(4)]);
+      await pg.query('update public.terenuri set oras=$1 where nume=$2',[longCity,'Court B']);
+      for (const [name,sport] of [[longCourt,'Baschet'],['Picior Court','Tenis Picior']]) {
+        await pg.query("insert into public.terenuri(nume,sport,oras,pret,pret_minge,optiune_minge,este_activ,poza) values($1,$2,$3,100,$4,false,true,'assets/imagini/avatar2.png')",[name,sport,longCity,sport==='Tenis Picior'?0:15]);
+      }
+      return (await pg.query('select id,nume,sport,oras,pret_minge from public.terenuri order by id')).rows;
+    });
+    const superAdmin=await pageFor();
+    await superAdmin.goto(new URL('admin.html',base).href,{waitUntil:'networkidle'});
+    for (const width of viewportWidths) {
+      await superAdmin.setViewportSize({width,height:844});
+      await assertFits(superAdmin,'#sectiune-login',`admin login ${width}px`);
+      assert.doesNotMatch(await superAdmin.locator('#sectiune-login').innerText(),/\p{Extended_Pictographic}/u);
+    }
+    await superAdmin.locator('#login-email-admin').fill('super@example.test');
+    await superAdmin.locator('#login-parola').fill(' test-password. ');
+    await superAdmin.locator('#login-admin-btn').click();
+    await superAdmin.locator('#sectiune-dashboard').waitFor({state:'visible'});
+    await superAdmin.waitForFunction(count=>document.querySelectorAll('[id^="modal-setari-"]').length===count,superCourts.length);
+    assert.equal(await superAdmin.locator('#container-meniu-terenuri .admin-court-card').count(),0);
+    const cities=superAdmin.locator('#container-meniu-terenuri .admin-city-card');
+    assert.equal(await cities.count(),3);
+    for (const cityCard of await cities.all()) {
+      assert.match(await cityCard.innerText(),/^Setări\s/);
+      await cityCard.click();
+      const cityPage=superAdmin.locator('.sub-pagina-oras:visible');
+      for (const courtCard of await cityPage.locator('.admin-court-card').all()) {
+        const courtName=await courtCard.locator('.admin-card-name').innerText();
+        const court=superCourts.find(court=>court.nume===courtName);
+        assert.ok(court,courtName);
+        const asset={Fotbal:'fotbal',Baschet:'baschet',Tenis:'tenis',Volei:'volei','Tenis Picior':'fotbal'}[court.sport];
+        assert.equal(await courtCard.locator('img').getAttribute('src'),`assets/imagini/${asset}.png`);
+        await assertPngLoaded(courtCard.locator('img'));
+        await courtCard.click();
+        await superAdmin.locator(`#modal-setari-${court.id}`).waitFor({state:'visible'});
+        assert.equal(await superAdmin.locator(`#modal-setari-${court.id} .admin-settings-header img`).getAttribute('src'),`assets/imagini/${asset}.png`);
+        await assertPngLoaded(superAdmin.locator(`#modal-setari-${court.id} .admin-settings-header img`));
+        assert.equal(await superAdmin.locator(`#pret-minge-${court.id}`).inputValue(),String(court.pret_minge ??15));
+        await superAdmin.locator(`#modal-setari-${court.id} .buton-inchidere`).click();
+      }
+      await cityPage.locator('[onclick*="inchideSubPaginaOras"]').click();
+    }
+    pass('only superadmin navigates Setări city → allocated court settings with PNG icons for each sport, including foot tennis');
+    for (const width of viewportWidths) {
+      await superAdmin.setViewportSize({width,height:844});
+      await assertFits(superAdmin,'#sectiune-dashboard',`superadmin dashboard ${width}px`);
+      assert.doesNotMatch(await superAdmin.locator('#sectiune-dashboard').innerText(),/\p{Extended_Pictographic}/u);
+      for (const cityCard of await cities.all()) {
+        await cityCard.click();
+        await assertFits(superAdmin,'.sub-pagina-oras[style*="display: block"]',`superadmin city page ${width}px`);
+        assert.doesNotMatch(await superAdmin.locator('.sub-pagina-oras:visible').innerText(),/\p{Extended_Pictographic}/u);
+        if (screenshotDir) {
+          const cityPageId=await superAdmin.locator('.sub-pagina-oras:visible').getAttribute('id');
+          await superAdmin.screenshot({path:join(screenshotDir,`spotivity-super-${cityPageId}-${width}.png`)});
+        }
+        for (const courtCard of await superAdmin.locator('.sub-pagina-oras:visible .admin-court-card').all()) {
+          const courtName=await courtCard.locator('.admin-card-name').innerText();
+          const court=superCourts.find(court=>court.nume===courtName);
+          await courtCard.click();
+          await assertFits(superAdmin,`#modal-setari-${court.id} .modal-continut`,`superadmin ${court.nume} settings ${width}px`);
+          assert.doesNotMatch(await superAdmin.locator(`#modal-setari-${court.id}`).innerText(),/\p{Extended_Pictographic}/u);
+          await superAdmin.locator(`#modal-setari-${court.id} .buton-inchidere`).click();
+        }
+        await superAdmin.locator('.sub-pagina-oras:visible [onclick*="inchideSubPaginaOras"]').click();
+      }
+      for (const id of ['modal-adauga-teren','modal-creeaza-cont']) {
+        await superAdmin.locator(`.card-sport[onclick*="${id}"]`).click();
+        await superAdmin.locator(`#${id}`).waitFor({state:'visible'});
+        if (id==='modal-adauga-teren') await superAdmin.locator('#container-lista-terenuri').getByText(longCourt,{exact:false}).waitFor();
+        if (id==='modal-creeaza-cont') await superAdmin.locator('#container-checkbox-terenuri').getByText(longCourt,{exact:false}).waitFor();
+        await assertFits(superAdmin,`#${id} .modal-continut`,`superadmin ${id} ${width}px`);
+        assert.doesNotMatch(await superAdmin.locator(`#${id}`).innerText(),/\p{Extended_Pictographic}/u);
+        if (screenshotDir) await superAdmin.screenshot({path:join(screenshotDir,`spotivity-super-${id}-${width}.png`)});
+        await superAdmin.keyboard.press('Escape');
+      }
+      pass(`superadmin city pages, every court settings dialog, court management and employee allocation fit ${width}px with long names`);
+    }
     const mobile=await pageFor();
-    await mobile.setViewportSize({width:390,height:844});
     await mobile.goto(base,{waitUntil:'networkidle'});
-    await mobile.locator('#btn-top-cont').click();
-    await mobile.locator('#modal-auth').waitFor({state:'visible'});
-    await mobile.keyboard.press('Escape');
-    await mobile.locator('#modal-auth').waitFor({state:'hidden'});
-    pass('mobile login dialog still opens and closes');
+    for (const width of viewportWidths) {
+      await mobile.setViewportSize({width,height:844});
+      const headerControls=await mobile.evaluate(()=>['btn-top-cont','filtru-oras-global','selector-limba'].map(id=>{
+        const box=document.getElementById(id).getBoundingClientRect();
+        return {id,left:box.left,right:box.right,top:box.top,bottom:box.bottom};
+      }));
+      if (screenshotDir) await mobile.screenshot({path:join(screenshotDir,`spotivity-public-header-${width}.png`)});
+      assert.ok(headerControls.every(control=>control.left>=0 && control.right<=width+1),JSON.stringify({width,headerControls}));
+      for (let i=0;i<headerControls.length;i++) for (let j=i+1;j<headerControls.length;j++) {
+        const a=headerControls[i],b=headerControls[j];
+        assert.ok(Math.min(a.right,b.right)-Math.max(a.left,b.left)<=1 || Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top)<=1,
+          JSON.stringify({width,overlapping:[a,b]}));
+      }
+      await mobile.locator('#btn-top-cont').click();
+      await mobile.locator('#modal-auth').waitFor({state:'visible'});
+      await mobile.locator('#tab-register').click();
+      await assertFits(mobile,'#modal-auth .modal-continut',`public signup ${width}px`);
+      await assertBackdrop(mobile,'modal-auth');
+      const gaps=await mobile.locator('#form-register .grup-input').evaluateAll(nodes=>nodes.slice(1).map((node,i)=>node.getBoundingClientRect().top-nodes[i].getBoundingClientRect().bottom));
+      assert.equal(gaps.length,3);
+      assert.ok(gaps.every(gap=>gap>=18),JSON.stringify({width,gaps}));
+      if (screenshotDir) await mobile.screenshot({path:join(screenshotDir,`spotivity-signup-${width}.png`)});
+      await mobile.keyboard.press('Escape');
+      await mobile.locator('#modal-auth').waitFor({state:'hidden'});
+      pass(`signup has spaced fields and a full-viewport blurred backdrop at ${width}px; the dialog opens and closes`);
+    }
     assert.deepEqual(browserErrors,[]);
     for (const context of contexts) await context.close();
     console.log(`\n${checks} browser integration checks passed against isolated PostgreSQL.`);

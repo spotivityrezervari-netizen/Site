@@ -226,6 +226,10 @@ window.esteRezervareTrecuta = function(dataStr, ora, timestamp_start) {
     return dataTerminarii < acum;
 };
 
+Object.assign(window.dict.ro, {cauta_teren:'Caută terenul',cauta_teren_placeholder:'Numele terenului',niciun_teren_cautare:'Nu am găsit un teren cu acest nume.'});
+Object.assign(window.dict.hu, {cauta_teren:'Pálya keresése',cauta_teren_placeholder:'A pálya neve',niciun_teren_cautare:'Nem találtunk ilyen nevű pályát.'});
+Object.assign(window.dict.en, {cauta_teren:'Find a court',cauta_teren_placeholder:'Court name',niciun_teren_cautare:'No courts match this name.'});
+
 window.schimbaLimba = function(limbaNoua) {
     window.lang = limbaNoua;
     localStorage.setItem('limba_app', window.lang);
@@ -428,12 +432,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     document.getElementById('tab-login')?.addEventListener('click', () => {
-        document.getElementById('form-login').style.display = 'block'; document.getElementById('form-register').style.display = 'none';
+        document.getElementById('form-login').style.display = 'flex'; document.getElementById('form-register').style.display = 'none';
         document.getElementById('tab-login').classList.add('activ'); document.getElementById('tab-register').classList.remove('activ');
     });
 
     document.getElementById('tab-register')?.addEventListener('click', () => {
-        document.getElementById('form-login').style.display = 'none'; document.getElementById('form-register').style.display = 'block';
+        document.getElementById('form-login').style.display = 'none'; document.getElementById('form-register').style.display = 'flex';
         document.getElementById('tab-register').classList.add('activ'); document.getElementById('tab-login').classList.remove('activ');
     });
 
@@ -687,6 +691,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             actualizeazaDataFiltrului();
             const filtruOra = document.getElementById('filtru-ora');
             if(filtruOra) filtruOra.value = 'ALL'; 
+            const filtruNume = document.getElementById('filtru-nume');
+            if (filtruNume) filtruNume.value = '';
+            clearTimeout(searchTimer);
             
             await aplicaFiltruSiDeseneazaTerenuri();
         });
@@ -701,8 +708,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             'Acest teren nu are ore disponibile pentru rezervări.';
     }
 
+    let searchTimer;
+    const normalizaNume = value => String(value ?? '').normalize('NFD')
+        .replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('ro-RO').trim();
     async function aplicaFiltruSiDeseneazaTerenuri() {
         const request = ++filterRequest;
+        const searchText = normalizaNume(document.getElementById('filtru-nume')?.value);
         const dataSelectataDinFiltru = document.getElementById('filtru-data').value;
         const filtruOra = document.getElementById('filtru-ora');
         const containerDinamicTerenuri = document.getElementById('container-dinamic-terenuri');
@@ -733,7 +744,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (error || !rezervari) { containerDinamicTerenuri.textContent = textProgram(true); return; }
             terenuriDisponibile = terenuriDisponibile.filter(court => !rezervari.some(rez => rez.teren === court.nume));
         }
+        terenuriDisponibile = terenuriDisponibile.filter(court => normalizaNume(court.nume).includes(searchText));
         containerDinamicTerenuri.innerHTML = '';
+        if (terenuriDisponibile.length === 0 && searchText) {
+            containerDinamicTerenuri.textContent = window.dict[window.lang]['niciun_teren_cautare'];
+            return;
+        }
         if (terenuriDisponibile.length === 0) {
             containerDinamicTerenuri.textContent = '0' + (oraAleasa === 'ALL' ? '' : ` / ${oraAleasa}`);
             return;
@@ -752,6 +768,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    document.getElementById('filtru-nume')?.addEventListener('input', () => {
+        clearTimeout(searchTimer);
+        // Invalidate an earlier fetch as soon as the search changes.
+        filterRequest++;
+        searchTimer = setTimeout(aplicaFiltruSiDeseneazaTerenuri,150);
+    });
+    document.getElementById('filtru-nume')?.addEventListener('keydown', event => {
+        if (event.key === 'Enter') { event.preventDefault(); clearTimeout(searchTimer); aplicaFiltruSiDeseneazaTerenuri(); }
+    });
     document.getElementById('filtru-data')?.addEventListener('input', actualizeazaDataFiltrului);
     document.getElementById('filtru-data')?.addEventListener('change', () => {
         actualizeazaDataFiltrului();

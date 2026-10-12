@@ -52,6 +52,9 @@
 #tabel-data::-webkit-datetime-edit,
 #manual-data::-webkit-datetime-edit { padding: 0; }
 .program-scroll {
+    background: rgba(0,0,0,.3);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 10px;
     overflow: auto;
     max-height: 400px;
     max-height: min(400px, calc(90dvh - 220px));
@@ -78,7 +81,8 @@
     min-width: 0;
     width: 100%;
     padding: 6px 2px !important;
-    font-size: 12px;
+    min-height: 44px;
+    font-size: 16px;
     text-overflow: ellipsis;
 }
 .program-ora-label { font-size: 14px; white-space: nowrap; }
@@ -120,7 +124,7 @@
 .ore-teren-grid input[type="checkbox"] { width: 16px; height: 16px; margin: 0; padding: 0; flex-shrink: 0; accent-color: #06b6d4; }
 @media (max-width: 480px) {
     .program-col-ora { width: 54px; }
-    .program-col-stare { width: 86px; }
+    .program-col-stare { width: 104px; }
     .program-tabel th, .program-tabel td { padding: 7px 4px; }
     #modal-tabel-program .program-titlu { font-size: 16px; }
     .ore-teren-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -129,3 +133,192 @@
     .program-filtre { grid-template-columns: minmax(0, 1fr); }
     .program-scroll { max-height: min(400px, calc(90dvh - 285px)); }
 }
+
+/* Admin layout has its own compact sizing for dashboards and every dialog. */
+.admin-page { height: auto; min-height: 100vh; min-height: 100dvh; }
+.admin-page [hidden] { display: none !important; }
+.admin-page .admin-shell {
+    width: 100%;
+    justify-content: flex-start;
+    padding: 24px 16px;
+    overflow: visible;
+}
+.admin-page #sectiune-login {
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    margin: 24px auto;
+    padding: 24px;
+    border-radius: 18px;
+}
+.admin-page #sectiune-login .titlu-modal { font-size: 21px; margin-bottom: 20px; }
+.admin-page #sectiune-dashboard { padding: 0 !important; gap: 16px !important; }
+.admin-header { flex-wrap: wrap; gap: 12px; padding: 14px !important; }
+#text-rol-activ { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; line-height: 1.5; margin-top: 0 !important; }
+.admin-header-actions { max-width: 100%; min-width: 0; }
+.admin-header-buttons { flex-wrap: wrap; gap: 8px !important; max-width: 100%; }
+.admin-header-buttons button { min-height: 44px; }
+.admin-page .grila-sporturi {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px !important;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+}
+.admin-page .admin-menu-card {
+    min-width: 0;
+    min-height: 106px;
+    height: 100%;
+    aspect-ratio: auto;
+    gap: 8px;
+    padding: 16px !important;
+    border-radius: 16px;
+    overflow-wrap: anywhere;
+    transition: background .2s, border-color .2s;
+}
+.admin-page .admin-menu-card:hover { transform: none; }
+.admin-page .admin-menu-card h2 { margin: 0; font-size: 17px !important; line-height: 1.35; font-weight: 600; }
+.admin-card-name { display: block; }
+.admin-card-detail { color: #b9c3d1; font-size: 13px; }
+.admin-sport-icon { display: block; width: 44px; height: 44px; object-fit: contain; flex-shrink: 0; }
+.admin-page .admin-court-card { min-height: 134px; }
+.admin-page .sub-pagina-oras { margin-top: 0 !important; }
+.admin-city-header { flex-wrap: wrap; gap: 12px; margin-bottom: 16px !important; }
+.admin-city-header h1 { flex: 1 1 180px; min-width: 0; margin-left: 0 !important; font-size: 21px !important; overflow-wrap: anywhere; line-height: 1.35; }
+.admin-city-header button { min-height: 44px; }
+.admin-page .modal { padding: 12px; }
+.admin-page .modal .modal-continut {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    width: 100% !important;
+    height: auto;
+    max-height: calc(100vh - 24px);
+    max-height: calc(100dvh - 24px);
+    min-height: 0;
+    min-width: 0;
+    gap: 14px;
+    margin: auto;
+    padding: 16px;
+    border-radius: 18px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+.admin-page .modal .modal-continut > * { min-width: 0; flex-shrink: 0; }
+.admin-page .modal .titlu-modal {
+    font-size: 19px !important;
+    line-height: 1.4;
+    text-align: left;
+    padding-right: 42px;
+    margin-bottom: 8px !important;
+    overflow-wrap: anywhere;
+}
+.admin-page .modal .modal-continut > div > p { margin-top: 0 !important; line-height: 1.45; }
+.admin-page .buton-inchidere {
+    top: 8px;
+    right: 8px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+.admin-page .formular-auth { min-width: 0; gap: 12px; flex: 0 0 auto !important; }
+.admin-page .modal .formular-auth { padding: 12px !important; }
+.admin-page .grup-input { min-width: 0; max-width: 100%; gap: 5px; }
+.admin-page .grup-input label { line-height: 1.4; overflow-wrap: anywhere; }
+.admin-page input:not([type="checkbox"]), .admin-page select {
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+    min-height: 44px;
+    padding: 10px;
+    border: 1px solid rgba(255,255,255,.2);
+    border-radius: 8px;
+    background: rgba(0,0,0,.4);
+    color: white;
+    font-size: 16px;
+    box-sizing: border-box;
+}
+.admin-page input[type="date"] { -webkit-appearance: none; appearance: none; }
+.admin-page input[type="checkbox"] { flex-shrink: 0; padding: 0; accent-color: #06b6d4; }
+.admin-page input[type="file"] { font-size: 13px; padding: 8px !important; }
+.admin-page input::file-selector-button { max-width: 100%; margin-right: 6px; }
+.admin-page button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.admin-page .buton-rezervare { min-height: 44px; padding: 11px 12px; font-size: 15px; line-height: 1.4; margin-top: 0 !important; }
+.admin-page .buton-rezervare:hover { transform: none; }
+.admin-settings-header { display: flex; align-items: center; gap: 10px; padding-right: 42px; }
+.admin-page .admin-settings-header .titlu-modal { flex: 1; padding-right: 0; margin: 0 !important; }
+.admin-settings-header .admin-sport-icon { width: 36px; height: 36px; }
+.admin-page .admin-toggle-row { flex-direction: row; align-items: center; gap: 12px; }
+.admin-toggle-row label { flex: 1; min-width: 0; }
+.admin-day-actions { display: grid !important; grid-template-columns: minmax(120px, 1fr) auto auto; align-items: center; gap: 6px !important; }
+.admin-day-actions input { min-width: 0 !important; }
+.admin-day-actions button { min-height: 44px; }
+#container-checkbox-terenuri label { min-height: 44px; overflow-wrap: anywhere; }
+#container-lista-terenuri { min-width: 0; overscroll-behavior: contain; }
+.admin-existing-court { min-width: 0; flex-wrap: wrap; gap: 10px; padding: 12px !important; margin-bottom: 0 !important; }
+.admin-existing-court > div { flex: 1 1 180px; min-width: 0; gap: 10px !important; }
+.admin-existing-court > div > div { min-width: 0; overflow-wrap: anywhere; }
+.admin-existing-court img { flex-shrink: 0; }
+.admin-existing-court button { min-height: 44px; }
+#container-istoric { max-height: 60vh; max-height: 60dvh; min-height: 0; overscroll-behavior: contain; }
+.admin-history-card { min-width: 0; overflow-wrap: anywhere; line-height: 1.45; }
+.admin-page #modal-chat-admin .modal-chat-box {
+    height: min(660px, calc(100vh - 24px));
+    height: min(660px, calc(100dvh - 24px));
+    max-width: 420px !important;
+    overflow: hidden;
+    gap: 10px;
+}
+.admin-page #modal-chat-admin .modal-chat-box.conversatie-activa { max-width: 900px !important; }
+.admin-page .chat-header { min-width: 0; gap: 10px; padding-bottom: 10px; margin-bottom: 0; }
+.admin-page .chat-header h2 { font-size: 19px !important; overflow-wrap: anywhere; line-height: 1.35; }
+.admin-page .chat-header .buton-inchidere { position: static; }
+.admin-page #modal-chat-admin .container-dual-chat { min-height: 0; min-width: 0; height: auto; flex: 1 1 auto; gap: 12px; }
+.admin-page .lista-conversații-side { min-width: 0; min-height: 0; padding-right: 3px; }
+.admin-page .fereastra-mesaje-side { min-width: 0; min-height: 0; overflow: hidden; }
+.admin-page .fereastra-mesaje-side > div:first-child { min-width: 0; gap: 8px; }
+#chat-admin-conversație-titlu { min-width: 0; flex: 1; overflow-wrap: anywhere; line-height: 1.35; }
+.admin-page .btn-inchide-conversatie-mobile { width: 44px; height: 44px; flex-shrink: 0; }
+.admin-page .lista-mesaje { min-height: 0; min-width: 0; padding: 8px; }
+.admin-page .card-conversatie { min-width: 0; }
+.admin-page .card-conversatie h4 { overflow-wrap: anywhere; padding-right: 12px; }
+.admin-page .chat-input-zona { min-width: 0; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.admin-page .chat-input-zona input { flex: 1 1 120px; min-width: 0; width: 0; }
+.admin-page #chat-admin-btn-sterge { min-height: 44px; padding: 8px !important; font-size: 12px; }
+.admin-page .chat-btn-trimite { flex: 0 0 44px; width: 44px; height: 44px; padding: 0; }
+.admin-page .mesaj-bula { max-width: 90%; overflow-wrap: anywhere; }
+.admin-page :is(button, input, select):focus-visible { outline: 2px solid #a1eafb; outline-offset: 2px; }
+
+@media (max-width: 768px) {
+    .admin-page .grila-sporturi { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .admin-page .admin-shell { padding: 16px 12px; }
+    .admin-page #sectiune-login { margin-top: 16px; }
+    .admin-page #modal-chat-admin .modal-chat-box { max-width: 540px !important; }
+    .admin-page .container-dual-chat { flex-direction: column; }
+}
+@media (max-width: 480px) {
+    .admin-page .admin-shell { padding: 12px; }
+    .admin-page #sectiune-login { padding: 20px; }
+    .admin-header { gap: 10px; }
+    .admin-header-actions { width: 100%; align-items: stretch !important; }
+    .admin-header-buttons button { flex: 1; }
+    .admin-page .admin-menu-card { min-height: 92px; padding: 12px !important; }
+    .admin-page .admin-menu-card h2 { font-size: 15px !important; }
+    .admin-page .admin-court-card { min-height: 124px; }
+    .admin-page .modal .modal-continut { padding: 12px; }
+    .admin-page .modal .titlu-modal { font-size: 17px !important; }
+    .admin-page .modal .formular-auth { padding: 10px !important; }
+    .admin-day-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .admin-day-actions input { grid-column: 1 / -1; }
+    .admin-page .admin-settings-header { gap: 8px; }
+    .admin-page .admin-settings-header .admin-sport-icon { width: 30px; height: 30px; }
+    .admin-page .chat-header h2 { font-size: 17px !important; }
+}
+
+/* Keep sport icons aligned across cards even when one court name wraps. */
+.admin-page .admin-court-card { justify-content: flex-start; }
+.admin-page .admin-city-header { align-items: flex-start !important; }

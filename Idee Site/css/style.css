@@ -1213,3 +1213,101 @@ body.fara-scroll {
 .modal-continut::-webkit-scrollbar-track:horizontal,
 .modal > div::-webkit-scrollbar-track:horizontal { margin-inline: 20px; }
 .modal-continut { overflow-x: hidden; }
+
+/* Blur the actual page layer: WebKit may clip nested backdrop-filter edges. */
+body.fara-scroll > .fundal-water,
+body.fara-scroll > #btn-legal {
+    filter: blur(12px);
+}
+.modal {
+    background: transparent !important;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    padding: 16px;
+    padding-top: max(16px, env(safe-area-inset-top));
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+}
+.modal::before {
+    content: "";
+    position: fixed;
+    inset: -24px;
+    background: var(--modal-veil, rgba(0,0,0,0.75));
+    pointer-events: none;
+    z-index: -1;
+}
+#modal-terenuri, #modal-rezervare { --modal-veil: rgba(60,60,64,0.7); }
+#modal-legal { --modal-veil: rgba(0,0,0,0.85); }
+.modal-continut {
+    min-width: 0;
+    max-width: min(450px,100%);
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+}
+.modal-mare { max-width: min(600px,100%); }
+.modal-antet {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) 44px;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 18px;
+    min-width: 0;
+}
+.modal-antet .titlu-modal { margin: 0; min-width: 0; overflow-wrap: anywhere; line-height: 1.3; }
+.modal-antet .buton-inchidere {
+    position: static;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    line-height: 1;
+    font-size: 22px;
+}
+#modal-auth .modal-continut, #modal-terenuri .modal-continut {
+    width: 100%;
+    padding: 22px;
+    max-height: calc(100vh - 32px) !important;
+    max-height: calc(100dvh - 32px) !important;
+}
+#modal-auth .taburi-auth { margin: 0; min-width: 0; padding: 4px; gap: 4px; }
+#modal-auth .tab-auth { min-width: 0; min-height: 44px; padding: 8px; line-height: 1.2; font-size: 14px; }
+#modal-auth .formular-auth { flex-direction: column; gap: 22px; }
+#modal-auth .grup-input { gap: 8px; min-width: 0; }
+#modal-auth .grup-input input { width: 100%; min-width: 0; min-height: 48px; }
+#modal-auth .formular-auth .buton-rezervare { margin-top: 4px !important; }
+.pagina-publica #modal-profil .modal-continut,
+.pagina-publica #modal-lista-rezervari .modal-continut,
+.pagina-publica #modal-rezervare .modal-continut,
+.pagina-publica #modal-parola-noua .modal-continut { padding-top: 52px !important; }
+.filtru-cautare-teren { grid-column: 1 / -1; }
+#filtru-nume {
+    width: 100%; min-width: 0; height: 48px; padding: 0 12px;
+    border-radius: 12px; color: white; font-size: 16px;
+    background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2);
+    -webkit-appearance: none; appearance: none;
+}
+#filtru-nume:focus { border-color: rgba(255,255,255,0.6); }
+@media (max-width: 600px) {
+    #modal-auth .modal-continut, #modal-terenuri .modal-continut { padding: 16px; }
+    #modal-terenuri .titlu-modal { font-size: 20px; }
+    .modal-antet { margin-bottom: 16px; }
+    .filtre-terenuri { padding: 12px; gap: 12px; margin-bottom: 20px; }
+    #modal-auth .tab-auth { font-size: 13px; }
+}
+
+.card-teren-poza, .info-teren-poza { min-width: 0; }
+.info-teren-poza h3, .info-teren-poza p { max-width: 100%; overflow-wrap: anywhere; }
+
+/* A long database city name must not extend across the account/language controls. */
+.pagina-publica #wrapper-filtru-oras { width: max-content; max-width: min(240px, calc(100% - 32px)); }
+.pagina-publica #filtru-oras-global {
+    width: 100%; max-width: 100%; min-width: 0 !important;
+    overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+
+/* Responsive header geometry updates immediately; animate only hover styling. */
+.pagina-publica .buton-top-cont {
+    transition: background .3s, border-color .3s, box-shadow .3s, transform .3s;
+}

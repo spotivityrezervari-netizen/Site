@@ -12,6 +12,9 @@ Admin: https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/admin.html
 - Recuperare: o singură fereastră bazată pe evenimentul validat de SDK; capturarea evenimentului înainte de încărcarea app.js; închiderea ferestrei și mesaje pentru link expirat. Un parametru `type=recovery` nu autorizează schimbarea parolei unei sesiuni existente. Cererea de schimbare folosește un client Auth separat, în memorie, legat de utilizatorul recuperării.
 - Chat client: trimiterea păstrează utilizatorul și terenul de la click; schimbarea conversației/deconectarea în timpul verificării oprește trimiterea. Datele private din chat sunt curățate la schimbarea contului/deconectare.
 - Admin: orașul editat se salvează; la deconectare/schimbarea utilizatorului se șterg setările, programul și mesajele afișate. Răspunsurile vechi nu repopulează aceste ecrane.
+- Formulare publice: distanțe între câmpuri păstrate și după schimbarea tabului; X este integrat în antet. Căutarea după nume respectă filtrele, literele mari/mici și diacriticele.
+- Telefon/admin: carduri și controale compacte, texte lungi încadrate, pictograme PNG pentru sporturi și etichete fără emojiuri decorative. Numai superadminul navighează prin orașe; adminul obișnuit deschide terenurile alocate direct.
+- Blur: pagina din spatele dialogului este estompată direct, cu strat de acoperire până la margini. Selectorul global de oraș are lățime limitată pentru a nu suprapune contul/limba.
 - Pozele absente/nevalide folosesc o imagine locală validă în același card și aceleași proporții.
 - SDK Supabase fixat la versiunea `2.117.3`, cu verificare SRI SHA-384 și CORS. Artefactul fixat a fost comparat cu cel servit anterior prin `@2`.
 - Scriptul de smoke test păstrează subdirectorul GitHub Pages și verifică erorile fișierelor de pe originea configurată.
@@ -29,10 +32,12 @@ Testele folosesc PostgreSQL izolat și cereri Auth/API interceptate; nu creează
 | `supabase/tests/rls.test.cjs` | 85 verificări UUID + 85 cu ID numeric |
 | `supabase/tests/court-hours.test.cjs` | 21 verificări UUID + 21 cu ID numeric |
 | `supabase/tests/admin-scope.test.cjs` | 20 verificări UUID + 20 cu ID numeric |
-| `supabase/tests/browser.test.cjs` | 28 verificări cu SDK real + Chromium + PostgreSQL izolat |
+| `supabase/tests/browser.test.cjs` | 49 verificări cu SDK real + Chromium + PostgreSQL izolat |
 | `supabase/tests/auth-recovery.test.cjs` | 6 verificări cu SDK real și Auth interceptat |
 
-Total: **286 verificări automate**, plus verificarea sintaxei JS și a diff-ului. Testele reproduc accesul neautorizat vechi, verifică refuzul după corecție, schimbarea contului în timpul recuperării, cursele din chat, XSS prin texte și ecranele admin la 320/390 px.
+Total: **307 verificări automate**, plus verificarea sintaxei JS și a diff-ului. Cele 252 de verificări SQL din auditul aceleiași zile rămân valabile pentru migrările nemodificate; după schimbările de interfață au fost rulate integral cele 49 de verificări browser și cele 6 de recuperare/poze. Testele verifică limitele RLS, schimbarea contului în timpul recuperării, cursele din chat și XSS prin texte.
+
+Interfața a fost verificată la **320, 390, 768 și 1440 px**: căutare cu filtre și diacritice, formularul de înregistrare, acoperirea blurului, antetul public fără suprapuneri, dashboardurile admin/superadmin, paginile orașelor, setările fiecărui teren, rezervarea manuală, programul, istoricul, chatul și alocarea angajaților. Probe cu nume lungi verifică încadrarea controalelor în chenare. Pictogramele sporturilor sunt decodate efectiv în browser; prețul mingii de 0 Lei rămâne 0. Aceste schimbări folosesc câmpurile și politicile existente; **nu necesită SQL suplimentar în proiectul live**.
 
 Smoke test local și publicat: pagina principală, cele patru sporturi, imagini, login, Escape, viewport mobil, pagina admin fără autentificare și citiri live Supabase. Cererile de scriere sunt blocate în smoke test. După push se compară fișierele publicate cu cele din Git, pentru a confirma versiunea servită efectiv.
 

@@ -9,11 +9,11 @@
     <link rel="icon" type="image/png" href="assets/imagini/avatar2.png">
     <title>Rezervari Sport</title>
     
-    <link rel="stylesheet" href="css/style.css?v=41">
+    <link rel="stylesheet" href="css/style.css?v=42">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3" integrity="sha384-dl/4LkSyQ4uEucc48NM6VDZLAjLLq9yMzZ5JLXumBq7Ld33XBof73hseOqPhO89+" crossorigin="anonymous"></script>
     <script src="js/db.js?v=2"></script>
     <script src="js/security.js?v=2"></script>
-    <script src="js/app.js?v=22" defer></script>
+    <script src="js/app.js?v=23" defer></script>
     <style>
 
         /* Fundal pagina */
@@ -157,11 +157,6 @@
         .orbita-wrapper:nth-child(4) { bottom: 18%; right: 3%; left: auto; top: auto; transform: scale(1) !important; } /* Tenis */
 
         /* --- DESKTOP POSITIONS --- */
-        /* Fixam overlap-ul butonului X (inchidere) in TOATE ferestrele */
-        .modal-continut {
-            padding-top: 65px !important;
-        }
-        
         .taburi-auth {
             margin-top: 0 !important;
         }
@@ -384,7 +379,7 @@
 
     </style>
 </head>
-<body>
+<body class="pagina-publica">
 
     <div class="fundal-water">
         <!-- Cadranele 4-split pentru background -->
@@ -450,10 +445,12 @@
 <!-- MODAL AUTH -->
     <div class="modal" id="modal-auth" style="display: none;">
         <div class="modal-continut">
-            <button class="buton-inchidere" id="inchide-auth">X</button>
-            <div class="taburi-auth" style="margin-top: 0px;">
-                <button class="tab-auth activ" id="tab-login" data-i18n="autentificare">Autentificare</button>
-                <button class="tab-auth" id="tab-register" data-i18n="creare_cont">Creare Cont</button>
+            <div class="modal-antet antet-auth">
+                <div class="taburi-auth">
+                    <button class="tab-auth activ" id="tab-login" data-i18n="autentificare">Autentificare</button>
+                    <button class="tab-auth" id="tab-register" data-i18n="creare_cont">Creare Cont</button>
+                </div>
+                <button type="button" class="buton-inchidere" id="inchide-auth" aria-label="Închide">X</button>
             </div>
 
             <div id="form-login" class="formular-auth">
@@ -517,10 +514,16 @@
     <!-- MODAL TERENURI -->
     <div class="modal" id="modal-terenuri" style="display: none;">
         <div class="modal-continut modal-mare">
-            <button class="buton-inchidere" id="inchide-terenuri">X</button>
-            <h2 class="titlu-modal" id="titlu-sport" data-i18n="alege_terenul">Alege Terenul</h2>
+            <div class="modal-antet">
+                <h2 class="titlu-modal" id="titlu-sport" data-i18n="alege_terenul">Alege Terenul</h2>
+                <button type="button" class="buton-inchidere" id="inchide-terenuri" aria-label="Închide">X</button>
+            </div>
             
             <div class="filtre-terenuri">
+                <div class="grup-input filtru-cautare-teren">
+                    <label for="filtru-nume" data-i18n="cauta_teren">Caută terenul</label>
+                    <input type="search" id="filtru-nume" placeholder="Numele terenului" data-i18n-placeholder="cauta_teren_placeholder" autocomplete="off">
+                </div>
                 <div class="grup-input">
                     <label for="filtru-data" style="font-size: 12px; color: #aaa;" data-i18n="data_dorita">Data Dorită</label>
                     <div class="filtru-data-control">

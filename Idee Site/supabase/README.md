@@ -17,7 +17,7 @@ Site-ul confirmat pe 12 octombrie 2026 este [GitHub Pages](https://spotivityreze
 Pentru a modifica programul:
 
 1. Deschide [panoul admin](https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/admin.html) și autentifică-te.
-2. Intră în orașul terenului și deschide setările acelui teren.
+2. Dacă ești superadmin, deschide **Setări [oraș]**, apoi terenul. Ca admin obișnuit, deschide direct **Setări [teren]** din meniu; sunt afișate doar terenurile alocate.
 3. În **Ore rezervabile**, bifează orele de început dorite și apasă **Salvează**. De exemplu, bifează 09:00–21:00 dacă terenul trebuie să închidă la 22:00.
 4. Deschide terenul din pagina publică: apar numai orele bifate. Filtrul de oră folosește programele terenurilor afișate; rezervarea manuală și blocarea unei zile respectă același program.
 
@@ -36,6 +36,14 @@ Pe **12 octombrie 2026**, migrarea 003 a fost aplicată în **Rendez-Vous** prin
 Adresele de redirect Auth sunt exacte; wildcardul vechi pentru spotivity.ro a fost eliminat. La cererea proprietarului, parola nouă are în continuare minimum **6 caractere**. Confirmarea automată și absența SMTP au fost păstrate; configurarea emailului și datele firmei sunt amânate de proprietar. Raportul de verificare și pașii rămași sunt în [PRODUCTION_REVIEW.md](../PRODUCTION_REVIEW.md).
 
 Pentru **alt proiect**, ordinea migrărilor este **001 → 003 → 004** după inventar/backup și verificarea datelor. 002 conține numai exemple de roluri pentru conturi Auth existente și confirmate. Fișierele `tests/` se rulează exclusiv în baza izolată. Instrucțiunile istorice de mai jos pentru reinstalarea 001 se aplică numai proiectelor fără migrări ulterioare.
+
+## Căutare și afișare pe telefon
+
+În pagina publică, deschide un sport și folosește **Caută terenul**. Numele se citesc din `terenuri`; căutarea acceptă litere mari/mici și text fără diacritice și se combină cu orașul, data și ora selectate. Ștergerea textului restabilește lista, iar deschiderea unui alt sport resetează căutarea.
+
+Panoul admin afișează **Setări [oraș] → terenuri** numai superadminului. Adminii obișnuiți deschid direct **Setări [teren]** pentru alocările lor din `users_admin`. Pictogramele sporturilor sunt imaginile locale folosite și în pagina principală; etichetele nu mai conțin emojiuri decorative. Formularele, chatul, istoricul și programul folosesc dimensiuni adaptate telefonului, cu scroll în chenar când conținutul este lung.
+
+Aceste modificări folosesc coloanele și politicile deja instalate. **Nu necesită SQL nou sau rerularea 001/003/004 în Rendez-Vous.** Salvarea setărilor rămâne protejată de RLS. Prețul mingii egal cu zero se păstrează; doar valoarea lipsă folosește implicit 15.
 
 ## 1. Ce va putea face fiecare rol
 
@@ -233,12 +241,18 @@ node supabase/tests/rls.test.cjs
 SPOTIVITY_TEST_INTEGER_IDS=1 node supabase/tests/rls.test.cjs
 node supabase/tests/court-hours.test.cjs
 SPOTIVITY_TEST_INTEGER_IDS=1 node supabase/tests/court-hours.test.cjs
+node supabase/tests/admin-scope.test.cjs
+SPOTIVITY_TEST_INTEGER_IDS=1 node supabase/tests/admin-scope.test.cjs
 SITE_BASE_URL=http://127.0.0.1:8002/ node supabase/tests/browser.test.cjs
 ```
 
 În mediul cloud curent, PGlite este instalat în `/workspace/shared/spotivity-rls-validation`; adaugă acel `node_modules` la `NODE_PATH` pentru a-l găsi. Testul browser necesită Playwright, Chromium și acces la baza de certificate de încredere. Aceste instalări nu modifică dependențele aplicației și nu sunt necesare pentru publicarea site-ului static.
 
-Rezultatele versiunii actualizate: **85 de verificări SQL de securitate plus 21 verificări ale programului pentru fiecare variantă de ID-uri, UUID și numerice, și 25 de verificări în browser**, toate trecute în mediul izolat. Verificările includ conversia alocărilor JSON/JSONB, păstrarea identităților și a accesului la terenurile alocate, anularea conversiei pentru date sau dependențe incompatibile, conversia definiției vechi a `is_admin()`, blocarea altor funcții nerevizuite și suspendarea/restaurarea exactă a webhook-urilor fără notificări la migrare. Testele browser acoperă programul schimbat din admin, selecția orelor clientului și rezervărilor manuale, păstrarea/anularea rezervărilor din afara programului și afișarea admin la 320/390 px. Ele verifică și adresa de redirect trimisă prin SDK pentru înregistrare și recuperarea parolei. Revenirea acasă după rezervare restabilește fundalul principal și arată o notificare discretă, tradusă în RO/HU/EN, timp de 2 secunde. Testele acoperă și revenirea din fluxul unui vizitator, ascunderea temporizată a notificării și păstrarea dialogului fără mesaj de succes când baza respinge rezervarea. Afișarea câmpurilor de dată/oră a fost verificată separat în Chromium la șapte dimensiuni de ecran, inclusiv 320–430 px pe mobil și orientare landscape: înălțime de 48 px, lățimi egale, fără depășire orizontală. Data afișată are formatul comun `DD.MM.YYYY`, iar selectorul nativ rămâne funcțional. Cele patru fotografii de pe pagina principală umplu fiecare cadran (`cover`), fără benzi de culoare între terenuri; păstrează proporțiile, cu decupare la margini unde ecranul are alt format. Fundalul sportului umple ecranul și ferestrele de alegere a terenului/rezervare (`cover`), inclusiv la revenirea din rezervare la terenuri, fără benzi albastre. Fotografiile din cardurile terenurilor au toate același cadru 3:2, ca exemplul din stânga, cu 15 px spațiu stânga/dreapta/sus și până la numele terenului. Imaginile umplu cadrul fără deformare (`object-fit: cover`), cu decupare dacă fotografia are alte proporții. La lățimi de cel mult 768 px, pagina principală și fluxul de rezervare folosesc variantele verticale `fundal_fotbal2p2.png`, `fundal_baschet2p2.png`, `fundal_tenis2p2.png`, `fundal_volei2p2.png`; pe desktop rămân JPG-urile originale. Imaginile se schimbă automat și în ferestre deschise când se redimensionează ecranul. Marginile și fundalul ferestrelor sportive au același strat de gri neutru, cu umbră redusă. Conturul este mai contrastant, iar fotografia se oprește la interiorul bordurii (`background-clip: padding-box`), pentru a păstra vizibile laturile și colțurile peste toate imaginile. Toate zonele de scroll din index și admin folosesc piste transparente și indicatoare gri rotunjite; inclusiv scrollul orizontal pentru zile, tabelele și chat-ul. Stratul estompat al dialogurilor este ancorat la toate cele patru margini ale ecranului și include regula Safari, cu o extensie de 1 px pentru marginile fracționare. Verificarea pe un iPhone real în Safari/DuckDuckGo rămâne necesară; motorul WebKit nu este disponibil în acest mediu.
+Verificările SQL au trecut pentru ambele variante de ID: 85 de securitate, 21 de program și 20 pentru limitele adminilor/Storage. Suita browser verifică SDK-ul real, rezervări/anulări, căutarea, meniurile după rol și ferestrele publice/admin la 320, 390, 768 și 1440 px. Numerele actuale și limitele verificării sunt consemnate în [raportul pentru producție](../PRODUCTION_REVIEW.md).
+
+Fotografiile păstrează cadrul 3:2, spațiul de 15 px și `object-fit: cover`; fundalurile verticale sunt folosite până la 768 px, iar desktopul folosește JPG-urile originale. Câmpurile publice de dată/oră au 48 px și data afișată `DD.MM.YYYY`. La deschiderea unui dialog, stratul paginii este estompat direct, iar un strat gri acoperă viewportul și marginile; astfel blurul nu depinde de filtre backdrop imbricate în WebKit. Indicatoarele de scroll sunt gri, pe piste transparente. Formularul de înregistrare păstrează `display:flex`, spații de 22 px între câmpuri și X pe același rând cu taburile. Recuperarea parolei folosește o singură fereastră validată de SDK. Notificarea de rezervare durează 2 secunde, iar revenirea acasă restabilește fundalul principal.
+
+Testele mobile folosesc viewporturi Chromium; Safari/DuckDuckGo pe iPhone real rămân de verificat înainte de lansarea finală.
 
 Testele SQL folosesc roluri PostgreSQL reale și verifică regulile RLS și trigger-ele pentru ID-uri UUID și numerice. Testele browser folosesc SDK-ul Supabase real și o simulare Auth/REST care execută cererile în aceeași bază izolată; cererile către proiectul găzduit sunt interceptate. Acoperă autentificarea, înregistrarea, rezervarea, anularea, logout-ul, rolurile, afișarea sigură a mesajelor și ecranul mobil.
 
