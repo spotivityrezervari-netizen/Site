@@ -1,6 +1,9 @@
 const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const baseUrl = process.env.SITE_BASE_URL || 'http://127.0.0.1:8000/';
+const siteBaseUrl = new URL(baseUrl);
+if (!siteBaseUrl.pathname.endsWith('/')) siteBaseUrl.pathname += '/';
+const siteOrigin = siteBaseUrl.origin;
 
 (async () => {
   const proxyUrl = process.env.HTTPS_PROXY || process.env.https_proxy;
@@ -20,21 +23,21 @@ const baseUrl = process.env.SITE_BASE_URL || 'http://127.0.0.1:8000/';
     });
     const page = await context.newPage();
     const jsErrors = [];
-    const failedLocal = [];
+    const failedSiteAssets = [];
     const backend = [];
     page.on('pageerror', e => { jsErrors.push(e.message); console.log('Browser exception:', e.message); });
     page.on('response', r => {
       const u = new URL(r.url());
-      if (u.hostname === '127.0.0.1' && r.status() >= 400) failedLocal.push(`${r.status()} ${u.pathname}`);
+      if (u.origin === siteOrigin && r.status() >= 400) failedSiteAssets.push(`${r.status()} ${u.pathname}`);
       if (u.hostname.endsWith('.supabase.co')) backend.push({ status: r.status(), path: u.pathname });
     });
     page.on('requestfailed', r => {
       const u = new URL(r.url());
       console.log('Request failed:', u.hostname + u.pathname, r.failure()?.errorText);
-      if (u.hostname === '127.0.0.1') failedLocal.push(u.pathname);
+      if (u.origin === siteOrigin) failedSiteAssets.push(u.pathname);
       if (u.hostname.endsWith('.supabase.co')) backend.push({ path: u.pathname, error: r.failure()?.errorText });
     });
-    assert.equal((await page.goto(new URL('/', baseUrl).href, {waitUntil:'networkidle'})).status(), 200);
+    assert.equal((await page.goto(siteBaseUrl.href, {waitUntil:'networkidle'})).status(), 200);
     await page.waitForFunction(() => typeof window.actualizeazaButonCont === 'function');
     assert.equal(await page.locator('.card-sport').count(), 4);
     assert.equal(await page.evaluate(() => typeof supabase.createClient), 'function');
@@ -60,13 +63,13 @@ const baseUrl = process.env.SITE_BASE_URL || 'http://127.0.0.1:8000/';
     await page.keyboard.press('Escape');
     await page.locator('#modal-auth').waitFor({state:'hidden'});
     console.log('PASS mobile viewport: login dialog opens and closes');
-    assert.equal((await page.goto(new URL('admin.html', baseUrl).href, {waitUntil:'networkidle'})).status(), 200);
+    assert.equal((await page.goto(new URL('admin.html', siteBaseUrl).href, {waitUntil:'networkidle'})).status(), 200);
     assert.ok(await page.locator('#sectiune-login').isVisible());
     assert.ok(await page.locator('#login-admin-btn').isVisible());
     assert.ok(!(await page.locator('#sectiune-dashboard').isVisible()));
-    assert.deepEqual(failedLocal, []);
+    assert.deepEqual(failedSiteAssets, []);
     assert.deepEqual(jsErrors, []);
-    console.log('PASS admin: login visible, dashboard hidden; no JavaScript exceptions or failed local assets');
+    console.log('PASS admin: login visible, dashboard hidden; no JavaScript exceptions or failed site assets');
     console.log('Backend read results:', JSON.stringify(backend));
     const read = await page.evaluate(async () => {
       const result = await db.from('terenuri').select('id').limit(1);

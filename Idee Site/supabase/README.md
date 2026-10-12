@@ -27,6 +27,16 @@ Pentru alt proiect care are deja migrarea 001, copiază întregul **Raw** din `0
 
 Pe **12 octombrie 2026**, migrarea 003 a fost aplicată în **Rendez-Vous** prin Management API, după o probă completă închisă cu rollback. Verificarea imediată a confirmat migrațiile 1 și 3, noua coloană, RLS păstrat și definițiile/stările tuturor trigger-elor neschimbate. Numerele de conturi și înregistrări au rămas identice: **8 conturi Auth, 5 profile, 2 admini, 5 terenuri, 47 rezervări, 22 mesaje și 23 sloturi ocupate**. Migrarea nu a rescris rezervările și nu a schimbat webhookurile.
 
+## Revizuirea pentru producție din 12 octombrie 2026
+
+[004_admin_scope_hardening.sql](004_admin_scope_hardening.sql) este **deja aplicat** în proiectul Rendez-Vous. Verificarea live a confirmat migrațiile **1, 3 și 4**, RLS pe toate cele șase tabele și păstrarea datelor și a definițiilor/stărilor trigger-elor. **Nu rula din nou 001 sau 003 în acest proiect**: ar restaura reguli vechi; scripturile actuale opresc această operație.
+
+004 împiedică un admin obișnuit să lege o rezervare manuală de un cont client neautorizat doar ghicindu-i emailul. Rezervarea rămâne manuală, fără UUID client, până există o relație autorizată; superadminul poate lega orice cont existent. După realocare, adminul nu poate modifica/șterge o poză proprie încă folosită de un teren nealocat. Pozele fără prefix UUID, încărcate înaintea protecțiilor, se gestionează de superadmin. Politicile anonime Storage restricționează scrierile separat, păstrând citirea publică. Superadminul poate anula și o rezervare istorică al cărei teren a fost șters.
+
+Adresele de redirect Auth sunt exacte; wildcardul vechi pentru spotivity.ro a fost eliminat. La cererea proprietarului, parola nouă are în continuare minimum **6 caractere**. Confirmarea automată și absența SMTP au fost păstrate; configurarea emailului și datele firmei sunt amânate de proprietar. Raportul de verificare și pașii rămași sunt în [PRODUCTION_REVIEW.md](../PRODUCTION_REVIEW.md).
+
+Pentru **alt proiect**, ordinea migrărilor este **001 → 003 → 004** după inventar/backup și verificarea datelor. 002 conține numai exemple de roluri pentru conturi Auth existente și confirmate. Fișierele `tests/` se rulează exclusiv în baza izolată. Instrucțiunile istorice de mai jos pentru reinstalarea 001 se aplică numai proiectelor fără migrări ulterioare.
+
 ## 1. Ce va putea face fiecare rol
 
 | Rol | Date și operații permise |
@@ -49,6 +59,7 @@ Deschide ramura `main` în GitHub, apoi folderul `Idee Site/supabase`:
 - [001_security.sql](001_security.sql): migrarea completă, inclusiv RLS, funcții, trigger-e, Storage și disponibilitate.
 - [002_admin_examples.sql](002_admin_examples.sql): exemple pentru primul superadmin și adminii alocați.
 - [003_court_hours.sql](003_court_hours.sql): program configurabil pe teren, după migrarea 001.
+- [004_admin_scope_hardening.sql](004_admin_scope_hardening.sql): limite suplimentare pentru admini și imagini, după 003.
 
 Pe pagina unui fișier din GitHub, apasă **Raw** și copiază întregul conținut. Nu copia marcajele Markdown sau numerele de linie. `tests/schema.sql` și celelalte fișiere din `tests/` sunt exclusiv pentru baza izolată a testelor: **nu le rula în Supabase**.
 
@@ -120,7 +131,7 @@ După backup și verificare în proiectul de test, ia **întregul `001_security.
 În Dashboard, denumirile paginilor pot varia puțin între versiunile Supabase:
 
 1. În **Authentication → Sign In / Providers → Email**, păstrează autentificarea cu email/parolă. Proiectul existent confirmă automat emailurile. Pentru un proiect care cere confirmare prin email, configurează și verifică SMTP înainte de activarea **Confirm email**; apoi clientul trebuie să confirme adresa înainte de autentificare.
-2. În **Authentication → URL Configuration**, setează **Site URL** la adresa HTTPS reală a site-ului. Pentru site-ul actual este configurat `https://luxury-flan-0eecf9.netlify.app/`. Dacă activezi ulterior un domeniu propriu, actualizează acest câmp la adresa publicată.
+2. În **Authentication → URL Configuration**, setează **Site URL** la adresa HTTPS reală a site-ului: `https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/` pentru GitHub Pages actual. Păstrează subdirectorul și `/` la final. Dacă activezi ulterior un domeniu propriu, actualizează acest câmp la adresa publicată.
 3. La **Redirect URLs**, adaugă adresele exacte folosite de site pentru confirmare și resetare. Adresa GitHub Pages actuală este deja permisă; `js/app.js` trimite folderul paginii cu `/` la final, inclusiv subdirectorul de găzduire. Pentru proiectul de test, configurează adresa frontend-ului de test în proiectul Supabase separat. Nu redirecționa utilizatorii de test către producție.
 4. Verifică politica de parole, limitele de autentificare și livrarea mesajelor de confirmare/resetare. Pentru lansare, configurează serviciul de email/SMTP potrivit proiectului și testează efectiv livrarea, inclusiv folderul Spam.
 

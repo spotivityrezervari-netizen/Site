@@ -1,53 +1,113 @@
-// ==========================================
-// DETECTARE LINK RESETARE PAROLĂ (PUS EXPRES LA ÎNCEPUT PENTRU A NU RATA EVENIMENTUL)
-// ==========================================
-db.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'PASSWORD_RECOVERY') {
-        
-        const afiseazaModalParola = () => {
-            // Creăm o fereastră neagră pe tot ecranul
-            const overlay = document.createElement('div');
-            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.95);z-index:999999;display:flex;justify-content:center;align-items:center;';
-            overlay.innerHTML = `
-                <div style="background:#1e1e1e;padding:30px;border-radius:15px;text-align:center;border:2px solid #3b82f6;width:90%;max-width:400px;font-family:sans-serif;">
-                    <h2 style="color:white;margin-bottom:15px;font-size:22px;">🔐 Resetează Parola</h2>
-                    <p style="color:#ccc;font-size:14px;margin-bottom:20px;">Introdu noua parolă mai jos (minim 6 caractere).</p>
-                    <input type="password" id="input-noua-parola-js" placeholder="Noua parolă..." style="padding:15px;width:100%;box-sizing:border-box;border-radius:8px;border:none;margin-bottom:20px;font-size:16px;">
-                    <button id="btn-salveaza-parola-js" style="padding:15px 24px;width:100%;background:#3b82f6;color:white;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:16px;">Salvează Noua Parolă</button>
-                </div>
-            `;
-            document.body.appendChild(overlay);
-
-            document.getElementById('btn-salveaza-parola-js').addEventListener('click', async () => {
-                const noua = document.getElementById('input-noua-parola-js').value;
-                if(noua.length < 6) return alert("Parola trebuie să aibă minim 6 caractere!");
-                
-                const btn = document.getElementById('btn-salveaza-parola-js');
-                btn.innerText = "⏳ Se salvează...";
-                btn.disabled = true;
-                
-                const { error } = await db.auth.updateUser({ password: noua });
-                
-                if (error) {
-                    alert("❌ Eroare: " + error.message);
-                    btn.innerText = "Salvează Noua Parolă";
-                    btn.disabled = false;
-                } else {
-                    alert("✅ Parola a fost schimbată cu succes! Te poți loga acum.");
-                    document.body.removeChild(overlay);
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                }
-            });
-        };
-
-        // Asigură-te că pagina s-a încărcat înainte să adaugi fereastra
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', afiseazaModalParola);
-        } else {
-            afiseazaModalParola();
+// Password resets require a recovery session accepted by the Auth SDK.
+(() => {
+    let activeRecovery = null;
+    const handledTokens = new Set();
+    const clearRecoveryUrl = () => {
+        const url = new URL(window.location.href);
+        const keys = ['access_token','refresh_token','expires_in','expires_at','token_type',
+            'type','code','error','error_code','error_description'];
+        for (const key of keys) url.searchParams.delete(key);
+        const hash = new URLSearchParams(url.hash.slice(1));
+        if (keys.some(key => hash.has(key))) {
+            for (const key of keys) hash.delete(key);
+            url.hash = hash.toString();
         }
-    }
-});
+        window.history.replaceState({}, document.title, url.pathname + url.search + url.hash);
+    };
+    const closeRecovery = () => {
+        document.getElementById('modal-parola-noua')?.remove();
+        activeRecovery = null;
+        if (![...document.querySelectorAll('.modal')].some(m => ['flex','block'].includes(m.style.display))) {
+            document.body.classList.remove('fara-scroll');
+        }
+        clearRecoveryUrl();
+    };
+    const showRecovery = session => {
+        if (!session?.user?.id || !session.access_token || !session.refresh_token
+            || handledTokens.has(session.access_token)) return;
+        handledTokens.add(session.access_token);
+        closeRecovery();
+        activeRecovery = session;
+        const modal = document.createElement('div');
+        modal.id = 'modal-parola-noua';
+        modal.className = 'modal';
+        modal.style.cssText = 'display:flex;z-index:100001;';
+        modal.innerHTML = `<div class="modal-continut" style="max-width:400px;width:calc(100% - 32px);height:auto;padding:28px;">
+            <button type="button" class="buton-inchidere" aria-label="Închide">X</button>
+            <h2 class="titlu-modal">Resetează parola</h2>
+            <p>Introdu noua parolă (minim 6 caractere).</p>
+            <div class="grup-input"><label for="input-noua-parola-js">Noua parolă</label>
+                <input type="password" id="input-noua-parola-js" autocomplete="new-password" minlength="6"></div>
+            <p id="mesaj-resetare-parola" role="status" aria-live="polite"></p>
+            <button type="button" id="btn-salveaza-parola-js" class="buton-rezervare">Salvează parola</button>
+        </div>`;
+        document.body.appendChild(modal);
+        document.body.classList.add('fara-scroll');
+        modal.querySelector('.buton-inchidere').onclick = closeRecovery;
+        modal.querySelector('#btn-salveaza-parola-js').onclick = async () => {
+            const button = modal.querySelector('#btn-salveaza-parola-js');
+            if (button.disabled || activeRecovery !== session) return;
+            const password = modal.querySelector('#input-noua-parola-js').value;
+            const status = modal.querySelector('#mesaj-resetare-parola');
+            if (password.length < 6) { status.textContent = 'Parola trebuie să aibă minim 6 caractere.'; return; }
+            button.disabled = true;
+            status.textContent = 'Se salvează...';
+            // A separate in-memory client binds this request to the recovery user,
+            // even if another tab signs the shared client into a different account.
+            const recoveryClient = createClient(supabaseUrl, supabaseKey, {
+                auth: {persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}
+            });
+            try {
+                const {error: sessionError} = await recoveryClient.auth.setSession({
+                    access_token: session.access_token, refresh_token: session.refresh_token
+                });
+                if (sessionError) throw sessionError;
+                const {data: identity, error: identityError} = await recoveryClient.auth.getUser();
+                if (identityError || identity?.user?.id !== session.user.id) {
+                    throw new Error('Linkul de resetare este invalid sau a expirat. Cere un link nou.');
+                }
+                if (activeRecovery !== session) return;
+                const {error} = await recoveryClient.auth.updateUser({password});
+                if (error) throw error;
+                if (activeRecovery !== session) return;
+                closeRecovery();
+                alert('Parola a fost schimbată cu succes.');
+            } catch (error) {
+                if (activeRecovery === session) {
+                    status.textContent = error.message || 'Resetarea nu a reușit. Cere un link nou.';
+                    button.disabled = false;
+                }
+            } finally {
+                recoveryClient.auth.stopAutoRefresh();
+            }
+        };
+    };
+    db.auth.onAuthStateChange((event, session) => {
+        if (event === 'PASSWORD_RECOVERY') {
+            const render = () => showRecovery(session);
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', render, {once:true});
+            else setTimeout(render,0);
+        } else if (event === 'SIGNED_OUT' || (event === 'SIGNED_IN' && activeRecovery
+            && activeRecovery.user.id !== session?.user?.id)) {
+            if (activeRecovery) setTimeout(closeRecovery,0);
+        }
+    });
+    document.addEventListener('DOMContentLoaded', async () => {
+        const initialUrl = new URL(window.location.href);
+        const hash = new URLSearchParams(initialUrl.hash.slice(1));
+        const recoveryLink = initialUrl.searchParams.get('type') === 'recovery' || hash.get('type') === 'recovery';
+        const linkError = initialUrl.searchParams.has('error') || hash.has('error');
+        await db.auth.getSession(); // Wait for SDK initialization and its verified event.
+        showRecovery(window.takeSpotivityRecoverySession?.());
+        if ((recoveryLink || linkError) && !activeRecovery && !handledTokens.size) {
+            clearRecoveryUrl();
+            alert('Linkul de resetare este invalid sau a expirat. Cere un link nou de la „Ai uitat parola?”.');
+        }
+    });
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && activeRecovery) closeRecovery();
+    });
+})();
 
 // ==========================================
 // 0. SISTEMUL DE TRADUCERI (i18n) GLOBAL
@@ -682,7 +742,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         terenuriDisponibile.forEach(teren => {
             const divTeren = document.createElement('div');
             divTeren.className = 'card-teren-poza btn-teren';
-            divTeren.innerHTML = `<img src="${window.escapeHtml(window.safeUrl(teren.poza, true))}" alt="${window.escapeHtml(teren.nume)}"><div class="info-teren-poza"><h3>${window.escapeHtml(teren.nume)}</h3><p>${window.escapeHtml(teren.pret)} ${window.dict[window.lang]['lei_ora']}</p></div>`;
+            const fallbackPhoto = 'assets/imagini/avatar2.png';
+            divTeren.innerHTML = `<img src="${window.escapeHtml(window.safeUrl(teren.poza, true) || fallbackPhoto)}" alt="${window.escapeHtml(teren.nume)}"><div class="info-teren-poza"><h3>${window.escapeHtml(teren.nume)}</h3><p>${window.escapeHtml(teren.pret)} ${window.dict[window.lang]['lei_ora']}</p></div>`;
+            divTeren.querySelector('img').addEventListener('error', function () {
+                if (this.getAttribute('src') !== fallbackPhoto) this.src = fallbackPhoto;
+            });
             divTeren.addEventListener('click', () => incarcaInterfataRezervare(teren));
             containerDinamicTerenuri.appendChild(divTeren);
         });
@@ -1027,12 +1091,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function incarcaMesajeClient(randeaza = true) {
         if (!loggedInUser) return;
+        const owner = loggedInUser.id;
         
         const { data, error } = await db.from('mesaje_chat')
             .select('*')
             .eq('email_client', loggedInUser.email)
             .order('created_at', { ascending: true });
 
+        if (loggedInUser?.id !== owner) return;
         if (error) { console.error("Eroare chat: ", error); return; }
         chatClientMesajeToate = data || [];
         
@@ -1048,6 +1114,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function randeazaListaConversatiiClient() {
+        if (!loggedInUser) return;
+        const owner = loggedInUser.id;
         const listaSide = document.getElementById('chat-client-lista-terenuri');
         if (!listaSide) return;
         
@@ -1056,12 +1124,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // Obținem terenurile unde clientul are rezervare (pentru a-i permite să deschidă chat nou și acolo)
         const { data: rezervari } = await db.from('rezervari').select('teren').eq('email_client', loggedInUser.email);
+        if (loggedInUser?.id !== owner) return;
         const terenuriRezervate = rezervari ? [...new Set(rezervari.map(r => r.teren))] : [];
         
         const toateTerenurileClient = [...new Set([...terenuriCuMesaje, ...terenuriRezervate])];
         
         // VERIFICARE: Aducem setările terenurilor ca să vedem unde e oprit chat-ul
         const { data: infoTerenuri } = await db.from('terenuri').select('nume, are_chat');
+        if (loggedInUser?.id !== owner) return;
         const terenuriFaraChat = infoTerenuri ? infoTerenuri.filter(t => t.are_chat === false).map(t => t.nume) : [];
 
         // Eliminăm din listă terenurile unde chat-ul a fost oprit de admin
@@ -1104,6 +1174,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function deschideConversatiaClient(teren) {
+        const owner = loggedInUser?.id;
+        const email = loggedInUser?.email;
+        if (!owner) return;
         if (inputChatClient) inputChatClient.value = '';
         document.getElementById('chat-client-teren-titlu').style.display = 'block';
         document.getElementById('chat-client-teren-titlu').innerText = `Conversație cu Admin (${teren})`;
@@ -1147,79 +1220,57 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Bulina se va actualiza via Realtime sau la următorul refresh
         }
 
-        // Verificare dacă are voie să scrie (rezervare activă)
-        const acum = new Date();
-        const { data: rezervariActive } = await db.from('rezervari')
-            .select('*')
-            .eq('email_client', loggedInUser.email)
-            .eq('teren', teren)
-            .eq('stare', 'activa');
+        if (loggedInUser?.id !== owner || chatClientTerenCurent !== teren) return;
+        await actualizeazaDreptulChatClient(teren, owner, email);
+    }
 
-        let areRezervareBuna = false;
-        if (rezervariActive && rezervariActive.length > 0) {
-            for (const r of rezervariActive) {
-                if (!window.esteRezervareTrecuta(r.data_str, r.ora, r.timestamp_start)) {
-                    areRezervareBuna = true;
-                    break;
-                }
-            }
-        }
-
-        if (areRezervareBuna) {
-            inputChatClient.disabled = false;
-            btnTrimiteChatClient.disabled = false;
-            avertismentChatClient.style.display = 'none';
-        } else {
-            inputChatClient.disabled = true;
-            btnTrimiteChatClient.disabled = true;
-            avertismentChatClient.style.display = 'block';
-        }
+    async function actualizeazaDreptulChatClient(teren, owner = loggedInUser?.id, email = loggedInUser?.email) {
+        if (!owner) return;
+        const {data: bookings, error} = await db.from('rezervari').select('*')
+            .eq('email_client', email).eq('teren', teren).eq('stare','activa');
+        if (loggedInUser?.id !== owner || chatClientTerenCurent !== teren) return;
+        const allowed = !error && bookings?.some(r => !window.esteRezervareTrecuta(r.data_str,r.ora,r.timestamp_start));
+        inputChatClient.disabled = !allowed;
+        btnTrimiteChatClient.disabled = !allowed;
+        avertismentChatClient.style.display = allowed ? 'none' : 'block';
     }
 
     // Trimitere Mesaj Client
     async function trimiteMesajClient() {
-        if (!chatClientTerenCurent || inputChatClient.disabled) return;
+        if (!loggedInUser || !chatClientTerenCurent || inputChatClient.disabled) return;
         const text = inputChatClient.value.trim();
         if (!text) return;
-
+        const owner = loggedInUser.id;
+        const email = loggedInUser.email;
+        const court = chatClientTerenCurent;
+        const stillCurrent = () => loggedInUser?.id === owner && chatClientTerenCurent === court
+            && document.getElementById('modal-chat-client').style.display !== 'none';
         inputChatClient.disabled = true;
         btnTrimiteChatClient.disabled = true;
-
-        // VERIFICARE STRICTĂ ÎNAINTE DE TRIMITE: Mai are dreptul?
-        const { data: verif } = await db.from('rezervari')
-            .select('*').eq('email_client', loggedInUser.email).eq('teren', chatClientTerenCurent).eq('stare', 'activa');
-        let incaAreBuna = false;
-        if (verif) {
-            for (const r of verif) {
-                if (!window.esteRezervareTrecuta(r.data_str, r.ora, r.timestamp_start)) {
-                    incaAreBuna = true; break;
-                }
+        try {
+            const {data: bookings, error: bookingError} = await db.from('rezervari')
+                .select('*').eq('email_client', email).eq('teren', court).eq('stare', 'activa');
+            if (!stillCurrent()) return;
+            if (bookingError) throw bookingError;
+            if (!bookings?.some(r => !window.esteRezervareTrecuta(r.data_str, r.ora, r.timestamp_start))) {
+                alert(window.dict[window.lang]['chat_avertisment']);
+                avertismentChatClient.style.display = 'block';
+                return;
+            }
+            const {error} = await db.from('mesaje_chat').insert([{
+                email_client: email, teren: court, expeditor:'client', mesaj:text, citit:false
+            }]);
+            if (!stillCurrent()) return;
+            if (error) throw error;
+            if (inputChatClient.value.trim() === text) inputChatClient.value = '';
+        } catch (error) {
+            if (stillCurrent()) alert('Eroare la trimitere: ' + error.message);
+        } finally {
+            if (stillCurrent()) {
+                await actualizeazaDreptulChatClient(court, owner, email);
+                if (stillCurrent() && !inputChatClient.disabled) inputChatClient.focus();
             }
         }
-
-        if (!incaAreBuna) {
-            alert(window.dict[window.lang]['chat_avertisment']);
-            avertismentChatClient.style.display = 'block';
-            return; // Nu trimitem
-        }
-
-        const { error } = await db.from('mesaje_chat').insert([{
-            email_client: loggedInUser.email,
-            teren: chatClientTerenCurent,
-            expeditor: 'client',
-            mesaj: text,
-            citit: false
-        }]);
-
-        if (error) {
-            alert("Eroare la trimitere: " + error.message);
-        } else {
-            inputChatClient.value = '';
-        }
-
-        inputChatClient.disabled = false;
-        btnTrimiteChatClient.disabled = false;
-        inputChatClient.focus();
     }
 
     btnTrimiteChatClient?.addEventListener('click', trimiteMesajClient);
@@ -1291,6 +1342,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     db.auth.onAuthStateChange((event, session) => {
         if (['SIGNED_IN','SIGNED_OUT','USER_UPDATED'].includes(event)) {
+            if (!session || (loggedInUser && loggedInUser.id !== session.user?.id)) {
+                authGeneration++;
+                loggedInUser = null;
+                for (const id of ['modal-profil','modal-lista-rezervari','modal-chat-client']) document.getElementById(id).style.display = 'none';
+                for (const id of ['chat-client-lista-terenuri','chat-client-mesaje','container-lista-rezervari']) document.getElementById(id)?.replaceChildren();
+                inputChatClient.value = '';
+                inputChatClient.disabled = true;
+                btnTrimiteChatClient.disabled = true;
+                chatClientTerenCurent = null;
+                chatClientMesajeToate = [];
+                if (chatClientRealtime) { const old = chatClientRealtime; chatClientRealtime = null; setTimeout(() => db.removeChannel(old),0); }
+            }
             setTimeout(async () => {
                 await syncAuthUser(session?.user || null);
                 if (!session) {
@@ -1303,62 +1366,3 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
 });
-
-
-
-
-
-
-// ==========================================
-// MANUAL URL CHECK PENTRU RECUPERARE PAROLA
-// Supabase PKCE sau V2 uneori nu trimite eventul PASSWORD_RECOVERY,
-// asa ca citim direct din URL pentru a fi siguri 100%.
-// ==========================================
-window.addEventListener('load', () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const hashParams = new URLSearchParams(window.location.hash.replace('#', '?'));
-    
-    if (urlParams.get('type') === 'recovery' || hashParams.get('type') === 'recovery' || window.location.href.includes('type=recovery')) {
-        setTimeout(afiseazaModalParolaFortat, 500); // Dam timp lui Supabase sa faca schimbul de sesiune
-    }
-});
-
-const afiseazaModalParolaFortat = () => {
-    if(document.getElementById('overlay-parola-noua-js')) return; // deja exista
-    
-    const overlay = document.createElement('div');
-    overlay.id = 'overlay-parola-noua-js';
-    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.95);z-index:999999;display:flex;justify-content:center;align-items:center;';
-    overlay.innerHTML = `
-        <div style="background:#1e1e1e;padding:30px;border-radius:15px;text-align:center;border:2px solid #3b82f6;width:90%;max-width:400px;font-family:sans-serif;">
-            <h2 style="color:white;margin-bottom:15px;font-size:22px;">Resetare Parolă</h2>
-            <p style="color:#ccc;font-size:14px;margin-bottom:20px;">Introdu noua parolă mai jos (minim 6 caractere).</p>
-            <input type="password" id="input-noua-parola-js-fortat" placeholder="Noua parolă..." style="padding:15px;width:100%;box-sizing:border-box;border-radius:8px;border:none;margin-bottom:20px;font-size:16px;">
-            <button id="btn-salveaza-parola-js-fortat" style="padding:15px 24px;width:100%;background:#3b82f6;color:white;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:16px;">Salvează Noua Parolă</button>
-        </div>
-    `;
-    document.body.appendChild(overlay);
-
-    document.getElementById('btn-salveaza-parola-js-fortat').addEventListener('click', async () => {
-        const noua = document.getElementById('input-noua-parola-js-fortat').value;
-        if(noua.length < 6) return alert("Parola trebuie să aibă minim 6 caractere!");
-        
-        const btn = document.getElementById('btn-salveaza-parola-js-fortat');
-        btn.innerText = "Se salvează...";
-        btn.disabled = true;
-        
-        // Folosim db.auth.updateUser ca sa salvam parola noii sesiuni
-        const { error } = await db.auth.updateUser({ password: noua });
-        
-        if(error) {
-            alert("Eroare la schimbarea parolei: " + error.message);
-            btn.innerText = "Salvează Noua Parolă";
-            btn.disabled = false;
-        } else {
-            alert("Parola a fost schimbată cu succes! Te poți bucura de aplicație.");
-            document.body.removeChild(overlay);
-            // Curatam URL-ul
-            window.history.replaceState(null, '', window.location.pathname);
-        }
-    });
-};

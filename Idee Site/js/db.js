@@ -10,5 +10,23 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 // Creăm conexiunea globală la baza de date
 const db = createClient(supabaseUrl, supabaseKey);
 
-console.log("🚀 Conectat la Supabase cu succes!");
+// Capture a verified recovery event before the deferred app script loads.
+// Keep it in memory only; a URL parameter alone never authorizes a reset.
+(() => {
+    let pendingRecoverySession = null;
+    db.auth.onAuthStateChange((event, session) => {
+        if (event === 'PASSWORD_RECOVERY') pendingRecoverySession = session;
+        else if (event === 'SIGNED_OUT' || (event === 'SIGNED_IN'
+            && pendingRecoverySession && session?.user?.id !== pendingRecoverySession.user?.id)) {
+            pendingRecoverySession = null;
+        }
+    });
+    window.takeSpotivityRecoverySession = () => {
+        const session = pendingRecoverySession;
+        pendingRecoverySession = null;
+        return session;
+    };
+})();
+
+console.log('Client Supabase inițializat.');
 

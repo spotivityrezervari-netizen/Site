@@ -26,6 +26,7 @@ let checks = 0;
     await pg.exec(readFileSync(join(__dirname,'schema.sql'),'utf8'));
     await pg.exec(readFileSync(join(__dirname,'../001_security.sql'),'utf8'));
     await pg.exec(readFileSync(join(__dirname,'../003_court_hours.sql'),'utf8'));
+    await pg.exec(readFileSync(join(__dirname,'../004_admin_scope_hardening.sql'),'utf8'));
     await pg.exec("update public.terenuri set poza='assets/imagini/avatar2.png'");
     const tomorrow=(await pg.query("select ((now() at time zone 'Europe/Bucharest')::date+1)::text as d")).rows[0].d;
     let queue=Promise.resolve();
@@ -33,6 +34,11 @@ let checks = 0;
     const requests=[];
     let logoutCount=0;
     let availabilityGate=null;
+    let chatGate=null;
+    const pauseChatPreflight=()=>{
+      let enter,release;const entered=new Promise(resolve=>enter=resolve),wait=new Promise(resolve=>release=resolve);
+      chatGate={enter,wait};return{entered,release};
+    };
     const pauseNextAvailability = () => {
       let enter,release;
       const entered=new Promise(resolve=>{enter=resolve});
@@ -49,6 +55,10 @@ let checks = 0;
         availabilityGate=null;
         gate.enter();
         await gate.wait;
+      }
+      if (chatGate && pendingRequest.method()==='GET' && pendingUrl.pathname.endsWith('/rezervari')
+        && pendingUrl.searchParams.get('teren')==='eq.Court A' && pendingUrl.searchParams.get('stare')==='eq.activa') {
+        const gate=chatGate;chatGate=null;gate.enter();await gate.wait;
       }
       return serial(async () => {
       const request=route.request(), url=new URL(request.url());
@@ -358,6 +368,7 @@ let checks = 0;
     for (const input of await hourInputs.all()) {
       await input.setChecked(enabledHours.includes(await input.getAttribute('value')));
     }
+    await admin.locator(`#oras-${settingsId}`).fill('Test City');
     const settingsResponse=admin.waitForResponse(response=>new URL(response.url()).pathname==='/rest/v1/terenuri' && response.request().method()==='PATCH');
     const settingsReload=admin.waitForRequest(request=>new URL(request.url()).pathname==='/auth/v1/token' && request.method()==='POST');
     await admin.locator(`#btn-save-${settingsId}`).click();
@@ -365,6 +376,7 @@ let checks = 0;
     await serial(async () => {
       await pg.exec("reset role; select set_config('request.jwt.claim.sub','',false)");
       assert.deepEqual((await pg.query("select ore_rezervabile from public.terenuri where nume='Court A'")).rows[0].ore_rezervabile,enabledHours);
+      assert.equal((await pg.query("select oras from public.terenuri where nume='Court A'")).rows[0].oras,'Test City');
     });
     await settingsReload;
     await admin.waitForFunction(()=>document.getElementById('login-admin-btn').disabled===false);
@@ -494,6 +506,41 @@ let checks = 0;
     assert.equal(nestedRequest.body.email,'alice@example.test');
     assert.equal(new URLSearchParams(nestedRequest.search).get('redirect_to'),nested.href);
     pass('password recovery preserves the GitHub Pages subdirectory in its real SDK redirect');
+    await serial(async()=>{
+      await pg.exec("reset role;select set_config('request.jwt.claim.sub','',false)");
+      await pg.exec("update public.terenuri set are_chat=true where nume in ('Court A','Court B')");
+      await pg.query("insert into public.rezervari(email_client,client_user_id,teren,data_str,ora,stare) values('alice@example.test',$2,'Court B',$1,'14:00','activa')",[tomorrow,uid(1)]);
+    });
+    const chatPage=await pageFor();await chatPage.goto(base,{waitUntil:'networkidle'});
+    await chatPage.evaluate(async()=>{await db.auth.signInWithPassword({email:'alice@example.test',password:' test-password. '})});
+    await chatPage.waitForFunction(()=>document.getElementById('btn-top-cont').innerText.includes('Contul'));
+    await chatPage.locator('#btn-top-cont').click();await chatPage.locator('#modal-profil').waitFor({state:'visible'});
+    await chatPage.locator('#btn-vezi-chat').click();await chatPage.locator('#modal-chat-client').waitFor({state:'visible'});
+    await chatPage.locator('#chat-client-lista-terenuri .card-conversatie').filter({hasText:'Court A'}).click();
+    await chatPage.waitForFunction(()=>!document.getElementById('chat-client-input').disabled);
+    const chatPause=pauseChatPreflight();await chatPage.locator('#chat-client-input').fill('Message intended for Court A');
+    await chatPage.locator('#chat-client-btn-trimite').click();await chatPause.entered;
+    await chatPage.locator('#chat-client-lista-terenuri .card-conversatie').filter({hasText:'Court B'}).click();
+    chatPause.release();await chatPage.waitForLoadState('networkidle');
+    await serial(async()=>{await pg.exec('reset role');assert.equal((await pg.query("select id from public.mesaje_chat where mesaj='Message intended for Court A'")).rows.length,0)});
+    pass('switching the chat court during preflight never sends the previous draft to another court');
+    await chatPage.locator('#chat-client-lista-terenuri .card-conversatie').filter({hasText:'Court A'}).click();
+    await chatPage.waitForFunction(()=>!document.getElementById('chat-client-input').disabled);
+    const logoutPause=pauseChatPreflight();await chatPage.locator('#chat-client-input').fill('Message cancelled by logout');
+    await chatPage.locator('#chat-client-btn-trimite').click();await logoutPause.entered;
+    await chatPage.evaluate(async()=>{await db.auth.signOut({scope:'local'})});
+    await chatPage.locator('#modal-chat-client').waitFor({state:'hidden'});logoutPause.release();await chatPage.waitForLoadState('networkidle');
+    assert.equal(await chatPage.locator('#chat-client-mesaje').innerText(),'');
+    await serial(async()=>{await pg.exec('reset role');assert.equal((await pg.query("select id from public.mesaje_chat where mesaj='Message cancelled by logout'")).rows.length,0)});
+    pass('logout during chat preflight clears private messages and aborts sending');
+    // A sign-out from another tab must remove cached privileged data.
+    await admin.evaluate(async()=>{await db.auth.signOut({scope:'local'})});
+    await admin.locator('#sectiune-login').waitFor({state:'visible'});
+    assert.ok(!(await admin.locator('#sectiune-dashboard').isVisible()));
+    assert.equal(await admin.locator('#container-meniu-terenuri').innerText(),'');
+    assert.equal(await admin.locator('#chat-admin-mesaje').innerText(),'');
+    assert.equal(await admin.locator('[id^="modal-setari-"]').count(),0);
+    pass('admin auth sign-out clears cached settings, program and private chat');
     const mobile=await pageFor();
     await mobile.setViewportSize({width:390,height:844});
     await mobile.goto(base,{waitUntil:'networkidle'});

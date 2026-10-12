@@ -9,6 +9,9 @@ begin
   if to_regclass('spotivity_private.migrations') is null then
     raise exception 'Apply 001_security.sql before 003_court_hours.sql.';
   end if;
+  if exists (select 1 from spotivity_private.migrations where version >= 4) then
+    raise exception '004_admin_scope_hardening.sql is already applied. Do not rerun 003_court_hours.sql.';
+  end if;
   if not exists (select 1 from spotivity_private.migrations where version = 1) then
     raise exception 'Apply 001_security.sql before 003_court_hours.sql.';
   end if;

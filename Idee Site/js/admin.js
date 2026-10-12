@@ -1,6 +1,8 @@
 let contLogatGlobal = null; 
 let programRequestGeneration = 0;
 let manualHoursRequestGeneration = 0;
+let adminAuthGeneration = 0;
+let activeAdminAuthUserId = null;
 
 async function adminHourIsAllowed(courtName, hour) {
     const { data: court, error } = await db.from('terenuri').select('*').eq('nume', courtName).single();
@@ -299,6 +301,7 @@ window.incarcaTabelProgram = async function() {
 };
 
 window.actualizeazaBifeTerenuri = async function() {
+    const authRequest = adminAuthGeneration;
     const container = document.getElementById('container-checkbox-terenuri');
     if (!container) return;
     container.innerHTML = `
@@ -306,17 +309,20 @@ window.actualizeazaBifeTerenuri = async function() {
         <hr style="border-color: rgba(255,255,255,0.1); width: 100%; margin: 5px 0;">
     `;
     const { data } = await db.from('terenuri').select('nume, sport');
+    if (authRequest !== adminAuthGeneration) return;
     if (data) {
         data.forEach(t => { container.innerHTML += `<label style="display: flex; align-items: center; gap: 10px; cursor: pointer;"><input type="checkbox" class="check-teren-alocat" value="${window.escapeHtml(t.nume)}" style="margin-right: 5px; width: 20px; height: 20px; flex-shrink: 0;"> ${window.escapeHtml(t.nume)} (${window.escapeHtml(t.sport)})</label>`; });
     }
 };
 
 window.incarcaTerenuriAdmin = async function() {
+    const authRequest = adminAuthGeneration;
     const container = document.getElementById('container-lista-terenuri');
     if (!container) return;
     container.innerHTML = "<p style='color: white;'>Se descarcă terenurile din cloud...</p>";
     
     const { data } = await db.from('terenuri').select('*');
+    if (authRequest !== adminAuthGeneration) return;
     if (!data || data.length === 0) { container.innerHTML = "<p style='color: #ccc;'>Niciun teren adăugat.</p>"; return; }
     
     let html = "";
@@ -429,9 +435,11 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.innerText = textVechi; btn.disabled = false;
             return alert("⛔ Acces respins! Email sau parolă greșită.");
         }
+        const authRequest = adminAuthGeneration;
         
         // 2. Extragere rol din tabelul users_admin pe baza email-ului
         const { data, error } = await db.from('users_admin').select('*').eq('user_id', authData.user.id).single();
+        if (authRequest !== adminAuthGeneration || activeAdminAuthUserId !== authData.user.id) return;
         
         if (data && !error) {
             contLogatGlobal = data;
@@ -452,6 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.actualizeazaBifeTerenuri(); 
                 
                 const { data: toate } = await db.from('terenuri').select('nume');
+                if (authRequest !== adminAuthGeneration) return;
                 if (toate) {
                     terenuriPtTabel = toate.map(t => t.nume);
                     listaTerenuriAlocate = terenuriPtTabel;
@@ -482,6 +491,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 for (let numeT of listaTerenuriAlocate) {
                     if(!numeT) continue;
                     const { data: terenDB } = await db.from('terenuri').select('*').eq('nume', numeT).single();
+                    if (authRequest !== adminAuthGeneration) return;
                     if (terenDB) {
                         selectManualTeren.innerHTML += `<option value="${window.escapeHtml(terenDB.nume)}" data-sport="${window.escapeHtml(terenDB.sport)}">${window.escapeHtml(terenDB.nume)}</option>`;
                         
@@ -630,6 +640,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.initializeazaTabel(terenuriPtTabel);
             }
             await window.actualizeazaOreManualAdmin();
+            if (authRequest !== adminAuthGeneration) return;
 
             // Chat real-time pentru admin
             setTimeout(() => { initializareRealtimeChatAdmin(); }, 1000);
@@ -703,6 +714,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(btnSave) { btnSave.innerText = "⏳ Se salvează..."; btnSave.disabled = true; }
 
         const pret = document.getElementById(`pret-${idDB}`).value;
+        const oras = document.getElementById(`oras-${idDB}`).value.trim();
         const minge = document.getElementById(`minge-${idDB}`).checked;
         const pretMinge = document.getElementById(`pret-minge-${idDB}`).value;
         const esteActiv = document.getElementById(`activ-${idDB}`).checked;
@@ -715,7 +727,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const oreRezervabile = window.bookingHourOptions.filter(hour => selectedHours.includes(hour));
 
-        let dateDeUpdatat = { pret: parseInt(pret), optiune_minge: minge, pret_minge: parseInt(pretMinge), este_activ: esteActiv, are_chat: areChat, ore_rezervabile: oreRezervabile };
+        let dateDeUpdatat = { oras, pret: parseInt(pret), optiune_minge: minge, pret_minge: parseInt(pretMinge), este_activ: esteActiv, are_chat: areChat, ore_rezervabile: oreRezervabile };
 
         if (fileInput && fileInput.files && fileInput.files[0]) {
             const file = fileInput.files[0];
@@ -877,6 +889,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     window.reincarcaIstoricAdmin = async function() {
+        if (!contLogatGlobal) return;
+        const authRequest = adminAuthGeneration;
         const container = document.getElementById('container-istoric');
         if (!container) return;
         container.style.display = 'flex'; // Lista verticala cu scroll interior
@@ -884,9 +898,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Preluăm clienții pentru a corela datele (nume, telefon) cu rezervările web
         const { data: clientiDB } = await db.from('clienti').select('*');
+        if (authRequest !== adminAuthGeneration) return;
         const totiClientii = clientiDB || [];
 
         const { data, error } = await db.from('rezervari').select('*');
+        if (authRequest !== adminAuthGeneration) return;
         if (error || !data || data.length === 0) { container.innerHTML = "<p style='color: white;'>Nu există nicio rezervare în sistem.</p>"; return; }
 
         data.sort((a, b) => b.id - a.id);
@@ -973,14 +989,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     async function initializareRealtimeChatAdmin() {
+        const authRequest = adminAuthGeneration;
         if (chatAdminRealtime) db.removeChannel(chatAdminRealtime);
         if (!contLogatGlobal) return;
         
         await incarcaMesajeAdmin(false); 
+        if (!contLogatGlobal || authRequest !== adminAuthGeneration) return;
         
         // Adminul primește notificări pentru orice mesaj legat de terenurile lui
         chatAdminRealtime = db.channel('mesaje_chat_admin')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'mesaje_chat' }, payload => {
+                if (!contLogatGlobal || authRequest !== adminAuthGeneration) return;
                 const terenMesaj = payload.new ? payload.new.teren : null;
                 const terenurileAdmin = contLogatGlobal.is_super ? [] : (contLogatGlobal.terenuri ? contLogatGlobal.terenuri.split(',').map(n => n.trim()).filter(Boolean) : []);
                 
@@ -1004,6 +1023,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function incarcaMesajeAdmin(randeaza = true) {
         if (!contLogatGlobal) return;
+        const authRequest = adminAuthGeneration;
         
         let query = db.from('mesaje_chat').select('*').order('created_at', { ascending: true });
         
@@ -1013,6 +1033,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const { data, error } = await query;
+        if (authRequest !== adminAuthGeneration) return;
         if (error) { console.error("Eroare chat admin: ", error); return; }
         
         chatAdminMesajeToate = data || [];
@@ -1028,6 +1049,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function randeazaListaConversatiiAdmin() {
+        if (!contLogatGlobal) return;
+        const authRequest = adminAuthGeneration;
         const listaSide = document.getElementById('chat-admin-lista-conversații');
         if (!listaSide) return;
         
@@ -1063,6 +1086,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Preluăm clienții pentru a le afișa numele real
         const { data: clientiDB } = await db.from('clienti').select('email, nume');
+        if (authRequest !== adminAuthGeneration) return;
         const clienti = clientiDB || [];
 
         listaSide.innerHTML = '';
@@ -1126,6 +1150,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     async function deschideConversatiaAdmin() {
+        const authRequest = adminAuthGeneration;
         const inp = document.getElementById('chat-admin-input'); if (inp) inp.value = '';
         if (!chatAdminConversatieCurenta) return;
         
@@ -1163,6 +1188,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (idUriDeMarcat.length > 0) {
             await db.from('mesaje_chat').update({ citit: true }).in('id', idUriDeMarcat);
         }
+        if (!contLogatGlobal || authRequest !== adminAuthGeneration) return;
 
         inputChatAdmin.disabled = false;
         btnTrimiteChatAdmin.disabled = false;
@@ -1200,6 +1226,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function trimiteMesajAdmin() {
         if (!chatAdminConversatieCurenta || inputChatAdmin.disabled) return;
+        const authRequest = adminAuthGeneration;
         const text = inputChatAdmin.value.trim().replace(/\.$/, '');
         if (!text) return;
 
@@ -1213,6 +1240,7 @@ document.addEventListener('DOMContentLoaded', () => {
             mesaj: text,
             citit: false
         }]);
+        if (authRequest !== adminAuthGeneration) return;
 
         if (error) alert("Eroare la trimitere: " + error.message);
         else inputChatAdmin.value = '';
@@ -1248,6 +1276,56 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => { if (contLogatGlobal) initializareRealtimeChatAdmin(); }, 1500);
         });
     }
+
+    function clearAdminSessionView() {
+        adminAuthGeneration++;
+        programRequestGeneration++;
+        manualHoursRequestGeneration++;
+        contLogatGlobal = null;
+        chatAdminMesajeToate = [];
+        chatAdminConversatieCurenta = null;
+        localStorage.removeItem('admin_session');
+        document.querySelectorAll('.modal').forEach(modal => { modal.style.display = 'none'; });
+        document.querySelectorAll('.modal input, .modal textarea').forEach(input => {
+            if (input.type === 'checkbox' || input.type === 'radio') input.checked = false;
+            else input.value = '';
+        });
+        for (const id of ['container-meniu-terenuri','container-modale-terenuri','sub-pages-container',
+            'container-istoric','container-lista-terenuri','container-checkbox-terenuri','tabel-corp-program',
+            'tabel-teren','manual-teren','manual-ora','chat-admin-lista-conversații','chat-admin-mesaje']) {
+            document.getElementById(id)?.replaceChildren();
+        }
+        document.getElementById('sectiune-dashboard').style.display = 'none';
+        document.getElementById('sectiune-login').style.display = 'flex';
+        document.getElementById('text-rol-activ').textContent = '';
+        document.getElementById('login-parola').value = '';
+        const loginButton = document.getElementById('login-admin-btn');
+        loginButton.disabled = false;
+        loginButton.textContent = 'Intră în Sistem';
+        document.getElementById('manual-ora').disabled = true;
+        document.getElementById('btn-rezervare-manuala').disabled = true;
+        inputChatAdmin.disabled = true;
+        btnTrimiteChatAdmin.disabled = true;
+        document.getElementById('chat-admin-btn-sterge').style.display = 'none';
+        const title = document.getElementById('chat-admin-conversație-titlu');
+        title.textContent = ''; title.style.display = 'none';
+        const badge = document.getElementById('bulina-chat-admin');
+        badge.textContent = '0'; badge.style.display = 'none';
+        document.querySelector('#modal-chat-admin .modal-chat-box')?.classList.remove('conversatie-activa');
+        if (chatAdminRealtime) {
+            const oldChannel = chatAdminRealtime;
+            chatAdminRealtime = null;
+            setTimeout(() => { db.removeChannel(oldChannel); }, 0);
+        }
+    }
+
+    db.auth.onAuthStateChange((event, session) => {
+        const nextUserId = session?.user?.id || null;
+        if (event === 'SIGNED_OUT' || (contLogatGlobal && contLogatGlobal.user_id !== nextUserId)) {
+            clearAdminSessionView();
+        }
+        activeAdminAuthUserId = nextUserId;
+    });
 
 });
 
