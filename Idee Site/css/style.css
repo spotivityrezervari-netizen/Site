@@ -105,7 +105,20 @@ html, body {
 
 
 
-.modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(12px); z-index: 100; align-items: center; justify-content: center; }
+.modal {
+    display: none;
+    position: fixed;
+    /* Extend by one CSS pixel to cover fractional viewport edges during resizing. */
+    inset: -1px;
+    width: auto;
+    height: auto;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+}
 
 .modal.activ { display: flex; }
 
@@ -707,11 +720,11 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 
 
-.lista-mesaje::-webkit-scrollbar { width: 6px; }
 
-.lista-mesaje::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); border-radius: 4px; }
 
-.lista-mesaje::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+
+
 
 
 
@@ -1168,3 +1181,31 @@ body.fara-scroll {
     background-color: rgba(60, 60, 64, 0.7);
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.16);
 }
+
+/* One scrollbar treatment for pages, dialogs, tables, chat and horizontal days. */
+:root { --scrollbar-thumb: rgba(210, 210, 216, 0.5); }
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+/* WebKit/Blink use custom rails; Firefox keeps the standard thin fallback. */
+@supports selector(::-webkit-scrollbar) {
+    * { scrollbar-width: auto; scrollbar-color: auto; }
+}
+*::-webkit-scrollbar { width: 8px; height: 8px; background: transparent; }
+*::-webkit-scrollbar-track { background: transparent; border-radius: 999px; }
+*::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover { background-color: rgba(230, 230, 236, 0.65); }
+*::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+*::-webkit-scrollbar-corner { background: transparent; }
+/* Keep the draggable rail inside the rounded dialog's straight edges. */
+.modal-continut::-webkit-scrollbar-track:vertical,
+.modal > div::-webkit-scrollbar-track:vertical { margin-block: 20px; }
+.modal-continut::-webkit-scrollbar-track:horizontal,
+.modal > div::-webkit-scrollbar-track:horizontal { margin-inline: 20px; }
+.modal-continut { overflow-x: hidden; }
