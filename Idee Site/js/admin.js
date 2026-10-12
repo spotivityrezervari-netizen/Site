@@ -1,4 +1,48 @@
 let contLogatGlobal = null; 
+let programRequestGeneration = 0;
+let manualHoursRequestGeneration = 0;
+
+async function adminHourIsAllowed(courtName, hour) {
+    const { data: court, error } = await db.from('terenuri').select('*').eq('nume', courtName).single();
+    if (error || !court) {
+        alert('Programul terenului nu poate fi verificat. Reîncarcă și încearcă din nou.');
+        return false;
+    }
+    if (!window.getCourtBookingHours(court).includes(hour)) {
+        alert('Această oră nu este în programul rezervabil al terenului.');
+        return false;
+    }
+    return true;
+}
+
+window.actualizeazaOreManualAdmin = async function() {
+    const courtSelect = document.getElementById('manual-teren');
+    const hourSelect = document.getElementById('manual-ora');
+    const saveButton = document.getElementById('btn-rezervare-manuala');
+    if (!courtSelect || !hourSelect) return;
+    const request = ++manualHoursRequestGeneration;
+    const previousHour = hourSelect.value;
+    hourSelect.disabled = true;
+    if (saveButton) saveButton.disabled = true;
+    hourSelect.innerHTML = '<option value="">Se încarcă orele...</option>';
+    if (!courtSelect.value) {
+        hourSelect.innerHTML = '<option value="">Alege un teren</option>';
+        return;
+    }
+    const { data: court, error } = await db.from('terenuri').select('*').eq('nume', courtSelect.value).single();
+    if (request !== manualHoursRequestGeneration) return;
+    if (error || !court) {
+        hourSelect.innerHTML = '<option value="">Orele nu pot fi încărcate</option>';
+        return;
+    }
+    const hours = window.getCourtBookingHours(court);
+    hourSelect.innerHTML = hours.length
+        ? hours.map(hour => `<option value="${hour}">${hour}</option>`).join('')
+        : '<option value="">Fără ore rezervabile</option>';
+    if (hours.includes(previousHour)) hourSelect.value = previousHour;
+    hourSelect.disabled = !hours.length;
+    if (saveButton) saveButton.disabled = !hours.length;
+};
 window.lang = 'ro';
 localStorage.setItem('lang', 'ro');
 
@@ -72,6 +116,8 @@ window.setLangAdmin = function(limba) {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
+    const manualCourtSelect = document.getElementById('manual-teren');
+    if (manualCourtSelect) manualCourtSelect.onchange = window.actualizeazaOreManualAdmin;
     window.setLangAdmin(window.lang);
 });
 
@@ -122,12 +168,13 @@ window.initializeazaTabel = function(terenuriArray) {
         dataInput.value = window.siteDate();
     }
     
-    dataInput.addEventListener('change', window.incarcaTabelProgram);
-    select.addEventListener('change', window.incarcaTabelProgram);
+    dataInput.onchange = window.incarcaTabelProgram;
+    select.onchange = window.incarcaTabelProgram;
     window.incarcaTabelProgram();
 };
 
 window.incarcaTabelProgram = async function() {
+    const request = ++programRequestGeneration;
     const terenAles = document.getElementById('tabel-teren').value;
     const dataInput = document.getElementById('tabel-data').value;
     const tbody = document.getElementById('tabel-corp-program');
@@ -145,6 +192,12 @@ window.incarcaTabelProgram = async function() {
         .eq('data_str', dataFormata)
         .neq('stare', 'anulata');
 
+    if (request !== programRequestGeneration) return;
+    if (error) {
+        tbody.innerHTML = '<tr><td colspan="3">Programul nu poate fi încărcat. Încearcă din nou.</td></tr>';
+        return;
+    }
+
     let clientiAsociati = [];
     if (rezervari && rezervari.length > 0) {
         const emails = rezervari.map(r => r.email_client).filter(e => e !== 'Teren Blocat');
@@ -154,16 +207,24 @@ window.incarcaTabelProgram = async function() {
         }
     }
 
-    const { data: infoTeren } = await db.from('terenuri').select('are_chat').eq('nume', terenAles).single();
+    const { data: infoTeren, error: courtError } = await db.from('terenuri').select('*').eq('nume', terenAles).single();
+    if (request !== programRequestGeneration) return;
+    if (courtError || !infoTeren) {
+        tbody.innerHTML = '<tr><td colspan="3">Setările terenului nu pot fi încărcate. Încearcă din nou.</td></tr>';
+        return;
+    }
     const terenAreChatActivat = infoTeren ? infoTeren.are_chat !== false : true;
 
     let html = '';
-    const ore = ["12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00"];
+    const oreRezervabile = window.getCourtBookingHours(infoTeren);
+    const ore = [...new Set([...oreRezervabile, ...(rezervari || []).map(r => r.ora)])]
+        .sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
 
     ore.forEach(ora => {
         const rGasita = rezervari ? rezervari.find(r => r.ora === ora) : null;
+        const inProgram = oreRezervabile.includes(ora);
         
-        let col1 = `<div style="font-size: 16px;">${ora}</div>`;
+        let col1 = `<div class="program-ora-label">${window.escapeHtml(ora)}</div>`;
         let col2 = '';
         let col3 = '<span style="color:#888;">-</span>';
         let bg = 'transparent';
@@ -172,7 +233,7 @@ window.incarcaTabelProgram = async function() {
             const eBlocat = rGasita.email_client === 'Teren Blocat';
             bg = eBlocat ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.05)';
             
-            col1 += `<br><button onclick="window.anulareDublaAdmin('${rGasita.id}', '${ora}')" style="background: #ef4444; color: white; border: none; padding: 4px 6px; border-radius: 4px; font-size: 11px; cursor: pointer; margin-top: 8px; width: 100%;">❌ Anulează</button>`;
+            col1 += `<br><button class="program-anulare" aria-label="Anulează rezervarea de la ora ${window.escapeHtml(ora)}" title="Anulează rezervarea de la ora ${window.escapeHtml(ora)}" onclick="window.anulareDublaAdmin('${rGasita.id}', '${ora}')" style="background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 5px; width: 100%;"><span class="program-anulare-icon" aria-hidden="true">✕</span><span class="program-anulare-text">Anulează</span></button>`;
 
             col2 = `
                 <select onchange="window.schimbaStareExistenta(this, '${rGasita.id}', '${ora}', '${window.escapeJs(terenAles)}', '${dataFormata}')" style="background: #1f2937; color: white; border: 1px solid ${eBlocat ? '#ef4444' : '#f59e0b'}; border-radius: 5px; padding: 6px; font-weight: bold; cursor: pointer; width: 100%;">
@@ -181,6 +242,9 @@ window.incarcaTabelProgram = async function() {
                     <option value="blocat" ${eBlocat ? 'selected' : ''}>BLOCAT</option>
                 </select>
             `;
+            if (!inProgram) {
+                col2 = `<span>${eBlocat ? 'BLOCAT' : 'OCUPAT'}</span><small class="program-in-afara">În afara programului actual</small>`;
+            }
 
             if (eBlocat) {
                 col3 = `<span style="color:#ef4444; font-weight:bold;">⛔ Închis de Admin</span>`;
@@ -204,7 +268,7 @@ window.incarcaTabelProgram = async function() {
                     chatBtnStr = `<button class="btn-tabel-chat" onclick="deschideChatDinTabel('${window.escapeJs(emailParam)}', '${window.escapeJs(terenAles)}', '${window.escapeJs(clientName)}')" style="background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.5); color: #3b82f6; border-radius: 8px; padding: 4px 10px; font-size: 11px; font-weight: bold; cursor: pointer; margin-left: 10px; transition: 0.3s; vertical-align: middle;">💬 Chat</button>`;
                 }
 
-                col3 = `<span style="color:white; font-size:13px; line-height:1.4;">${infoClient}</span> <br><div style="margin-top: 5px; display: flex; align-items: center;"><span style="font-size:12px; color:#aaa;">💰 ${window.escapeHtml(rGasita.pret_total)}</span>${chatBtnStr}</div>`;
+                col3 = `<span style="color:white; font-size:12px; line-height:1.4;">${infoClient}</span><div class="program-detalii-footer"><span style="font-size:12px; color:#aaa;">💰 ${window.escapeHtml(rGasita.pret_total)}</span>${chatBtnStr}</div>`;
             }
         } else {
             const oraId = ora.replace(':', '');
@@ -226,12 +290,12 @@ window.incarcaTabelProgram = async function() {
             `;
         }
 
-        html += `<tr style="background: ${bg}; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                <td style="padding: 12px; border-right: 1px solid rgba(255,255,255,0.05); font-weight: bold; color: #fff; width: 70px; text-align: center; vertical-align: middle;">${col1}</td>
-                <td style="padding: 12px; border-right: 1px solid rgba(255,255,255,0.05); width: 140px; text-align: center; vertical-align: middle;">${col2}</td>
-                <td style="padding: 12px; vertical-align: middle;">${col3}</td></tr>`;
+        html += `<tr data-ora="${window.escapeHtml(ora)}" style="background: ${bg}; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <td class="program-col-ora">${col1}</td>
+                <td class="program-col-stare">${col2}</td>
+                <td>${col3}</td></tr>`;
     });
-    tbody.innerHTML = html;
+    tbody.innerHTML = html || '<tr><td colspan="3">Nu sunt ore rezervabile. Alege orele în setările terenului pentru a relua rezervările.</td></tr>';
 };
 
 window.actualizeazaBifeTerenuri = async function() {
@@ -405,6 +469,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const selectManualTeren = document.getElementById('manual-teren');
                 
                 containerMeniu.innerHTML = ''; 
+                containerMeniu.parentElement.style.display = '';
                 containerModale.innerHTML = '';
                 selectManualTeren.innerHTML = '';
 
@@ -511,6 +576,13 @@ document.addEventListener('DOMContentLoaded', () => {
                                         </div>
 
                                         <div class="grup-input" style="margin-bottom: 15px;"><label>Oraș</label><input type="text" id="oras-${terenDB.id}" value="${window.escapeHtml(terenDB.oras ? terenDB.oras.trim().replace(/\.+$/, '') : '')}" placeholder="Ex: București"></div>
+                                        <fieldset class="ore-teren-setari" id="ore-rezervabile-${terenDB.id}">
+                                            <legend>Ore rezervabile</legend>
+                                            <p>Bifează orele de început, între 09:00 și 22:00. Ora 22:00 acoperă intervalul 22:00–23:00. Fără bife, rezervările noi sunt oprite; cele existente rămân vizibile în program.</p>
+                                            <div class="ore-teren-grid">
+                                                ${window.bookingHourOptions.map(hour => `<label><input type="checkbox" class="ora-rezervabila" value="${hour}" ${window.getCourtBookingHours(terenDB).includes(hour) ? 'checked' : ''}><span>${hour}</span></label>`).join('')}
+                                            </div>
+                                        </fieldset>
                                         <div class="grup-input"><label>Preț Teren (Lei)</label><input type="number" id="pret-${terenDB.id}" value="${terenDB.pret}"></div>
                                         <div class="grup-input" style="display:flex; justify-content:space-between; margin-top:10px;"><label>Ofertă Minge?</label><input type="checkbox" id="minge-${terenDB.id}" ${terenDB.optiune_minge ? 'checked' : ''} style="width:20px;height:20px;"></div>
                                         <div class="grup-input" style="margin-top:10px;"><label>Preț Minge (Lei)</label><input type="number" id="pret-minge-${terenDB.id}" value="${terenDB.pret_minge || 15}"></div>
@@ -557,6 +629,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (selectM && terenuriPtTabel.length > 0) {
                 window.initializeazaTabel(terenuriPtTabel);
             }
+            await window.actualizeazaOreManualAdmin();
 
             // Chat real-time pentru admin
             setTimeout(() => { initializareRealtimeChatAdmin(); }, 1000);
@@ -575,12 +648,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const d = new Date(dataInput);
         const zile = ["Dum", "Lun", "Mar", "Mie", "Joi", "Vin", "Sâm"];
         const dataFormata = dataInput;
+        const { data: court, error: courtError } = await db.from('terenuri').select('*').eq('nume', numeTeren).single();
+        if (courtError || !court) return alert('Programul terenului nu poate fi verificat. Încearcă din nou.');
+        const ore = window.getCourtBookingHours(court);
+        if (!ore.length) return alert('Terenul nu are ore rezervabile. Nu este nimic de blocat.');
         if (!confirm(`Ești sigur că blochezi complet terenul ${numeTeren} pe data de ${dataFormata}?`)) return;
 
         const btn = event.target; const textVechi = btn.innerText; btn.innerText = "Se blochează..."; btn.disabled = true;
-        const ore = ["12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00"];
         
-        const { data: oreExistente } = await db.from('rezervari').select('ora').eq('teren', numeTeren).eq('data_str', dataFormata).neq('stare', 'anulata');
+        const { data: oreExistente, error: availabilityError } = await db.from('rezervari').select('ora').eq('teren', numeTeren).eq('data_str', dataFormata).neq('stare', 'anulata');
+        if (availabilityError) {
+            alert('Rezervările existente nu pot fi verificate. Încearcă din nou.');
+            btn.innerText = textVechi; btn.disabled = false;
+            return;
+        }
         const oreOcupate = oreExistente ? oreExistente.map(r => r.ora) : [];
         
         const oreDeBlocat = ore.filter(o => !oreOcupate.includes(o)).map(oraLibera => ({
@@ -627,8 +708,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const esteActiv = document.getElementById(`activ-${idDB}`).checked;
         const areChat = document.getElementById(`are-chat-${idDB}`) ? document.getElementById(`are-chat-${idDB}`).checked : true;
         const fileInput = document.getElementById(`poza-${idDB}`);
+        const selectedHours = Array.from(document.getElementById(`ore-rezervabile-${idDB}`).querySelectorAll('.ora-rezervabila:checked')).map(input => input.value);
+        if (selectedHours.some(hour => !window.bookingHourOptions.includes(hour)) || new Set(selectedHours).size !== selectedHours.length) {
+            if (btnSave) { btnSave.innerText = `💾 Salvează Setările pt ${numeTeren}`; btnSave.disabled = false; }
+            return alert('Programul conține ore nevalide. Reîncarcă setările terenului.');
+        }
+        const oreRezervabile = window.bookingHourOptions.filter(hour => selectedHours.includes(hour));
 
-        let dateDeUpdatat = { pret: parseInt(pret), optiune_minge: minge, pret_minge: parseInt(pretMinge), este_activ: esteActiv, are_chat: areChat };
+        let dateDeUpdatat = { pret: parseInt(pret), optiune_minge: minge, pret_minge: parseInt(pretMinge), este_activ: esteActiv, are_chat: areChat, ore_rezervabile: oreRezervabile };
 
         if (fileInput && fileInput.files && fileInput.files[0]) {
             const file = fileInput.files[0];
@@ -658,36 +745,51 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('btn-rezervare-manuala')?.addEventListener('click', async () => {
         const selectBox = document.getElementById('manual-teren');
+        const hourSelect = document.getElementById('manual-ora');
+        const clientInput = document.getElementById('manual-client');
+        const dateInput = document.getElementById('manual-data');
+        const priceInput = document.getElementById('manual-pret');
+        const modal = document.getElementById('modal-rezervare-manuala');
+        const saveButton = document.getElementById('btn-rezervare-manuala');
+        const request = manualHoursRequestGeneration;
+        const clientValue = clientInput.value;
+        const priceValue = priceInput.value;
         const terenAles = selectBox.value;
-        const sportAles = selectBox.options[selectBox.selectedIndex].getAttribute('data-sport');
-        const client = document.getElementById('manual-client').value.trim().replace(/\.$/, '');
-        const dataInput = document.getElementById('manual-data').value;
-        const oraAlesa = document.getElementById('manual-ora').value;
-        const pret = document.getElementById('manual-pret').value.trim().replace(/\.$/, '');
+        const sportAles = selectBox.selectedIndex >= 0 ? selectBox.options[selectBox.selectedIndex].getAttribute('data-sport') : '-';
+        const client = clientValue.trim().replace(/\.$/, '');
+        const dataInput = dateInput.value;
+        const oraAlesa = hourSelect.value;
+        const pret = priceValue.trim().replace(/\.$/, '');
+        const sameContext = () => request === manualHoursRequestGeneration
+            && modal.style.display === 'flex' && selectBox.value === terenAles
+            && hourSelect.value === oraAlesa && dateInput.value === dataInput
+            && clientInput.value === clientValue && priceInput.value === priceValue;
         
-        if (!client || !dataInput || !pret) return alert("Completează câmpurile!");
-        const d = new Date(dataInput);
-        const zile = ["Dum", "Lun", "Mar", "Mie", "Joi", "Vin", "Sâm"];
+        if (!terenAles || !oraAlesa || !client || !dataInput || !pret) return alert("Alege o oră rezervabilă și completează câmpurile!");
         const dataFormata = dataInput;
-
-        document.getElementById('btn-rezervare-manuala').innerText = "Se verifică...";
-        const { data: dublura } = await db.from('rezervari').select('id').eq('teren', terenAles).eq('data_str', dataFormata).eq('ora', oraAlesa).neq('stare', 'anulata');
-        if (dublura && dublura.length > 0) {
-            document.getElementById('btn-rezervare-manuala').innerText = window.lang === 'hu' ? "➕ Mentés" : "➕ Salvează";
-            return alert(`❌ Ora ${oraAlesa} pe ${dataFormata} este rezervată!`);
+        saveButton.innerText = 'Se verifică...';
+        saveButton.disabled = true;
+        try {
+            const allowed = await adminHourIsAllowed(terenAles, oraAlesa);
+            if (!sameContext()) return;
+            if (!allowed) { await window.actualizeazaOreManualAdmin(); return; }
+            const { data: dublura, error: availabilityError } = await db.from('rezervari').select('id').eq('teren', terenAles).eq('data_str', dataFormata).eq('ora', oraAlesa).neq('stare', 'anulata');
+            if (!sameContext()) return;
+            if (availabilityError) return alert('Rezervările existente nu pot fi verificate. Încearcă din nou.');
+            if (dublura && dublura.length > 0) return alert(`❌ Ora ${oraAlesa} pe ${dataFormata} este rezervată!`);
+            const { error } = await db.from('rezervari').insert([{
+                sport: sportAles, teren: terenAles, data_str: dataFormata, ora: oraAlesa,
+                pret_total: pret + (window.lang === 'hu' ? ' RON (Kézi)' : ' Lei (Manual)'), email_client: client, stare: 'activa', timestamp_start: Date.now()
+            }]);
+            if (!error) {
+                alert('✅ Rezervare adăugată!');
+                if (typeof window.reincarcaIstoricAdmin === 'function') window.reincarcaIstoricAdmin();
+                if (typeof window.incarcaTabelProgram === 'function') window.incarcaTabelProgram();
+            } else alert('Eroare: ' + error.message);
+        } finally {
+            saveButton.innerText = window.lang === 'hu' ? '➕ Mentés' : '➕ Salvează';
+            saveButton.disabled = hourSelect.disabled || !hourSelect.value;
         }
-
-        const { error } = await db.from('rezervari').insert([{
-            sport: sportAles, teren: terenAles, data_str: dataFormata, ora: oraAlesa,
-            pret_total: pret + (window.lang === 'hu' ? " RON (Kézi)" : " Lei (Manual)"), email_client: client, stare: 'activa', timestamp_start: Date.now()
-        }]);
-        if (!error) { 
-            alert("✅ Rezervare adăugată!"); 
-            if (typeof window.reincarcaIstoricAdmin === 'function') window.reincarcaIstoricAdmin(); 
-            if (typeof window.incarcaTabelProgram === 'function') window.incarcaTabelProgram(); 
-        } 
-        else alert("Eroare: " + error.message);
-        document.getElementById('btn-rezervare-manuala').innerText = window.lang === 'hu' ? "➕ Mentés" : "➕ Salvează";
     });
 
         window.deschideModalAdaugaTeren = function() {
@@ -1151,6 +1253,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 window.blocheazaOraSinguraAdmin = async function(numeTeren, dataFormata, ora) {
+    if (!await adminHourIsAllowed(numeTeren, ora)) { window.incarcaTabelProgram(); return; }
     if (!confirm(`Blochezi ora ${ora} pentru terenul ${numeTeren}?`)) return;
 
     const { data: verif } = await db.from('rezervari').select('id').eq('teren', numeTeren).eq('data_str', dataFormata).eq('ora', ora).neq('stare', 'anulata');
@@ -1209,6 +1312,7 @@ window.schimbaStareExistenta = async function(select, idRez, ora, teren, data) {
     if (val === 'liber') {
         window.anulareDublaAdmin(idRez, ora);
     } else if (val === 'blocat') {
+        if (!await adminHourIsAllowed(teren, ora)) { window.incarcaTabelProgram(); return; }
         if(confirm('Transformi aceasta rezervare in BLOCAT?')) {
             await db.from('rezervari').update({ email_client: 'Teren Blocat' }).eq('id', idRez);
             window.incarcaTabelProgram();
@@ -1242,16 +1346,28 @@ window.anulareDublaAdmin = async function(idRez, ora) {
 };
 
 window.salveazaRezervareInlineAdmin = async function(teren, data, ora) {
+    const request = programRequestGeneration;
     const oraId = ora.replace(':', '');
-    const nume = document.getElementById('inline-nume-' + oraId).value.trim().replace(/\.$/, '');
-    const pret = document.getElementById('inline-pret-' + oraId).value.trim().replace(/\.$/, '');
+    const nameInput = document.getElementById('inline-nume-' + oraId);
+    const priceInput = document.getElementById('inline-pret-' + oraId);
+    if (!nameInput || !priceInput) return;
+    const nume = nameInput.value.trim().replace(/\.$/, '');
+    const pret = priceInput.value.trim().replace(/\.$/, '');
+    const sameContext = () => request === programRequestGeneration && nameInput.isConnected && priceInput.isConnected
+        && document.getElementById('modal-tabel-program').style.display === 'flex';
 
     if (!nume) {
         alert('Introdu un Nume / Telefon pentru a rezerva!');
         return;
     }
 
-    const { data: verif } = await db.from('rezervari').select('id').eq('teren', teren).eq('data_str', data).eq('ora', ora).neq('stare', 'anulata');
+    const allowed = await adminHourIsAllowed(teren, ora);
+    if (!sameContext()) return;
+    if (!allowed) { window.incarcaTabelProgram(); return; }
+
+    const { data: verif, error: availabilityError } = await db.from('rezervari').select('id').eq('teren', teren).eq('data_str', data).eq('ora', ora).neq('stare', 'anulata');
+    if (!sameContext()) return;
+    if (availabilityError) return alert('Rezervările existente nu pot fi verificate. Încearcă din nou.');
     if (verif && verif.length > 0) {
         alert('Eroare: Ora a fost rezervata intre timp!');
         window.incarcaTabelProgram();

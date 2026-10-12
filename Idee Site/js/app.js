@@ -233,7 +233,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         loggedInUser = user ? { id: user.id, email: user.email, nume: profile?.nume || user.email.split('@')[0], telefon: profile?.telefon || '-' } : null;
         if (typeof window.actualizeazaButonCont === 'function') window.actualizeazaButonCont();
     }
-    let terenuriDinDB = []; 
+    let terenuriDinDB = [];
+    let filterRequest = 0, hoursRequest = 0, bookingContextGeneration = 0;
+    let bookingInFlight = false, hoursLoading = false;
     let sportCurent = "", terenCurent = "", pretTerenCurent = 0, pretMingeCurent = 15;
     let mingeBifata = false, oraSelectata = [], dataSelectataStr = "";
 
@@ -245,7 +247,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function incarcaTerenuri() {
         const { data, error } = await db.from('terenuri').select('*');
-        if (data && !error) terenuriDinDB = data;
+        if (error || !data) return false;
+        terenuriDinDB = data;
+        return true;
     }
     await incarcaTerenuri();
 
@@ -414,7 +418,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const { data: authData, error: authError } = await db.auth.signUp({
             email: email,
             password: parola,
-            options: { data: { nume, telefon }, emailRedirectTo: window.location.origin + '/' },
+            options: { data: { nume, telefon }, emailRedirectTo: window.siteHomeUrl() },
         });
 
         if (authError) {
@@ -628,41 +632,50 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
+    function textProgram(indisponibil = false) {
+        if (indisponibil) return window.lang === 'hu' ? 'Nem sikerült betölteni az időpontokat. Próbáld újra.' :
+            window.lang === 'en' ? 'Availability could not be loaded. Please try again.' :
+            'Disponibilitatea nu poate fi încărcată. Încearcă din nou.';
+        return window.lang === 'hu' ? 'Erre a pályára nincs foglalható időpont.' :
+            window.lang === 'en' ? 'This court has no booking hours available.' :
+            'Acest teren nu are ore disponibile pentru rezervări.';
+    }
+
     async function aplicaFiltruSiDeseneazaTerenuri() {
+        const request = ++filterRequest;
         const dataSelectataDinFiltru = document.getElementById('filtru-data').value;
-        const oraAleasa = document.getElementById('filtru-ora').value;
+        const filtruOra = document.getElementById('filtru-ora');
         const containerDinamicTerenuri = document.getElementById('container-dinamic-terenuri');
-        
-        containerDinamicTerenuri.innerHTML = `<p style="color:white; width: 100%; text-align: center;">${window.dict[window.lang]['se_cauta']}</p>`;
+        containerDinamicTerenuri.innerHTML = `<p style="color:white; width:100%; text-align:center;">${window.dict[window.lang]['se_cauta']}</p>`;
+        const loaded = await incarcaTerenuri();
+        if (request !== filterRequest) return;
+        if (!loaded) { containerDinamicTerenuri.textContent = textProgram(true); return; }
 
-        const orasSelectat = document.getElementById('filtru-oras-global') ? document.getElementById('filtru-oras-global').value : 'ALL';
-        const terenuriPentruAcestSport = terenuriDinDB.filter(t => (t.sport === sportCurent || (sportCurent === 'Fotbal' && t.sport === 'Tenis Picior')) && t.este_activ !== false && (orasSelectat === 'ALL' || (t.oras && t.oras.trim().replace(/\.+$/, '') === orasSelectat)));
-
-        if (terenuriPentruAcestSport.length === 0) {
-            containerDinamicTerenuri.innerHTML = '<p style="color:white; width: 100%; text-align: center;">0</p>';
-            return;
-        }
-
-        const dataObj = new Date(dataSelectataDinFiltru);
-        const ziTextDB = numeZileT_DB[dataObj.getDay()];
-        const ziNumar = String(dataObj.getDate()).padStart(2, '0');
-        const lunaNumar = String(dataObj.getMonth() + 1).padStart(2, '0');
-        const dataFormatataPentruDB = dataSelectataDinFiltru;
-
-        let terenuriDisponibile = terenuriPentruAcestSport;
-
+        const orasSelectat = document.getElementById('filtru-oras-global')?.value || 'ALL';
+        const terenuriPentruAcestSport = terenuriDinDB.filter(t =>
+            (t.sport === sportCurent || (sportCurent === 'Fotbal' && t.sport === 'Tenis Picior')) &&
+            t.este_activ !== false && (orasSelectat === 'ALL' || (t.oras && t.oras.trim().replace(/\.+$/, '') === orasSelectat)));
+        const selectedHour = filtruOra.value;
+        const availableHours = window.bookingHourOptions.filter(hour =>
+            terenuriPentruAcestSport.some(court => window.getCourtBookingHours(court).includes(hour)));
+        filtruOra.innerHTML = `<option value="ALL" data-i18n="toate_orele">${window.dict[window.lang]['toate_orele']}</option>` +
+            availableHours.map(hour => `<option value="${hour}">${hour}</option>`).join('');
+        filtruOra.value = availableHours.includes(selectedHour) ? selectedHour : 'ALL';
+        const oraAleasa = filtruOra.value;
+        let terenuriDisponibile = terenuriPentruAcestSport.filter(court => {
+            const hours = window.getCourtBookingHours(court);
+            return hours.length > 0 && (oraAleasa === 'ALL' || hours.includes(oraAleasa));
+        });
         if (oraAleasa !== 'ALL') {
-            const { data: rezervari } = await db.from('rezervari_disponibilitate').select('teren, ora').eq('data_str', dataFormatataPentruDB).eq('ora', oraAleasa);
-            if (rezervari) {
-                terenuriDisponibile = terenuriPentruAcestSport.filter(teren => {
-                    return !rezervari.some(rez => rez.teren === teren.nume);
-                });
-            }
+            const {data: rezervari, error} = await db.from('rezervari_disponibilitate').select('teren,ora')
+                .eq('data_str', dataSelectataDinFiltru).eq('ora', oraAleasa);
+            if (request !== filterRequest) return;
+            if (error || !rezervari) { containerDinamicTerenuri.textContent = textProgram(true); return; }
+            terenuriDisponibile = terenuriDisponibile.filter(court => !rezervari.some(rez => rez.teren === court.nume));
         }
-
         containerDinamicTerenuri.innerHTML = '';
         if (terenuriDisponibile.length === 0) {
-            containerDinamicTerenuri.innerHTML = `<p style="color: #ff4d4d; width: 100%; text-align: center;">0 / ${oraAleasa}</p>`;
+            containerDinamicTerenuri.textContent = '0' + (oraAleasa === 'ALL' ? '' : ` / ${oraAleasa}`);
             return;
         }
 
@@ -683,6 +696,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('filtru-ora')?.addEventListener('change', aplicaFiltruSiDeseneazaTerenuri);
 
     function incarcaInterfataRezervare(terenDinDB) {
+        bookingContextGeneration++;
         terenCurent = terenDinDB.nume; pretTerenCurent = terenDinDB.pret; pretMingeCurent = terenDinDB.pret_minge !== null ? terenDinDB.pret_minge : 15;
         document.getElementById('buton-vezi-locatia').onclick = () => window.open(window.safeUrl(terenDinDB.locatie), '_blank', 'noopener,noreferrer');
         
@@ -765,6 +779,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             btnZi.innerText = `${ziTextVizual}\n${ziNumar}.${lunaNumar}`;
             btnZi.addEventListener('click', () => {
                 document.querySelectorAll('.btn-zi').forEach(b => b.classList.remove('selectat')); btnZi.classList.add('selectat');
+                bookingContextGeneration++;
                 dataSelectataStr = dataCurenta.toISOString().slice(0,10);
                 oraSelectata = [];
                 incarcaOreDinSupabase();
@@ -775,21 +790,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     async function incarcaOreDinSupabase() {
+        if (bookingInFlight) return;
         const selection = [...oraSelectata];
-        oraSelectata = []; actualizeazaButonFinal();
+        hoursLoading = true; actualizeazaButonFinal();
         const containerOre = document.getElementById('container-ore');
         containerOre.innerHTML = '<p style="grid-column: span 4; text-align:center;">⏳...</p>';
 
-        const requestDay = dataSelectataStr; // Salvează data pentru care se face cererea curentă
-        const { data: rezervariOcupate, error: availabilityError } = await db.from('rezervari_disponibilitate')
-            .select('ora').eq('teren', terenCurent).eq('data_str', dataSelectataStr);
-            
-        // Dacă utilizatorul a dat click pe altă zi cât timp așteptam baza de date, abandonăm afișarea veche
-        if (requestDay !== dataSelectataStr) return;
-        if (availabilityError) {
-            containerOre.textContent = 'Disponibilitatea nu poate fi încărcată. Încearcă din nou.';
+        const request = ++hoursRequest;
+        const requestDay = dataSelectataStr, requestCourt = terenCurent;
+        const [availability, settings] = await Promise.all([
+            db.from('rezervari_disponibilitate').select('ora').eq('teren', requestCourt).eq('data_str', requestDay),
+            db.from('terenuri').select('*').eq('nume', requestCourt).maybeSingle()
+        ]);
+        if (request !== hoursRequest || requestDay !== dataSelectataStr || requestCourt !== terenCurent) return;
+        hoursLoading = false;
+        oraSelectata = [];
+        actualizeazaButonFinal();
+        const rezervariOcupate = availability.data;
+        if (availability.error || settings.error || !settings.data || settings.data.este_activ === false) {
+            containerOre.textContent = textProgram(true);
             return;
         }
+        const oreTeren = window.getCourtBookingHours(settings.data);
+        if (!oreTeren.length) { containerOre.textContent = textProgram(); return; }
 
         let oreOcupateArray = rezervariOcupate ? rezervariOcupate.map(r => r.ora) : [];
         
@@ -817,8 +840,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         containerOre.innerHTML = '';
-        for (let i = 12; i <= 22; i++) {
-            let oraTxt = `${i}:00`; let btnOra = document.createElement('button');
+        for (const oraTxt of oreTeren) {
+            const i = Number(oraTxt.split(':')[0]);
+            const btnOra = document.createElement('button');
             btnOra.className = 'btn-ora'; btnOra.innerText = oraTxt;
 
             // Calculăm dacă e prea din scurt
@@ -850,6 +874,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function toggleOra(btn, ora) {
+        if (bookingInFlight || hoursLoading) return;
         if (btn.classList.contains('selectat')) { btn.classList.remove('selectat'); oraSelectata = oraSelectata.filter(o => o !== ora); } 
         else { btn.classList.add('selectat'); oraSelectata.push(ora); }
         actualizeazaButonFinal();
@@ -857,7 +882,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function actualizeazaButonFinal() {
         const butonConfirma = document.getElementById('buton-confirma');
-        if (oraSelectata.length === 0) {
+        if (bookingInFlight) { butonConfirma.disabled = true; return; }
+        if (hoursLoading || oraSelectata.length === 0) {
             butonConfirma.innerText = window.dict[window.lang]['alegeti_o_ora']; butonConfirma.disabled = true; butonConfirma.style.opacity = '0.5';
         } else {
             let pretTotal = (pretTerenCurent * oraSelectata.length);
@@ -871,61 +897,50 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('modal-rezervare').style.display = 'none'; reseteazaFundalSport(); document.getElementById('modal-auth').style.display = 'flex'; return;
         }
 
+        if (bookingInFlight || hoursLoading || !oraSelectata.length) return;
         const butonConfirma = document.getElementById('buton-confirma');
-        
-        const { data: dublura } = await db.from('rezervari_disponibilitate').select('ora').eq('teren', terenCurent).eq('data_str', dataSelectataStr).in('ora', oraSelectata);
-        if (dublura && dublura.length > 0) {
-            butonConfirma.disabled = false; incarcaOreDinSupabase(); return;
-        }
-
-        let pretDoarTeren = pretTerenCurent;
-        
-        const rowsToInsert = oraSelectata.map((ora, index) => {
-            let costOra = pretDoarTeren;
-            let textPret = `${costOra} RON`;
-            
-            // Adăugăm prețul mingii DOAR la prima oră rezervată din pachet, ca să nu dăm numere cu virgulă ciudate
-            if (index === 0 && mingeBifata) {
-                costOra += pretMingeCurent;
-                textPret = `${costOra} RON (+Minge)`;
-            }
-            
-            return {
-                sport: sportCurent, 
-                teren: terenCurent, 
-                data_str: dataSelectataStr,
-                ora: ora, 
-                cu_minge: index === 0 && mingeBifata,
-                email_client: loggedInUser.email, 
-                stare: 'activa', 
-                timestamp_start: Date.now()
-            };
-        });
-        
+        const context = bookingContextGeneration, ownerId = loggedInUser.id;
+        const rowsToInsert = oraSelectata.map((ora, index) => ({
+            sport: sportCurent, teren: terenCurent, data_str: dataSelectataStr, ora,
+            cu_minge: index === 0 && mingeBifata, email_client: loggedInUser.email,
+            stare: 'activa', timestamp_start: Date.now()
+        }));
         const textButonInitial = butonConfirma.innerText;
-        butonConfirma.innerText = "Se procesează...";
+        bookingInFlight = true;
+        butonConfirma.innerText = 'Se procesează...';
         butonConfirma.disabled = true;
+        try {
+            const {data: dublura, error: availabilityError} = await db.from('rezervari_disponibilitate')
+                .select('ora').eq('teren', rowsToInsert[0].teren).eq('data_str', rowsToInsert[0].data_str)
+                .in('ora', rowsToInsert.map(row => row.ora));
+            if (context !== bookingContextGeneration || loggedInUser?.id !== ownerId ||
+                document.getElementById('modal-rezervare').style.display !== 'flex' ||
+                availabilityError || !dublura || dublura.length > 0) return;
 
-        const { error } = await db.from('rezervari').insert(rowsToInsert);
+            const { error } = await db.from('rezervari').insert(rowsToInsert);
         
-        let erori = error ? 1 : 0;
-        if (error && error.code === '23505') {
-            console.error("Eroare rezervare - dublura:", error);
-            alert("Atenție: Una sau mai multe ore selectate tocmai au fost rezervate de altcineva. Vă rugăm să reîncărcați și să alegeți altă oră.");
-        } else if (error) {
-            console.error("Eroare salvare rezervare:", error);
-            alert("Eroare la salvarea rezervării: " + error.message);
+            let erori = error ? 1 : 0;
+            if (error && error.code === '23505') {
+                console.error("Eroare rezervare - dublura:", error);
+                alert("Atenție: Una sau mai multe ore selectate tocmai au fost rezervate de altcineva. Vă rugăm să reîncărcați și să alegeți altă oră.");
+            } else if (error) {
+                console.error("Eroare salvare rezervare:", error);
+                alert("Eroare la salvarea rezervării: " + error.message);
+            }
+
+            if (erori === 0) {
+                document.getElementById('modal-rezervare').style.display = 'none';
+                document.getElementById('modal-terenuri').style.display = 'none';
+                reseteazaFundalSport();
+                afiseazaSuccesRezervare();
+            }
+
+        } finally {
+            bookingInFlight = false;
+            butonConfirma.innerText = textButonInitial;
+            actualizeazaButonFinal();
+            if (document.getElementById('modal-rezervare').style.display === 'flex') incarcaOreDinSupabase();
         }
-
-        if (erori === 0) {
-            document.getElementById('modal-rezervare').style.display = 'none';
-            document.getElementById('modal-terenuri').style.display = 'none';
-            reseteazaFundalSport();
-            afiseazaSuccesRezervare();
-        } 
-        
-        butonConfirma.innerText = textButonInitial;
-        butonConfirma.disabled = false;
     });
 
     // ----------------------------------------
@@ -1260,7 +1275,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             nouBtnUitat.style.pointerEvents = "none";
 
             const { error } = await db.auth.resetPasswordForEmail(email.trim(), {
-                redirectTo: window.location.origin + '/',
+                redirectTo: window.siteHomeUrl(),
             });
 
             nouBtnUitat.innerText = textInitial; 

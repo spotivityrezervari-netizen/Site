@@ -1,0 +1,131 @@
+/* Admin-only layout: the public booking screens keep their existing styles. */
+#modal-tabel-program .program-modal,
+#modal-rezervare-manuala .modal-continut,
+[id^="modal-setari-"] .modal-continut {
+    width: calc(100% - 24px) !important;
+    height: auto;
+    max-height: 90vh;
+    max-height: 90dvh;
+    min-height: 0;
+    padding: 18px;
+    justify-content: flex-start;
+}
+
+#modal-tabel-program .program-modal { padding: 14px; gap: 12px; }
+#modal-tabel-program .buton-inchidere { top: 12px; right: 14px; }
+.program-continut { min-width: 0; min-height: 0; }
+#modal-tabel-program .program-titlu {
+    font-size: 18px;
+    line-height: 1.3;
+    text-align: left;
+    color: #06b6d4;
+    padding-right: 24px;
+    margin-bottom: 12px;
+}
+.program-filtre {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding: 10px;
+    margin-bottom: 12px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.2);
+}
+.program-filtre .grup-input { min-width: 0; margin: 0; gap: 5px; }
+.program-filtre label { font-size: 12px; }
+#tabel-teren, #tabel-data, #manual-teren, #manual-data, #manual-ora {
+    width: 100%;
+    min-width: 0;
+    height: 44px;
+    box-sizing: border-box;
+    padding: 0 8px !important;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px !important;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    font-size: 16px;
+    line-height: normal;
+}
+#tabel-data, #manual-data { -webkit-appearance: none; appearance: none; }
+#tabel-data::-webkit-date-and-time-value,
+#manual-data::-webkit-date-and-time-value { text-align: left; }
+#tabel-data::-webkit-datetime-edit,
+#manual-data::-webkit-datetime-edit { padding: 0; }
+.program-scroll {
+    overflow: auto;
+    max-height: 400px;
+    max-height: min(400px, calc(90dvh - 220px));
+    overscroll-behavior: contain;
+}
+.program-tabel {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    color: white;
+    text-align: left;
+    font-size: 12px;
+}
+.program-tabel th, .program-tabel td {
+    padding: 8px 6px;
+    vertical-align: middle;
+    overflow-wrap: anywhere;
+}
+.program-tabel th { position: sticky; top: 0; z-index: 2; background: #172033; }
+.program-col-ora { width: 64px; text-align: center; font-weight: bold; }
+.program-col-stare { width: 106px; text-align: center; }
+.program-tabel td:not(:last-child) { border-right: 1px solid rgba(255,255,255,0.05); }
+.program-tabel select {
+    min-width: 0;
+    width: 100%;
+    padding: 6px 2px !important;
+    font-size: 12px;
+    text-overflow: ellipsis;
+}
+.program-ora-label { font-size: 14px; white-space: nowrap; }
+.program-detalii-footer { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+.program-detalii-footer .btn-tabel-chat { margin-left: 0 !important; }
+.program-in-afara { display: block; color: #a1a1aa; font-size: 10px; margin-top: 5px; }
+.program-tabel .program-anulare { min-height: 44px; padding: 5px 2px; }
+.program-anulare-icon { display: block; font-size: 12px; line-height: 1.2; color: white; }
+.program-anulare-text { display: block; font-size: 9px; white-space: nowrap; line-height: 1.2; }
+#modal-tabel-program .program-reincarca {
+    background: #06b6d4;
+    color: black;
+    font-size: 13px;
+    padding: 10px;
+    margin: 0;
+    flex-shrink: 0;
+}
+.ore-teren-setari {
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    padding: 12px;
+    min-width: 0;
+}
+.ore-teren-setari legend { padding: 0 5px; color: #a1eafb; font-size: 14px; }
+.ore-teren-setari p { color: #ccc; font-size: 12px; line-height: 1.4; margin-bottom: 10px; }
+.ore-teren-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
+.ore-teren-grid label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-height: 38px;
+    padding: 5px 3px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 7px;
+    font-size: 13px;
+    cursor: pointer;
+}
+.ore-teren-grid input[type="checkbox"] { width: 16px; height: 16px; margin: 0; padding: 0; flex-shrink: 0; accent-color: #06b6d4; }
+@media (max-width: 480px) {
+    .program-col-ora { width: 54px; }
+    .program-col-stare { width: 86px; }
+    .program-tabel th, .program-tabel td { padding: 7px 4px; }
+    #modal-tabel-program .program-titlu { font-size: 16px; }
+    .ore-teren-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 350px) {
+    .program-filtre { grid-template-columns: minmax(0, 1fr); }
+    .program-scroll { max-height: min(400px, calc(90dvh - 285px)); }
+}

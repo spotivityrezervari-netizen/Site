@@ -29,3 +29,13 @@ window.bookingEnded = (day, hour) => {
     const current = `${window.siteDate()} ${String(clock.hour).padStart(2,'0')}:${String(clock.minute).padStart(2,'0')}`;
     return `${day} ${String(Number(hour.split(':')[0])+1).padStart(2,'0')}:00` <= current;
 };
+
+// Hourly START slots; an undefined field supports the pre-migration frontend.
+window.bookingHourOptions = Array.from({length:14}, (_, i) => `${String(i+9).padStart(2,'0')}:00`);
+window.getCourtBookingHours = court => {
+    if (court?.ore_rezervabile === undefined) return window.bookingHourOptions.slice(3);
+    if (!Array.isArray(court.ore_rezervabile)) return [];
+    return window.bookingHourOptions.filter(hour => court.ore_rezervabile.includes(hour));
+};
+// Preserve hosting subdirectories for Auth confirmation and password recovery.
+window.siteHomeUrl = () => new URL('./', window.location.href).href;

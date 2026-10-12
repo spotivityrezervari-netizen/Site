@@ -8,12 +8,13 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Panou Admin - Rezervări Sport</title>
     <link rel="icon" type="image/jpeg" href="assets/imagini/avatar.jpeg">
-    <link rel="stylesheet" href="css/style.css?v=9">
+    <link rel="stylesheet" href="css/style.css?v=38">
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/db.js"></script>
-    <script src="js/security.js"></script>
-    <script src="js/admin.js?v=17" defer></script>
+    <script src="js/security.js?v=2"></script>
+    <script src="js/admin.js?v=18" defer></script>
+    <link rel="stylesheet" href="css/admin.css?v=1">
     
     <style>
         .modal-continut {
@@ -154,11 +155,7 @@
                 <div class="grup-input"><label data-trad="t-nume">Nume Client (sau Telefon)</label><input type="text" id="manual-client" placeholder="Ex: Ion - 07..."></div>
                 <div class="grup-input"><label data-trad="t-data-cal">Data calendaristică</label><input type="date" id="manual-data" style="background: rgba(0,0,0,0.5); color: white; padding: 10px; border-radius: 5px;"></div>
                 <div class="grup-input"><label data-trad="t-ora">Ora</label>
-                    <select id="manual-ora" style="background: rgba(0,0,0,0.5); color: white; padding: 10px; border-radius: 5px;">
-                        <option value="12:00">12:00</option><option value="13:00">13:00</option><option value="14:00">14:00</option><option value="15:00">15:00</option>
-                        <option value="16:00">16:00</option><option value="17:00">17:00</option><option value="18:00">18:00</option><option value="19:00">19:00</option>
-                        <option value="20:00">20:00</option><option value="21:00">21:00</option><option value="22:00">22:00</option>
-                    </select>
+                    <select id="manual-ora" disabled><option value="">Alege un teren</option></select>
                 </div>
                 <div class="grup-input"><label data-trad="t-pret-incasat">Preț Încasat</label><input type="text" id="manual-pret" placeholder="100 Lei"></div>
                 <button type="button" id="btn-rezervare-manuala" class="buton-rezervare" style="background: #a855f7; margin-top: 20px;" data-trad="t-btn-salv">➕ Salvează</button>
@@ -167,27 +164,27 @@
     </div>
 
     <div class="modal" id="modal-tabel-program">
-        <div class="modal-continut modal-mare" style="border-color: #06b6d4; width: 100%; max-width: 600px;">
+        <div class="modal-continut modal-mare program-modal" style="border-color: #06b6d4; max-width: 600px;">
             <button class="buton-inchidere" onclick="this.parentElement.parentElement.style.display='none'">X</button>
-            <div>
-                <h2 class="titlu-modal" style="font-size: 20px; text-align: left; color: #06b6d4;" data-trad="t-prog">📋 Program & Disponibilitate</h2>
-                <div style="display: flex; gap: 10px; margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; flex-wrap: wrap;">
-                    <div class="grup-input" style="flex: 1; min-width: 150px; margin: 0;">
-                        <label style="margin-bottom: 5px;" data-trad="t-alege">Alege Terenul</label>
-                        <select id="tabel-teren" style="background: rgba(0,0,0,0.5); color: white; padding: 10px; border-radius: 5px; width: 100%; border: 1px solid rgba(255,255,255,0.1);"></select>
+            <div class="program-continut">
+                <h2 class="titlu-modal program-titlu" data-trad="t-prog">📋 Program & Disponibilitate</h2>
+                <div class="program-filtre">
+                    <div class="grup-input">
+                        <label for="tabel-teren" data-trad="t-alege">Alege Terenul</label>
+                        <select id="tabel-teren"></select>
                     </div>
-                    <div class="grup-input" style="flex: 1; min-width: 150px; margin: 0;">
-                        <label style="margin-bottom: 5px;" data-trad="t-data">Data Dorită</label>
-                        <input type="date" id="tabel-data" style="background: rgba(0,0,0,0.5); color: white; padding: 10px; border-radius: 5px; width: 100%; border: 1px solid rgba(255,255,255,0.1);">
+                    <div class="grup-input">
+                        <label for="tabel-data" data-trad="t-data">Data Dorită</label>
+                        <input type="date" id="tabel-data">
                     </div>
                 </div>
-                <div class="tabel-scrolabil" style="max-height: 400px; overflow-y: auto;">
-                    <table style="width: 100%; border-collapse: collapse; color: white; text-align: left; font-size: 14px;">
+                <div class="tabel-scrolabil program-scroll">
+                    <table class="program-tabel">
                         <thead>
-                            <tr style="background: rgba(255,255,255,0.1); border-bottom: 1px solid rgba(255,255,255,0.2);">
-                                <th style="padding: 12px; width: 80px;" data-trad="t-ora-th">Ora</th>
-                                <th style="padding: 12px; width: 90px;" data-trad="t-status">Status</th>
-                                <th style="padding: 12px;" data-trad="t-detalii">Client / Detalii</th>
+                            <tr>
+                                <th scope="col" class="program-col-ora" data-trad="t-ora-th">Ora</th>
+                                <th scope="col" class="program-col-stare" data-trad="t-status">Status</th>
+                                <th scope="col" data-trad="t-detalii">Client / Detalii</th>
                             </tr>
                         </thead>
                         <tbody id="tabel-corp-program">
@@ -196,7 +193,7 @@
                     </table>
                 </div>
             </div>
-            <button class="buton-rezervare" onclick="window.incarcaTabelProgram()" style="background: #06b6d4; color: black; margin-top: 20px; padding: 10px;" data-trad="t-reincarca">🔄 Reîncarcă Programul</button>
+            <button class="buton-rezervare program-reincarca" onclick="window.incarcaTabelProgram()" data-trad="t-reincarca">🔄 Reîncarcă Programul</button>
         </div>
     </div>
 

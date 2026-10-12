@@ -3,6 +3,18 @@
 begin;
 set local datestyle = 'ISO, YMD';
 
+-- Later migrations replace the court/booking guards. Reapplying this older
+-- migration would silently restore the original fixed hours and field scope.
+do $prevent_downgrade$
+begin
+  if to_regclass('spotivity_private.migrations') is not null then
+    if exists (select 1 from spotivity_private.migrations where version = 3) then
+      raise exception '003_court_hours.sql is already applied. Do not rerun 001_security.sql; use the latest migration instead.';
+    end if;
+  end if;
+end;
+$prevent_downgrade$;
+
 -- Compatibility for the exact legacy is_admin() definition reviewed from the
 -- supplied CSV. Keep its OID/old policy references, but use UUID ownership and
 -- the caller's RLS. This conversion commits only with the complete migration.

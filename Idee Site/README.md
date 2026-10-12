@@ -52,3 +52,9 @@ Lista de domenii permise se configurează în setările mediului cloud; acest fi
 Scriptul reutilizează proxy-ul HTTPS al mediului și păstrează verificarea certificatelor TLS. Dacă Chromium raportează `ERR_CERT_AUTHORITY_INVALID` în sandbox, verifică accesul la baza sa de certificate NSS. În mediul pregătit, certificatul CA al platformei era deja de încredere, iar verificările au funcționat prin rularea scriptului cu mecanismul de escaladare permis al instrumentului de execuție. Nu dezactiva verificarea TLS.
 
 Configurația publică Supabase este deja în codul site-ului. Nu adăuga credențiale private în scripturi sau documentație.
+
+## Publicare și programul terenurilor
+
+Site-ul folosit este [GitHub Pages](https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/), cu panoul [admin.html](https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/admin.html). Publicarea servește fișierele statice din `main`. Verifică ultimul deployment `github-pages` după actualizare.
+
+Programul rezervabil se schimbă în setările fiecărui teren din admin: ore de început 09:00–22:00. Terenurile existente păstrează 12:00–22:00 până le modifici. Migrarea `supabase/003_court_hours.sql` este aplicată în proiectul existent; [instrucțiunile Supabase](supabase/README.md) explică pașii, rolurile și verificările. Nu rula din nou migrarea 001 după 003.

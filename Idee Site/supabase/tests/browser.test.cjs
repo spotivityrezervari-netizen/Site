@@ -2,12 +2,14 @@
 // Every request to the hosted project is intercepted; no live data is read or written.
 const {PGlite} = require('@electric-sql/pglite');
 const {chromium} = require('playwright');
-const {readFileSync} = require('node:fs');
+const {readFileSync,mkdirSync} = require('node:fs');
 const {join} = require('node:path');
 const assert = require('node:assert/strict');
 const uid = n => `00000000-0000-0000-0000-${String(n).padStart(12,'0')}`;
 const host = 'ndubcdwohqzgxpuiowye.supabase.co';
 const base = process.env.SITE_BASE_URL || 'http://127.0.0.1:8002/';
+const screenshotDir = process.env.SPOTIVITY_TEST_SCREENSHOT_DIR;
+if (screenshotDir) mkdirSync(screenshotDir,{recursive:true});
 const tokens = new Map();
 const token = person => {
   const payload = Buffer.from(JSON.stringify({sub:uid(person),exp:Math.floor(Date.now()/1000)+3600,role:'authenticated'})).toString('base64url');
@@ -23,13 +25,32 @@ let checks = 0;
   try {
     await pg.exec(readFileSync(join(__dirname,'schema.sql'),'utf8'));
     await pg.exec(readFileSync(join(__dirname,'../001_security.sql'),'utf8'));
+    await pg.exec(readFileSync(join(__dirname,'../003_court_hours.sql'),'utf8'));
     await pg.exec("update public.terenuri set poza='assets/imagini/avatar2.png'");
     const tomorrow=(await pg.query("select ((now() at time zone 'Europe/Bucharest')::date+1)::text as d")).rows[0].d;
     let queue=Promise.resolve();
     const serial = fn => { const run=queue.then(fn); queue=run.catch(()=>{}); return run; };
     const requests=[];
     let logoutCount=0;
-    const api = async route => serial(async () => {
+    let availabilityGate=null;
+    const pauseNextAvailability = () => {
+      let enter,release;
+      const entered=new Promise(resolve=>{enter=resolve});
+      const wait=new Promise(resolve=>{release=resolve});
+      availabilityGate={enter,wait};
+      return {entered,release};
+    };
+    const api = async route => {
+      const pendingRequest=route.request(), pendingUrl=new URL(pendingRequest.url());
+      if (availabilityGate && pendingRequest.method()==='GET'
+        && pendingUrl.pathname.endsWith('/rezervari_disponibilitate')
+        && pendingUrl.searchParams.get('ora')?.startsWith('in.(')) {
+        const gate=availabilityGate;
+        availabilityGate=null;
+        gate.enter();
+        await gate.wait;
+      }
+      return serial(async () => {
       const request=route.request(), url=new URL(request.url());
       const person=tokens.get((request.headers().authorization || '').replace(/^Bearer /,''));
       const reply=(status,data) => route.fulfill({status,contentType:'application/json',body:data===undefined ? '' : JSON.stringify(data)});
@@ -102,7 +123,8 @@ let checks = 0;
         if (single && result.rows.length!==1) return reply(406,{code:'PGRST116',message:'Expected exactly one row'});
         return reply(request.method()==='POST'?201:200,single ? result.rows[0] : result.rows);
       } catch (e) { console.error('Fixture API:',url.pathname,e.message); return reply(403,{code:e.code || 'FIXTURE',message:e.message}); }
-    });
+      });
+    };
     const options={executablePath:process.env.CHROMIUM_PATH || '/usr/bin/chromium',headless:true};
     const proxyUrl=process.env.HTTPS_PROXY || process.env.https_proxy;
     if (proxyUrl) { const u=new URL(proxyUrl);options.proxy={server:u.origin,bypass:'127.0.0.1,localhost'}; }
@@ -148,6 +170,31 @@ let checks = 0;
     await page.locator('#btn-executa-login').click();
     await page.locator('#modal-auth').waitFor({state:'hidden'});
     await chooseSlot();
+    const raceRequests=requests.length;
+    const pendingAvailability=pauseNextAvailability();
+    const gatedRequest=page.waitForRequest(request=>{
+      const url=new URL(request.url());
+      return url.pathname.endsWith('/rezervari_disponibilitate') && url.searchParams.get('ora')?.startsWith('in.(');
+    });
+    await page.locator('#buton-confirma').click();
+    await gatedRequest;
+    await pendingAvailability.entered;
+    assert.equal(await page.locator('#buton-confirma').isDisabled(),true);
+    await page.locator('#container-zile .btn-zi').nth(2).click();
+    pendingAvailability.release();
+    await page.locator('.btn-ora').filter({hasText:/^12:00$/}).click();
+    await page.waitForFunction(()=>document.getElementById('buton-confirma').disabled===false);
+    assert.match(await page.locator('#container-zile .btn-zi').nth(2).getAttribute('class'),/selectat/);
+    assert.match(await page.locator('.btn-ora').filter({hasText:/^12:00$/}).getAttribute('class'),/selectat/);
+    assert.equal(await page.locator('#modal-rezervare').isVisible(),true);
+    assert.ok(!requests.slice(raceRequests).some(request=>request.path==='/rest/v1/rezervari' && request.method==='POST'));
+    await serial(async () => {
+      await pg.exec('reset role');
+      assert.equal((await pg.query("select count(*)::integer as n from public.rezervari where stare='activa'")).rows[0].n,0);
+    });
+    await page.locator('#inchide-rezervare').click();
+    pass('changing the selected day during a delayed booking preflight aborts insertion without changing the new selection');
+    await chooseSlot();
     await page.locator('.btn-ora').filter({hasText:/^13:00$/}).click();
     await page.locator('#container-minge label').click();
     assert.equal(await page.locator('#checkbox-minge').isChecked(),true);
@@ -185,7 +232,9 @@ let checks = 0;
     });
     await page.locator('#buton-confirma').click();
     assert.equal((await failedBookingResponse).status(),403);
-    await page.waitForFunction(()=>document.getElementById('buton-confirma').disabled===false);
+    await page.waitForFunction(()=>!document.getElementById('buton-confirma').innerText.includes('Se procesează')
+      && !document.getElementById('container-ore').innerText.includes('⏳'));
+    assert.equal(await page.locator('#buton-confirma').isDisabled(),true);
     assert.equal(await notice.isVisible(),false);
     assert.equal(await page.locator('#modal-rezervare').isVisible(),true);
     await serial(async () => {
@@ -243,8 +292,8 @@ let checks = 0;
     const recover=requests.find(r=>r.path==='/auth/v1/recover');
     assert.equal(recover.method,'POST');
     assert.equal(recover.body.email,'alice@example.test');
-    assert.equal(new URLSearchParams(recover.search).get('redirect_to'),new URL(base).origin+'/');
-    pass('password recovery sends the entered email and current site origin through the real SDK');
+    assert.equal(new URLSearchParams(recover.search).get('redirect_to'),new URL('./',base).href);
+    pass('password recovery sends the entered email and current site directory through the real SDK');
     await page.locator('#tab-register').click();
     await page.locator('#reg-nume').fill('New Client');
     await page.locator('#reg-email').fill('new@example.test');
@@ -261,8 +310,8 @@ let checks = 0;
     const signup=requests.find(r=>r.path==='/auth/v1/signup');
     assert.equal(signup.method,'POST');
     assert.equal(signup.body.email,'new@example.test');
-    assert.equal(new URLSearchParams(signup.search).get('redirect_to'),new URL(base).origin+'/');
-    pass('signup confirmation redirects to the current site origin through the real SDK');
+    assert.equal(new URLSearchParams(signup.search).get('redirect_to'),new URL('./',base).href);
+    pass('signup confirmation redirects to the current site directory through the real SDK');
     await serial(async () => {
       await pg.exec('reset role');
       await pg.query("update public.clienti set nume=$1 where user_id=$2",['<img src=x onerror="window.__xss=true">',uid(1)]);
@@ -297,6 +346,154 @@ let checks = 0;
     assert.equal(await admin.locator('img[src="x"]').count(),0);
     assert.ok((await admin.locator('#chat-admin-mesaje').innerText()).includes('<img src=x'));
     pass('client names and chat messages render as text, without stored HTML execution');
+    await admin.keyboard.press('Escape');
+    await admin.locator('#container-meniu-terenuri .card-sport').first().click();
+    await admin.locator('.card-sport[onclick*="modal-setari-"]').click();
+    const settingsId=(await admin.locator('[id^="modal-setari-"]').getAttribute('id')).slice('modal-setari-'.length);
+    const hourInputs=admin.locator(`#ore-rezervabile-${settingsId} input.ora-rezervabila`);
+    const allHours=Array.from({length:14},(_,i)=>`${String(i+9).padStart(2,'0')}:00`);
+    const enabledHours=['09:00','10:00','11:00'];
+    assert.deepEqual(await hourInputs.evaluateAll(nodes=>nodes.map(node=>node.value)),allHours);
+    assert.deepEqual(await hourInputs.evaluateAll(nodes=>nodes.filter(node=>node.checked).map(node=>node.value)),allHours.slice(3));
+    for (const input of await hourInputs.all()) {
+      await input.setChecked(enabledHours.includes(await input.getAttribute('value')));
+    }
+    const settingsResponse=admin.waitForResponse(response=>new URL(response.url()).pathname==='/rest/v1/terenuri' && response.request().method()==='PATCH');
+    const settingsReload=admin.waitForRequest(request=>new URL(request.url()).pathname==='/auth/v1/token' && request.method()==='POST');
+    await admin.locator(`#btn-save-${settingsId}`).click();
+    assert.equal((await settingsResponse).status(),200);
+    await serial(async () => {
+      await pg.exec("reset role; select set_config('request.jwt.claim.sub','',false)");
+      assert.deepEqual((await pg.query("select ore_rezervabile from public.terenuri where nume='Court A'")).rows[0].ore_rezervabile,enabledHours);
+    });
+    await settingsReload;
+    await admin.waitForFunction(()=>document.getElementById('login-admin-btn').disabled===false);
+    await admin.keyboard.press('Escape');
+    const cityBack=admin.locator('.sub-pagina-oras:visible [onclick*="inchideSubPaginaOras"]');
+    if (await cityBack.count()) await cityBack.click();
+    pass('allocated admin changes the court hours to 09:00, 10:00 and 11:00 through settings and the real SDK');
+    const unallocatedUpdate=await admin.evaluate(async ()=>{
+      const result=await db.from('terenuri').update({ore_rezervabile:['09:00']}).eq('nume','Court B').select('ore_rezervabile');
+      return {data:result.data,error:result.error?.message || null};
+    });
+    assert.equal(unallocatedUpdate.error,null);
+    assert.deepEqual(unallocatedUpdate.data,[]);
+    await serial(async () => {
+      await pg.exec('reset role');
+      assert.deepEqual((await pg.query("select ore_rezervabile from public.terenuri where nume='Court B'")).rows[0].ore_rezervabile,allHours.slice(3));
+    });
+    assert.equal(await admin.locator('[id^="modal-setari-"]').count(),1);
+    pass('changing hours preserves assigned-admin boundaries and leaves an unallocated court unchanged');
+    await admin.locator('[onclick*="modal-rezervare-manuala"]').click();
+    await admin.locator('#manual-teren').selectOption('Court A');
+    await admin.waitForFunction(()=>document.querySelector('#manual-ora option[value="09:00"]')!==null);
+    assert.deepEqual(await admin.locator('#manual-ora option').evaluateAll(nodes=>nodes.map(node=>node.value).filter(Boolean)),enabledHours);
+    assert.deepEqual(await admin.locator('#manual-teren option').evaluateAll(nodes=>nodes.map(node=>node.value)),['Court A']);
+    const longManualName='ManualCustomer_'+ 'UnbrokenLongName'.repeat(10);
+    await admin.locator('#manual-client').fill(longManualName);
+    await admin.locator('#manual-data').fill(tomorrow);
+    await admin.locator('#manual-ora').selectOption('09:00');
+    await admin.locator('#manual-pret').fill('90 RON');
+    const manualResponse=admin.waitForResponse(response=>new URL(response.url()).pathname==='/rest/v1/rezervari' && response.request().method()==='POST');
+    await admin.locator('#btn-rezervare-manuala').click();
+    assert.equal((await manualResponse).status(),201);
+    await admin.waitForFunction(()=>!document.getElementById('btn-rezervare-manuala').innerText.includes('verifică'));
+    await admin.locator('#modal-rezervare-manuala .buton-inchidere').click();
+    await admin.locator('#modal-rezervare-manuala').waitFor({state:'hidden'});
+    await admin.locator('[onclick*="modal-tabel-program"]').click();
+    await admin.locator('#tabel-data').fill(tomorrow);
+    await admin.locator('#tabel-data').dispatchEvent('change');
+    await admin.locator('#tabel-corp-program tr[data-ora="09:00"]').getByText(longManualName,{exact:false}).waitFor();
+    assert.deepEqual(await admin.locator('#tabel-corp-program tr[data-ora]').evaluateAll(nodes=>nodes.map(node=>node.dataset.ora)),['09:00','10:00','11:00','12:00','14:00']);
+    assert.equal(await admin.locator('#tabel-corp-program tr[data-ora="12:00"] select').count(),0);
+    assert.equal(await admin.locator('#tabel-corp-program tr[data-ora="14:00"] select').count(),0);
+    await serial(async () => {
+      await pg.exec('reset role');
+      const manual=(await pg.query("select * from public.rezervari where teren='Court A' and data_str=$1 and ora='09:00'",[tomorrow])).rows[0];
+      assert.equal(manual.email_client,longManualName);
+      assert.equal(manual.client_user_id,null);
+    });
+    pass('manual hour choices match settings and the schedule retains occupied hours outside the new program');
+    const configuredClient=await pageFor();
+    await configuredClient.goto(base,{waitUntil:'networkidle'});
+    await configuredClient.locator('#btn-top-cont').click();
+    await configuredClient.locator('#login-email').fill('alice@example.test');
+    await configuredClient.locator('#login-parola').fill(' test-password. ');
+    await configuredClient.locator('#btn-executa-login').click();
+    await configuredClient.locator('#modal-auth').waitFor({state:'hidden'});
+    await configuredClient.locator('.card-sport[data-sport="Fotbal"]').click();
+    await configuredClient.locator('#filtru-data').fill(tomorrow);
+    await configuredClient.locator('#filtru-data').dispatchEvent('change');
+    await configuredClient.locator('.btn-teren').first().click();
+    await configuredClient.locator('.btn-ora').filter({hasText:/^10:00$/}).waitFor();
+    assert.deepEqual(await configuredClient.locator('.btn-ora').evaluateAll(nodes=>nodes.map(node=>node.textContent.match(/^\d{2}:\d{2}/)?.[0])),enabledHours);
+    assert.equal(await configuredClient.locator('.btn-ora').filter({hasText:/^09:00/}).isDisabled(),true);
+    await configuredClient.locator('.btn-ora').filter({hasText:/^10:00$/}).click();
+    await configuredClient.locator('#buton-confirma').click();
+    await configuredClient.locator('#modal-rezervare').waitFor({state:'hidden'});
+    await serial(async () => {
+      await pg.exec('reset role');
+      const reserved=(await pg.query("select * from public.rezervari where teren='Court A' and data_str=$1 and ora='10:00'",[tomorrow])).rows[0];
+      assert.equal(reserved.client_user_id,uid(1));
+      assert.equal(reserved.pret_total,'100 RON');
+    });
+    pass('public booking offers only configured hours and a real SDK booking at 10:00 passes server validation');
+    const outsideHour=await serial(async () => {
+      await pg.exec('reset role');
+      return (await pg.query("select * from public.rezervari where teren='Court A' and data_str=$1 and ora='12:00' and stare='activa'",[tomorrow])).rows[0];
+    });
+    await configuredClient.locator('#btn-top-cont').click();
+    await configuredClient.locator('#btn-vezi-active').click();
+    await configuredClient.locator(`.anulare-client[data-id="${outsideHour.id}"]`).click();
+    await configuredClient.locator(`.anulare-client[data-id="${outsideHour.id}"]`).waitFor({state:'hidden'});
+    await serial(async () => {
+      await pg.exec('reset role');
+      assert.deepEqual((await pg.query('select * from public.rezervari where id=$1',[outsideHour.id])).rows[0],{...outsideHour,stare:'anulata'});
+    });
+    pass('a client still sees and cancels an existing booking outside the revised court hours');
+    await admin.locator('.program-reincarca').click();
+    await admin.locator('#tabel-corp-program tr[data-ora="09:00"]').getByText(longManualName,{exact:false}).waitFor();
+    for (const width of [320,390]) {
+      await admin.setViewportSize({width,height:844});
+      const dimensions=await admin.evaluate(()=>{
+        const modal=document.querySelector('.program-modal');
+        const box=modal.getBoundingClientRect();
+        const detail=document.querySelector('#tabel-corp-program tr[data-ora="09:00"] td:nth-child(3)');
+        return {
+          viewport:innerWidth,pageWidth:document.documentElement.scrollWidth,left:box.left,right:box.right,
+          controlHeights:[...modal.querySelectorAll('input,select,.program-reincarca')].map(node=>node.getBoundingClientRect().height).filter(height=>height>0),
+          detailWidth:detail.clientWidth,detailScroll:detail.scrollWidth,
+          tableWidth:modal.querySelector('.program-scroll').clientWidth,tableScroll:modal.querySelector('.program-scroll').scrollWidth,
+        };
+      });
+      if (screenshotDir) await admin.screenshot({path:join(screenshotDir,`spotivity-hours-program-${width}.png`)});
+      assert.ok(dimensions.pageWidth<=dimensions.viewport+1,JSON.stringify(dimensions));
+      assert.ok(dimensions.left>=-1 && dimensions.right<=width+1,JSON.stringify(dimensions));
+      assert.ok(dimensions.controlHeights.length>=2,JSON.stringify(dimensions));
+      assert.ok(dimensions.controlHeights.every(height=>height>0 && height<=44.1),JSON.stringify(dimensions));
+      assert.ok(dimensions.detailScroll<=dimensions.detailWidth+1,JSON.stringify(dimensions));
+      assert.ok(dimensions.tableScroll<=dimensions.tableWidth+1,JSON.stringify(dimensions));
+      pass(`admin schedule fits a ${width}px mobile viewport with compact controls and wrapped customer details`);
+    }
+    const subpathPage=await pageFor();
+    const directory=new URL('./',base), nested=new URL('Site/Idee%20Site/',directory);
+    await subpathPage.context().route(url=>url.origin===nested.origin && url.pathname.startsWith(nested.pathname),async route=>{
+      const requested=new URL(route.request().url());
+      requested.pathname=directory.pathname+requested.pathname.slice(nested.pathname.length);
+      const response=await route.fetch({url:requested.href});
+      await route.fulfill({response});
+    });
+    await subpathPage.goto(nested.href,{waitUntil:'networkidle'});
+    await subpathPage.locator('#btn-top-cont').click();
+    await subpathPage.locator('#login-email').fill('alice@example.test');
+    const beforeRecovery=requests.length;
+    const nestedRecovery=subpathPage.waitForResponse(response=>new URL(response.url()).pathname==='/auth/v1/recover' && response.request().method()==='POST');
+    await subpathPage.locator('#btn-forgot-password').click();
+    assert.equal((await nestedRecovery).status(),200);
+    const nestedRequest=requests.slice(beforeRecovery).find(r=>r.path==='/auth/v1/recover' && r.method==='POST');
+    assert.equal(nestedRequest.body.email,'alice@example.test');
+    assert.equal(new URLSearchParams(nestedRequest.search).get('redirect_to'),nested.href);
+    pass('password recovery preserves the GitHub Pages subdirectory in its real SDK redirect');
     const mobile=await pageFor();
     await mobile.setViewportSize({width:390,height:844});
     await mobile.goto(base,{waitUntil:'networkidle'});
