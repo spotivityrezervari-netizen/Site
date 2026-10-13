@@ -4,15 +4,10 @@ let manualHoursRequestGeneration = 0;
 let adminAuthGeneration = 0;
 let activeAdminAuthUserId = null;
 
-// Sport icons are chosen from fixed local assets; court data never becomes a URL.
+// Sport imagery comes from the shared public configuration, with validated URLs.
 function adminSportIconMarkup(sport) {
-    const icons = new Map([
-        ['fotbal', 'fotbal'], ['baschet', 'baschet'], ['tenis', 'tenis'],
-        ['volei', 'volei'], ['tenis picior', 'fotbal'], ['tenis de picior', 'fotbal']
-    ]);
-    const key = String(sport || '').trim().toLocaleLowerCase('ro').replace(/\s+/g, ' ');
-    const asset = icons.get(key) || 'fotbal';
-    return `<img class="admin-sport-icon" src="assets/imagini/${asset}.png" alt="${window.escapeHtml(sport || 'Sport')}" width="44" height="44">`;
+    const appearance = window.getSportAppearance(sport);
+    return `<img class="admin-sport-icon" data-sport-icon="${window.escapeHtml(sport || 'Fotbal')}" src="${window.escapeHtml(appearance.icona_url)}" alt="${window.escapeHtml(sport || 'Sport')}" width="44" height="44">`;
 }
 
 async function adminHourIsAllowed(courtName, hour) {

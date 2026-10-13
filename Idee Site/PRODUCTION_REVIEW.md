@@ -1,10 +1,18 @@
-# Verificare pentru producție — 12 octombrie 2026
+# Verificare pentru producție — audit 12 octombrie și actualizare vizuală 13 octombrie 2026
 
 Revizuire a codului, migrărilor SQL, configurației Supabase reale și publicării GitHub Pages. Corecțiile tehnice sunt implementate; lansarea publică finală mai necesită email, datele firmei și o soluție verificată de backup. Datele firmei și SMTP au fost amânate explicit de proprietar. Parolele noi păstrează minimum **6 caractere**, conform cererii sale.
 
 Site: https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/
 
 Admin: https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/admin.html
+
+## Actualizare vizuală și Supabase — 13 octombrie 2026
+
+Pagina principală a fost refăcută după captura de referință: secțiuni mari pentru Fotbal, Baschet, Tenis și Volei, sigla `avatar2`, navigare pe desktop, selector de oraș și meniu pe tot ecranul pe telefon. Pictogramele sunt fișierele `fotbalrealist`, `baschetrealist`, `tenisrealist`, `voleirealist`; fundalurile sunt `RealistFotbal`, `RealisBaschet`, `RealistTenis`, `RealistVolei`. Accesul direct la apple.com a fost refuzat de rețeaua mediului; captura proprietarului a fost referința vizuală.
+
+[005_sport_appearance.sql](supabase/005_sport_appearance.sql) a fost aplicată în Rendez-Vous după 36 de verificări SQL izolate și o probă live cu rollback. `public.site_sporturi` are patru rânduri de configurație publică; numai superadminul poate scrie prin API. Pagina și pictogramele admin citesc configurația prin SDK; valorile locale sunt fallback dacă serviciul este indisponibil. O probă izolată schimbă efectiv configurația și verifică noile imagini în pagină și în dialog, pentru a demonstra integrarea cu baza de date.
+
+După aplicare: migrări **1, 3, 4, 5**, RLS pe toate cele șapte tabele gestionate, patru politici pentru noul tabel. Numerele înainte/după sunt identice: **8 conturi Auth, 5 profile, 2 admini, 5 terenuri, 48 rezervări, 22 mesaje, 24 sloturi**. Definițiile/stările trigger-elor, funcțiile private și politicile anterioare sunt identice. SQL-ul modifică doar configurația vizuală; nu este necesară rularea manuală a vreunui fișier pentru această actualizare.
 
 ## Corecții implementate
 
@@ -27,21 +35,22 @@ Admin: https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/admin.html
 
 Testele folosesc PostgreSQL izolat și cereri Auth/API interceptate; nu creează clienți, rezervări sau emailuri reale.
 
-| Suită | Rezultat |
-| --- | --- |
-| `supabase/tests/rls.test.cjs` | 85 verificări UUID + 85 cu ID numeric |
-| `supabase/tests/court-hours.test.cjs` | 21 verificări UUID + 21 cu ID numeric |
-| `supabase/tests/admin-scope.test.cjs` | 20 verificări UUID + 20 cu ID numeric |
-| `supabase/tests/browser.test.cjs` | 49 verificări cu SDK real + Chromium + PostgreSQL izolat |
-| `supabase/tests/auth-recovery.test.cjs` | 6 verificări cu SDK real și Auth interceptat |
+| Suită | Rezultat | Ultima execuție |
+| --- | --- | --- |
+| `supabase/tests/rls.test.cjs` | 85 verificări UUID + 85 cu ID numeric | 12 octombrie |
+| `supabase/tests/court-hours.test.cjs` | 21 verificări UUID + 21 cu ID numeric | 12 octombrie |
+| `supabase/tests/admin-scope.test.cjs` | 20 verificări UUID + 20 cu ID numeric | 12 octombrie |
+| `supabase/tests/sport-appearance.test.cjs` | 18 verificări UUID + 18 cu ID numeric | 13 octombrie |
+| `supabase/tests/browser.test.cjs` | 60 verificări cu SDK real + Chromium + PostgreSQL izolat | 13 octombrie |
+| `supabase/tests/auth-recovery.test.cjs` | 6 verificări cu SDK real și Auth interceptat | 13 octombrie |
 
-Total: **307 verificări automate**, plus verificarea sintaxei JS și a diff-ului. Cele 252 de verificări SQL din auditul aceleiași zile rămân valabile pentru migrările nemodificate; după schimbările de interfață au fost rulate integral cele 49 de verificări browser și cele 6 de recuperare/poze. Testele verifică limitele RLS, schimbarea contului în timpul recuperării, cursele din chat și XSS prin texte.
+Total consemnat: **354 verificări automate**, plus sintaxa JS și diff-ul. Cele 252 de verificări ale protecțiilor existente au fost rulate pe 12 octombrie; după actualizarea vizuală din 13 octombrie au fost rulate integral **102 verificări**: 36 pentru noua migrare, 60 de integrare browser și 6 pentru recuperare/poze. Testele verifică limitele RLS, schimbarea contului în timpul recuperării, cursele din chat și XSS prin texte.
 
-Interfața a fost verificată la **320, 390, 768 și 1440 px**: căutare cu filtre și diacritice, formularul de înregistrare, acoperirea blurului, antetul public fără suprapuneri, dashboardurile admin/superadmin, paginile orașelor, setările fiecărui teren, rezervarea manuală, programul, istoricul, chatul și alocarea angajaților. Probe cu nume lungi verifică încadrarea controalelor în chenare. Pictogramele sporturilor sunt decodate efectiv în browser; prețul mingii de 0 Lei rămâne 0. Aceste schimbări folosesc câmpurile și politicile existente; **nu necesită SQL suplimentar în proiectul live**.
+Interfața a fost verificată la **320, 390, 768 și 1440 px**: căutare cu filtre și diacritice, formularul de înregistrare, acoperirea blurului, antetul public fără suprapuneri, dashboardurile admin/superadmin, paginile orașelor, setările fiecărui teren, rezervarea manuală, programul, istoricul, chatul și alocarea angajaților. Probe cu nume lungi verifică încadrarea controalelor în chenare. Pictogramele sporturilor sunt decodate efectiv în browser; prețul mingii de 0 Lei rămâne 0. Verificările includ cele patru secțiuni, navigarea desktop, meniul mobil, păstrarea scrollului când se deschide/închide un dialog, configurarea imaginilor din baza de date și fallbackul la indisponibilitatea acesteia. **005 este deja aplicată; nu trebuie rulat SQL suplimentar.**
 
 Smoke test local și publicat: pagina principală, cele patru sporturi, imagini, login, Escape, viewport mobil, pagina admin fără autentificare și citiri live Supabase. Cererile de scriere sunt blocate în smoke test. După push se compară fișierele publicate cu cele din Git, pentru a confirma versiunea servită efectiv.
 
-## Verificări directe Supabase
+## Auditul Supabase din 12 octombrie 2026
 
 Proiectul autorizat: Rendez-Vous (`ndubcdwohqzgxpuiowye`). Migrarea 004 a fost aplicată prin Management API după o probă live închisă cu rollback. Nu trebuie rulată din nou manual.
 
@@ -76,8 +85,9 @@ Din folderul `Idee Site`, pornește `PORT=8010 bash scripts/start-site.sh`. Depe
 NODE_PATH=/workspace/shared/spotivity-rls-validation/node_modules node supabase/tests/rls.test.cjs
 NODE_PATH=/workspace/shared/spotivity-rls-validation/node_modules node supabase/tests/court-hours.test.cjs
 NODE_PATH=/workspace/shared/spotivity-rls-validation/node_modules node supabase/tests/admin-scope.test.cjs
+NODE_PATH=/workspace/shared/spotivity-rls-validation/node_modules node supabase/tests/sport-appearance.test.cjs
 ```
 
 Repetă fiecare suită SQL cu `SPOTIVITY_TEST_INTEGER_IDS=1`. Pentru cele două suite de browser adaugă la `NODE_PATH` runtime-ul Playwright din mediul curent și setează `SITE_BASE_URL=http://127.0.0.1:8010/`. Păstrează verificarea TLS activă; folosește mecanismul de acces NSS al mediului dacă Chromium nu poate citi certificatele.
 
-`SITE_BASE_URL=https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/ node scripts/smoke-site.cjs` verifică publicarea fără scrieri. Nu rula `tests/schema.sql` sau fișierele de test în SQL Editor-ul proiectului real. Pentru un alt proiect, aplică 001 → 003 → 004 după backup/inventar; 002 sunt exemple de roluri. **Nu reinstala 001/003 în Rendez-Vous.**
+`SITE_BASE_URL=https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/ node scripts/smoke-site.cjs` verifică publicarea fără scrieri. Nu rula `tests/schema.sql` sau fișierele de test în SQL Editor-ul proiectului real. Pentru un alt proiect, aplică 001 → 003 → 004 → 005 după backup/inventar; 002 sunt exemple de roluri. **Nu reinstala 001/003 în Rendez-Vous.**

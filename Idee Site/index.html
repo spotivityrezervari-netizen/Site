@@ -9,438 +9,140 @@
     <link rel="icon" type="image/png" href="assets/imagini/avatar2.png">
     <title>Rezervari Sport</title>
     
-    <link rel="stylesheet" href="css/style.css?v=42">
+    <link rel="stylesheet" href="css/style.css?v=43">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3" integrity="sha384-dl/4LkSyQ4uEucc48NM6VDZLAjLLq9yMzZ5JLXumBq7Ld33XBof73hseOqPhO89+" crossorigin="anonymous"></script>
     <script src="js/db.js?v=2"></script>
     <script src="js/security.js?v=2"></script>
-    <script src="js/app.js?v=23" defer></script>
-    <style>
+    <script src="js/sport-appearance.js?v=1"></script>
+    <script src="js/app.js?v=24" defer></script>
+    <link rel="stylesheet" href="css/home.css?v=1">
+    <script src="js/home.js?v=1" defer></script>
 
-        /* Fundal pagina */
-        .fundal-water {
-            background: linear-gradient(135deg, #020617 0%, #1e293b 100%) !important;
-            width: 100% !important;
-            height: 100% !important;
-            position: absolute !important;
-            top: 0; left: 0; right: 0; bottom: 0;
-            overflow: hidden !important;
-        }
-
-        /* Ascunde scrollbars globally */
-        body, html {
-            background-color: #020617 !important; /* Vopseste spatiile "moarte" de la notch si bara de jos de pe iPhone */
-            overflow: hidden !important;
-            width: 100% !important;
-            height: 100% !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            position: fixed !important;
-            /* Pentru a ne asigura ca extindem si fundalul sub safe-areas */
-
-        }
-        
-        /* Top bar elements styling */
-        .buton-top-cont, #selector-limba, #filtru-oras-global {
-            z-index: 9999 !important;
-            background: rgba(255, 255, 255, 0.4) !important;
-            color: #ffffff !important;
-            border: 1px solid rgba(255, 255, 255, 0.2) !important;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05) !important;
-        }
-        .buton-top-cont img { border-color: rgba(0,0,0,0.1) !important; }
-        .btn-lang { color: #ffffff !important; }
-        #sageata-filtru { color: #ffffff !important; }
-
-        /* Container principal */
-        .grila-sporturi {
-            position: absolute !important;
-            z-index: 1 !important;
-            background: transparent !important;
-            max-width: none !important;
-            top: 0 !important;
-            bottom: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            width: 100% !important;
-            margin: 0 !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-        }
-
-        /* Globul central urias */
-        .centru-video {
-            position: absolute !important;
-            top: 50% !important;
-            left: 50% !important;
-            transform: translate(-50%, -50%) !important;
-            background-color: transparent !important;
-            width: 115vw !important;
-            height: 115vw !important;
-            max-width: 550px !important;
-            max-height: 550px !important;
-            min-width: 380px !important;
-            min-height: 380px !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            border: none !important;
-        }
-
-        .centru-video img {
-            width: 50% !important;
-            height: 50% !important;
-            object-fit: contain !important;
-            mix-blend-mode: screen !important;
-            border-radius: 50% !important;
-            background: transparent !important;
-        }
-
-        /* Wrappers pentru fiecare card sport */
-        .orbita-wrapper {
-            position: absolute !important;
-            z-index: 10 !important;
-            display: block !important;
-            width: max-content !important;
-            max-width: max-content !important;
-            min-width: max-content !important;
-        }
-        
-        /* Design pilula solida */
-        .orbita-wrapper .card-sport {
-            width: 165px !important; /* Lățime fixă identică pentru toate */
-            max-width: 165px !important;
-            min-width: 165px !important;
-            height: auto !important;
-            padding: 8px 16px !important;
-            border-radius: 40px !important;
-            margin: 0 !important;
-            display: flex !important;
-            flex-direction: row !important;
-            align-items: center !important;
-            justify-content: center !important;
-            background: rgba(255, 255, 255, 0.15) !important;
-            backdrop-filter: blur(8px) !important;
-            border: 1px solid rgba(255, 255, 255, 0.4) !important;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
-            color: #ffffff !important;
-            transition: all 0.3s ease !important;
-        }
-        
-        .orbita-wrapper .card-sport:hover {
-            transform: scale(1.1) translateY(-3px) !important;
-            background: rgba(255, 255, 255, 0.25) !important;
-            border-color: rgba(255, 255, 255, 0.7) !important;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.2) !important;
-        }
-
-        .orbita-wrapper .iconita-minge {
-            width: 28px !important;
-            height: 28px !important;
-            margin-right: 12px !important;
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)) !important;
-        }
-
-        .orbita-wrapper h2 {
-            font-size: 15px !important;
-            font-weight: 700 !important;
-            margin: 0 !important;
-            text-transform: uppercase !important;
-            letter-spacing: 0.5px !important;
-        }
-
-        /* --- MOBILE POSITIONS --- */
-        .orbita-wrapper:nth-child(2) { top: 25%; left: 3%; transform: scale(1) !important; right: auto; } /* Fotbal */
-        
-        .orbita-wrapper:nth-child(3) { top: 25%; right: 3%; left: auto; transform: scale(1) !important; } /* Baschet */
-        .orbita-wrapper:nth-child(5) { bottom: 18%; left: 3%; right: auto; top: auto; transform: scale(1) !important; } /* Volei */
-        .orbita-wrapper:nth-child(4) { bottom: 18%; right: 3%; left: auto; top: auto; transform: scale(1) !important; } /* Tenis */
-
-        /* --- DESKTOP POSITIONS --- */
-        .taburi-auth {
-            margin-top: 0 !important;
-        }
-
-    
-        /* Asiguram ca textul nu se rupe pe doua randuri pentru a pastra simetria */
-        .orbita-wrapper .card-sport {
-            justify-content: center !important;
-            padding: 10px 15px !important;
-        }
-        .orbita-wrapper h2 {
-            font-size: 18px !important;
-            white-space: nowrap !important; /* forteaza pe un singur rand */
-        }
-        .orbita-wrapper .iconita-minge {
-            width: 28px !important;
-            height: 28px !important;
-            margin-right: 8px !important;
-        }
-
-    
-        /* Aliniere perfecta pe verticala si orizontala a continutului din butoane */
-        .orbita-wrapper .card-sport {
-            display: flex !important;
-            align-items: center !important; /* asigura alinierea verticala pe mijloc */
-            justify-content: center !important; /* centram totul ca sa arate simetric in chenarul fix */
-            padding: 8px 12px !important;
-            height: 46px !important; /* inaltime fixa pentru a asigura ca icoana si textul au aceeasi "camera" */
-        }
-        
-        .orbita-wrapper h2 {
-            font-size: 18px !important;
-            white-space: nowrap !important;
-            line-height: 1 !important; /* anuleaza orice padding invizibil al textului care l-ar putea impinge in sus/jos */
-            margin: 0 !important;
-            display: flex !important;
-            align-items: center !important;
-        }
-        
-        .orbita-wrapper .iconita-minge {
-            width: 28px !important;
-            height: 28px !important;
-            margin-right: 12px !important;
-            display: block !important;
-        }
-
-    
-        /* --- DESKTOP SIZING --- */
-        @media (min-width: 768px) {
-            .centru-video {
-                width: min(90vh, 50vw) !important;
-                height: min(90vh, 50vw) !important;
-            }
-            
-            /* --- DESKTOP POSITIONS (ALINIATE LA STANGA) --- */
-            .orbita-wrapper:nth-child(2) { top: 25%; left: 15%; transform: translateY(-50%) !important; right: auto; } /* Fotbal */
-            
-            .orbita-wrapper:nth-child(3) { top: 25%; right: 15%; left: auto; transform: translateY(-50%) !important; } /* Baschet */
-            .orbita-wrapper:nth-child(5) { bottom: 25%; left: 15%; right: auto; top: auto; transform: translateY(50%) !important; } /* Volei */
-            .orbita-wrapper:nth-child(4) { bottom: 25%; right: 15%; left: auto; top: auto; transform: translateY(50%) !important; } /* Tenis */
-        }
-        
-        /* Fixare EXACTA icoana + text in interiorul butonului */
-        .orbita-wrapper h2 {
-            font-size: 18px !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            line-height: 1 !important;
-            white-space: nowrap !important;
-        }
-        .orbita-wrapper .iconita-minge {
-            width: 28px !important;
-            height: 28px !important;
-            margin: 0 !important; /* RESETAM MARGINILE, INCLUSIV CEL DE BOTTOM 20px DIN STYLE.CSS */
-            margin-right: 8px !important;
-            padding: 0 !important;
-            display: block !important;
-        }
-
-    
-        /* --- Ascundem elementele globale din header cand se deschide un modal --- */
-        body:has(.modal[style*="display: flex"]) #wrapper-filtru-oras,
-        body:has(.modal[style*="display: flex"]) #selector-limba,
-        body:has(.modal[style*="display: flex"]) .buton-top-cont {
-            opacity: 0 !important;
-            pointer-events: none !important;
-        }
-        
-        /* Stilizam select-urile sa fie negre nativ pe Windows */
-        #filtru-oras-global option, #filtru-ora option {
-            background-color: #0f172a !important;
-            color: #ffffff !important;
-        }
-
-    
-        /* Evitam complet suprapunerea "squishing" a field-urilor si butoanelor in form-uri */
-        .formular-auth > * {
-            flex-shrink: 0 !important;
-        }
-        .grup-input {
-            flex-shrink: 0 !important;
-        }
-        
-        /* Adaugam mai mult spatiu inainte de butonul Creeaza Cont / Login */
-        .formular-auth .buton-rezervare {
-            margin-top: 20px !important;
-            flex-shrink: 0 !important;
-        }
-        
-        /* Ne asiguram ca fereastra face scroll daca nu incape continutul, fara sa striveasca box-urile */
-        .modal-continut {
-            overflow-y: auto !important;
-            max-height: 90vh !important;
-        }
-
-    
-        /* --- ULTRA SMALL SCREENS (iPhone SE, Galaxy Fold, etc) --- */
-        @media (max-width: 420px) {
-            .orbita-wrapper {
-                transform: scale(0.85) !important;
-                transform-origin: left center !important;
-            }
-            .orbita-wrapper:nth-child(3), .orbita-wrapper:nth-child(4) {
-                transform-origin: right center !important;
-            }
-            .centru-video {
-                transform: translate(-50%, -50%) scale(0.85) !important;
-            }
-        }
-
-    
-        /* --- Ajustari specifice pentru telefoane (Meniul de sus) --- */
-        @media (max-width: 768px) {
-            /* Mutam selectorul de oras sub celelalte doua butoane pentru a avea loc */
-            #wrapper-filtru-oras { top: 60px !important; }
-            
-            /* Micsoram usor butoanele de sus ca sa nu se loveasca intre ele */
-            .buton-top-cont { top: 12px !important; left: 12px !important; padding: 6px 10px !important; font-size: 11px !important; }
-            #selector-limba { top: 12px !important; right: 12px !important; padding: 4px !important; }
-            .btn-lang { padding: 4px 8px !important; font-size: 11px !important; }
-            #filtru-oras-global { padding: 8px 12px !important; font-size: 13px !important; }
-        }
-
-    
-        /* --- BACKGROUND QUADRANTS --- */
-        .bg-quad {
-            position: absolute !important;
-            background-color: #0f172a;
-            background-image: linear-gradient(rgba(2,6,23,0.6), rgba(2,6,23,0.6)), var(--fundal-ales);
-            background-size: 100% 100%, cover !important;
-            background-position: center !important;
-            background-repeat: no-repeat;
-            z-index: 0;
-            transition: opacity 0.5s;
-            width: 50%;
-            height: 50%;
-        }
-        .bg-quad-1 { top: 0; left: 0; --fundal-desktop: url('assets/imagini/fundal_fotbal.jpg'); --fundal-mobil: url('assets/imagini/fundal_fotbal2p2.png'); }
-        .bg-quad-2 { top: 0; right: 0; --fundal-desktop: url('assets/imagini/fundal_baschet.jpg'); --fundal-mobil: url('assets/imagini/fundal_baschet2p2.png'); }
-        .bg-quad-3 { bottom: 0; left: 0; --fundal-desktop: url('assets/imagini/fundal_volei.jpg'); --fundal-mobil: url('assets/imagini/fundal_volei2p2.png'); }
-        .bg-quad-4 { bottom: 0; right: 0; --fundal-desktop: url('assets/imagini/fundal_tenis.jpg'); --fundal-mobil: url('assets/imagini/fundal_tenis2p2.png'); }
-
-        @media (max-width: 768px) {
-            /* Revenim la grila in cruce 2x2 pe telefon */
-            .bg-quad {
-                width: 50% !important;
-                height: 50% !important;
-            }
-            .bg-quad-1 { top: 0 !important; left: 0 !important; background-position: center !important; }
-            .bg-quad-2 { top: 0 !important; right: 0 !important; left: auto !important; background-position: center !important; }
-            .bg-quad-3 { bottom: 0 !important; left: 0 !important; top: auto !important; background-position: center !important; }
-            .bg-quad-4 { bottom: 0 !important; right: 0 !important; top: auto !important; left: auto !important; background-position: center !important; }
-        }
-
-    
-        /* --- iOS FULLSCREEN FIX --- */
-        .fundal-water, #fundal-imagine-sport {
-            /* Extindem fundalurile sub marginile fizice (notch, bara jos) pe iOS */
-            top: calc(0px - env(safe-area-inset-top)) !important;
-            bottom: calc(0px - env(safe-area-inset-bottom)) !important;
-            left: calc(0px - env(safe-area-inset-left)) !important;
-            right: calc(0px - env(safe-area-inset-right)) !important;
-            width: auto !important;
-            height: auto !important;
-        }
-
-    
-        /* --- BUTOANE ORE - DIMENSIUNI UNIFORME --- */
-        .btn-ora {
-            min-height: 55px !important;
-            display: flex !important;
-            flex-direction: column !important;
-            align-items: center !important;
-            justify-content: center !important;
-            padding: 8px 4px !important;
-            font-size: 14px !important;
-            box-sizing: border-box !important;
-        }
-        @media (max-width: 768px) {
-            .btn-ora {
-                min-height: 55px !important;
-                font-size: 14px !important;
-            }
-            #container-ore {
-                grid-template-columns: repeat(4, 1fr) !important;
-                gap: 6px !important;
-            }
-        }
-
-    
-        /* --- PROTECTIE NOTCH PENTRU ELEMENTELE DE SUS --- */
-        .buton-top-cont { top: calc(env(safe-area-inset-top) + 12px) !important; }
-        #selector-limba { top: calc(env(safe-area-inset-top) + 12px) !important; }
-        #wrapper-filtru-oras { top: calc(env(safe-area-inset-top) + 20px) !important; }
-        
-        @media (max-width: 768px) {
-            /* Pe mobil, filtrul de oras e sub celelalte butoane, deci adaugam 60px la notch */
-            #wrapper-filtru-oras { top: calc(env(safe-area-inset-top) + 60px) !important; }
-        }
-
-    </style>
 </head>
 <body class="pagina-publica">
 
-    <div class="fundal-water">
-        <!-- Cadranele 4-split pentru background -->
-        <div class="bg-quad bg-quad-1"></div>
-        <div class="bg-quad bg-quad-2"></div>
-        <div class="bg-quad bg-quad-3"></div>
-        <div class="bg-quad bg-quad-4"></div>
-        <div id="fundal-imagine-sport" style="position: absolute; top:0; left:0; width:100%; height:100%; background-color: #020617; background-size: cover; background-position: center; background-repeat: no-repeat; opacity: 0; transition: opacity 0.5s ease; z-index: 1;"></div>
-        
-        <!-- SELECTOR DE LIMBA -->
-        <div id="selector-limba" style="position: absolute; top: 20px; right: 20px; display: flex; background: rgba(0,0,0,0.7); border-radius: 20px; border: 1px solid rgba(255,255,255,0.2); padding: 5px; gap: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 1000;">
-            <button id="btn-lang-ro" class="btn-lang" onclick="schimbaLimba('ro')" style="background: transparent; border: none; color: white; cursor: pointer; font-weight: bold; padding: 6px 12px; border-radius: 15px; transition: 0.3s;">RO</button>
-            <button id="btn-lang-hu" class="btn-lang" onclick="schimbaLimba('hu')" style="background: transparent; border: none; color: white; cursor: pointer; font-weight: bold; padding: 6px 12px; border-radius: 15px; transition: 0.3s;">HU</button>
-            <button id="btn-lang-en" class="btn-lang" onclick="schimbaLimba('en')" style="background: transparent; border: none; color: white; cursor: pointer; font-weight: bold; padding: 6px 12px; border-radius: 15px; transition: 0.3s;">EN</button>
-        </div>
+    <div id="fundal-imagine-sport" aria-hidden="true"></div>
+    <div class="fundal-water home-shell" id="spotivity-top">
+        <section class="home-city-region" id="home-city-region" aria-label="Oraș și limbă">
+            <div class="home-city-inner">
+                <label for="filtru-oras-global" class="home-city-copy" data-i18n="home_alege_oras">Alege orașul și găsește terenul potrivit.</label>
+                <div id="wrapper-filtru-oras">
+                    <select id="filtru-oras-global" aria-label="Alege orașul">
+                        <option value="ALL" data-i18n="toate_orasele">Toate Orașele</option>
+                    </select>
+                    <svg class="home-city-chevron" viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7 5 5 5-5"/></svg>
+                </div>
+                <div id="selector-limba" aria-label="Limba site-ului">
+                    <button type="button" id="btn-lang-ro" class="btn-lang" onclick="schimbaLimba('ro')">RO</button>
+                    <button type="button" id="btn-lang-hu" class="btn-lang" onclick="schimbaLimba('hu')">HU</button>
+                    <button type="button" id="btn-lang-en" class="btn-lang" onclick="schimbaLimba('en')">EN</button>
+                </div>
+            </div>
+        </section>
 
-        <!-- BUTON CONT -->
-        <button class="buton-top-cont" id="btn-top-cont" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-            <img src="assets/imagini/avatar2.png" alt="Avatar" style="width: 26px; height: 26px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.3);">
-            <span id="text-top-cont" data-i18n="contul_meu">Contul Meu</span>
-        </button>
+        <header class="home-header" id="home-header">
+            <nav class="home-nav" aria-label="Navigare principală">
+                <a class="home-brand" id="home-brand" href="#spotivity-top" aria-label="Spotivity — pagina principală">
+                    <img src="assets/imagini/avatar2.png" alt="Spotivity" width="30" height="30">
+                </a>
+                <div class="home-desktop-nav">
+                    <button type="button" data-sport-target="Fotbal" data-i18n="fotbal">Fotbal</button>
+                    <button type="button" data-sport-target="Baschet" data-i18n="baschet">Baschet</button>
+                    <button type="button" data-sport-target="Tenis" data-i18n="tenis">Tenis</button>
+                    <button type="button" data-sport-target="Volei" data-i18n="volei">Volei</button>
+                </div>
+                <button type="button" class="buton-top-cont home-profile-button" id="btn-top-cont" aria-label="Profilul meu">
+                    <svg class="home-profile-symbol" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 21v-2a7.5 7.5 0 0 1 15 0v2"/></svg>
+                    <span class="home-profile-label" data-i18n="home_profil">Profilul meu</span>
+                    <span class="home-visually-hidden" id="text-top-cont" data-i18n="contul_meu">Contul Meu</span>
+                </button>
+                <button type="button" class="home-menu-toggle" id="btn-mobile-menu" aria-label="Deschide meniul" aria-controls="home-mobile-menu" aria-expanded="false">
+                    <span></span><span></span><span></span>
+                </button>
+            </nav>
+            <div class="home-mobile-menu" id="home-mobile-menu" hidden>
+                <nav class="home-mobile-links" aria-label="Meniu sporturi">
+                    <button type="button" data-sport-target="Fotbal" data-i18n="fotbal">Fotbal</button>
+                    <button type="button" data-sport-target="Baschet" data-i18n="baschet">Baschet</button>
+                    <button type="button" data-sport-target="Tenis" data-i18n="tenis">Tenis</button>
+                    <button type="button" data-sport-target="Volei" data-i18n="volei">Volei</button>
+                    <button type="button" data-profile-target data-i18n="home_profil">Profilul meu</button>
+                </nav>
+            </div>
+        </header>
 
-        <div id="wrapper-filtru-oras" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999 !important; display: flex; flex-direction: column; align-items: center; transition: opacity 0.3s;">
-            <select id="filtru-oras-global" style="background: rgba(0,0,0,0.6); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 8px 20px; border-radius: 20px; font-weight: bold; cursor: pointer; text-align: center; text-align-last: center; appearance: none; -webkit-appearance: none; min-width: 130px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); backdrop-filter: blur(5px);">
-                <option value="ALL" data-i18n="toate_orasele">Toate Orasele</option>
-            </select>
-        </div>
-
-        <div class="grila-sporturi">
-            <div class="centru-video">
-                <img src="assets/imagini/avatar2.png" alt="Avatar">
-            </div>
-            
-            <div class="orbita-wrapper">
-                <div class="card-sport" data-sport="Fotbal">
-                    <img src="assets/imagini/fotbal.png" alt="Fotbal" class="iconita-minge">
-                    <h2 data-i18n="fotbal">Fotbal</h2>
+        <main class="home-main" id="home-main">
+            <section class="home-sport-hero home-hero-fotbal" id="sport-fotbal" data-home-sport="Fotbal" aria-labelledby="home-title-fotbal">
+                <div class="home-hero-copy">
+                    <div class="home-sport-heading">
+                        <img src="assets/imagini/fotbalrealist.png" data-sport-icon="Fotbal" alt="" width="48" height="48" decoding="async">
+                        <h1 id="home-title-fotbal" data-i18n="fotbal">Fotbal</h1>
+                    </div>
+                    <p class="home-hero-subtitle" data-i18n="home_subtitlu_fotbal">Jocul începe aici.</p>
+                    <div class="home-hero-actions">
+                        <button type="button" class="card-sport home-reserve-button" data-sport="Fotbal" data-i18n="home_rezerva">Rezervă un teren</button>
+                        <button type="button" class="home-explore-button" data-sport-target="Fotbal" data-i18n="home_vezi_terenuri">Vezi terenurile</button>
+                    </div>
                 </div>
-            </div>
-            <div class="orbita-wrapper">
-                <div class="card-sport" data-sport="Baschet">
-                    <img src="assets/imagini/baschet.png" alt="Baschet" class="iconita-minge">
-                    <h2 data-i18n="baschet">Baschet</h2>
+                <div class="home-hero-art">
+                    <img src="assets/imagini/RealistFotbal.png" data-sport-background="Fotbal" alt="" width="1672" height="941" loading="eager" decoding="async" fetchpriority="high">
                 </div>
-            </div>
-            <div class="orbita-wrapper">
-                <div class="card-sport" data-sport="Tenis">
-                    <img src="assets/imagini/tenis.png" alt="Tenis" class="iconita-minge">
-                    <h2 data-i18n="tenis">Tenis</h2>
+            </section>
+            <section class="home-sport-hero home-hero-baschet" id="sport-baschet" data-home-sport="Baschet" aria-labelledby="home-title-baschet">
+                <div class="home-hero-copy">
+                    <div class="home-sport-heading">
+                        <img src="assets/imagini/baschetrealist.png" data-sport-icon="Baschet" alt="" width="48" height="48" loading="lazy" decoding="async">
+                        <h2 id="home-title-baschet" data-i18n="baschet">Baschet</h2>
+                    </div>
+                    <p class="home-hero-subtitle" data-i18n="home_subtitlu_baschet">Fiecare aruncare contează.</p>
+                    <div class="home-hero-actions">
+                        <button type="button" class="card-sport home-reserve-button" data-sport="Baschet" data-i18n="home_rezerva">Rezervă un teren</button>
+                        <button type="button" class="home-explore-button" data-sport-target="Baschet" data-i18n="home_vezi_terenuri">Vezi terenurile</button>
+                    </div>
                 </div>
-            </div>
-            <div class="orbita-wrapper">
-                <div class="card-sport" data-sport="Volei">
-                    <img src="assets/imagini/volei.png" alt="Volei" class="iconita-minge">
-                    <h2 data-i18n="volei">Volei</h2>
+                <div class="home-hero-art">
+                    <img src="assets/imagini/RealisBaschet.png" data-sport-background="Baschet" alt="" width="1672" height="941" loading="lazy" decoding="async">
                 </div>
-            </div>
-            
-        </div>
+            </section>
+            <section class="home-sport-hero home-hero-tenis" id="sport-tenis" data-home-sport="Tenis" aria-labelledby="home-title-tenis">
+                <div class="home-hero-copy">
+                    <div class="home-sport-heading">
+                        <img src="assets/imagini/tenisrealist.png" data-sport-icon="Tenis" alt="" width="48" height="48" loading="lazy" decoding="async">
+                        <h2 id="home-title-tenis" data-i18n="tenis">Tenis</h2>
+                    </div>
+                    <p class="home-hero-subtitle" data-i18n="home_subtitlu_tenis">Următorul punct e al tău.</p>
+                    <div class="home-hero-actions">
+                        <button type="button" class="card-sport home-reserve-button" data-sport="Tenis" data-i18n="home_rezerva">Rezervă un teren</button>
+                        <button type="button" class="home-explore-button" data-sport-target="Tenis" data-i18n="home_vezi_terenuri">Vezi terenurile</button>
+                    </div>
+                </div>
+                <div class="home-hero-art">
+                    <img src="assets/imagini/RealistTenis.png" data-sport-background="Tenis" alt="" width="1672" height="941" loading="lazy" decoding="async">
+                </div>
+            </section>
+            <section class="home-sport-hero home-hero-volei" id="sport-volei" data-home-sport="Volei" aria-labelledby="home-title-volei">
+                <div class="home-hero-copy">
+                    <div class="home-sport-heading">
+                        <img src="assets/imagini/voleirealist.png" data-sport-icon="Volei" alt="" width="48" height="48" loading="lazy" decoding="async">
+                        <h2 id="home-title-volei" data-i18n="volei">Volei</h2>
+                    </div>
+                    <p class="home-hero-subtitle" data-i18n="home_subtitlu_volei">Adună echipa. Intră în joc.</p>
+                    <div class="home-hero-actions">
+                        <button type="button" class="card-sport home-reserve-button" data-sport="Volei" data-i18n="home_rezerva">Rezervă un teren</button>
+                        <button type="button" class="home-explore-button" data-sport-target="Volei" data-i18n="home_vezi_terenuri">Vezi terenurile</button>
+                    </div>
+                </div>
+                <div class="home-hero-art">
+                    <img src="assets/imagini/RealistVolei.png" data-sport-background="Volei" alt="" width="1672" height="941" loading="lazy" decoding="async">
+                </div>
+            </section>
+        </main>
+        <footer class="home-footer" id="home-footer">
+            <button type="button" id="btn-legal" onclick="document.getElementById('modal-legal').style.display='flex'">
+                <span data-i18n="copyright_text">&copy; 2026 Numele SRL</span> &bull; <span data-i18n="drepturi_rezervate">Toate drepturile rezervate</span> &bull; <span class="home-legal-link" data-i18n="info_legale">Info Legale</span>
+            </button>
+        </footer>
     </div>
-
 
 <!-- MODAL AUTH -->
     <div class="modal" id="modal-auth" style="display: none;">
@@ -614,11 +316,6 @@
 
 
     
-
-    <!-- LEGAL INFO - Buton discret + Modal -->
-    <div id="btn-legal" onclick="document.getElementById('modal-legal').style.display='flex'" style="position: fixed; bottom: 8px; left: 50%; transform: translateX(-50%); z-index: 9998; cursor: pointer; font-size: 11px; color: rgba(255,255,255,0.4); font-family: sans-serif; letter-spacing: 0.5px; transition: color 0.3s; text-align: center; white-space: nowrap;">
-        <span data-i18n="copyright_text">&copy; 2026 Numele SRL</span> &bull; <span data-i18n="drepturi_rezervate">Toate drepturile rezervate</span> &bull; <span style="text-decoration: underline;" data-i18n="info_legale">Info Legale</span>
-    </div>
 
     <div id="notificare-rezervare" class="notificare-rezervare" role="status" aria-live="polite" aria-atomic="true" hidden>
         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>

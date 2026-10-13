@@ -251,9 +251,9 @@ window.schimbaLimba = function(limbaNoua) {
     // Colorare și Evidențiere buton limbă (Activ)
     document.querySelectorAll('.btn-lang').forEach(btn => {
         if (btn.id === `btn-lang-${limbaNoua}`) {
-            btn.style.background = '#34c759'; // Verde aprins
-            btn.style.color = '#000';
-            btn.style.boxShadow = '0 0 10px rgba(52, 199, 89, 0.5)';
+            btn.style.background = 'rgba(255,255,255,0.16)';
+            btn.style.color = '#fff';
+            btn.style.boxShadow = 'none';
         } else {
             btn.style.background = 'transparent';
             btn.style.color = 'white';
@@ -625,9 +625,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function seteazaFundalSport(element, sport, suprapunere = false) {
         if (!element) return;
-        const baza = `assets/imagini/fundal_${sport}`;
-        element.style.setProperty('--fundal-desktop', `url("${new URL(baza + '.jpg', document.baseURI).href}")`);
-        element.style.setProperty('--fundal-mobil', `url("${new URL(baza + '2p2.png', document.baseURI).href}")`);
+        const appearance = window.getSportAppearance(sport);
+        const background = `url(${JSON.stringify(new URL(appearance.fundal_url, document.baseURI).href)})`;
+        element.style.setProperty('--fundal-desktop', background);
+        element.style.setProperty('--fundal-mobil', background);
         const stratGri = 'linear-gradient(rgba(60, 60, 64, 0.7), rgba(60, 60, 64, 0.7)), ';
         element.style.backgroundImage = (suprapunere ? stratGri : '') + 'var(--fundal-ales)';
         element.style.backgroundSize = suprapunere ? '100% 100%, cover' : 'cover';

@@ -10,6 +10,23 @@ Site-ul confirmat pe 12 octombrie 2026 este [GitHub Pages](https://spotivityreze
 
 **Site URL** și redirectul exact către folderul GitHub Pages au fost configurate în Supabase pe 12 octombrie; adresele Netlify și spotivity.ro permise anterior au fost păstrate. Înregistrarea și recuperarea parolei trimit adresa folderului paginii, inclusiv `/Site/Idee%20Site/`. Înregistrarea este activă, emailurile sunt confirmate automat, iar SMTP personalizat nu este configurat. Aceste opțiuni au fost păstrate.
 
+## Interfața și imaginile sporturilor: 13 octombrie 2026
+
+Pagina principală folosește secțiuni mari pentru fiecare sport, navigare pe desktop și meniu pe tot ecranul pe telefon. Avatarul `avatar2.png` este sigla din antet. Orașele se aleg în bara de sus; căutarea după numele terenului și filtrele de dată/oră sunt în fereastra sportului. Butoanele din navigare și meniu deschid aceleași formulare de rezervare și profil.
+
+[005_sport_appearance.sql](005_sport_appearance.sql) este **deja aplicată în Rendez-Vous** prin Management API, după 36 de verificări izolate și o probă live cu rollback. **Nu trebuie să copiezi/rulezi SQL pentru această actualizare.** Tabelul `public.site_sporturi` conține numai configurația vizuală:
+
+| Sport | Pictogramă | Fundal |
+| --- | --- | --- |
+| Fotbal | `fotbalrealist.png` | `RealistFotbal.png` |
+| Baschet | `baschetrealist.png` | `RealisBaschet.png` |
+| Tenis | `tenisrealist.png` | `RealistTenis.png` |
+| Volei | `voleirealist.png` | `RealistVolei.png` |
+
+Căile sunt relative la `assets/imagini/`. Numele `RealisBaschet.png` corespunde exact fișierului încărcat în GitHub. `sport` identifică una dintre cele patru categorii, `icona_url` și `fundal_url` stabilesc imaginile, iar `ordine` este între 1 și 4. Vizitatorii și conturile autentificate pot citi configurația; numai superadminul poate scrie prin API. Proprietarul proiectului poate edita valorile și din Table Editor/SQL Editor. Sunt acceptate imagini locale și URL-uri HTTPS valide. La indisponibilitatea configurației, site-ul folosește imaginile locale incluse.
+
+Verificarea înainte/după aplicarea 005 a confirmat aceleași **8 conturi Auth, 5 profile, 2 admini, 5 terenuri, 48 rezervări, 22 mesaje și 24 sloturi**, precum și definiții/stări identice pentru trigger-ele, funcțiile private și politicile existente. Migrările instalate sunt acum **1, 3, 4 și 5**. Pozele specifice terenurilor sunt în continuare în `terenuri.poza`; noul tabel configurează imaginile categoriilor de sport.
+
 ## Programul terenurilor: actualizarea din 12 octombrie 2026
 
 [003_court_hours.sql](003_court_hours.sql) adaugă `terenuri.ore_rezervabile` și verificarea programului la rezervare. Terenurile existente păstrează implicit **12:00–22:00**. Fiecare teren poate avea orice selecție de ore de început între **09:00 și 22:00**; o rezervare începută la 22:00 se termină la 23:00. Programul este comun tuturor zilelor, iar blocajele din **Program & Disponibilitate** permit excepții pentru o anumită zi.
@@ -35,15 +52,15 @@ Pe **12 octombrie 2026**, migrarea 003 a fost aplicată în **Rendez-Vous** prin
 
 Adresele de redirect Auth sunt exacte; wildcardul vechi pentru spotivity.ro a fost eliminat. La cererea proprietarului, parola nouă are în continuare minimum **6 caractere**. Confirmarea automată și absența SMTP au fost păstrate; configurarea emailului și datele firmei sunt amânate de proprietar. Raportul de verificare și pașii rămași sunt în [PRODUCTION_REVIEW.md](../PRODUCTION_REVIEW.md).
 
-Pentru **alt proiect**, ordinea migrărilor este **001 → 003 → 004** după inventar/backup și verificarea datelor. 002 conține numai exemple de roluri pentru conturi Auth existente și confirmate. Fișierele `tests/` se rulează exclusiv în baza izolată. Instrucțiunile istorice de mai jos pentru reinstalarea 001 se aplică numai proiectelor fără migrări ulterioare.
+Pentru **alt proiect**, ordinea migrărilor este **001 → 003 → 004 → 005** după inventar/backup și verificarea datelor. 002 conține numai exemple de roluri pentru conturi Auth existente și confirmate. Fișierele `tests/` se rulează exclusiv în baza izolată. Instrucțiunile istorice de mai jos pentru reinstalarea 001 se aplică numai proiectelor fără migrări ulterioare.
 
 ## Căutare și afișare pe telefon
 
 În pagina publică, deschide un sport și folosește **Caută terenul**. Numele se citesc din `terenuri`; căutarea acceptă litere mari/mici și text fără diacritice și se combină cu orașul, data și ora selectate. Ștergerea textului restabilește lista, iar deschiderea unui alt sport resetează căutarea.
 
-Panoul admin afișează **Setări [oraș] → terenuri** numai superadminului. Adminii obișnuiți deschid direct **Setări [teren]** pentru alocările lor din `users_admin`. Pictogramele sporturilor sunt imaginile locale folosite și în pagina principală; etichetele nu mai conțin emojiuri decorative. Formularele, chatul, istoricul și programul folosesc dimensiuni adaptate telefonului, cu scroll în chenar când conținutul este lung.
+Panoul admin afișează **Setări [oraș] → terenuri** numai superadminului. Adminii obișnuiți deschid direct **Setări [teren]** pentru alocările lor din `users_admin`. Pictogramele sporturilor se citesc din configurația `site_sporturi`, comună cu pagina principală; etichetele nu mai conțin emojiuri decorative. Formularele, chatul, istoricul și programul folosesc dimensiuni adaptate telefonului, cu scroll în chenar când conținutul este lung.
 
-Aceste modificări folosesc coloanele și politicile deja instalate. **Nu necesită SQL nou sau rerularea 001/003/004 în Rendez-Vous.** Salvarea setărilor rămâne protejată de RLS. Prețul mingii egal cu zero se păstrează; doar valoarea lipsă folosește implicit 15.
+Aceste modificări folosesc coloanele și politicile deja instalate, inclusiv 005 aplicată pe 13 octombrie. **Nu necesită SQL suplimentar sau rerularea 001/003/004/005 în Rendez-Vous.** Salvarea setărilor rămâne protejată de RLS. Prețul mingii egal cu zero se păstrează; doar valoarea lipsă folosește implicit 15.
 
 ## 1. Ce va putea face fiecare rol
 

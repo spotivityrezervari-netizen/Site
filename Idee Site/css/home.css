@@ -1,0 +1,371 @@
+/* Public landing page. Booking, profile and authentication dialogs use style.css. */
+body.pagina-publica {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: clip;
+    background: #000;
+    color: #f5f5f7;
+}
+.pagina-publica .home-shell {
+    width: 100%;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: block;
+    position: relative;
+    background: #000;
+    background-image: none;
+    animation: none;
+    overflow: visible;
+    padding: 0;
+}
+.pagina-publica #fundal-imagine-sport {
+    position: fixed;
+    inset: -16px;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0;
+    background-color: #000;
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+    transition: opacity .2s ease;
+}
+body.pagina-publica.fara-scroll > #fundal-imagine-sport { filter: blur(12px); }
+.pagina-publica .home-city-region {
+    background: #272727;
+    padding: 16px 24px;
+    padding-top: max(16px, env(safe-area-inset-top));
+}
+.pagina-publica .home-city-inner {
+    max-width: 1000px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 340px) auto;
+    align-items: center;
+    gap: 24px;
+}
+.pagina-publica .home-city-copy { font-size: 14px; line-height: 1.5; color: #dedede; }
+.pagina-publica #wrapper-filtru-oras {
+    position: relative;
+    inset: auto;
+    transform: none;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    z-index: auto;
+}
+.pagina-publica #filtru-oras-global {
+    display: block;
+    width: 100%;
+    min-width: 0 !important;
+    max-width: 100%;
+    height: 44px;
+    padding: 0 42px 0 16px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: #3b3b3b;
+    color: #f5f5f7;
+    font-size: 16px;
+    font-weight: 400;
+    text-align: left;
+    text-align-last: left;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    box-shadow: none;
+    text-overflow: ellipsis;
+}
+.pagina-publica .home-city-chevron {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    top: 13px;
+    right: 14px;
+    fill: none;
+    stroke: #d6d6d6;
+    stroke-width: 1.5;
+    pointer-events: none;
+}
+.pagina-publica #selector-limba {
+    position: static;
+    display: flex;
+    gap: 2px;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    box-shadow: none;
+    z-index: auto;
+}
+.pagina-publica .btn-lang {
+    min-width: 38px;
+    min-height: 44px;
+    padding: 0 7px;
+    border: 0;
+    border-radius: 6px;
+    color: #d6d6d6;
+    background: transparent;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+}
+.pagina-publica .home-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(22,22,23,.96);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+}
+.pagina-publica .home-nav {
+    max-width: 1000px;
+    min-height: 52px;
+    margin: 0 auto;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    gap: 36px;
+}
+.pagina-publica .home-brand {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+}
+.pagina-publica .home-brand img { display: block; width: 30px; height: 30px; object-fit: contain; }
+.pagina-publica .home-desktop-nav {
+    display: flex;
+    flex: 1;
+    justify-content: space-evenly;
+    align-items: center;
+    gap: 18px;
+    min-width: 0;
+}
+.pagina-publica .home-desktop-nav button,
+.pagina-publica .home-profile-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    position: static;
+    margin: 0;
+    padding: 0 8px;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    color: #dedede;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.3;
+    white-space: nowrap;
+    box-shadow: none;
+    transform: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    cursor: pointer;
+}
+.pagina-publica .home-desktop-nav button:hover,
+.pagina-publica .home-profile-button:hover { color: #fff; background: transparent; transform: none; }
+.pagina-publica .home-profile-symbol {
+    display: none;
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.4;
+}
+.pagina-publica .home-menu-toggle,
+.pagina-publica .home-mobile-menu { display: none; }
+.pagina-publica .home-main { display: block; width: 100%; }
+.pagina-publica .home-sport-hero {
+    position: relative;
+    overflow: hidden;
+    background: #000;
+    text-align: center;
+    border-bottom: 10px solid #f5f5f7;
+}
+.pagina-publica .home-sport-hero:last-child { border-bottom: 0; }
+.pagina-publica .home-hero-copy {
+    position: relative;
+    z-index: 1;
+    padding: 58px 24px 14px;
+}
+.pagina-publica .home-sport-heading { display: flex; justify-content: center; align-items: center; gap: 15px; }
+.pagina-publica .home-sport-heading img { width: 48px; height: 48px; object-fit: contain; flex: 0 0 auto; }
+.pagina-publica .home-sport-heading h1,
+.pagina-publica .home-sport-heading h2 {
+    font-size: clamp(44px, 4vw, 64px);
+    font-weight: 600;
+    letter-spacing: -.035em;
+    line-height: 1.1;
+    margin: 0;
+}
+.pagina-publica .home-hero-subtitle {
+    margin-top: 12px;
+    font-size: clamp(22px, 2vw, 28px);
+    letter-spacing: -.02em;
+    line-height: 1.3;
+    color: #f5f5f7;
+}
+.pagina-publica .home-hero-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 16px; margin-top: 22px; }
+.pagina-publica .home-reserve-button,
+.pagina-publica .home-explore-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: row;
+    width: auto;
+    min-width: 0;
+    min-height: 44px;
+    height: auto;
+    aspect-ratio: auto;
+    padding: 12px 23px;
+    border: 1px solid #0071e3;
+    border-radius: 999px;
+    background: #0071e3;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.2;
+    text-align: center;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    transition: background .15s ease;
+    cursor: pointer;
+}
+.pagina-publica .home-explore-button { color: #2997ff; background: transparent; }
+.pagina-publica .home-reserve-button:hover { background: #0077ed; border-color: #0077ed; transform: none; box-shadow: none; }
+.pagina-publica .home-explore-button:hover { color: #fff; background: #0071e3; }
+.pagina-publica .home-hero-art { width: min(100%, 1280px); aspect-ratio: 1672 / 941; margin: -12px auto 0; }
+.pagina-publica .home-hero-art img { width: 100%; height: 100%; display: block; object-fit: contain; }
+.pagina-publica .home-footer { background: #161617; padding: 24px; padding-bottom: max(24px, env(safe-area-inset-bottom)); text-align: center; }
+.pagina-publica #btn-legal {
+    position: static;
+    width: auto;
+    max-width: 100%;
+    min-height: 44px;
+    margin: 0;
+    padding: 8px 0;
+    border: 0;
+    background: transparent;
+    color: #9c9c9f;
+    font-size: 12px;
+    line-height: 1.8;
+    letter-spacing: 0;
+    white-space: normal;
+    transform: none;
+    cursor: pointer;
+}
+.pagina-publica .home-legal-link { text-decoration: underline; text-underline-offset: 3px; }
+.pagina-publica .home-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    white-space: nowrap;
+    border: 0;
+}
+.pagina-publica .home-shell button:focus-visible,
+.pagina-publica .home-shell a:focus-visible,
+.pagina-publica .home-shell select:focus-visible { outline: 2px solid #2997ff; outline-offset: 4px; }
+.pagina-publica #filtru-oras-global option,
+.pagina-publica #filtru-ora option { background: #252525; color: #f5f5f7; }
+.pagina-publica .btn-ora { min-height: 55px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 4px; font-size: 14px; }
+
+@media (max-width: 767px) {
+    .pagina-publica .home-city-region { padding: 14px 20px; padding-top: max(14px, env(safe-area-inset-top)); }
+    .pagina-publica .home-city-inner { grid-template-columns: minmax(0,1fr) auto; gap: 10px 12px; }
+    .pagina-publica .home-city-copy { grid-column: 1 / -1; font-size: 12px; }
+    .pagina-publica #filtru-oras-global { font-size: 15px; padding-left: 12px; }
+    .pagina-publica .btn-lang { min-width: 32px; padding: 0 5px; }
+    .pagina-publica .home-nav { min-height: 52px; padding: 0 14px; gap: 4px; }
+    .pagina-publica .home-brand { margin-right: auto; }
+    .pagina-publica .home-desktop-nav,
+    .pagina-publica .home-profile-label { display: none; }
+    .pagina-publica .home-profile-button { min-width: 44px; padding: 0; }
+    .pagina-publica .home-profile-symbol { display: block; }
+    .pagina-publica .home-menu-toggle {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        flex: 0 0 44px;
+        width: 44px;
+        height: 44px;
+        border: 0;
+        background: transparent;
+        cursor: pointer;
+    }
+    .pagina-publica .home-menu-toggle span { display: block; width: 18px; height: 1px; background: #f5f5f7; transition: transform .2s ease, opacity .2s ease; }
+    .pagina-publica .home-mobile-menu:not([hidden]) {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 2;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        background: #161617;
+        padding: 98px 40px 40px;
+        padding-top: calc(98px + env(safe-area-inset-top));
+        padding-bottom: max(40px, env(safe-area-inset-bottom));
+    }
+    .pagina-publica .home-mobile-links { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+    .pagina-publica .home-mobile-links button {
+        max-width: 100%;
+        min-height: 52px;
+        padding: 6px 0;
+        border: 0;
+        background: transparent;
+        color: #f5f5f7;
+        font-size: 30px;
+        line-height: 1.2;
+        letter-spacing: -.02em;
+        font-weight: 600;
+        text-align: left;
+        cursor: pointer;
+        overflow-wrap: anywhere;
+    }
+    body.pagina-publica.home-menu-open { overflow: hidden; }
+    .pagina-publica.home-menu-open .home-header {
+        position: fixed;
+        inset: 0 0 auto;
+        padding-top: env(safe-area-inset-top);
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+    .pagina-publica.home-menu-open .home-brand,
+    .pagina-publica.home-menu-open .home-menu-toggle { position: relative; z-index: 3; }
+    .pagina-publica.home-menu-open .home-profile-button { visibility: hidden; }
+    .pagina-publica.home-menu-open .home-menu-toggle span:nth-child(1) { transform: translateY(5px) rotate(45deg); }
+    .pagina-publica.home-menu-open .home-menu-toggle span:nth-child(2) { opacity: 0; }
+    .pagina-publica.home-menu-open .home-menu-toggle span:nth-child(3) { transform: translateY(-5px) rotate(-45deg); }
+    .pagina-publica .home-hero-copy { padding: 42px 18px 12px; }
+    .pagina-publica .home-sport-heading { gap: 10px; }
+    .pagina-publica .home-sport-heading img { width: 36px; height: 36px; }
+    .pagina-publica .home-sport-heading h1,
+    .pagina-publica .home-sport-heading h2 { font-size: 42px; }
+    .pagina-publica .home-hero-subtitle { font-size: 21px; margin-top: 10px; }
+    .pagina-publica .home-hero-actions { gap: 10px; margin-top: 20px; }
+    .pagina-publica .home-reserve-button,
+    .pagina-publica .home-explore-button { padding: 11px 17px; font-size: 14px; }
+    .pagina-publica .home-hero-art { aspect-ratio: 4 / 3; margin-top: 8px; }
+    .pagina-publica .home-hero-art img { object-fit: cover; }
+    /* Keep the complete racket visible; its shape spans the original landscape image. */
+    .pagina-publica .home-hero-tenis .home-hero-art { aspect-ratio: 1672 / 941; }
+    .pagina-publica .home-hero-tenis .home-hero-art img { object-fit: contain; }
+    .pagina-publica .home-footer { padding-inline: 20px; }
+    .pagina-publica #container-ore { grid-template-columns: repeat(4,1fr); gap: 6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .pagina-publica #fundal-imagine-sport,
+    .pagina-publica .home-menu-toggle span,
+    .pagina-publica .home-reserve-button { transition: none; }
+}

@@ -27,6 +27,7 @@ let checks = 0;
     await pg.exec(readFileSync(join(__dirname,'../001_security.sql'),'utf8'));
     await pg.exec(readFileSync(join(__dirname,'../003_court_hours.sql'),'utf8'));
     await pg.exec(readFileSync(join(__dirname,'../004_admin_scope_hardening.sql'),'utf8'));
+    await pg.exec(readFileSync(join(__dirname,'../005_sport_appearance.sql'),'utf8'));
     await pg.exec("update public.terenuri set poza='assets/imagini/avatar2.png'");
     const tomorrow=(await pg.query("select ((now() at time zone 'Europe/Bucharest')::date+1)::text as d")).rows[0].d;
     let queue=Promise.resolve();
@@ -104,7 +105,7 @@ let checks = 0;
           return reply(401,{message:'No fixture session'});
         }
         const table=url.pathname.split('/').pop();
-        assert.ok(['clienti','users_admin','terenuri','rezervari','rezervari_disponibilitate','mesaje_chat'].includes(table));
+        assert.ok(['clienti','users_admin','terenuri','rezervari','rezervari_disponibilitate','mesaje_chat','site_sporturi'].includes(table));
         await pg.exec(`set role ${person ? 'authenticated' : 'anon'}`);
         const params=[], conditions=[];
         for (const [field,value] of url.searchParams) {
@@ -211,6 +212,9 @@ let checks = 0;
       assert.ok(result.corners.every(Boolean),JSON.stringify(result));
     };
     const assertCourtNames = async (target,names) => {
+      // The input deliberately debounces for 150 ms; drain that queued render
+      // before waiting for its network calls, rather than accepting an older list.
+      await target.waitForTimeout(175);
       await target.waitForLoadState('networkidle');
       await target.waitForFunction(expected=>{
         const container=document.getElementById('container-dinamic-terenuri');
@@ -351,6 +355,8 @@ let checks = 0;
     await page.locator('#modal-rezervare').waitFor({state:'hidden'});
     assert.equal(await page.locator('#modal-terenuri').isVisible(),false);
     assert.equal(await page.locator('#fundal-imagine-sport').evaluate(node=>node.style.opacity),'0');
+    await page.waitForFunction(()=>!document.body.classList.contains('fara-scroll'));
+    assert.equal(await page.locator('.home-sport-hero').count(),4);
     const notice=page.locator('#notificare-rezervare');
     await notice.waitFor({state:'visible'});
     assert.equal(await notice.getAttribute('role'),'status');
@@ -502,12 +508,12 @@ let checks = 0;
     assert.match(await allocatedCard.innerText(),/Court A/);
     const allocatedIcon=allocatedCard.locator('img');
     assert.equal(await allocatedIcon.count(),1);
-    assert.match(await allocatedIcon.getAttribute('src'),/fotbal\.png(?:\?|$)/);
+    assert.match(await allocatedIcon.getAttribute('src'),/fotbalrealist\.png(?:\?|$)/);
     await assertPngLoaded(allocatedIcon);
     await allocatedCard.click();
     pass('ordinary admin opens its allocated court settings directly with the matching PNG sport icon');
     const settingsId=(await admin.locator('[id^="modal-setari-"]').getAttribute('id')).slice('modal-setari-'.length);
-    assert.match(await admin.locator(`#modal-setari-${settingsId} .admin-settings-header img`).getAttribute('src'),/fotbal\.png(?:\?|$)/);
+    assert.match(await admin.locator(`#modal-setari-${settingsId} .admin-settings-header img`).getAttribute('src'),/fotbalrealist\.png(?:\?|$)/);
     await assertPngLoaded(admin.locator(`#modal-setari-${settingsId} .admin-settings-header img`));
     const hourInputs=admin.locator(`#ore-rezervabile-${settingsId} input.ora-rezervabila`);
     const allHours=Array.from({length:14},(_,i)=>`${String(i+9).padStart(2,'0')}:00`);
@@ -809,7 +815,7 @@ let checks = 0;
         const courtName=await courtCard.locator('.admin-card-name').innerText();
         const court=superCourts.find(court=>court.nume===courtName);
         assert.ok(court,courtName);
-        const asset={Fotbal:'fotbal',Baschet:'baschet',Tenis:'tenis',Volei:'volei','Tenis Picior':'fotbal'}[court.sport];
+        const asset={Fotbal:'fotbalrealist',Baschet:'baschetrealist',Tenis:'tenisrealist',Volei:'voleirealist','Tenis Picior':'fotbalrealist'}[court.sport];
         assert.equal(await courtCard.locator('img').getAttribute('src'),`assets/imagini/${asset}.png`);
         await assertPngLoaded(courtCard.locator('img'));
         await courtCard.click();
@@ -858,12 +864,36 @@ let checks = 0;
     }
     const mobile=await pageFor();
     await mobile.goto(base,{waitUntil:'networkidle'});
+    await mobile.evaluate(()=>window.spotivitySportAppearanceReady);
+    assert.equal(await mobile.locator('.home-sport-hero').count(),4);
+    assert.equal(await mobile.locator('.card-sport[data-sport]').count(),4);
+    assert.equal(await mobile.locator('#home-brand img').getAttribute('src'),'assets/imagini/avatar2.png');
+    await assertPngLoaded(mobile.locator('#home-brand img'));
+    const appearanceRows=await serial(async()=>{
+      await pg.exec('reset role');
+      return (await pg.query('select sport,icona_url,fundal_url from public.site_sporturi order by ordine')).rows;
+    });
+    assert.equal(appearanceRows.length,4);
+    for (const appearance of appearanceRows) {
+      const hero=mobile.locator(`.home-sport-hero[data-home-sport="${appearance.sport}"]`);
+      assert.equal(await hero.count(),1);
+      await hero.scrollIntoViewIfNeeded();
+      assert.equal(await hero.locator(`[data-sport-background="${appearance.sport}"]`).getAttribute('src'),appearance.fundal_url);
+      assert.equal(await hero.locator(`[data-sport-icon="${appearance.sport}"]`).getAttribute('src'),appearance.icona_url);
+      await assertPngLoaded(hero.locator('[data-sport-background]'));
+      await assertPngLoaded(hero.locator('[data-sport-icon]'));
+    }
+    assert.ok(requests.some(request=>request.path==='/rest/v1/site_sporturi' && request.method==='GET' && !request.person));
+    pass('the four stacked sport sections and realistic PNG icons use public Supabase appearance metadata with the avatar2 brand');
     for (const width of viewportWidths) {
       await mobile.setViewportSize({width,height:844});
-      const headerControls=await mobile.evaluate(()=>['btn-top-cont','filtru-oras-global','selector-limba'].map(id=>{
-        const box=document.getElementById(id).getBoundingClientRect();
-        return {id,left:box.left,right:box.right,top:box.top,bottom:box.bottom};
-      }));
+      await mobile.evaluate(()=>window.scrollTo(0,0));
+      await assertFits(mobile,'.home-main',`stacked homepage ${width}px`);
+      await assertFits(mobile,'#home-city-region',`homepage city and language controls ${width}px`);
+      const headerControls=await mobile.evaluate(()=>['home-brand','btn-top-cont','btn-mobile-menu','filtru-oras-global','selector-limba'].map(id=>{
+        const node=document.getElementById(id),box=node.getBoundingClientRect();
+        return {id,left:box.left,right:box.right,top:box.top,bottom:box.bottom,visible:!!(box.width && box.height && getComputedStyle(node).visibility!=='hidden')};
+      }).filter(control=>control.visible));
       if (screenshotDir) await mobile.screenshot({path:join(screenshotDir,`spotivity-public-header-${width}.png`)});
       assert.ok(headerControls.every(control=>control.left>=0 && control.right<=width+1),JSON.stringify({width,headerControls}));
       for (let i=0;i<headerControls.length;i++) for (let j=i+1;j<headerControls.length;j++) {
@@ -871,6 +901,79 @@ let checks = 0;
         assert.ok(Math.min(a.right,b.right)-Math.max(a.left,b.left)<=1 || Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top)<=1,
           JSON.stringify({width,overlapping:[a,b]}));
       }
+      assert.equal(await mobile.locator('#filtru-oras-global').isVisible(),true);
+      const desktopNav=mobile.locator('.home-desktop-nav');
+      const hamburger=mobile.locator('#btn-mobile-menu');
+      if (await hamburger.isVisible()) {
+        assert.equal(await desktopNav.isVisible(),false);
+        await hamburger.click();
+        const menu=mobile.locator('#home-mobile-menu');
+        await menu.waitFor({state:'visible'});
+        assert.equal(await hamburger.getAttribute('aria-expanded'),'true');
+        await assertFits(mobile,'#home-mobile-menu',`mobile sport menu ${width}px`);
+        const bounds=await menu.evaluate(node=>{
+          const box=node.getBoundingClientRect(),toggle=document.getElementById('btn-mobile-menu').getBoundingClientRect();
+          return {left:box.left,right:box.right,top:box.top,bottom:box.bottom,width:innerWidth,height:innerHeight,toggleBottom:toggle.bottom};
+        });
+        assert.ok(bounds.left<=0 && bounds.right>=bounds.width && bounds.top<=bounds.toggleBottom+1 && bounds.bottom>=bounds.height-1,JSON.stringify(bounds));
+        assert.deepEqual(await menu.locator('[data-sport-target]').evaluateAll(nodes=>nodes.map(node=>node.dataset.sportTarget).sort()),['Baschet','Fotbal','Tenis','Volei']);
+        assert.equal(await menu.locator('[data-profile-target]').count(),1);
+        await mobile.keyboard.press('Tab');
+        assert.equal(await mobile.evaluate(()=>document.activeElement.id==='btn-mobile-menu' || !!document.activeElement.closest('#home-mobile-menu')),true);
+        if (screenshotDir) await mobile.screenshot({path:join(screenshotDir,`spotivity-mobile-menu-${width}.png`)});
+        await mobile.keyboard.press('Escape');
+        await menu.waitFor({state:'hidden'});
+        assert.equal(await hamburger.getAttribute('aria-expanded'),'false');
+        assert.equal(await hamburger.evaluate(node=>document.activeElement===node),true);
+        await hamburger.click();
+        await menu.locator('[data-sport-target="Tenis"]').click();
+        await menu.waitFor({state:'hidden'});
+        await mobile.locator('#modal-terenuri').waitFor({state:'visible'});
+        assert.ok((await mobile.locator('#titlu-sport').innerText()).includes('Tenis'));
+        assert.equal(await mobile.locator('#filtru-nume').isVisible(),true);
+        assert.equal(await mobile.locator('#filtru-data').isVisible(),true);
+        assert.equal(await mobile.locator('#filtru-ora').isVisible(),true);
+        await mobile.locator('#inchide-terenuri').click();
+        await hamburger.click();
+        await menu.locator('[data-profile-target]').click();
+        await menu.waitFor({state:'hidden'});
+        await mobile.locator('#modal-auth').waitFor({state:'visible'});
+        await mobile.keyboard.press('Escape');
+      } else {
+        assert.equal(await desktopNav.isVisible(),true);
+        assert.deepEqual(await desktopNav.locator('[data-sport-target]').evaluateAll(nodes=>nodes.map(node=>node.dataset.sportTarget).sort()),['Baschet','Fotbal','Tenis','Volei']);
+        await desktopNav.locator('[data-sport-target="Tenis"]').click();
+        await mobile.locator('#modal-terenuri').waitFor({state:'visible'});
+        assert.ok((await mobile.locator('#titlu-sport').innerText()).includes('Tenis'));
+        assert.equal(await mobile.locator('#filtru-nume').isVisible(),true);
+        assert.equal(await mobile.locator('#filtru-data').isVisible(),true);
+        assert.equal(await mobile.locator('#filtru-ora').isVisible(),true);
+        await mobile.locator('#inchide-terenuri').click();
+      }
+      pass(`homepage navigation and sport menu fit ${width}px, use the existing sport/profile dialogs and preserve all chooser filters`);
+      const lowerSport=mobile.locator('.card-sport[data-sport="Baschet"]');
+      await lowerSport.evaluate(node=>window.scrollTo({top:node.closest('.home-sport-hero').offsetTop,behavior:'instant'}));
+      await lowerSport.scrollIntoViewIfNeeded();
+      const originalScroll=await mobile.evaluate(()=>window.scrollY);
+      assert.ok(originalScroll>0,`The stacked homepage must scroll to basketball at ${width}px`);
+      await lowerSport.click();
+      await mobile.locator('#modal-terenuri').waitFor({state:'visible'});
+      await mobile.waitForFunction(()=>document.body.classList.contains('fara-scroll'));
+      await assertBackdrop(mobile,'modal-terenuri');
+      await mobile.mouse.wheel(0,300);
+      await mobile.waitForTimeout(100);
+      assert.ok(Math.abs((await mobile.evaluate(()=>window.scrollY))-originalScroll)<=1,`Background scroll moved while the chooser was open at ${width}px`);
+      await mobile.keyboard.press('Escape');
+      await mobile.locator('#modal-terenuri').waitFor({state:'hidden'});
+      await mobile.waitForFunction(()=>!document.body.classList.contains('fara-scroll'));
+      assert.ok(Math.abs((await mobile.evaluate(()=>window.scrollY))-originalScroll)<=1,`Closing the chooser changed the homepage scroll position at ${width}px`);
+      assert.equal(await mobile.locator('#fundal-imagine-sport').evaluate(node=>node.style.opacity),'0');
+      await mobile.mouse.move(width/2,600);
+      await mobile.mouse.wheel(0,250);
+      await mobile.waitForFunction(previous=>window.scrollY>previous,originalScroll,{timeout:3000});
+      assert.ok((await mobile.evaluate(()=>window.scrollY))>originalScroll,`Closing the chooser must restore homepage scrolling at ${width}px`);
+      pass(`stacked homepage scroll remains locked under the full blurred chooser and returns to its original position at ${width}px`);
+      await mobile.evaluate(()=>window.scrollTo(0,0));
       await mobile.locator('#btn-top-cont').click();
       await mobile.locator('#modal-auth').waitFor({state:'visible'});
       await mobile.locator('#tab-register').click();
@@ -884,6 +987,33 @@ let checks = 0;
       await mobile.locator('#modal-auth').waitFor({state:'hidden'});
       pass(`signup has spaced fields and a full-viewport blurred backdrop at ${width}px; the dialog opens and closes`);
     }
+    await serial(async()=>{
+      await pg.exec('reset role');
+      await pg.query("update public.site_sporturi set icona_url='assets/imagini/avatar2.png',fundal_url='assets/imagini/RealistVolei.png' where sport='Fotbal'");
+    });
+    const configuredAppearance=await pageFor();
+    await configuredAppearance.goto(base,{waitUntil:'networkidle'});
+    await configuredAppearance.evaluate(()=>window.spotivitySportAppearanceReady);
+    assert.equal(await configuredAppearance.locator('[data-sport-icon="Fotbal"]').getAttribute('src'),'assets/imagini/avatar2.png');
+    assert.equal(await configuredAppearance.locator('[data-sport-background="Fotbal"]').getAttribute('src'),'assets/imagini/RealistVolei.png');
+    await configuredAppearance.locator('.card-sport[data-sport="Fotbal"]').click();
+    await configuredAppearance.locator('#modal-terenuri').waitFor({state:'visible'});
+    assert.match(await configuredAppearance.locator('#modal-terenuri .modal-continut').evaluate(node=>getComputedStyle(node).backgroundImage),/RealistVolei\.png/);
+    assert.equal(await configuredAppearance.locator('#filtru-nume').isVisible(),true);
+    pass('a configured sport appearance changes the homepage and its booking dialog through real public SDK reads');
+    const unavailableAppearance=await pageFor();
+    await unavailableAppearance.context().route(url=>url.hostname===host && url.pathname.endsWith('/site_sporturi'),route=>route.fulfill({
+      status:503,contentType:'application/json',body:JSON.stringify({message:'Fixture public settings temporarily unavailable'})
+    }));
+    await unavailableAppearance.goto(base,{waitUntil:'networkidle'});
+    await unavailableAppearance.evaluate(()=>window.spotivitySportAppearanceReady);
+    assert.equal(await unavailableAppearance.locator('[data-sport-icon="Fotbal"]').getAttribute('src'),'assets/imagini/fotbalrealist.png');
+    assert.equal(await unavailableAppearance.locator('[data-sport-background="Fotbal"]').getAttribute('src'),'assets/imagini/RealistFotbal.png');
+    await unavailableAppearance.locator('.card-sport[data-sport="Fotbal"]').click();
+    await unavailableAppearance.locator('#modal-terenuri').waitFor({state:'visible'});
+    await unavailableAppearance.locator('#filtru-nume').fill('Court A');
+    await assertCourtNames(unavailableAppearance,['Court A']);
+    pass('temporary appearance settings failure retains bundled realistic images and a working court chooser');
     assert.deepEqual(browserErrors,[]);
     for (const context of contexts) await context.close();
     console.log(`\n${checks} browser integration checks passed against isolated PostgreSQL.`);

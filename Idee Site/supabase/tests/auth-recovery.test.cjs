@@ -36,6 +36,12 @@ let passed=0;
     }
     if(u.pathname.startsWith('/rest/v1/')){
      assert.equal(r.method(),'GET','Unexpected fixture business write');
+     if(u.pathname.endsWith('/site_sporturi'))return reply(200,[
+      {sport:'Fotbal',icona_url:'assets/imagini/fotbalrealist.png',fundal_url:'assets/imagini/RealistFotbal.png',ordine:1},
+      {sport:'Baschet',icona_url:'assets/imagini/baschetrealist.png',fundal_url:'assets/imagini/RealisBaschet.png',ordine:2},
+      {sport:'Tenis',icona_url:'assets/imagini/tenisrealist.png',fundal_url:'assets/imagini/RealistTenis.png',ordine:3},
+      {sport:'Volei',icona_url:'assets/imagini/voleirealist.png',fundal_url:'assets/imagini/RealistVolei.png',ordine:4}
+     ]);
      if(u.pathname.endsWith('/terenuri'))return reply(200,[{id:1,nume:'Court A',sport:'Fotbal',pret:100,poza:null,este_activ:true,are_chat:true,oras:'Test',ore_rezervabile:['12:00']}]);
      return reply(200,[]);
     }
