@@ -1,0 +1,144 @@
+/* Warm gold accents shared by the public site and admin. Status colours stay intact. */
+:root {
+    --spotivity-gold: #d8b66a;
+    --spotivity-gold-light: #edca82;
+    --spotivity-cream: #f7f3e8;
+    --spotivity-muted: #c9c0b2;
+    --spotivity-gold-border: rgba(216, 182, 106, .28);
+    --spotivity-panel: #211e18;
+}
+
+html,
+body.pagina-publica,
+body.admin-page { background-color: #100f0c; color: var(--spotivity-cream); }
+
+.pagina-publica .home-shell { background: #050504; color: var(--spotivity-cream); }
+.pagina-publica .home-city-region {
+    background: linear-gradient(110deg, #2c2518, #201e18);
+    box-shadow: inset 0 -1px 0 var(--spotivity-gold-border);
+}
+.pagina-publica .home-city-copy { color: #e3d8c2; }
+.pagina-publica #filtru-oras-global {
+    background: #373022;
+    border-color: var(--spotivity-gold-border);
+    color: var(--spotivity-cream);
+}
+.pagina-publica .home-city-chevron { stroke: var(--spotivity-gold); }
+.pagina-publica .home-header {
+    background: rgba(24, 21, 15, .96);
+    box-shadow: inset 0 -1px 0 var(--spotivity-gold-border);
+}
+.pagina-publica .home-brand img { filter: drop-shadow(0 0 8px rgba(216, 182, 106, .2)); }
+.pagina-publica .home-desktop-nav button,
+.pagina-publica .home-profile-button,
+.pagina-publica .home-search-button { color: #e7dcc5; }
+.pagina-publica .home-desktop-nav button:hover,
+.pagina-publica .home-profile-button:hover,
+.pagina-publica .home-search-button:hover { color: var(--spotivity-gold-light); }
+.pagina-publica .home-search-button svg { stroke: var(--spotivity-gold); }
+.pagina-publica .home-menu-toggle span { background: var(--spotivity-gold-light); }
+.pagina-publica .home-mobile-menu:not([hidden]) { background: #19160f; }
+.pagina-publica .home-mobile-links button { color: var(--spotivity-cream); }
+.pagina-publica .home-mobile-links button:hover { color: var(--spotivity-gold-light); }
+
+.pagina-publica .home-sport-hero {
+    background: radial-gradient(ellipse at 50% 0%, rgba(164, 116, 38, .15), transparent 50%), #000;
+    border-bottom-color: #282114;
+}
+.pagina-publica .home-sport-heading h1,
+.pagina-publica .home-sport-heading h2 { color: #f8edcf; }
+.pagina-publica .home-hero-subtitle { color: #ded6c6; }
+.pagina-publica .home-reserve-button,
+.pagina-publica .sports-bases-action:not(.sports-bases-share) {
+    background: linear-gradient(135deg, #edca82, #cfaa58);
+    border-color: var(--spotivity-gold);
+    color: #20190f;
+    font-weight: 600;
+    box-shadow: 0 4px 22px rgba(207, 170, 88, .14);
+}
+.pagina-publica .home-reserve-button:hover,
+.pagina-publica .sports-bases-action:not(.sports-bases-share):hover {
+    background: var(--spotivity-gold-light);
+    border-color: var(--spotivity-gold-light);
+    color: #20190f;
+    box-shadow: 0 4px 24px rgba(207, 170, 88, .22);
+}
+.pagina-publica .home-court-card,
+.pagina-publica .sports-base-card,
+.pagina-publica .sports-base-court {
+    background: linear-gradient(145deg, #242017, #181610);
+    border-color: var(--spotivity-gold-border);
+    color: var(--spotivity-cream);
+}
+.pagina-publica .home-court-card:hover,
+.pagina-publica .sports-base-card:hover { background: #2b2519; border-color: #b89b5e; }
+.pagina-publica .sports-base-card::after { border-color: var(--spotivity-gold-light); }
+.pagina-publica .home-court-meta,
+.pagina-publica .home-base-summary,
+.pagina-publica .sports-base-count,
+.pagina-publica .home-discovery-message { color: var(--spotivity-muted); }
+.pagina-publica .home-court-price,
+.pagina-publica .sports-base-city,
+.pagina-publica .sports-base-court-sport,
+.pagina-publica .sports-bases-back,
+.pagina-publica .sports-bases-status { color: var(--spotivity-gold-light); }
+.pagina-publica .home-section-heading h2 { color: #f1d797; }
+.pagina-publica .sports-bases-share {
+    background: rgba(216, 182, 106, .06);
+    border-color: var(--spotivity-gold);
+    color: var(--spotivity-gold-light);
+}
+.pagina-publica .sports-bases-share:hover { background: rgba(216, 182, 106, .14); }
+.pagina-publica .home-footer { background: #1b1812; box-shadow: inset 0 1px 0 var(--spotivity-gold-border); }
+.pagina-publica #btn-legal { color: var(--spotivity-muted); }
+.pagina-publica .home-legal-link { color: var(--spotivity-gold-light); }
+
+:is(.pagina-publica, .admin-page) .modal-continut {
+    background-color: rgba(27, 23, 16, .94);
+    border-color: var(--spotivity-gold-border);
+    color: var(--spotivity-cream);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .7), 0 0 28px rgba(216, 182, 106, .06);
+}
+:is(.pagina-publica, .admin-page) .titlu-modal { color: #f8edcf; }
+:is(.pagina-publica, .admin-page) .taburi-auth { border-color: var(--spotivity-gold-border); background: rgba(216, 182, 106, .05); }
+:is(.pagina-publica, .admin-page) .tab-auth.activ { background: var(--spotivity-gold); color: #20190f; }
+:is(.pagina-publica, .admin-page) .buton-rezervare:not(:disabled):not([style*="background"]) {
+    background: linear-gradient(135deg, #edca82, #cfaa58);
+    color: #20190f;
+    box-shadow: 0 4px 18px rgba(216, 182, 106, .12);
+}
+:is(.pagina-publica, .admin-page) .buton-rezervare:not(:disabled):not([style*="background"]):hover { background: var(--spotivity-gold-light); }
+.pagina-publica #inapoi-la-profil { color: var(--spotivity-cream); }
+:is(.pagina-publica, .admin-page) :is(.btn-cont, .buton-locatie, .buton-inapoi) {
+    background: rgba(216, 182, 106, .07);
+    border-color: var(--spotivity-gold-border);
+    color: var(--spotivity-cream);
+}
+:is(.pagina-publica, .admin-page) :is(.btn-cont, .buton-locatie, .buton-inapoi):hover {
+    background: rgba(216, 182, 106, .16);
+    color: var(--spotivity-gold-light);
+}
+:is(.pagina-publica, .admin-page) .grup-input input,
+.pagina-publica #home-search-input {
+    background: rgba(12, 10, 7, .65);
+    border-color: var(--spotivity-gold-border);
+    color: var(--spotivity-cream);
+}
+:is(.pagina-publica, .admin-page) .grup-input input:focus { border-color: var(--spotivity-gold); }
+.pagina-publica #btn-forgot-password { color: var(--spotivity-gold-light) !important; }
+:is(.pagina-publica, .admin-page) :is(button, a, input, select, textarea):focus-visible {
+    outline-color: var(--spotivity-gold-light) !important;
+}
+
+.admin-page .admin-shell {
+    background: #100f0c;
+    background-image: radial-gradient(ellipse at 80% 0%, rgba(177, 126, 40, .18), transparent 60%);
+    animation: none;
+}
+.admin-page #sectiune-login { border-color: var(--spotivity-gold-border) !important; }
+.admin-page .admin-menu-card,
+.admin-page .admin-base-card { background: var(--spotivity-panel); border-color: var(--spotivity-gold-border); }
+.admin-page .admin-menu-card:hover,
+.admin-page .admin-base-card:hover { background: #2b2519; border-color: #b89b5e; }
+.admin-page .admin-base-card small { color: var(--spotivity-gold-light); }
+.admin-page .ore-teren-grid input[type="checkbox"] { accent-color: var(--spotivity-gold); }
