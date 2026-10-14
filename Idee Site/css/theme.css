@@ -38,7 +38,7 @@ body.admin-page { background-color: #100f0c; color: var(--spotivity-cream); }
 .pagina-publica .home-search-button svg { stroke: var(--spotivity-gold); }
 .pagina-publica .home-menu-toggle span { background: var(--spotivity-gold-light); }
 .pagina-publica .home-mobile-menu:not([hidden]) { background: #19160f; }
-.pagina-publica .home-mobile-links button { color: var(--spotivity-cream); }
+.pagina-publica .home-mobile-links button { color: var(--spotivity-gold); }
 .pagina-publica .home-mobile-links button:hover { color: var(--spotivity-gold-light); }
 
 .pagina-publica .home-sport-hero {

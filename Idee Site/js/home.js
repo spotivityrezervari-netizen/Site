@@ -4,19 +4,19 @@
 
     const copy = {
         ro: {
-            home_alege_oras: 'Alege orașul și găsește terenul potrivit.', home_profil: 'Profilul meu',
+            home_alege_oras: 'Alege orașul și găsește terenul potrivit.', home_profil: 'Profilul meu', home_vezi_baza: 'Vezi baza sportivă',
             home_rezerva: 'Rezervă un teren', home_vezi_terenuri: 'Vezi terenurile',
             home_subtitlu_fotbal: 'Jocul începe aici.', home_subtitlu_baschet: 'Fiecare aruncare contează.',
             home_subtitlu_tenis: 'Următorul punct e al tău.', home_subtitlu_volei: 'Adună echipa. Intră în joc.'
         },
         hu: {
-            home_alege_oras: 'Válassz várost, és találd meg a megfelelő pályát.', home_profil: 'Profilom',
+            home_alege_oras: 'Válassz várost, és találd meg a megfelelő pályát.', home_profil: 'Profilom', home_vezi_baza: 'Sportközpont megtekintése',
             home_rezerva: 'Pálya foglalása', home_vezi_terenuri: 'Pályák megtekintése',
             home_subtitlu_fotbal: 'Itt kezdődik a játék.', home_subtitlu_baschet: 'Minden dobás számít.',
             home_subtitlu_tenis: 'Tiéd a következő pont.', home_subtitlu_volei: 'Hívd a csapatod. Játsszatok együtt.'
         },
         en: {
-            home_alege_oras: 'Choose your city and find your next court.', home_profil: 'My profile',
+            home_alege_oras: 'Choose your city and find your next court.', home_profil: 'My profile', home_vezi_baza: 'View sports centre',
             home_rezerva: 'Book a court', home_vezi_terenuri: 'Explore courts',
             home_subtitlu_fotbal: 'The game starts here.', home_subtitlu_baschet: 'Make every shot count.',
             home_subtitlu_tenis: 'The next point is yours.', home_subtitlu_volei: 'Bring your team. Join the game.'
@@ -90,7 +90,7 @@
         });
         document.querySelectorAll('[data-bases-target]').forEach(button => {
             button.addEventListener('click', () => {
-                closeMenu(false);
+                closeMenu();
                 window.openSportsBases?.();
             });
         });

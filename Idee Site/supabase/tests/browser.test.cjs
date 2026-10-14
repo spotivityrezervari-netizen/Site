@@ -1073,7 +1073,7 @@ let checks = 0;
     });
     await basesPage.goto(base,{waitUntil:'networkidle'});
     await basesPage.evaluate(()=>window.spotivityDiscoveryReady);
-    assert.equal(await basesPage.locator('.home-header [data-bases-target]').count(),0);
+    assert.equal(await basesPage.locator('.home-nav [data-bases-target]').count(),0);
     assert.equal(await basesPage.locator('.home-explore-button').count(),0);
     for (const sport of ['Fotbal','Baschet','Tenis','Volei']) {
       assert.equal(await basesPage.locator(`[data-home-sport="${sport}"] .home-hero-actions button`).count(),1);

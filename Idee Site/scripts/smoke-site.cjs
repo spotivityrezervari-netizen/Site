@@ -103,7 +103,7 @@ const siteOrigin = siteBaseUrl.origin;
     console.log('PASS public sports bases: live directory, description, share and associated court controls');
 
     await page.evaluate(() => window.spotivityDiscoveryReady);
-    assert.equal(await page.locator('.home-header [data-bases-target]').count(), 0);
+    assert.equal(await page.locator('.home-nav [data-bases-target]').count(), 0);
     assert.equal(await page.locator('.home-explore-button').count(), 0);
     assert.equal(await page.locator('.home-hero-actions button').count(), 4);
     assert.ok(await page.locator('#home-bases-section').isVisible());
