@@ -30,6 +30,7 @@ let checks = 0;
     await pg.exec(readFileSync(join(__dirname,'../005_sport_appearance.sql'),'utf8'));
     await pg.exec(readFileSync(join(__dirname,'../006_sports_bases.sql'),'utf8'));
     await pg.exec(readFileSync(join(__dirname,'../007_completed_booking_cancellation.sql'),'utf8'));
+    await pg.exec(readFileSync(join(__dirname,'../008_profile_edit.sql'),'utf8'));
     await pg.exec("update public.terenuri set poza='assets/imagini/avatar2.png'");
     const tomorrow=(await pg.query("select ((now() at time zone 'Europe/Bucharest')::date+1)::text as d")).rows[0].d;
     let queue=Promise.resolve();
@@ -67,7 +68,7 @@ let checks = 0;
       if (chatGate && pendingRequest.method()==='GET' && pendingUrl.pathname.endsWith('/rezervari')
         && pendingRequest.frame().page()===chatGate.target
         && pendingRequest.headers()['x-spotivity-fixture-chat-send']==='1'
-        && pendingUrl.searchParams.get('email_client')==='eq.alice@example.test'
+        && pendingUrl.searchParams.get('client_user_id')===`eq.${uid(1)}`
         && pendingUrl.searchParams.get('teren')==='eq.Court A' && pendingUrl.searchParams.get('stare')==='eq.activa') {
         const gate=chatGate;chatGate=null;gate.enter();await gate.wait;
       }

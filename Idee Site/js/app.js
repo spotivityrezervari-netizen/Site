@@ -289,17 +289,46 @@ document.addEventListener('DOMContentLoaded', async () => {
     let loggedInUser = null;
     let authGeneration = 0;
     localStorage.removeItem('user_session');
-    async function syncAuthUser(user) {
+    function renderProfileUser() {
+        const user = loggedInUser;
+        document.getElementById('profil-nume').textContent = user?.nume || '';
+        document.getElementById('profil-email').textContent = user?.email || '';
+        document.getElementById('profil-telefon').textContent = user?.telefon || '-';
+        const pending = document.getElementById('profil-email-pending');
+        if (pending) {
+            pending.hidden = !user?.newEmail || user.newEmail === user.email;
+            const pendingCopy = window.dict?.[window.lang]?.profil_edit_pending || 'Schimbarea adresei către {email} așteaptă confirmarea.';
+            pending.textContent = pending.hidden ? '' : pendingCopy.replace('{email}', user.newEmail);
+        }
+    }
+    window.getSpotivityProfileUser = () => loggedInUser ? { ...loggedInUser } : null;
+    window.refreshSpotivityProfile = async () => {
+        const capturedId = loggedInUser?.id;
+        if (!capturedId) throw new Error('Conectează-te din nou.');
+        const { data, error } = await db.auth.getUser();
+        if (error || !data.user || capturedId !== data.user.id || loggedInUser?.id !== capturedId) throw new Error('Sesiunea s-a schimbat. Conectează-te din nou.');
+        const synced = await syncAuthUser(data.user, true);
+        if (!synced) throw new Error('Profilul nu a putut fi reîncărcat. Încearcă din nou.');
+        if (loggedInUser?.id !== data.user.id) throw new Error('Sesiunea s-a schimbat. Conectează-te din nou.');
+        return window.getSpotivityProfileUser();
+    };
+    window.addEventListener('spotivity:language', renderProfileUser);
+    async function syncAuthUser(user, requireProfile = false) {
         const generation = ++authGeneration;
-        const { data: profile } = user
+        const { data: profile, error: profileError } = user
             ? await db.from('clienti').select('nume,telefon').eq('user_id', user.id).maybeSingle()
-            : { data: null };
-        if (generation !== authGeneration) return;
-        loggedInUser = user ? { id: user.id, email: user.email, nume: profile?.nume || user.email.split('@')[0], telefon: profile?.telefon || '-' } : null;
+            : { data: null, error: null };
+        if (generation !== authGeneration) return false;
+        if (requireProfile && (profileError || !profile)) throw new Error('Profilul nu a putut fi reîncărcat. Încearcă din nou.');
+        loggedInUser = user ? { id: user.id, email: user.email, newEmail: user.new_email || '', nume: profile?.nume || user.email.split('@')[0], telefon: profile?.telefon || '-' } : null;
+        renderProfileUser();
+        window.dispatchEvent(new CustomEvent('spotivity:profile-user', { detail: { user: window.getSpotivityProfileUser() } }));
         if (typeof window.actualizeazaButonCont === 'function') window.actualizeazaButonCont();
+        return true;
     }
     let terenuriDinDB = [];
     let filterRequest = 0, hoursRequest = 0, bookingContextGeneration = 0;
+    let historyRequest = 0;
     let bookingInFlight = false, hoursLoading = false;
     let baseCourtRequest = 0;
     let sportCurent = "", terenCurent = "", pretTerenCurent = 0, pretMingeCurent = 15;
@@ -350,13 +379,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (btnTopCont) {
         btnTopCont.addEventListener('click', async () => {
             if (loggedInUser) {
+                const owner = loggedInUser.id;
+                const refreshStatus = document.getElementById('profil-refresh-status');
+                if (refreshStatus) { refreshStatus.hidden = true; refreshStatus.textContent = ''; }
+                try {
+                    await window.refreshSpotivityProfile();
+                } catch {
+                    if (loggedInUser?.id !== owner) return;
+                    if (refreshStatus) {
+                        refreshStatus.textContent = window.dict?.[window.lang]?.profil_edit_profile_refresh_failed
+                            || 'Datele profilului nu au putut fi reîncărcate. Încearcă din nou.';
+                        refreshStatus.hidden = false;
+                    }
+                }
+                if (loggedInUser?.id !== owner) return;
                 if(document.getElementById('profil-nume')) document.getElementById('profil-nume').innerText = loggedInUser.nume || (window.dict[window.lang]['nume_nesetat'] || 'Nume Nesetat');
                 document.getElementById('profil-email').innerText = loggedInUser.email;
                 if(document.getElementById('profil-telefon')) document.getElementById('profil-telefon').innerText = loggedInUser.telefon || "-";
                 
                 const nrActiveSpan = document.getElementById('nr-active');
                 if (nrActiveSpan) {
-                    const { data } = await db.from('rezervari').select('data_str, ora, stare, timestamp_start').eq('email_client', loggedInUser.email.trim()).neq('stare', 'anulata');
+                    const { data } = await db.from('rezervari').select('data_str, ora, stare, timestamp_start').eq('client_user_id', owner).neq('stare', 'anulata');
+                    if (loggedInUser?.id !== owner) return;
                     let nrReale = 0;
                     if (data) {
                         data.forEach(r => {
@@ -365,6 +409,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                     nrActiveSpan.innerText = nrReale;
                 }
+                if (loggedInUser?.id !== owner) return;
                 document.getElementById('modal-profil').style.display = 'flex';
             } else document.getElementById('modal-auth').style.display = 'flex';
         });
@@ -511,6 +556,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     async function deschideIstoric(tip) {
+        if (!loggedInUser) return;
+        const owner = loggedInUser.id, request = ++historyRequest;
         window.tipIstoricDeschis = tip;
         document.getElementById('modal-profil').style.display = 'none';
         document.getElementById('modal-lista-rezervari').style.display = 'flex';
@@ -519,7 +566,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const container = document.getElementById('container-rezervari');
         container.innerHTML = `<p style="color:white; text-align:center;">⏳</p>`;
 
-        const { data, error } = await db.from('rezervari').select('*').ilike('email_client', loggedInUser.email.trim());
+        const { data, error } = await db.from('rezervari').select('*').eq('client_user_id', owner);
+        if (loggedInUser?.id !== owner || request !== historyRequest) return;
         container.innerHTML = "";
         
         if (!data || data.length === 0) {
@@ -1114,7 +1162,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     let chatClientRealtime = null;
     let chatClientTerenCurent = null; // Stochează terenul selectat curent pentru conversație
     let chatClientMesajeToate = []; // Toate mesajele clientului
+    let chatRealtimeGeneration = 0, chatMessageRequest = 0, chatListRequest = 0;
     const avertismentChatClient = document.getElementById('chat-client-avertisment');
+
+    // A confirmed email change keeps the same UUID. Refresh mutable identity
+    // only after the Auth callback has released its lock and chat is ready.
+    let clientIdentity = loggedInUser ? { id: loggedInUser.id, email: loggedInUser.email } : null;
+    window.addEventListener('spotivity:profile-user', event => {
+        const user = event.detail?.user || null;
+        if (clientIdentity?.id === user?.id && clientIdentity?.email === user?.email) return;
+        clientIdentity = user ? { id: user.id, email: user.email } : null;
+        bookingContextGeneration++;
+        historyRequest++;
+        chatRealtimeGeneration++;
+        chatMessageRequest++;
+        chatListRequest++;
+        if (!user) return;
+        const owner = user.id, email = user.email;
+        inputChatClient.disabled = true;
+        btnTrimiteChatClient.disabled = true;
+        setTimeout(async () => {
+            if (loggedInUser?.id !== owner || loggedInUser.email !== email) return;
+            if (document.getElementById('modal-lista-rezervari').style.display === 'flex' && window.tipIstoricDeschis) {
+                deschideIstoric(window.tipIstoricDeschis);
+            }
+            await initializareRealtimeChatClient();
+        }, 0);
+    });
 
     btnVeziChat?.addEventListener('click', () => {
         document.getElementById('modal-profil').style.display = 'none';
@@ -1128,14 +1202,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     async function initializareRealtimeChatClient() {
-        if (chatClientRealtime) db.removeChannel(chatClientRealtime);
-        if (!loggedInUser) return;
+        const generation = ++chatRealtimeGeneration, owner = loggedInUser?.id;
+        const previousChannel = chatClientRealtime;
+        chatClientRealtime = null;
+        if (previousChannel) await db.removeChannel(previousChannel);
+        if (!owner || loggedInUser?.id !== owner || generation !== chatRealtimeGeneration) return;
         
-        // Preluare inițială pentru bulină
-        await incarcaMesajeClient(false); // Nu randăm interfața, doar actualizăm datele interne și bulina
+        // Refresh the unread badge and any open conversation for this identity.
+        await incarcaMesajeClient(modalChatClient.style.display === 'flex');
+        if (loggedInUser?.id !== owner || generation !== chatRealtimeGeneration) return;
         
-        chatClientRealtime = db.channel('mesaje_chat_client')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'mesaje_chat', filter: `email_client=eq.${loggedInUser.email}` }, payload => {
+        chatClientRealtime = db.channel(`mesaje_chat_client_${owner}_${generation}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'mesaje_chat', filter: `client_user_id=eq.${owner}` }, payload => {
+                if (loggedInUser?.id !== owner || generation !== chatRealtimeGeneration) return;
                 // Dacă suntem cu modalul deschis, re-randăm complet
                 if (modalChatClient && modalChatClient.style.display === 'flex') {
                     incarcaMesajeClient();
@@ -1155,14 +1234,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function incarcaMesajeClient(randeaza = true) {
         if (!loggedInUser) return;
-        const owner = loggedInUser.id;
+        const owner = loggedInUser.id, request = ++chatMessageRequest;
         
         const { data, error } = await db.from('mesaje_chat')
             .select('*')
-            .eq('email_client', loggedInUser.email)
+            .eq('client_user_id', owner)
             .order('created_at', { ascending: true });
 
-        if (loggedInUser?.id !== owner) return;
+        if (loggedInUser?.id !== owner || request !== chatMessageRequest) return;
         if (error) { console.error("Eroare chat: ", error); return; }
         chatClientMesajeToate = data || [];
         
@@ -1179,7 +1258,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function randeazaListaConversatiiClient() {
         if (!loggedInUser) return;
-        const owner = loggedInUser.id;
+        const owner = loggedInUser.id, request = ++chatListRequest;
         const listaSide = document.getElementById('chat-client-lista-terenuri');
         if (!listaSide) return;
         
@@ -1187,15 +1266,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         const terenuriCuMesaje = [...new Set(chatClientMesajeToate.map(m => m.teren))];
         
         // Obținem terenurile unde clientul are rezervare (pentru a-i permite să deschidă chat nou și acolo)
-        const { data: rezervari } = await db.from('rezervari').select('teren').eq('email_client', loggedInUser.email);
-        if (loggedInUser?.id !== owner) return;
+        const { data: rezervari } = await db.from('rezervari').select('teren').eq('client_user_id', owner);
+        if (loggedInUser?.id !== owner || request !== chatListRequest) return;
         const terenuriRezervate = rezervari ? [...new Set(rezervari.map(r => r.teren))] : [];
         
         const toateTerenurileClient = [...new Set([...terenuriCuMesaje, ...terenuriRezervate])];
         
         // VERIFICARE: Aducem setările terenurilor ca să vedem unde e oprit chat-ul
         const { data: infoTerenuri } = await db.from('terenuri').select('nume, are_chat');
-        if (loggedInUser?.id !== owner) return;
+        if (loggedInUser?.id !== owner || request !== chatListRequest) return;
         const terenuriFaraChat = infoTerenuri ? infoTerenuri.filter(t => t.are_chat === false).map(t => t.nume) : [];
 
         // Eliminăm din listă terenurile unde chat-ul a fost oprit de admin
@@ -1284,15 +1363,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Bulina se va actualiza via Realtime sau la următorul refresh
         }
 
-        if (loggedInUser?.id !== owner || chatClientTerenCurent !== teren) return;
+        if (loggedInUser?.id !== owner || loggedInUser.email !== email || chatClientTerenCurent !== teren) return;
         await actualizeazaDreptulChatClient(teren, owner, email);
     }
 
     async function actualizeazaDreptulChatClient(teren, owner = loggedInUser?.id, email = loggedInUser?.email) {
         if (!owner) return;
         const {data: bookings, error} = await db.from('rezervari').select('*')
-            .eq('email_client', email).eq('teren', teren).eq('stare','activa');
-        if (loggedInUser?.id !== owner || chatClientTerenCurent !== teren) return;
+            .eq('client_user_id', owner).eq('teren', teren).eq('stare','activa');
+        if (loggedInUser?.id !== owner || loggedInUser.email !== email || chatClientTerenCurent !== teren) return;
         const allowed = !error && bookings?.some(r => !window.esteRezervareTrecuta(r.data_str,r.ora,r.timestamp_start));
         inputChatClient.disabled = !allowed;
         btnTrimiteChatClient.disabled = !allowed;
@@ -1307,13 +1386,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const owner = loggedInUser.id;
         const email = loggedInUser.email;
         const court = chatClientTerenCurent;
-        const stillCurrent = () => loggedInUser?.id === owner && chatClientTerenCurent === court
+        const stillCurrent = () => loggedInUser?.id === owner && loggedInUser.email === email && chatClientTerenCurent === court
             && document.getElementById('modal-chat-client').style.display !== 'none';
         inputChatClient.disabled = true;
         btnTrimiteChatClient.disabled = true;
         try {
             const {data: bookings, error: bookingError} = await db.from('rezervari')
-                .select('*').eq('email_client', email).eq('teren', court).eq('stare', 'activa');
+                .select('*').eq('client_user_id', owner).eq('teren', court).eq('stare', 'activa');
             if (!stillCurrent()) return;
             if (bookingError) throw bookingError;
             if (!bookings?.some(r => !window.esteRezervareTrecuta(r.data_str, r.ora, r.timestamp_start))) {
@@ -1405,12 +1484,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     db.auth.onAuthStateChange((event, session) => {
-        if (['SIGNED_IN','SIGNED_OUT','USER_UPDATED'].includes(event)) {
+        if (['SIGNED_IN','SIGNED_OUT','USER_UPDATED','TOKEN_REFRESHED'].includes(event)) {
             if (!session || (loggedInUser && loggedInUser.id !== session.user?.id)) {
                 authGeneration++;
                 loggedInUser = null;
+                renderProfileUser();
+                window.dispatchEvent(new CustomEvent('spotivity:profile-user', { detail: { user: null } }));
                 for (const id of ['modal-profil','modal-lista-rezervari','modal-chat-client']) document.getElementById(id).style.display = 'none';
-                for (const id of ['chat-client-lista-terenuri','chat-client-mesaje','container-lista-rezervari']) document.getElementById(id)?.replaceChildren();
+                for (const id of ['chat-client-lista-terenuri','chat-client-mesaje','container-rezervari']) document.getElementById(id)?.replaceChildren();
                 inputChatClient.value = '';
                 inputChatClient.disabled = true;
                 btnTrimiteChatClient.disabled = true;

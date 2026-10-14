@@ -287,3 +287,13 @@ Baza publică trebuie să fie activă și să conțină cel puțin un teren acti
 În admin: **Baze sportive → selectează baza → Terenurile bazei** pentru terenuri existente; **Adaugă Teren → Baza sportivă** pentru unul nou. **Cine poate edita descrierea** acordă accesul unui admin obișnuit. Descrierile au maximum 2.000 de caractere și sunt afișate ca text. Partajarea păstrează numai parametrul `baza`, fără tokenuri Auth.
 
 Testele relevante sunt `sports-bases.test.cjs` și `completed-booking.test.cjs`, fiecare cu și fără `SPOTIVITY_TEST_INTEGER_IDS=1`, plus integrarea browser. Detaliile și starea aplicării în proiectul existent sunt în [raportul curent](../PRODUCTION_REVIEW.md).
+
+## 008 — profil editabil și email confirmat
+
+Migrarea 008 este aplicată în proiectul existent. Cele trei profiluri lipsă au fost create; contactele existente, rezervările, chatul, rolurile și permisiunile bazelor au rămas neschimbate. SMTP propriu nu este încă configurat pentru livrarea confirmărilor către utilizatori publici.
+
+Aplică `008_profile_edit.sql` după 007. Această migrare validează numai numele și telefonul care se modifică, impune UUID-ul propriu inclusiv pentru administratorii conectați și păstrează sincronizarea controlată a emailului prin triggerul Supabase Auth. Profilurile istorice care lipsesc sunt create din conturile Auth, fără rescrierea contactelor existente; coliziunile de email opresc tranzacția pentru verificarea proprietarului.
+
+Schimbarea emailului se solicită din frontend prin `auth.updateUser({email}, {emailRedirectTo: siteHomeUrl()})`. Păstrează **Secure email change** activ și configurează SMTP propriu pentru livrarea către utilizatori publici. Nu actualiza manual emailul din `clienti` și nu dezactiva confirmarea pentru a ocoli problemele de livrare. Migrarea nu configurează SMTP și nu schimbă politica de înregistrare.
+
+Testele `profile-edit.test.cjs` și `profile-edit-browser.test.cjs` verifică modificările proprii, refuzul accesului la alte profiluri, confirmarea explicită, starea emailului în așteptare și continuitatea rezervărilor/chatului după confirmare. Nu executa fișierele din `supabase/tests/` în proiectul real.

@@ -81,3 +81,15 @@ Fiecare sport are un singur buton **Rezervă un teren** și o listă de carduri 
 În admin, **Setări baze sportive** apare pentru superadmin și pentru adminii obișnuiți cu alocare explicită în `baze_sportive_admini`. Adminul obișnuit poate edita numai descrierea bazelor alocate. Superadminul acordă acces din **Cine poate edita descrierea**; alocarea unui teren nu acordă automat acces la descrierea bazei. Nu se extind drepturile asupra rezervărilor sau altor terenuri.
 
 Verificarea RLS în proiectul real a confirmat refuzul fără alocare, editarea numai a descrierii cu alocare și refuzul după retragerea dreptului. Proba s-a închis cu rollback, fără schimbări persistente în date sau permisiuni. Protecția migrării 007 pentru rezervările finalizate rămâne activă.
+
+## Editarea profilului
+
+Din **Profilul meu → Editează profilul**, poți modifica numele, telefonul și emailul. **Verifică modificările** afișează schimbările; abia **Confirmă și salvează** trimite cererile. Datele sunt validate și de Supabase: numele are 2–200 de caractere, iar telefonul 7–15 cifre și cel mult 50 de caractere de formatare.
+
+Emailul se modifică prin Supabase Auth, cu **Secure email change** activ. Linkurile de confirmare se trimit la adresa actuală și la cea nouă. Până la confirmare, autentificarea și profilul folosesc adresa actuală. După confirmare, triggerul Auth sincronizează contactele, rezervările și chatul după UUID. Frontend-ul citește rezervările și chatul după același UUID, astfel încât schimbarea emailului să nu le ascundă.
+
+Migrarea `supabase/008_profile_edit.sql`, aplicată după 007, permite numai editarea propriului nume și telefon și blochează modificarea directă a identității/emailului. Creează doar profilurile lipsă pentru conturi Auth vechi; păstrează rândurile existente și refuză coliziunile de email. Nu acordă roluri sau baze suplimentare. Nu reaplica 001 peste 008.
+
+Pentru confirmări către clienți este necesar **SMTP propriu** în Supabase. Expeditorul implicit este destinat adreselor membrilor echipei proiectului. Configurarea SMTP se face securizat în Dashboard, conform [instrucțiunilor Supabase](https://supabase.com/docs/guides/auth/auth-smtp); nu include parola SMTP sau cheile în repository. `mailer_secure_email_change_enabled` trebuie să rămână activ. `mailer_autoconfirm` pentru înregistrări nu elimină confirmarea schimbării emailului conturilor permanente.
+
+Verificările izolate noi sunt `supabase/tests/profile-edit.test.cjs` (cu și fără `SPOTIVITY_TEST_INTEGER_IDS=1`) și `supabase/tests/profile-edit-browser.test.cjs`. Testele browser folosesc SDK-ul real, PostgreSQL izolat și confirmări Auth simulate; nu trimit mesaje și nu schimbă conturi live.

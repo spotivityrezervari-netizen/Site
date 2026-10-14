@@ -14,12 +14,14 @@
     <script src="js/db.js?v=2"></script>
     <script src="js/security.js?v=2"></script>
     <script src="js/sport-appearance.js?v=1"></script>
-    <script src="js/app.js?v=26" defer></script>
+    <script src="js/app.js?v=27" defer></script>
     <link rel="stylesheet" href="css/home.css?v=3">
     <link rel="stylesheet" href="css/theme.css?v=2">
     <script src="js/home.js?v=4" defer></script>
     <script src="js/baze.js?v=1" defer></script>
     <script src="js/home-discovery.js?v=1" defer></script>
+    <link rel="stylesheet" href="css/profile-editor.css?v=1">
+    <script src="js/profile-editor.js?v=1" defer></script>
 
 </head>
 <body class="pagina-publica">
@@ -241,7 +243,10 @@
                 <p style="display: flex; gap: 10px;"><span>📧</span> <span id="profil-email">client@email.com</span></p>
                 <p style="display: flex; gap: 10px;"><span>📞</span> <span id="profil-telefon">0712 345 678</span></p>
             </div>
+            <p id="profil-refresh-status" class="profile-refresh-status" role="status" hidden></p>
+            <p id="profil-email-pending" class="profile-email-pending" role="status" hidden></p>
             <div class="actiuni-cont">
+                <button type="button" class="btn-cont" id="btn-editeaza-profil" data-i18n="profil_edit_button" aria-controls="modal-editare-profil">Editează profilul</button>
                 <button class="btn-cont" id="btn-vezi-active">🟢 <span data-i18n="rez_active">Rezervări Active</span> (<span id="nr-active">0</span>)</button>
                 <button class="btn-cont" id="btn-vezi-istoric">🕒 <span data-i18n="istoric">Istoric Rezervări</span></button>
                 <button class="btn-cont" id="btn-vezi-chat" style="position: relative;">
@@ -251,6 +256,41 @@
                 <button class="btn-deconectare" id="btn-logout">🚪 <span data-i18n="deconectare">Deconectare</span></button>
             </div>
         </div>
+    </div>
+
+    <div class="modal" id="modal-editare-profil" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="profil-edit-title">
+        <section class="modal-continut profile-editor-panel" tabindex="-1">
+            <div class="modal-antet">
+                <h2 class="titlu-modal" id="profil-edit-title" data-i18n="profil_edit_title">Editează profilul</h2>
+                <button type="button" class="buton-inchidere" id="inchide-editare-profil" aria-label="Închide">X</button>
+            </div>
+            <form id="profil-edit-form">
+                <div id="profil-edit-fields">
+                    <div class="grup-input">
+                        <label for="profil-edit-nume" data-i18n="profil_edit_name">Nume complet</label>
+                        <input type="text" id="profil-edit-nume" autocomplete="name" minlength="2" maxlength="200" required>
+                    </div>
+                    <div class="grup-input">
+                        <label for="profil-edit-telefon" data-i18n="profil_edit_phone">Număr de telefon</label>
+                        <input type="tel" id="profil-edit-telefon" autocomplete="tel" inputmode="tel" maxlength="50" required>
+                    </div>
+                    <div class="grup-input">
+                        <label for="profil-edit-email" data-i18n="profil_edit_email">Adresă email</label>
+                        <input type="email" id="profil-edit-email" autocomplete="email" maxlength="254" required aria-describedby="profil-edit-hint">
+                    </div>
+                    <p id="profil-edit-hint" class="profile-editor-hint" data-i18n="profil_edit_hint">Schimbarea emailului se finalizează după confirmarea linkurilor trimise la adresa actuală și la cea nouă. Până atunci, adresa actuală rămâne activă.</p>
+                    <button type="submit" class="buton-rezervare" id="btn-profil-continua" data-i18n="profil_edit_next">Verifică modificările</button>
+                </div>
+                <div id="profil-edit-review" hidden>
+                    <h3 data-i18n="profil_edit_review_title">Confirmă modificările</h3>
+                    <dl id="profil-edit-summary"></dl>
+                    <button type="button" class="buton-rezervare" id="btn-profil-confirma" data-i18n="profil_edit_confirm">Confirmă și salvează</button>
+                    <button type="button" class="btn-cont" id="btn-profil-inapoi" data-i18n="profil_edit_back">Înapoi la editare</button>
+                </div>
+                <p id="profil-edit-status" role="status" aria-live="polite"></p>
+                <button type="button" class="btn-cont" id="btn-profil-anuleaza" data-i18n="profil_edit_cancel">Închide</button>
+            </form>
+        </section>
     </div>
 
     <!-- MODAL LISTĂ REZERVĂRI -->
