@@ -20,7 +20,7 @@
     <script src="js/home.js?v=4" defer></script>
     <script src="js/baze.js?v=1" defer></script>
     <script src="js/home-discovery.js?v=1" defer></script>
-    <link rel="stylesheet" href="css/profile-editor.css?v=1">
+    <link rel="stylesheet" href="css/profile-editor.css?v=2">
     <script src="js/profile-editor.js?v=1" defer></script>
 
 </head>
@@ -284,8 +284,10 @@
                 <div id="profil-edit-review" hidden>
                     <h3 data-i18n="profil_edit_review_title">Confirmă modificările</h3>
                     <dl id="profil-edit-summary"></dl>
-                    <button type="button" class="buton-rezervare" id="btn-profil-confirma" data-i18n="profil_edit_confirm">Confirmă și salvează</button>
-                    <button type="button" class="btn-cont" id="btn-profil-inapoi" data-i18n="profil_edit_back">Înapoi la editare</button>
+                    <div class="profil-edit-actions">
+                        <button type="button" class="buton-rezervare" id="btn-profil-confirma" data-i18n="profil_edit_confirm">Confirmă și salvează</button>
+                        <button type="button" class="btn-cont" id="btn-profil-inapoi" data-i18n="profil_edit_back">Înapoi la editare</button>
+                    </div>
                 </div>
                 <p id="profil-edit-status" role="status" aria-live="polite"></p>
                 <button type="button" class="btn-cont" id="btn-profil-anuleaza" data-i18n="profil_edit_cancel">Închide</button>

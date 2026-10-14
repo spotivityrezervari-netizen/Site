@@ -70,8 +70,8 @@
 #profil-edit-summary strong { color: var(--spotivity-cream, #f7f3e8); }
 #profil-edit-summary .profil-edit-before { color: var(--spotivity-muted, #c9c0b2); }
 #profil-edit-summary .profil-edit-review-note { color: var(--spotivity-gold-light, #edca82); font-size: 13px; }
-#modal-editare-profil .profil-edit-actions { display: flex; flex-wrap: wrap; gap: 10px; }
-#modal-editare-profil .profil-edit-actions button { flex: 1 1 100%; margin: 0; min-height: 46px; padding: 12px 16px; border-radius: 12px; }
+#modal-editare-profil .profil-edit-actions { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+#modal-editare-profil .profil-edit-actions button { margin: 0; min-height: 46px; padding: 12px 16px; border-radius: 12px; }
 #modal-editare-profil #profil-edit-form button {
     width: 100%;
     min-height: 46px;
@@ -79,7 +79,6 @@
     padding: 12px 16px;
     border-radius: 12px;
 }
-#modal-editare-profil #btn-profil-inapoi { margin-top: 10px; }
 #modal-editare-profil :is(#btn-profil-continua, #btn-profil-confirma):not(:disabled) {
     background: linear-gradient(135deg, #edca82, #cfaa58);
     border: 1px solid var(--spotivity-gold, #d8b66a);
