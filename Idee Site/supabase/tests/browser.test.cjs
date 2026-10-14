@@ -140,6 +140,7 @@ let checks = 0;
             query+=' order by '+url.searchParams.get('order').split(',').map(o=>{const [col,direction]=o.split('.');return ident(col)+(direction==='desc'?' desc':' asc')}).join(',');
           }
           if (url.searchParams.has('limit')) {params.push(Number(url.searchParams.get('limit')));query+=` limit $${params.length}`;}
+          if (url.searchParams.has('offset')) {params.push(Number(url.searchParams.get('offset')));query+=` offset $${params.length}`;}
         } else if (request.method()==='POST') {
           const body=request.postDataJSON(), rows=Array.isArray(body)?body:[body], fields=Object.keys(rows[0]);
           const values=rows.map(row=>'('+fields.map(field=>{params.push(row[field]);return `$${params.length}`}).join(',')+')');
@@ -186,12 +187,18 @@ let checks = 0;
       const dimensions=await target.evaluate(selector=>{
         const root=document.querySelector(selector),box=root.getBoundingClientRect();
         const visible=node=>node.getClientRects().length && getComputedStyle(node).visibility!=='hidden';
+        // Court strips deliberately clip offscreen cards inside a bounded
+        // horizontal scroller. Page and strip bounds remain mandatory checks.
+        const inCourtStrip=node=>Boolean(node.closest('[data-home-courts]'))
+          && getComputedStyle(node.closest('[data-home-courts]')).overflowX==='auto';
         const blocks=[root,...root.querySelectorAll('*')].filter(node=>visible(node)
           && !['INPUT','SELECT','TEXTAREA','IMG','SVG','PATH','OPTION'].includes(node.tagName)
           && !['inline','contents'].includes(getComputedStyle(node).display)
-          && getComputedStyle(node).textOverflow!=='ellipsis');
+          && getComputedStyle(node).textOverflow!=='ellipsis'
+          && !node.classList.contains('home-visually-hidden')
+          && !(node.matches('[data-home-courts]') && getComputedStyle(node).overflowX==='auto'));
         return {viewport:innerWidth,pageWidth:document.documentElement.scrollWidth,left:box.left,right:box.right,
-          outsideControls:[...root.querySelectorAll('input,select,textarea,button')].filter(visible).map(node=>({node,rect:node.getBoundingClientRect()}))
+          outsideControls:[...root.querySelectorAll('input,select,textarea,button')].filter(node=>visible(node) && !inCourtStrip(node)).map(node=>({node,rect:node.getBoundingClientRect()}))
             .filter(({rect})=>rect.left<box.left-1 || rect.right>box.right+1)
             .map(({node,rect})=>({id:node.id,tag:node.tagName,left:rect.left,right:rect.right})),
           overflow:blocks.filter(node=>node.clientWidth>0 && node.scrollWidth>node.clientWidth+1).map(node=>({
@@ -213,7 +220,7 @@ let checks = 0;
         const styles=[getComputedStyle(modal),getComputedStyle(modal,'::before'),getComputedStyle(modal,'::after')];
         const background=document.querySelector('.fundal-water'),backgroundBox=background.getBoundingClientRect();
         const fullBackgroundBlur=getComputedStyle(background).filter.includes('blur(')
-          && backgroundBox.left<=0 && backgroundBox.top<=0 && backgroundBox.right>=innerWidth && backgroundBox.bottom>=innerHeight;
+          && backgroundBox.left<=1 && backgroundBox.top<=1 && backgroundBox.right>=innerWidth-1 && backgroundBox.bottom>=innerHeight-1;
         return {width:innerWidth,height:innerHeight,left:box.left,top:box.top,right:box.right,bottom:box.bottom,
           blurred:fullBackgroundBlur || styles.some(style=>[style.backdropFilter,style.webkitBackdropFilter].some(value=>value && value!=='none')),
           corners:[[0,0],[innerWidth-1,0],[0,innerHeight-1],[innerWidth-1,innerHeight-1]]
@@ -1065,6 +1072,74 @@ let checks = 0;
       Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async value=>{window.__sharedBaseUrl=value;}}});
     });
     await basesPage.goto(base,{waitUntil:'networkidle'});
+    await basesPage.evaluate(()=>window.spotivityDiscoveryReady);
+    assert.equal(await basesPage.locator('.home-header [data-bases-target]').count(),0);
+    assert.equal(await basesPage.locator('.home-explore-button').count(),0);
+    for (const sport of ['Fotbal','Baschet','Tenis','Volei']) {
+      assert.equal(await basesPage.locator(`[data-home-sport="${sport}"] .home-hero-actions button`).count(),1);
+      assert.equal(await basesPage.locator(`[data-home-sport="${sport}"] .home-hero-actions button`).innerText(),'Rezervă un teren');
+    }
+    assert.deepEqual((await basesPage.locator('[data-home-base-id]').evaluateAll(nodes=>nodes.map(node=>node.dataset.homeBaseId))).sort(),[baseIds.a,baseIds.b]);
+    assert.ok((await basesPage.locator('#home-bases-directory').innerText()).includes(unsafeBaseName));
+    assert.equal(await basesPage.evaluate(()=>window.__baseXss),undefined);
+    pass('homepage has one reservation action per sport, safe sports-base cards in a separate section and global search in navigation');
+    await basesPage.locator('#filtru-oras-global').selectOption('Târgu Mureș');
+    await basesPage.waitForFunction(()=>!document.querySelector('[data-home-courts="Baschet"] [data-discovery-court]'));
+    const localIds=await basesPage.locator('.home-courts-strip [data-discovery-court]').evaluateAll(nodes=>nodes.map(node=>node.dataset.discoveryCourt));
+    assert.ok(localIds.includes(String(baseCourts.a2)));
+    assert.ok(!localIds.includes(String(baseCourts.b1)));
+    assert.ok(!localIds.includes(String(baseCourts.hidden)));
+    assert.deepEqual(await basesPage.locator('[data-home-base-id]').evaluateAll(nodes=>nodes.map(node=>node.dataset.homeBaseId)),[baseIds.a]);
+    pass('compact sport strips and homepage bases follow the selected city and exclude inactive courts and empty/hidden bases');
+    await basesPage.locator('#btn-home-search').click();
+    await basesPage.locator('#modal-cautare-terenuri').waitFor({state:'visible'});
+    assert.equal(await basesPage.locator('#home-search-input').evaluate(node=>node===document.activeElement),true);
+    await basesPage.locator('#home-search-input').fill('bucuresti baschet');
+    await basesPage.locator(`#home-search-results [data-discovery-court="${baseCourts.b1}"]`).waitFor();
+    assert.equal(await basesPage.locator('#home-search-results [data-discovery-court]').count(),1);
+    await basesPage.locator('#home-search-input').fill('Baza B Volei');
+    await basesPage.locator(`#home-search-results [data-discovery-court="${baseCourts.b2}"]`).waitFor();
+    await basesPage.locator('#home-search-input').fill('Terenul ascuns al bazei');
+    assert.equal(await basesPage.locator('#home-search-results [data-discovery-court]').count(),0);
+    assert.match(await basesPage.locator('#home-search-results').innerText(),/Nu am găsit/);
+    await basesPage.locator('#home-search-input').fill('Baza B Baschet');
+    await basesPage.locator(`#home-search-results [data-discovery-court="${baseCourts.b1}"]`).click();
+    await basesPage.locator('#modal-rezervare').waitFor({state:'visible'});
+    await basesPage.locator('#modal-cautare-terenuri').waitFor({state:'hidden'});
+    assert.ok((await basesPage.locator('#modal-rezervare').innerText()).includes('Baza B Baschet'));
+    assert.equal(await basesPage.locator('#filtru-oras-global').inputValue(),'Târgu Mureș');
+    await basesPage.keyboard.press('Escape');
+    pass('global search matches name, sport and city without diacritics across city filters, excludes inactive courts and opens the existing reservation form');
+    await basesPage.locator(`[data-home-courts="Tenis"] [data-discovery-court="${baseCourts.a2}"]`).click();
+    await basesPage.locator('#modal-rezervare').waitFor({state:'visible'});
+    await basesPage.locator('#container-zile .btn-zi').nth(1).click();
+    await basesPage.locator('.btn-ora').filter({hasText:/^09:00$/}).waitFor();
+    assert.equal(await basesPage.locator('.btn-ora').count(),3);
+    await basesPage.keyboard.press('Escape');
+    pass('compact court cards reuse court-specific booking hours and the existing reservation dialog');
+    for (const width of viewportWidths) {
+      await basesPage.setViewportSize({width,height:844});
+      await basesPage.evaluate(()=>window.scrollTo(0,0));
+      assert.ok(await basesPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`Discovery page overflow at ${width}px`);
+      await assertFits(basesPage,'.home-nav',`global search navigation ${width}px`);
+      await assertFits(basesPage,'#home-bases-section',`homepage sports bases ${width}px`);
+      const strip=await basesPage.locator('[data-home-courts="Tenis"]').evaluate(node=>({overflow:getComputedStyle(node).overflowX,width:node.clientWidth,scroll:node.scrollWidth}));
+      assert.equal(strip.overflow,'auto');
+      if(width<768) {
+        await basesPage.locator('#btn-mobile-menu').click();
+        await basesPage.locator('#home-mobile-menu [data-search-target]').click();
+        await basesPage.locator('#home-mobile-menu').waitFor({state:'hidden'});
+      } else await basesPage.locator('#btn-home-search').click();
+      await basesPage.locator('#home-search-input').fill('bucuresti');
+      await basesPage.locator(`#home-search-results [data-discovery-court="${baseCourts.b1}"]`).waitFor();
+      await assertFits(basesPage,'#modal-cautare-terenuri .modal-continut',`global search results ${width}px`);
+      await assertBackdrop(basesPage,'modal-cautare-terenuri');
+      await basesPage.keyboard.press('Escape');
+      await basesPage.locator('#modal-cautare-terenuri').waitFor({state:'hidden'});
+      if (screenshotDir) await basesPage.screenshot({path:join(screenshotDir,`spotivity-discovery-${width}.png`),fullPage:true});
+    }
+    pass('global search, compact horizontal court strips and sports-base section fit 320, 390, 768 and 1440 px with a keyboard-accessible mobile menu and modal');
+    await basesPage.locator('#filtru-oras-global').selectOption('ALL');
     await basesPage.locator('#btn-home-baze').click();
     await basesPage.locator('#modal-baze-sportive').waitFor({state:'visible'});
     await basesPage.locator(`[data-base-id="${baseIds.a}"]`).waitFor();

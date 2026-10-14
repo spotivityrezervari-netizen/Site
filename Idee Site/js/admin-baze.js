@@ -63,6 +63,7 @@
 
     function renderDirectory() {
         byId('btn-baza-noua').hidden = !role?.isSuper;
+        byId('admin-baze-access-hint').textContent = role?.isSuper ? 'Descrieri, terenuri și permisiuni' : 'Descrierile bazelor la care ai acces';
         byId('admin-baze-list').innerHTML = bases.length ? bases.map(base => `
             <button type="button" class="admin-base-card" data-edit-base="${esc(base.id)}">
                 <strong>${esc(base.nume)}</strong>
@@ -106,7 +107,7 @@
         editingId = null;
         byId('admin-baza-form').hidden = true;
         byId('admin-baze-directory').hidden = false;
-        byId('admin-baze-title').textContent = 'Baze sportive';
+        byId('admin-baze-title').textContent = 'Setări baze sportive';
         setSaving(false);
     }
 
@@ -123,6 +124,7 @@
         byId('baza-nume').value = base?.nume || '';
         byId('baza-oras').value = base?.oras || '';
         byId('baza-descriere').value = base?.descriere || '';
+        byId('baza-descriere').setAttribute('aria-label', `Descriere ${base?.nume || 'bază sportivă'}`);
         byId('baza-activa').checked = base?.este_activa !== false;
         for (const field of ['baza-nume', 'baza-oras', 'baza-activa']) byId(field).disabled = !role.isSuper;
         for (const section of ['admin-baza-structura', 'admin-baza-terenuri-section', 'admin-baza-admini-section']) byId(section).hidden = !role.isSuper;

@@ -71,3 +71,13 @@ Din pagina principală, butonul **Vezi bazele sportive** (sau **Baze sportive** 
 Rezervările finalizate rămân în istoric fără buton de anulare. O rezervare pe o oră se încheie la sfârșitul acelei ore: pentru 10:00, limita este 11:00, în fusul Europe/Bucharest. Rezervările viitoare și cele în desfășurare se pot anula conform permisiunilor existente. Regula este verificată și de baza de date, pentru client, admin și superadmin.
 
 Migrările aferente sunt `supabase/006_sports_bases.sql` și `supabase/007_completed_booking_cancellation.sql`; nu rula fișierele din `supabase/tests/` în proiectul real.
+
+## Căutare globală și terenuri pe pagina principală
+
+Navigarea conține **Caută un teren**: caută după nume, sport sau oraș, fără să limiteze rezultatele la orașul ales. Diacriticele nu sunt obligatorii. Sunt afișate numai terenurile active accesibile public; încărcarea este paginată. Un card deschide formularul existent, care verifică din nou terenul prin Supabase.
+
+Fiecare sport are un singur buton **Rezervă un teren** și o listă de carduri mici cu scroll lateral pentru orașul selectat. Tenisul de picior rămâne în secțiunea Fotbal. **Baze sportive** are o secțiune separată cu baze active care au terenuri active, filtrată după oraș.
+
+În admin, **Setări baze sportive** apare pentru superadmin și pentru adminii obișnuiți cu alocare explicită în `baze_sportive_admini`. Adminul obișnuit poate edita numai descrierea bazelor alocate. Superadminul acordă acces din **Cine poate edita descrierea**; alocarea unui teren nu acordă automat acces la descrierea bazei. Nu se extind drepturile asupra rezervărilor sau altor terenuri.
+
+Verificarea RLS în proiectul real a confirmat refuzul fără alocare, editarea numai a descrierii cu alocare și refuzul după retragerea dreptului. Proba s-a închis cu rollback, fără schimbări persistente în date sau permisiuni. Protecția migrării 007 pentru rezervările finalizate rămâne activă.

@@ -277,6 +277,7 @@ window.schimbaLimba = function(limbaNoua) {
     if (document.getElementById('container-istoric')?.style.display === 'flex' && typeof window.reincarcaIstoricAdmin === 'function') {
         window.reincarcaIstoricAdmin();
     }
+    window.dispatchEvent(new Event('spotivity:language'));
 };
 
 
@@ -788,6 +789,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function incarcaInterfataRezervare(terenDinDB) {
         bookingContextGeneration++;
+        document.getElementById('rezervare-teren-selectat').textContent = terenDinDB.nume;
         terenCurent = terenDinDB.nume; pretTerenCurent = terenDinDB.pret; pretMingeCurent = terenDinDB.pret_minge !== null ? terenDinDB.pret_minge : 15;
         document.getElementById('buton-vezi-locatia').onclick = () => window.open(window.safeUrl(terenDinDB.locatie), '_blank', 'noopener,noreferrer');
         

@@ -535,3 +535,56 @@ body.pagina-publica.fara-scroll > #fundal-imagine-sport { filter: blur(12px); }
 @media (prefers-reduced-motion: reduce) {
     .pagina-publica .sports-base-card { transition: none; }
 }
+
+/* Global search and compact court strips stay within the page at every width. */
+.pagina-publica .home-search-button {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: 44px; padding: 0 8px; border: 0; background: transparent;
+    color: #dedede; font-size: 12px; cursor: pointer; flex: 0 0 auto;
+}
+.pagina-publica .home-search-button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; }
+.pagina-publica .home-search-panel { max-width: 820px; width: 100%; min-width: 0; }
+.pagina-publica .home-search-panel label { display: block; font-size: 14px; line-height: 1.5; color: #d6d6d6; margin: 12px 0; }
+.pagina-publica #home-search-input { width: 100%; min-width: 0; min-height: 48px; margin: 0; font-size: 16px; }
+.pagina-publica #home-search-status { min-height: 24px; margin: 12px 0; font-size: 14px; }
+.pagina-publica .home-search-results { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); gap: 16px; }
+.pagina-publica .home-courts-wrap { position: relative; z-index: 1; max-width: 1048px; margin: 0 auto; padding: 0 24px 32px; }
+.pagina-publica .home-courts-strip {
+    display: flex; gap: 14px; overflow-x: auto; min-width: 0; padding: 6px 2px 14px;
+    scroll-snap-type: x proximity; overscroll-behavior-x: contain;
+    scrollbar-color: #757575 transparent; scrollbar-width: thin;
+}
+.pagina-publica .home-courts-strip::-webkit-scrollbar { height: 6px; }
+.pagina-publica .home-courts-strip::-webkit-scrollbar-thumb { background: #757575; border-radius: 6px; }
+.pagina-publica .home-court-card {
+    display: flex; flex-direction: column; flex: 0 0 220px; width: 220px;
+    min-width: 0; padding: 0; margin: 0; text-align: left; color: #f5f5f7;
+    background: #1c1c1e; border: 1px solid #3b3b3d; border-radius: 14px;
+    overflow: hidden; cursor: pointer; scroll-snap-align: start;
+}
+.pagina-publica .home-search-results .home-court-card { width: 100%; }
+.pagina-publica .home-court-card:disabled { opacity: .65; cursor: wait; }
+.pagina-publica .home-court-card:hover { border-color: #86868b; }
+.pagina-publica .home-court-photo { display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: cover; }
+.pagina-publica .home-court-details { display: grid; gap: 6px; padding: 12px; min-width: 0; width: 100%; }
+.pagina-publica .home-court-details strong { font-size: 15px; line-height: 1.4; overflow-wrap: anywhere; }
+.pagina-publica .home-court-meta { font-size: 12px; line-height: 1.4; color: #b8b8bd; overflow-wrap: anywhere; }
+.pagina-publica .home-court-price { font-size: 13px; color: #e1e1e4; }
+.pagina-publica .home-courts-status { margin: 0; font-size: 14px; text-align: left; }
+.pagina-publica .home-discovery-message { padding: 12px 0; margin: 0; color: #b8b8bd; font-size: 14px; line-height: 1.5; }
+.pagina-publica .home-bases-section { padding: 48px 24px; max-width: 1048px; margin: 0 auto; }
+.pagina-publica .home-section-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px; }
+.pagina-publica .home-section-heading h2 { font-size: clamp(28px, 3vw, 40px); line-height: 1.2; margin: 0; }
+.pagina-publica .home-bases-section .sports-base-card { color: #f5f5f7; }
+.pagina-publica .home-base-summary { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; color: #b8b8bd; line-height: 1.5; font-size: 14px; overflow-wrap: anywhere; }
+.pagina-publica .home-search-panel button:focus-visible,
+.pagina-publica .home-courts-strip:focus-visible { outline: 2px solid #2997ff; outline-offset: -3px; }
+@media (max-width: 767px) {
+    .pagina-publica.home-menu-open .home-search-button { visibility: hidden; }
+    .pagina-publica .home-search-button { padding: 0 6px; font-size: 12px; }
+    .pagina-publica .home-courts-wrap { padding: 0 18px 24px; }
+    .pagina-publica .home-court-card { flex-basis: 190px; width: 190px; }
+    .pagina-publica .home-bases-section { padding: 32px 18px; }
+    .pagina-publica .home-search-results { grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); }
+}
+.pagina-publica .home-booking-court { margin: 0 0 18px; font-size: 16px; text-align: center; overflow-wrap: anywhere; color: #dedede; }
