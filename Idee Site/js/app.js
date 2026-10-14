@@ -122,7 +122,7 @@ window.dict = {
         'istoric': 'Istoric Rezervări', 'deconectare': 'Deconectare', 'inapoi_profil': 'Înapoi la Profil', 'alege_terenul': 'Alege Terenul',
         'data_dorita': 'Data Dorită', 'ora_dorita': 'Ora Dorită', 'toate_orele': 'Toate Orele', 'inapoi': 'Înapoi',
         'finalizare_rezervare': 'Finalizare Rezervare', 'nevoie_minge': 'Ai nevoie de minge?', 'alege_ziua': 'Alege Ziua', 
-        'alege_ora': 'Alege Ora (Poți selecta mai multe)', 'disclaimer': 'Rezervarea poate fi anulată gratuit oricând.',
+        'alege_ora': 'Alege Ora (Poți selecta mai multe)', 'disclaimer': 'Rezervarea poate fi anulată gratuit până la încheierea orei rezervate.',
         'vezi_locatia': 'Vezi Locația (Hartă)', 'alegeti_o_ora': 'Alegeți o oră', 'zile': ["Dum", "Lun", "Mar", "Mie", "Joi", "Vin", "Sâm"], 'azi': 'Azi', 'maine': 'Mâine',
         'lei_ora': 'Lei/oră', 'ocupat': 'Ocupat', 'trecut': 'Trecut', 'rezerva': 'Rezervă', 'se_cauta': 'Se caută terenuri disponibile...',
         'fara_rezervari': 'Nu ai rezervări momentan.', 'anuleaza': '❌ Anulează (Gratuit)',
@@ -145,7 +145,7 @@ window.dict = {
         'istoric': 'Foglalási előzmények', 'deconectare': 'Kijelentkezés', 'inapoi_profil': 'Vissza a profilhoz', 'alege_terenul': 'Pálya kiválasztása',
         'data_dorita': 'Kívánt dátum', 'ora_dorita': 'Kívánt időpont', 'toate_orele': 'Minden időpont', 'inapoi': 'Vissza',
         'finalizare_rezervare': 'Foglalás véglegesítése', 'nevoie_minge': 'Szükséged van labdára?', 'alege_ziua': 'Válassz napot', 
-        'alege_ora': 'Válassz időpontot (többet is lehet)', 'disclaimer': 'A foglalás bármikor ingyenesen lemondható.',
+        'alege_ora': 'Válassz időpontot (többet is lehet)', 'disclaimer': 'A foglalás a lefoglalt óra végéig ingyenesen lemondható.',
         'vezi_locatia': 'Helyszín (Térkép)', 'alegeti_o_ora': 'Válassz időpontot', 'zile': ["Vas", "Hét", "Ked", "Sze", "Csü", "Pén", "Szo"], 'azi': 'Ma', 'maine': 'Holnap',
         'lei_ora': 'RON/óra', 'ocupat': 'Foglalt', 'trecut': 'Elmúlt', 'rezerva': 'Foglalás', 'se_cauta': 'Szabad pályák keresése...',
         'fara_rezervari': 'Jelenleg nincsenek foglalásaid.', 'anuleaza': '❌ Lemondás (Ingyenes)',
@@ -168,7 +168,7 @@ window.dict = {
         'istoric': 'Booking History', 'deconectare': 'Logout', 'inapoi_profil': 'Back to Profile', 'alege_terenul': 'Choose Court',
         'data_dorita': 'Desired Date', 'ora_dorita': 'Desired Time', 'toate_orele': 'All Hours', 'inapoi': 'Back',
         'finalizare_rezervare': 'Finalize Booking', 'nevoie_minge': 'Need a ball?', 'alege_ziua': 'Choose Day', 
-        'alege_ora': 'Choose Time (Select multiple)', 'disclaimer': 'You can cancel your booking for free at any time.',
+        'alege_ora': 'Choose Time (Select multiple)', 'disclaimer': 'You can cancel your booking for free until the booked hour ends.',
         'vezi_locatia': 'View Location (Map)', 'alegeti_o_ora': 'Choose a time', 'zile': ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], 'azi': 'Today', 'maine': 'Tomorrow',
         'lei_ora': 'RON/hour', 'ocupat': 'Booked', 'trecut': 'Passed', 'rezerva': 'Book', 'se_cauta': 'Searching for available courts...',
         'fara_rezervari': 'You have no bookings at the moment.', 'anuleaza': '❌ Cancel (Free)',
@@ -300,6 +300,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let terenuriDinDB = [];
     let filterRequest = 0, hoursRequest = 0, bookingContextGeneration = 0;
     let bookingInFlight = false, hoursLoading = false;
+    let baseCourtRequest = 0;
     let sportCurent = "", terenCurent = "", pretTerenCurent = 0, pretMingeCurent = 15;
     let mingeBifata = false, oraSelectata = [], dataSelectataStr = "";
 
@@ -543,7 +544,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 culoareBorder = '#6b7280'; culoareTitlu = '#9ca3af'; opacitate = '0.85';
                 textExtra = '<span style="color: #9ca3af; font-weight: bold;">[FINALIZED]</span>';
             }
-            if (r.stare !== 'anulata') {
+            if (r.stare !== 'anulata' && !esteTrecuta) {
                 butonAnulare = `<button class="btn-anulare anulare-client" data-id="${window.escapeHtml(r.id)}" style="margin-top: 10px; background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer;">${window.dict[window.lang]['anuleaza']}</button>`;
             }
 
@@ -809,6 +810,41 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         window.genereazaZile();
     }
+
+    // Base details use the same booking form and recheck the selected court via RLS.
+    window.openCourtReservation = async function(courtId, { signal } = {}) {
+        const id = String(courtId ?? '');
+        if (!/^(?:[1-9]\d{0,18}|[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})$/i.test(id) || signal?.aborted) return false;
+        const request = ++baseCourtRequest;
+        const generation = authGeneration;
+        const bookingGeneration = bookingContextGeneration;
+        try {
+            let query = db.from('terenuri').select('*').eq('id', id);
+            if (signal) query = query.abortSignal(signal);
+            const {data: court, error} = await query.maybeSingle();
+            if (signal?.aborted || request !== baseCourtRequest || generation !== authGeneration ||
+                bookingGeneration !== bookingContextGeneration || error || !court || court.este_activ === false) return false;
+            sportCurent = court.sport === 'Tenis Picior' ? 'Fotbal' : court.sport;
+            const translatedSport = window.dict[window.lang][sportCurent.toLowerCase()] || sportCurent;
+            document.getElementById('titlu-sport').textContent = `${window.dict[window.lang]['alege_terenul']} - ${translatedSport}`;
+            document.getElementById('filtru-data').value = window.siteDate();
+            document.getElementById('filtru-ora').value = 'ALL';
+            document.getElementById('filtru-nume').value = '';
+            clearTimeout(searchTimer);
+            actualizeazaDataFiltrului();
+            const background = document.getElementById('fundal-imagine-sport');
+            seteazaFundalSport(background, sportCurent);
+            if (background) background.style.opacity = '1';
+            seteazaFundalSport(document.querySelector('#modal-terenuri .modal-continut'), sportCurent, true);
+            incarcaInterfataRezervare(court);
+            // Prepare the existing back-to-courts view using the current filters.
+            void aplicaFiltruSiDeseneazaTerenuri();
+            return true;
+        } catch (_) {
+            return false;
+        }
+    };
+    window.dispatchEvent(new Event('spotivity:booking-ready'));
 
     document.getElementById('inchide-terenuri')?.addEventListener('click', () => {
         document.getElementById('modal-terenuri').style.display = 'none';

@@ -1,5 +1,7 @@
 # Instalarea protecțiilor Supabase și a rolurilor Spotivity
 
+**Actualizare 14 octombrie 2026:** în Rendez-Vous sunt deja aplicate migrările **1, 3, 4, 5, 6, 7**, inclusiv bazele sportive și refuzarea anulării rezervărilor finalizate. Nu trebuie să copiezi sau să rulezi din nou SQL pentru actualizarea curentă. Pașii de instalare de mai jos sunt pentru proiecte noi; istoricul datat descrie aplicările anterioare. Gestionează bazele din **Admin → Baze sportive**.
+
 Acest pachet conține migrarea bazei de date și frontend-ul compatibil. Pregătirea fișierelor în GitHub nu execută automat SQL-ul în Supabase. Instrucțiunile de mai jos permit aplicarea din Dashboard; accesul administrativ configurat separat permite și aplicarea asistată prin Management API. Testele automate folosesc date fictive într-un PostgreSQL izolat.
 
 Pe **10 octombrie 2026**, migrarea completă a fost aplicată în proiectul autorizat **Rendez-Vous**, referința `ndubcdwohqzgxpuiowye`, prin Management API. Au fost păstrate conturile Auth și datele existente; alocarea JSONB a superadminului a fost convertită la text și legată de UUID-ul Auth. Înainte de aplicare au trecut reproducerea izolată a structurii/datelor reale și o probă pe proiect închisă cu rollback. Copiile private ale datelor tabelelor aplicației și ale metadatelor nu sunt în Git și nu reprezintă un backup complet Supabase; fișierele Storage nu au fost modificate.
@@ -52,7 +54,7 @@ Pe **12 octombrie 2026**, migrarea 003 a fost aplicată în **Rendez-Vous** prin
 
 Adresele de redirect Auth sunt exacte; wildcardul vechi pentru spotivity.ro a fost eliminat. La cererea proprietarului, parola nouă are în continuare minimum **6 caractere**. Confirmarea automată și absența SMTP au fost păstrate; configurarea emailului și datele firmei sunt amânate de proprietar. Raportul de verificare și pașii rămași sunt în [PRODUCTION_REVIEW.md](../PRODUCTION_REVIEW.md).
 
-Pentru **alt proiect**, ordinea migrărilor este **001 → 003 → 004 → 005** după inventar/backup și verificarea datelor. 002 conține numai exemple de roluri pentru conturi Auth existente și confirmate. Fișierele `tests/` se rulează exclusiv în baza izolată. Instrucțiunile istorice de mai jos pentru reinstalarea 001 se aplică numai proiectelor fără migrări ulterioare.
+Pentru **alt proiect**, ordinea migrărilor este **001 → 003 → 004 → 005 → 006 → 007** după inventar/backup și verificarea datelor. 002 conține numai exemple de roluri pentru conturi Auth existente și confirmate. Fișierele `tests/` se rulează exclusiv în baza izolată. Instrucțiunile istorice de mai jos pentru reinstalarea 001 se aplică numai proiectelor fără migrări ulterioare.
 
 ## Căutare și afișare pe telefon
 
@@ -175,7 +177,7 @@ Migrarea face automat următoarele:
 - Leagă profilele și rolurile prin `user_id`, iar rezervările și chat-ul prin `client_user_id`, de `auth.users.id`. Retragerea rolului are efect în baza de date fără a aștepta emiterea unui JWT nou.
 - Creează profilul la înregistrarea Auth, folosind numele/telefonul din metadata, fără a crea un rol admin. Sincronizează emailurile la schimbarea emailului Auth.
 - Calculează prețul rezervărilor clientului din `terenuri` și `cu_minge`, verifică orele selectate pentru teren (după migrarea 003, între 09:00 și 22:00), minimum o oră în avans și următoarele 7 zile. Mingea se taxează pe primul rând al pachetului, ca în interfață. Adminii pot introduce rezervări manuale și blocaje fără cont client asociat.
-- Previne două rezervări active pentru același teren/oră printr-un index unic și permite anularea oricând a unei rezervări proprii active.
+- Previne două rezervări active pentru același teren/oră printr-un index unic și permite anularea unei rezervări proprii active; migrarea 007 blochează anularea după sfârșitul orei rezervate.
 - Publică numai disponibilitatea: ID opac, teren, dată și oră. Emailul, profilul și prețul clientului nu sunt publicate pentru a afișa orele ocupate.
 - Limitează chat-ul clientului la terenuri cu chat activ și o rezervare activă neîncheiată. Clienții și adminii obișnuiți pot marca mesajele primite drept citite, fără să le rescrie conținutul.
 - Creează schema internă `spotivity_private`. Nu o adăuga la schemele expuse de Data API.
@@ -233,7 +235,7 @@ Nu publica frontend-ul nou înainte de migrare: folosește coloane și tabelul d
 
 În repository-ul `spotivityrezervari-netizen/Site`, verifică **Settings → Pages** și ultimul deployment **github-pages** din **Actions** / **Deployments**. Publicarea trebuie să corespundă ultimului commit din `main`. Adresa paginii principale este `https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/`, iar adminul este în același folder, la `admin.html`.
 
-Versiunea actuală încarcă `css/style.css?v=41`, `js/security.js?v=2`, `js/app.js?v=21`, `css/admin.css?v=1` și `js/admin.js?v=18`. Reîncarcă pagina după terminarea deployment-ului. Actualizarea ramurii GitHub nu demonstrează singură terminarea publicării; testele izolate nu înlocuiesc verificarea site-ului publicat.
+Versiunea actuală încarcă `css/style.css?v=43`, `js/security.js?v=2`, `js/app.js?v=25`, `css/admin.css?v=3`, `js/admin.js?v=22`, `css/home.css?v=2`, `js/home.js?v=2`, `js/baze.js?v=1` și `js/admin-baze.js?v=1`. Reîncarcă pagina după terminarea deployment-ului. Actualizarea ramurii GitHub nu demonstrează singură terminarea publicării; testele izolate nu înlocuiesc verificarea site-ului publicat.
 
 ## 10. Verificări înainte de lansare
 
@@ -241,7 +243,7 @@ Folosește conturi distincte și ferestre/sesiuni separate pentru client, admin 
 
 - **Vizitator:** vede terenurile active și orele ocupate; nu poate vedea profilele, emailurile, rezervările private, chat-ul sau rolurile.
 - **Doi clienți:** înregistrare cu confirmare, autentificare, refresh și logout; fiecare vede numai propriile date. O încercare de a rezerva simultan aceeași oră lasă cel mult o rezervare activă.
-- **Anulare:** testează o rezervare proprie cu mai mult de 6 ore înainte, una cu mai puțin de 6 ore, una începută și una încheiată, folosind date de test. Toate cele încă `activa` se pot anula; alt client nu le poate anula. Pentru rezervările încheiate, deschide și istoricul. Verifică starea `anulata` și actualizarea disponibilității pentru orele viitoare.
+- **Anulare:** testează o rezervare proprie cu mai mult de 6 ore înainte, una cu mai puțin de 6 ore, una începută și una încheiată, folosind date de test. Cele viitoare și cele în desfășurare se pot anula; după migrarea 007, cele încheiate nu se mai pot anula; alt client nu le poate anula. Pentru rezervările încheiate, deschide și istoricul. Verifică starea `anulata` și actualizarea disponibilității pentru orele viitoare.
 - **Admin alocat:** vede și modifică numai terenurile lui; gestionează rezervări/chat și upload pentru acestea. Nu poate acorda roluri, crea/șterge terenuri sau gestiona un teren nealocat.
 - **Superadmin:** vede toate terenurile, poate modifica datele și alocările; după retragerea rolului unui admin, accesul acelui cont este refuzat de bază.
 - **Chat și imagini:** verifică ambele sensuri ale chat-ului, marcarea mesajelor citite și upload-ul cu fișier permis; un client nu trebuie să poată scrie imagini.
@@ -267,10 +269,21 @@ SITE_BASE_URL=http://127.0.0.1:8002/ node supabase/tests/browser.test.cjs
 
 Verificările SQL au trecut pentru ambele variante de ID: 85 de securitate, 21 de program și 20 pentru limitele adminilor/Storage. Suita browser verifică SDK-ul real, rezervări/anulări, căutarea, meniurile după rol și ferestrele publice/admin la 320, 390, 768 și 1440 px. Numerele actuale și limitele verificării sunt consemnate în [raportul pentru producție](../PRODUCTION_REVIEW.md).
 
-Fotografiile păstrează cadrul 3:2, spațiul de 15 px și `object-fit: cover`; fundalurile verticale sunt folosite până la 768 px, iar desktopul folosește JPG-urile originale. Câmpurile publice de dată/oră au 48 px și data afișată `DD.MM.YYYY`. La deschiderea unui dialog, stratul paginii este estompat direct, iar un strat gri acoperă viewportul și marginile; astfel blurul nu depinde de filtre backdrop imbricate în WebKit. Indicatoarele de scroll sunt gri, pe piste transparente. Formularul de înregistrare păstrează `display:flex`, spații de 22 px între câmpuri și X pe același rând cu taburile. Recuperarea parolei folosește o singură fereastră validată de SDK. Notificarea de rezervare durează 2 secunde, iar revenirea acasă restabilește fundalul principal.
+Fotografiile păstrează cadrul 3:2, spațiul de 15 px și `object-fit: cover`; pagina principală folosește imaginile Realist configurate în `site_sporturi`, cu încadrare adaptată telefonului și desktopului. Câmpurile publice de dată/oră au 48 px și data afișată `DD.MM.YYYY`. La deschiderea unui dialog, stratul paginii este estompat direct, iar un strat gri acoperă viewportul și marginile; astfel blurul nu depinde de filtre backdrop imbricate în WebKit. Indicatoarele de scroll sunt gri, pe piste transparente. Formularul de înregistrare păstrează `display:flex`, spații de 22 px între câmpuri și X pe același rând cu taburile. Recuperarea parolei folosește o singură fereastră validată de SDK. Notificarea de rezervare durează 2 secunde, iar revenirea acasă restabilește fundalul principal.
 
 Testele mobile folosesc viewporturi Chromium; Safari/DuckDuckGo pe iPhone real rămân de verificat înainte de lansarea finală.
 
 Testele SQL folosesc roluri PostgreSQL reale și verifică regulile RLS și trigger-ele pentru ID-uri UUID și numerice. Testele browser folosesc SDK-ul Supabase real și o simulare Auth/REST care execută cererile în aceeași bază izolată; cererile către proiectul găzduit sunt interceptate. Acoperă autentificarea, înregistrarea, rezervarea, anularea, logout-ul, rolurile, afișarea sigură a mesajelor și ecranul mobil.
 
 Coloanele utilizate din cele cinci tabele live au fost confirmate anterior prin cereri REST cu `limit=0`, fără citirea datelor personale. Testele izolate nu confirmă serviciile Auth, Storage și Realtime live sau datele și trigger-ele particulare ale proiectului tău. Verificările de după activare rămân necesare. RLS controlează accesul la date; nu înlocuiește verificarea hostingului, a integrărilor și un audit complet al aplicației.
+
+
+## Baze sportive și restricția anulării după finalizare — 006/007
+
+Pentru o instalare nouă, după 001 → 003 → 004 → 005, aplică întregul `006_sports_bases.sql`, apoi `007_completed_booking_cancellation.sql`. 006 creează `baze_sportive`, `baze_sportive_admini` și legătura opțională `terenuri.baza_sportiva_id`. Fișierul generic nu inventează baze sau grupări. 007 adaugă un trigger separat care refuză anularea unei rezervări încheiate pentru orice utilizator autentificat; verifică ora veche salvată, nu data trimisă de browser.
+
+Baza publică trebuie să fie activă și să conțină cel puțin un teren activ. Superadminul gestionează structura și alocările prin funcția `save_sports_base`, executată cu drepturile utilizatorului (`SECURITY INVOKER`) și cu salvare atomică. Un administrator obișnuit are acces la descriere numai prin `baze_sportive_admini`; grantul nu modifică alocarea din `users_admin.terenuri`. Permisiunile sunt verificate de RLS și trigger-e, inclusiv la retragerea accesului.
+
+În admin: **Baze sportive → selectează baza → Terenurile bazei** pentru terenuri existente; **Adaugă Teren → Baza sportivă** pentru unul nou. **Cine poate edita descrierea** acordă accesul unui admin obișnuit. Descrierile au maximum 2.000 de caractere și sunt afișate ca text. Partajarea păstrează numai parametrul `baza`, fără tokenuri Auth.
+
+Testele relevante sunt `sports-bases.test.cjs` și `completed-booking.test.cjs`, fiecare cu și fără `SPOTIVITY_TEST_INTEGER_IDS=1`, plus integrarea browser. Detaliile și starea aplicării în proiectul existent sunt în [raportul curent](../PRODUCTION_REVIEW.md).

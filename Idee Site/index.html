@@ -14,9 +14,10 @@
     <script src="js/db.js?v=2"></script>
     <script src="js/security.js?v=2"></script>
     <script src="js/sport-appearance.js?v=1"></script>
-    <script src="js/app.js?v=24" defer></script>
-    <link rel="stylesheet" href="css/home.css?v=1">
-    <script src="js/home.js?v=1" defer></script>
+    <script src="js/app.js?v=25" defer></script>
+    <link rel="stylesheet" href="css/home.css?v=2">
+    <script src="js/home.js?v=2" defer></script>
+    <script src="js/baze.js?v=1" defer></script>
 
 </head>
 <body class="pagina-publica">
@@ -51,6 +52,10 @@
                     <button type="button" data-sport-target="Tenis" data-i18n="tenis">Tenis</button>
                     <button type="button" data-sport-target="Volei" data-i18n="volei">Volei</button>
                 </div>
+                <button type="button" class="home-bases-button" id="btn-home-baze" data-bases-target aria-controls="modal-baze-sportive">
+                    <span class="home-bases-label-desktop" data-i18n="baze_vezi">Vezi bazele sportive</span>
+                    <span class="home-bases-label-mobile" data-i18n="baze_titlu">Baze sportive</span>
+                </button>
                 <button type="button" class="buton-top-cont home-profile-button" id="btn-top-cont" aria-label="Profilul meu">
                     <svg class="home-profile-symbol" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 21v-2a7.5 7.5 0 0 1 15 0v2"/></svg>
                     <span class="home-profile-label" data-i18n="home_profil">Profilul meu</span>
@@ -66,6 +71,7 @@
                     <button type="button" data-sport-target="Baschet" data-i18n="baschet">Baschet</button>
                     <button type="button" data-sport-target="Tenis" data-i18n="tenis">Tenis</button>
                     <button type="button" data-sport-target="Volei" data-i18n="volei">Volei</button>
+                    <button type="button" data-bases-target data-i18n="baze_titlu">Baze sportive</button>
                     <button type="button" data-profile-target data-i18n="home_profil">Profilul meu</button>
                 </nav>
             </div>
@@ -75,7 +81,6 @@
             <section class="home-sport-hero home-hero-fotbal" id="sport-fotbal" data-home-sport="Fotbal" aria-labelledby="home-title-fotbal">
                 <div class="home-hero-copy">
                     <div class="home-sport-heading">
-                        <img src="assets/imagini/fotbalrealist.png" data-sport-icon="Fotbal" alt="" width="48" height="48" decoding="async">
                         <h1 id="home-title-fotbal" data-i18n="fotbal">Fotbal</h1>
                     </div>
                     <p class="home-hero-subtitle" data-i18n="home_subtitlu_fotbal">Jocul începe aici.</p>
@@ -91,7 +96,6 @@
             <section class="home-sport-hero home-hero-baschet" id="sport-baschet" data-home-sport="Baschet" aria-labelledby="home-title-baschet">
                 <div class="home-hero-copy">
                     <div class="home-sport-heading">
-                        <img src="assets/imagini/baschetrealist.png" data-sport-icon="Baschet" alt="" width="48" height="48" loading="lazy" decoding="async">
                         <h2 id="home-title-baschet" data-i18n="baschet">Baschet</h2>
                     </div>
                     <p class="home-hero-subtitle" data-i18n="home_subtitlu_baschet">Fiecare aruncare contează.</p>
@@ -107,7 +111,6 @@
             <section class="home-sport-hero home-hero-tenis" id="sport-tenis" data-home-sport="Tenis" aria-labelledby="home-title-tenis">
                 <div class="home-hero-copy">
                     <div class="home-sport-heading">
-                        <img src="assets/imagini/tenisrealist.png" data-sport-icon="Tenis" alt="" width="48" height="48" loading="lazy" decoding="async">
                         <h2 id="home-title-tenis" data-i18n="tenis">Tenis</h2>
                     </div>
                     <p class="home-hero-subtitle" data-i18n="home_subtitlu_tenis">Următorul punct e al tău.</p>
@@ -123,7 +126,6 @@
             <section class="home-sport-hero home-hero-volei" id="sport-volei" data-home-sport="Volei" aria-labelledby="home-title-volei">
                 <div class="home-hero-copy">
                     <div class="home-sport-heading">
-                        <img src="assets/imagini/voleirealist.png" data-sport-icon="Volei" alt="" width="48" height="48" loading="lazy" decoding="async">
                         <h2 id="home-title-volei" data-i18n="volei">Volei</h2>
                     </div>
                     <p class="home-hero-subtitle" data-i18n="home_subtitlu_volei">Adună echipa. Intră în joc.</p>
@@ -142,6 +144,23 @@
                 <span data-i18n="copyright_text">&copy; 2026 Numele SRL</span> &bull; <span data-i18n="drepturi_rezervate">Toate drepturile rezervate</span> &bull; <span class="home-legal-link" data-i18n="info_legale">Info Legale</span>
             </button>
         </footer>
+    </div>
+
+    <!-- BAZE SPORTIVE: director public și terenurile fiecărei baze -->
+    <div class="modal" id="modal-baze-sportive" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="baze-sportive-titlu">
+        <div class="modal-continut sports-bases-panel" tabindex="-1">
+            <div class="modal-antet sports-bases-header">
+                <div class="sports-bases-heading">
+                    <button type="button" id="baze-sportive-inapoi" class="sports-bases-back" hidden>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg>
+                        <span data-i18n="baze_toate">Toate bazele</span>
+                    </button>
+                    <h2 class="titlu-modal" id="baze-sportive-titlu" data-i18n="baze_titlu">Baze sportive</h2>
+                </div>
+                <button type="button" class="buton-inchidere" id="inchide-baze-sportive" aria-label="Închide">X</button>
+            </div>
+            <div id="baze-sportive-continut" aria-live="polite" aria-busy="false"></div>
+        </div>
     </div>
 
 <!-- MODAL AUTH -->

@@ -1,10 +1,30 @@
-# Verificare pentru producție — audit 12 octombrie și actualizare vizuală 13 octombrie 2026
+# Verificare pentru producție — actualizare 14 octombrie 2026
 
 Revizuire a codului, migrărilor SQL, configurației Supabase reale și publicării GitHub Pages. Corecțiile tehnice sunt implementate; lansarea publică finală mai necesită email, datele firmei și o soluție verificată de backup. Datele firmei și SMTP au fost amânate explicit de proprietar. Parolele noi păstrează minimum **6 caractere**, conform cererii sale.
 
 Site: https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/
 
 Admin: https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/admin.html
+
+## Baze sportive și anulări — 14 octombrie 2026
+
+Migrările [006](supabase/006_sports_bases.sql) și [007](supabase/007_completed_booking_cancellation.sql) sunt aplicate în proiectul Rendez-Vous. Au fost probate întâi în PostgreSQL izolat și într-o tranzacție live închisă cu rollback. **Nu trebuie rulat manual SQL pentru această actualizare.** Registrul instalat este **1, 3, 4, 5, 6, 7**, iar cele nouă tabele publice gestionate au RLS activ.
+
+Proprietarul a cerut două baze cu câte două terenuri. Gruparea inițială păstrează orașele existente: **Baza A / Reghin: Exemplu, Exemplu2**; **Baza B / Târgu Mureș: Exemplu3, Exemplu4**. Bernabeu rămâne neasociat. Numele, descrierile și grupările se modifică din **Admin → Baze sportive**. Descrierile inițiale sunt goale. Nu s-au inventat detalii comerciale și nu s-au acordat automat permisiuni suplimentare administratorilor obișnuiți.
+
+Butonul din navigarea publică deschide bazele pentru orașul selectat. Pagina bazei arată descrierea, terenurile și distribuirea prin link; deschiderea unui teren folosește formularul de rezervare existent și reverifică terenul prin API. Linkul partajat conține numai UUID-ul bazei, fără parametri/tokenuri Auth. Pictogramele mici de lângă titlurile sporturilor au fost eliminate; cele realiste se păstrează în admin la sportul corespunzător.
+
+Superadminul poate crea baze, asocia/dezasocia terenuri existente și selecta baza la crearea unui teren nou. Funcția de salvare este `SECURITY INVOKER`: RLS și trigger-ele se aplică în continuare, iar metadatele, terenurile și permisiunile se salvează atomic. Adminul obișnuit poate modifica doar descrierea bazelor pentru care primește explicit permisiune. Acest acces nu extinde accesul la alte terenuri, rezervări, clienți, chat sau fotografii.
+
+Conform cererii noi, o rezervare **finalizată nu mai poate fi anulată**, inclusiv prin API, pentru client, admin și superadmin. Limita este `starts_at + 1 oră`; rezervările viitoare și în desfășurare rămân anulabile potrivit accesului existent. Migrarea folosește valoarea veche din rând, prevenind ocolirea prin modificarea simultană a orei. Istoricul păstrează rezervarea. Mentenanța SQL de încredere fără identitate Auth își păstrează drepturile.
+
+Verificarea live înainte/după aplicare a confirmat aceleași **8 conturi Auth, 5 profile, 2 admini, 5 terenuri, 57 rezervări, 24 mesaje și 25 sloturi**. Toate funcțiile private anterioare, definițiile/stările trigger-elor existente și politicile anterioare au fost păstrate. Sunt adăugate numai relațiile și protecțiile noi. Webhook-urile existente la momentul aplicării nu au fost rescrise.
+
+Testele SQL noi au trecut: **32 + 32** pentru baze și **29 + 29** pentru anulările finalizate, cu ID-uri UUID și numerice. Acoperă retragerea permisiunilor, scrieri neautorizate, atomicitate, ora exactă de încheiere, tranzacții lungi și repetarea migrărilor. Recuperarea parolei/pozele au trecut **6 verificări**; limita parolei rămâne **6 caractere**. Testele autentificate sunt izolate; nu creează conturi, rezervări sau emailuri reale.
+
+Au trecut integral **76 de verificări browser** cu SDK real și PostgreSQL izolat, inclusiv crearea bazei, adăugarea unui teren direct în bază, editarea autorizată, retragerea accesului, curățarea la logout, partajarea fără tokenuri și deschiderea rezervării existente. Sunt **204 verificări pentru actualizarea curentă** (122 SQL, 76 browser, 6 recuperare/poze). Verificările folosesc Chromium la **320, 390, 768 și 1440 px**; Safari/DuckDuckGo pe iPhone fizic nu au fost testate aici. A fost corectată și inițializarea dublă a canalului Realtime din admin, detectată în integrare.
+
+Smoke test-ul local cu citiri reale a trecut pentru noul director public, descrieri și terenurile asociate, imagini, cele patru sporturi și autentificare. Scriptul refuză toate scrierile. Publicarea se verifică după push prin compararea fișierelor servite cu Git și un nou smoke test public.
 
 ## Actualizare vizuală și Supabase — 13 octombrie 2026
 
@@ -90,4 +110,4 @@ NODE_PATH=/workspace/shared/spotivity-rls-validation/node_modules node supabase/
 
 Repetă fiecare suită SQL cu `SPOTIVITY_TEST_INTEGER_IDS=1`. Pentru cele două suite de browser adaugă la `NODE_PATH` runtime-ul Playwright din mediul curent și setează `SITE_BASE_URL=http://127.0.0.1:8010/`. Păstrează verificarea TLS activă; folosește mecanismul de acces NSS al mediului dacă Chromium nu poate citi certificatele.
 
-`SITE_BASE_URL=https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/ node scripts/smoke-site.cjs` verifică publicarea fără scrieri. Nu rula `tests/schema.sql` sau fișierele de test în SQL Editor-ul proiectului real. Pentru un alt proiect, aplică 001 → 003 → 004 → 005 după backup/inventar; 002 sunt exemple de roluri. **Nu reinstala 001/003 în Rendez-Vous.**
+`SITE_BASE_URL=https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/ node scripts/smoke-site.cjs` verifică publicarea fără scrieri. Nu rula `tests/schema.sql` sau fișierele de test în SQL Editor-ul proiectului real. Pentru un alt proiect, aplică 001 → 003 → 004 → 005 → 006 → 007 după backup/inventar; 002 sunt exemple de roluri. **Nu reinstala 001/003 în Rendez-Vous.**

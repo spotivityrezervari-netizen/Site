@@ -85,6 +85,23 @@ const siteOrigin = siteBaseUrl.origin;
     await page.keyboard.press('Escape');
     await page.locator('#modal-auth').waitFor({state:'hidden'});
     console.log('PASS mobile viewport: login dialog opens and closes');
+    assert.equal(await page.locator('.home-sport-heading img').count(),0);
+    const basesRead = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/rest/v1/baze_sportive'));
+    await page.locator('#btn-home-baze').click();
+    await page.locator('#modal-baze-sportive').waitFor({state:'visible'});
+    assert.equal((await basesRead).status(),200);
+    await page.waitForFunction(()=>document.getElementById('baze-sportive-continut').getAttribute('aria-busy')==='false');
+    const baseCards=page.locator('[data-base-id]');
+    if (await baseCards.count()) {
+      await baseCards.first().click();
+      await page.locator('#baze-sportive-share').waitFor({state:'visible'});
+      assert.ok(await page.locator('[data-base-court]').count()>0);
+      assert.ok(await page.locator('#baze-sportive-descriere').isVisible());
+    }
+    await page.locator('#inchide-baze-sportive').click();
+    await page.locator('#modal-baze-sportive').waitFor({state:'hidden'});
+    console.log('PASS public sports bases: live directory, description, share and associated court controls');
+
     assert.equal((await page.goto(new URL('admin.html', siteBaseUrl).href, {waitUntil:'networkidle'})).status(), 200);
     assert.ok(await page.locator('#sectiune-login').isVisible());
     assert.ok(await page.locator('#login-admin-btn').isVisible());

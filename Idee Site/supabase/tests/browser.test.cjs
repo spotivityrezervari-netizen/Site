@@ -28,6 +28,8 @@ let checks = 0;
     await pg.exec(readFileSync(join(__dirname,'../003_court_hours.sql'),'utf8'));
     await pg.exec(readFileSync(join(__dirname,'../004_admin_scope_hardening.sql'),'utf8'));
     await pg.exec(readFileSync(join(__dirname,'../005_sport_appearance.sql'),'utf8'));
+    await pg.exec(readFileSync(join(__dirname,'../006_sports_bases.sql'),'utf8'));
+    await pg.exec(readFileSync(join(__dirname,'../007_completed_booking_cancellation.sql'),'utf8'));
     await pg.exec("update public.terenuri set poza='assets/imagini/avatar2.png'");
     const tomorrow=(await pg.query("select ((now() at time zone 'Europe/Bucharest')::date+1)::text as d")).rows[0].d;
     let queue=Promise.resolve();
@@ -104,13 +106,23 @@ let checks = 0;
           }
           return reply(401,{message:'No fixture session'});
         }
+        if (url.pathname==='/rest/v1/rpc/save_sports_base') {
+          assert.equal(request.method(),'POST');
+          const body=request.postDataJSON(); recorded.body=body;
+          await pg.exec(`set role ${person ? 'authenticated' : 'anon'}`);
+          const fields=['p_id','p_nume','p_oras','p_descriere','p_este_activa','p_court_ids','p_admin_ids'];
+          const result=await pg.query('select public.save_sports_base($1::uuid,$2::text,$3::text,$4::text,$5::boolean,$6::text[],$7::uuid[]) as id',fields.map(field=>body[field]));
+          return reply(200,result.rows[0].id);
+        }
         const table=url.pathname.split('/').pop();
-        assert.ok(['clienti','users_admin','terenuri','rezervari','rezervari_disponibilitate','mesaje_chat','site_sporturi'].includes(table));
+        assert.ok(['clienti','users_admin','terenuri','rezervari','rezervari_disponibilitate','mesaje_chat','site_sporturi','baze_sportive','baze_sportive_admini'].includes(table));
         await pg.exec(`set role ${person ? 'authenticated' : 'anon'}`);
         const params=[], conditions=[];
         for (const [field,value] of url.searchParams) {
           if (['select','order','limit','offset','columns'].includes(field)) continue;
-          if (value.startsWith('in.(')) {
+          if (value==='is.null' || value==='not.is.null') {
+            conditions.push(`${ident(field)} is ${value==='not.is.null'?'not ':''}null`);
+          } else if (value.startsWith('in.(')) {
             const values=value.slice(4,-1).split(',').map(v=>v.replace(/^"|"$/g,''));
             const placeholders=values.map(v=>{params.push(v);return `$${params.length}`});
             conditions.push(`${ident(field)} in (${placeholders.join(',')})`);
@@ -418,15 +430,21 @@ let checks = 0;
     });
     await page.locator('#inapoi-la-profil').click();
     await page.locator('#btn-vezi-istoric').click();
-    await page.locator(`.anulare-client[data-id="${pastId}"]`).click();
-    await page.locator(`.anulare-client[data-id="${pastId}"]`).waitFor({state:'hidden'});
+    await page.waitForFunction(()=>document.getElementById('container-rezervari').textContent.includes('FINALIZED'));
+    assert.equal(await page.locator(`.anulare-client[data-id="${pastId}"]`).count(),0);
+    assert.match(await page.locator('#container-rezervari').innerText(),/FINALIZED/);
+    const pastCancel=await page.evaluate(async id=>{
+      const result=await db.from('rezervari').update({stare:'anulata'}).eq('id',id);
+      return {error:result.error?.message};
+    },pastId);
+    assert.match(pastCancel.error,/finished|completed|finalizat|încheiat/i);
     assert.equal(await page.evaluate(()=>window.tipIstoricDeschis),'istoric');
     assert.equal(await page.locator('#titlu-lista-rezervari').innerText(),'Istoric Rezervări');
     await serial(async () => {
       await pg.exec('reset role');
-      assert.equal((await pg.query('select stare from public.rezervari where id=$1',[pastId])).rows[0].stare,'anulata');
+      assert.equal((await pg.query('select stare from public.rezervari where id=$1',[pastId])).rows[0].stare,'activa');
     });
-    pass('client can cancel a finished booking from history and stays in the history view');
+    pass('finished bookings remain in history without cancellation controls and direct API cancellation is denied');
     await page.locator('#inchide-istoric-client').click();
     await page.locator('#btn-top-cont').click();
     await page.locator('#btn-logout').click();
@@ -851,7 +869,7 @@ let checks = 0;
         await superAdmin.locator('.sub-pagina-oras:visible [onclick*="inchideSubPaginaOras"]').click();
       }
       for (const id of ['modal-adauga-teren','modal-creeaza-cont']) {
-        await superAdmin.locator(`.card-sport[onclick*="${id}"]`).click();
+        await superAdmin.locator(`.card-sport[onclick*="${id === 'modal-adauga-teren' ? 'deschideModalAdaugaTeren' : id}"]`).click();
         await superAdmin.locator(`#${id}`).waitFor({state:'visible'});
         if (id==='modal-adauga-teren') await superAdmin.locator('#container-lista-terenuri').getByText(longCourt,{exact:false}).waitFor();
         if (id==='modal-creeaza-cont') await superAdmin.locator('#container-checkbox-terenuri').getByText(longCourt,{exact:false}).waitFor();
@@ -879,12 +897,12 @@ let checks = 0;
       assert.equal(await hero.count(),1);
       await hero.scrollIntoViewIfNeeded();
       assert.equal(await hero.locator(`[data-sport-background="${appearance.sport}"]`).getAttribute('src'),appearance.fundal_url);
-      assert.equal(await hero.locator(`[data-sport-icon="${appearance.sport}"]`).getAttribute('src'),appearance.icona_url);
+      assert.equal(await hero.locator('[data-sport-icon]').count(),0,'Sport headlines must be text only');
       await assertPngLoaded(hero.locator('[data-sport-background]'));
-      await assertPngLoaded(hero.locator('[data-sport-icon]'));
+
     }
     assert.ok(requests.some(request=>request.path==='/rest/v1/site_sporturi' && request.method==='GET' && !request.person));
-    pass('the four stacked sport sections and realistic PNG icons use public Supabase appearance metadata with the avatar2 brand');
+    pass('the four sport sections have text-only headings and Supabase-configured realistic backgrounds with the avatar2 brand');
     for (const width of viewportWidths) {
       await mobile.setViewportSize({width,height:844});
       await mobile.evaluate(()=>window.scrollTo(0,0));
@@ -994,7 +1012,7 @@ let checks = 0;
     const configuredAppearance=await pageFor();
     await configuredAppearance.goto(base,{waitUntil:'networkidle'});
     await configuredAppearance.evaluate(()=>window.spotivitySportAppearanceReady);
-    assert.equal(await configuredAppearance.locator('[data-sport-icon="Fotbal"]').getAttribute('src'),'assets/imagini/avatar2.png');
+    assert.equal(await configuredAppearance.locator('.home-sport-hero [data-sport-icon]').count(),0);
     assert.equal(await configuredAppearance.locator('[data-sport-background="Fotbal"]').getAttribute('src'),'assets/imagini/RealistVolei.png');
     await configuredAppearance.locator('.card-sport[data-sport="Fotbal"]').click();
     await configuredAppearance.locator('#modal-terenuri').waitFor({state:'visible'});
@@ -1007,13 +1025,262 @@ let checks = 0;
     }));
     await unavailableAppearance.goto(base,{waitUntil:'networkidle'});
     await unavailableAppearance.evaluate(()=>window.spotivitySportAppearanceReady);
-    assert.equal(await unavailableAppearance.locator('[data-sport-icon="Fotbal"]').getAttribute('src'),'assets/imagini/fotbalrealist.png');
+    assert.equal(await unavailableAppearance.locator('.home-sport-hero [data-sport-icon]').count(),0);
     assert.equal(await unavailableAppearance.locator('[data-sport-background="Fotbal"]').getAttribute('src'),'assets/imagini/RealistFotbal.png');
     await unavailableAppearance.locator('.card-sport[data-sport="Fotbal"]').click();
     await unavailableAppearance.locator('#modal-terenuri').waitFor({state:'visible'});
     await unavailableAppearance.locator('#filtru-nume').fill('Court A');
     await assertCourtNames(unavailableAppearance,['Court A']);
     pass('temporary appearance settings failure retains bundled realistic images and a working court chooser');
+    // Sports-base tests use new records only inside this disposable database.
+    // Keep them after the legacy workflow checks so prior city/count assertions
+    // continue testing exactly the same booking and authorization contracts.
+    const baseIds={a:uid(101),b:uid(102),empty:uid(103),hidden:uid(104),inactive:uid(105)};
+    const unsafeBaseName='Baza A <img src=x onerror="window.__baseXss=true">';
+    const unsafeDescription='Descriere <script>window.__baseXss=true</script> pentru baza A.';
+    const baseCourts=await serial(async()=>{
+      await pg.exec("reset role; select set_config('request.jwt.claim.sub','',false)");
+      for (const [id,name,city,description,active] of [
+        [baseIds.a,unsafeBaseName,'Târgu Mureș',unsafeDescription,true],
+        [baseIds.b,'Baza B','București','Două terenuri pentru sport.',true],
+        [baseIds.empty,'Baza fără terenuri','Târgu Mureș','',true],
+        [baseIds.hidden,'Baza cu teren ascuns','Târgu Mureș','',true],
+        [baseIds.inactive,'Baza dezactivată','Târgu Mureș','',false]
+      ]) await pg.query('insert into public.baze_sportive(id,nume,oras,descriere,este_activa) values($1,$2,$3,$4,$5)',[id,name,city,description,active]);
+      const courts={};
+      courts.a=(await pg.query("update public.terenuri set baza_sportiva_id=$1 where nume='Court A' returning id",[baseIds.a])).rows[0].id;
+      for (const [key,name,sport,city,baseId,active] of [
+        ['a2','Baza A Tenis','Tenis','Târgu Mureș',baseIds.a,true],
+        ['b1','Baza B Baschet','Baschet','București',baseIds.b,true],
+        ['b2','Baza B Volei','Volei','București',baseIds.b,true],
+        ['hidden','Terenul ascuns al bazei','Tenis','Târgu Mureș',baseIds.hidden,false],
+        ['inactive','Terenul bazei dezactivate','Volei','Târgu Mureș',baseIds.inactive,true]
+      ]) courts[key]=(await pg.query("insert into public.terenuri(nume,sport,oras,pret,pret_minge,optiune_minge,este_activ,poza,baza_sportiva_id,ore_rezervabile) values($1,$2,$3,100,0,false,$4,'assets/imagini/avatar2.png',$5,$6) returning id",[name,sport,city,active,baseId,['09:00','10:00','11:00']])).rows[0].id;
+      await pg.query('insert into public.baze_sportive_admini(baza_id,user_id) values($1,$2)',[baseIds.a,uid(3)]);
+      return courts;
+    });
+    const basesPage=await pageFor();
+    await basesPage.addInitScript(()=>{
+      Object.defineProperty(navigator,'share',{configurable:true,value:undefined});
+      Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async value=>{window.__sharedBaseUrl=value;}}});
+    });
+    await basesPage.goto(base,{waitUntil:'networkidle'});
+    await basesPage.locator('#btn-home-baze').click();
+    await basesPage.locator('#modal-baze-sportive').waitFor({state:'visible'});
+    await basesPage.locator(`[data-base-id="${baseIds.a}"]`).waitFor();
+    assert.deepEqual((await basesPage.locator('[data-base-id]').evaluateAll(nodes=>nodes.map(node=>node.dataset.baseId))).sort(),[baseIds.a,baseIds.b]);
+    assert.equal(await basesPage.evaluate(()=>window.__baseXss),undefined);
+    assert.equal(await basesPage.locator('img[src="x"]').count(),0);
+    pass('public sports-base directory lists only active bases with active courts, and renders names as literal text');
+    await basesPage.locator(`[data-base-id="${baseIds.a}"]`).click();
+    await basesPage.locator(`[data-base-court="${baseCourts.a}"]`).waitFor();
+    assert.equal(await basesPage.locator('[data-base-court]').count(),2);
+    assert.ok((await basesPage.locator('#baze-sportive-continut').innerText()).includes(unsafeDescription));
+    assert.equal(await basesPage.evaluate(()=>window.__baseXss),undefined);
+    for (const width of viewportWidths) {
+      await basesPage.setViewportSize({width,height:844});
+      await assertFits(basesPage,'#modal-baze-sportive .modal-continut',`base detail ${width}px`);
+      await assertBackdrop(basesPage,'modal-baze-sportive');
+      if (screenshotDir) await basesPage.screenshot({path:join(screenshotDir,`spotivity-base-detail-${width}.png`)});
+      await basesPage.locator('#baze-sportive-inapoi').click();
+      await basesPage.locator(`[data-base-id="${baseIds.a}"]`).waitFor();
+      await assertFits(basesPage,'#modal-baze-sportive .modal-continut',`base directory ${width}px`);
+      await basesPage.locator(`[data-base-id="${baseIds.a}"]`).click();
+      await basesPage.locator(`[data-base-court="${baseCourts.a}"]`).waitFor();
+    }
+    pass('sports-base descriptions and both courts fit 320, 390, 768 and 1440 px with a full blurred modal and no stored HTML execution');
+    await basesPage.evaluate(()=>history.replaceState(null,'',location.pathname+'?tracking=private#access_token=must-not-share'));
+    await basesPage.locator('#baze-sportive-share').click();
+    await basesPage.waitForFunction(()=>Boolean(window.__sharedBaseUrl));
+    const sharedUrl=new URL(await basesPage.evaluate(()=>window.__sharedBaseUrl));
+    assert.equal(sharedUrl.search,`?baza=${baseIds.a}`);
+    assert.equal(sharedUrl.hash,'');
+    assert.equal(sharedUrl.origin,new URL(base).origin);
+    assert.equal(sharedUrl.pathname,new URL(base).pathname);
+    pass('copying a sports-base link includes only its public UUID and strips unrelated query parameters and authentication fragments');
+    await basesPage.locator('#inchide-baze-sportive').click();
+    await basesPage.evaluate(()=>history.replaceState(null,'',location.pathname));
+    await basesPage.locator('#filtru-oras-global').selectOption('București');
+    await basesPage.locator('#btn-home-baze').click();
+    await basesPage.locator(`[data-base-id="${baseIds.b}"]`).waitFor();
+    assert.equal(await basesPage.locator('[data-base-id]').count(),1);
+    await basesPage.evaluate(id=>window.openSportsBases(id),baseIds.a);
+    await basesPage.locator(`[data-base-court="${baseCourts.a}"]`).waitFor();
+    pass('base directory follows the city filter while an explicit shared base opens independently of the selected city');
+    await basesPage.locator(`[data-base-court="${baseCourts.a2}"]`).click();
+    await basesPage.locator('#modal-rezervare').waitFor({state:'visible'});
+    await basesPage.locator('#modal-baze-sportive').waitFor({state:'hidden'});
+    await basesPage.locator('#container-zile .btn-zi').nth(1).click();
+    await basesPage.locator('.btn-ora').filter({hasText:/^09:00$/}).waitFor();
+    assert.equal(await basesPage.locator('.btn-ora').count(),3);
+    assert.match(await basesPage.locator('#modal-rezervare .modal-continut').evaluate(node=>getComputedStyle(node).backgroundImage),/RealistTenis\.png/);
+    assert.ok(requests.some(item=>item.path==='/rest/v1/terenuri' && new URLSearchParams(item.search).get('id')===`eq.${baseCourts.a2}`));
+    await basesPage.locator('.btn-ora').filter({hasText:/^09:00$/}).click();
+    await basesPage.locator('#buton-confirma').click();
+    await basesPage.locator('#modal-auth').waitFor({state:'visible'});
+    assert.equal(await basesPage.locator('#modal-rezervare').isVisible(),false);
+    await basesPage.keyboard.press('Escape');
+    pass('a base court is rechecked through RLS and opens the original booking form with its real sport, hours and guest authentication flow');
+    const deepLink=await pageFor();
+    await deepLink.goto(new URL(`?baza=${baseIds.b}`,base).href,{waitUntil:'networkidle'});
+    await deepLink.locator(`[data-base-court="${baseCourts.b1}"]`).waitFor();
+    assert.equal(await deepLink.locator('[data-base-court]').count(),2);
+    assert.equal(await deepLink.locator('#baze-sportive-titlu').innerText(),'Baza B');
+    await deepLink.keyboard.press('Escape');
+    await deepLink.locator('#modal-baze-sportive').waitFor({state:'hidden'});
+    pass('a direct shared URL opens the correct base and Escape restores the homepage');
+    const missingBase=await pageFor();
+    await missingBase.goto(new URL(`?baza=${baseIds.inactive}`,base).href,{waitUntil:'networkidle'});
+    await missingBase.locator('#modal-baze-sportive').waitFor({state:'visible'});
+    assert.equal(await missingBase.locator('[data-base-court]').count(),0);
+    assert.ok((await missingBase.locator('#baze-sportive-continut').innerText()).trim());
+    assert.ok(!(await missingBase.locator('#baze-sportive-continut').innerText()).includes('Terenul bazei dezactivate'));
+    await missingBase.keyboard.press('Escape');
+    pass('an unavailable shared base gives a recoverable empty result without exposing its courts');
+    const nativeShare=await pageFor();
+    await nativeShare.addInitScript(()=>{
+      Object.defineProperty(navigator,'share',{configurable:true,value:async data=>{window.__nativeShare=data;throw new DOMException('Cancelled','AbortError');}});
+    });
+    await nativeShare.goto(new URL(`?baza=${baseIds.b}`,base).href,{waitUntil:'networkidle'});
+    await nativeShare.locator('#baze-sportive-share').click();
+    await nativeShare.waitForFunction(()=>Boolean(window.__nativeShare));
+    assert.equal(new URL((await nativeShare.evaluate(()=>window.__nativeShare)).url).search,`?baza=${baseIds.b}`);
+    assert.equal(await nativeShare.locator('#modal-baze-sportive').isVisible(),true);
+    assert.equal(await nativeShare.locator('[data-base-court]').count(),2);
+    pass('native share cancellation preserves the current base without an exception');
+    const unavailableBases=await pageFor();
+    await unavailableBases.context().route(url=>url.hostname===host && url.pathname.endsWith('/baze_sportive'),route=>route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({message:'Fixture base read unavailable'})}));
+    await unavailableBases.goto(base,{waitUntil:'networkidle'});
+    await unavailableBases.locator('#btn-home-baze').click();
+    await unavailableBases.waitForLoadState('networkidle');
+    assert.equal(await unavailableBases.locator('[data-base-id]').count(),0);
+    assert.ok((await unavailableBases.locator('#baze-sportive-continut').innerText()).trim());
+    await unavailableBases.keyboard.press('Escape');
+    await unavailableBases.locator('.card-sport[data-sport="Tenis"]').click();
+    await unavailableBases.locator('#modal-terenuri').waitFor({state:'visible'});
+    await unavailableBases.locator('#filtru-nume').fill('Baza A Tenis');
+    await assertCourtNames(unavailableBases,['Baza A Tenis']);
+    pass('a failed base-directory read leaves a usable close action and the existing sport booking path working');
+
+    // Superadmin changes go through the real SDK into one RLS-enforced RPC.
+    await superAdmin.locator('#btn-baze-admin').click();
+    await superAdmin.locator('#modal-baze-admin').waitFor({state:'visible'});
+    await superAdmin.locator(`[data-edit-base="${baseIds.a}"]`).waitFor();
+    assert.equal(await superAdmin.locator('[data-edit-base]').count(),5);
+    await superAdmin.locator(`[data-edit-base="${baseIds.a}"]`).click();
+    assert.equal(await superAdmin.locator('#baza-descriere').inputValue(),unsafeDescription);
+    assert.equal(await superAdmin.evaluate(()=>window.__baseXss),undefined);
+    for (const width of viewportWidths) {
+      await superAdmin.setViewportSize({width,height:844});
+      await assertFits(superAdmin,'#modal-baze-admin .modal-continut',`superadmin base editor ${width}px`);
+      assert.doesNotMatch(await superAdmin.locator('#modal-baze-admin').innerText(),/\p{Extended_Pictographic}/u);
+      if (screenshotDir) await superAdmin.screenshot({path:join(screenshotDir,`spotivity-super-base-editor-${width}.png`)});
+    }
+    pass('superadmin sees empty, inactive and public bases, with a safe editor that fits all four viewport widths');
+    await superAdmin.locator('#btn-inapoi-baze').click();
+    await superAdmin.locator('#btn-baza-noua').click();
+    await superAdmin.locator('#baza-nume').fill('Baza creată din panou');
+    await superAdmin.locator('#baza-oras').fill('Cluj-Napoca');
+    await superAdmin.locator('#baza-descriere').fill('Descriere creată prin formular.');
+    const unassignedCourtId=await serial(async()=>{
+      await pg.exec('reset role');
+      return (await pg.query("select id from public.terenuri where nume='Court B'")).rows[0].id;
+    });
+    await superAdmin.locator(`[data-base-court-id="${unassignedCourtId}"]`).check();
+    await superAdmin.locator(`[data-base-admin-id="${uid(3)}"]`).check();
+    const savedBaseResponse=superAdmin.waitForResponse(response=>new URL(response.url()).pathname==='/rest/v1/rpc/save_sports_base' && response.request().method()==='POST');
+    await superAdmin.locator('#btn-salveaza-baza').click();
+    assert.equal((await savedBaseResponse).status(),200);
+    await superAdmin.waitForLoadState('networkidle');
+    const createdBase=await serial(async()=>{
+      await pg.exec('reset role');
+      const row=(await pg.query("select * from public.baze_sportive where nume='Baza creată din panou'")).rows[0];
+      assert.ok(row);
+      assert.equal((await pg.query('select baza_sportiva_id from public.terenuri where id=$1',[unassignedCourtId])).rows[0].baza_sportiva_id,row.id);
+      assert.equal((await pg.query('select user_id from public.baze_sportive_admini where baza_id=$1',[row.id])).rows[0].user_id,uid(3));
+      return row;
+    });
+    assert.ok(requests.some(item=>item.path==='/rest/v1/rpc/save_sports_base' && item.person===4 && item.body.p_court_ids.includes(String(unassignedCourtId))));
+    pass('superadmin creates a base, associates an existing court and grants description editing atomically through the authenticated SDK and PostgreSQL RLS');
+    await superAdmin.keyboard.press('Escape');
+    await superAdmin.locator('.card-sport[onclick*="deschideModalAdaugaTeren"]').click();
+    await superAdmin.locator('#teren-baza').selectOption(createdBase.id);
+    await superAdmin.locator('#teren-nume').fill('Teren creat direct în bază');
+    await superAdmin.locator('#teren-sport').selectOption('Baschet');
+    await superAdmin.locator('#teren-oras').fill('Cluj-Napoca');
+    await superAdmin.locator('#teren-pret').fill('100');
+    await superAdmin.locator('#teren-locatie').fill('https://maps.google.com/');
+    await superAdmin.locator('#btn-adauga-teren').click();
+    await superAdmin.locator('#modal-adauga-teren').waitFor({state:'hidden'});
+    await serial(async()=>{
+      await pg.exec('reset role');
+      const row=(await pg.query("select baza_sportiva_id from public.terenuri where nume='Teren creat direct în bază'")).rows[0];
+      assert.equal(row?.baza_sportiva_id,createdBase.id);
+    });
+    pass('the existing add-court form can create a court directly inside the selected sports base');
+    const baseAdmin=await pageFor();
+    await baseAdmin.goto(new URL('admin.html',base).href,{waitUntil:'networkidle'});
+    await baseAdmin.locator('#login-email-admin').fill('admin@example.test');
+    await baseAdmin.locator('#login-parola').fill(' test-password. ');
+    await baseAdmin.locator('#login-admin-btn').click();
+    await baseAdmin.locator('#sectiune-dashboard').waitFor({state:'visible'});
+    await baseAdmin.locator('#btn-baze-admin').click();
+    await baseAdmin.locator(`[data-edit-base="${createdBase.id}"]`).waitFor();
+    assert.deepEqual((await baseAdmin.locator('[data-edit-base]').evaluateAll(nodes=>nodes.map(node=>node.dataset.editBase))).sort(),[baseIds.a,createdBase.id].sort());
+    assert.equal(await baseAdmin.locator('#btn-baza-noua').isVisible(),false);
+    await baseAdmin.locator(`[data-edit-base="${createdBase.id}"]`).click();
+    assert.ok(!(await baseAdmin.locator('#baza-nume').isEditable()));
+    assert.ok(!(await baseAdmin.locator('#baza-oras').isEditable()));
+    assert.equal(await baseAdmin.locator('[data-base-court-id]:enabled').count(),0);
+    assert.equal(await baseAdmin.locator('[data-base-admin-id]:enabled').count(),0);
+    for (const width of viewportWidths) {
+      await baseAdmin.setViewportSize({width,height:844});
+      await assertFits(baseAdmin,'#modal-baze-admin .modal-continut',`ordinary admin base description ${width}px`);
+      if (screenshotDir) await baseAdmin.screenshot({path:join(screenshotDir,`spotivity-admin-base-description-${width}.png`)});
+    }
+    await baseAdmin.locator('#baza-descriere').fill('Descriere actualizată de administratorul autorizat.');
+    await baseAdmin.locator('#btn-salveaza-baza').click();
+    await baseAdmin.locator('#admin-baze-directory').waitFor({state:'visible'});
+    assert.equal(await baseAdmin.locator('#admin-baza-status').innerText(),'Descrierea a fost salvată.');
+    await serial(async()=>{
+      await pg.exec('reset role');
+      assert.equal((await pg.query('select descriere from public.baze_sportive where id=$1',[createdBase.id])).rows[0].descriere,'Descriere actualizată de administratorul autorizat.');
+      assert.equal((await pg.query('select terenuri from public.users_admin where user_id=$1',[uid(3)])).rows[0].terenuri.trim(),'Court A');
+    });
+    pass('an ordinary admin sees only explicitly permitted bases and can save the description without gaining another court allocation');
+    const scopeResult=await baseAdmin.evaluate(async({baseId,courtId})=>{
+      const structural=await db.from('baze_sportive').update({nume:'Attempted unauthorized rename'}).eq('id',baseId).select('id');
+      const association=await db.from('terenuri').update({baza_sportiva_id:baseId}).eq('id',courtId).select('id');
+      const otherBookings=await db.from('rezervari').select('id').eq('teren','Court B');
+      return {structural:!!structural.error,association:!!association.error || association.data?.length===0,otherBookings:otherBookings.data};
+    },{baseId:createdBase.id,courtId:baseCourts.a});
+    assert.equal(scopeResult.structural,true);
+    assert.equal(scopeResult.association,true);
+    assert.deepEqual(scopeResult.otherBookings,[]);
+    pass('base description permissions do not permit renaming the base, changing court membership or reading another court’s reservations');
+    // Revoke in a separate trusted transaction while the editor is already open.
+    await baseAdmin.locator(`[data-edit-base="${createdBase.id}"]`).click();
+    await serial(async()=>{
+      await pg.exec("reset role; select set_config('request.jwt.claim.sub','',false)");
+      await pg.query('delete from public.baze_sportive_admini where baza_id=$1 and user_id=$2',[createdBase.id,uid(3)]);
+    });
+    await baseAdmin.locator('#baza-descriere').fill('Revoked edit must never save');
+    await baseAdmin.locator('#btn-salveaza-baza').click();
+    await baseAdmin.locator('#admin-baza-status.is-error').waitFor({state:'visible'});
+    await serial(async()=>{
+      await pg.exec('reset role');
+      assert.equal((await pg.query('select descriere from public.baze_sportive where id=$1',[createdBase.id])).rows[0].descriere,'Descriere actualizată de administratorul autorizat.');
+    });
+    assert.ok((await baseAdmin.locator('#admin-baza-status').innerText()).trim());
+    assert.doesNotMatch(await baseAdmin.locator('#admin-baza-status').innerText(),/^.*salvat[ăa]? cu succes.*$/i);
+    pass('revoking a description grant while its editor is open prevents the save and never reports a false success');
+    await baseAdmin.evaluate(async()=>{await db.auth.signOut({scope:'local'});});
+    await baseAdmin.locator('#sectiune-login').waitFor({state:'visible'});
+    assert.equal(await baseAdmin.locator('#modal-baze-admin').isVisible(),false);
+    assert.equal(await baseAdmin.locator('#admin-baze-list').innerText(),'');
+    assert.equal(await baseAdmin.locator('#baza-descriere').inputValue(),'');
+    pass('sign-out closes the base editor and clears its cached private permissions and draft');
+
     assert.deepEqual(browserErrors,[]);
     for (const context of contexts) await context.close();
     console.log(`\n${checks} browser integration checks passed against isolated PostgreSQL.`);

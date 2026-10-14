@@ -241,7 +241,7 @@ window.incarcaTabelProgram = async function() {
             const eBlocat = rGasita.email_client === 'Teren Blocat';
             bg = eBlocat ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.05)';
             
-            col1 += `<br><button class="program-anulare" aria-label="Anulează rezervarea de la ora ${window.escapeHtml(ora)}" title="Anulează rezervarea de la ora ${window.escapeHtml(ora)}" onclick="window.anulareDublaAdmin('${rGasita.id}', '${ora}')" style="background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 5px; width: 100%;"><span class="program-anulare-icon" aria-hidden="true">✕</span><span class="program-anulare-text">Anulează</span></button>`;
+            if (!window.bookingEnded(rGasita.data_str, rGasita.ora)) col1 += `<br><button class="program-anulare" aria-label="Anulează rezervarea de la ora ${window.escapeHtml(ora)}" title="Anulează rezervarea de la ora ${window.escapeHtml(ora)}" onclick="window.anulareDublaAdmin('${rGasita.id}', '${ora}')" style="background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 5px; width: 100%;"><span class="program-anulare-icon" aria-hidden="true">✕</span><span class="program-anulare-text">Anulează</span></button>`;
 
             col2 = `
                 <select onchange="window.schimbaStareExistenta(this, '${rGasita.id}', '${ora}', '${window.escapeJs(terenAles)}', '${dataFormata}')" style="background: #1f2937; color: white; border: 1px solid ${eBlocat ? '#ef4444' : '#f59e0b'}; border-radius: 5px; padding: 6px; font-weight: bold; cursor: pointer; width: 100%;">
@@ -250,7 +250,9 @@ window.incarcaTabelProgram = async function() {
                     <option value="blocat" ${eBlocat ? 'selected' : ''}>BLOCAT</option>
                 </select>
             `;
-            if (!inProgram) {
+            if (window.bookingEnded(rGasita.data_str, rGasita.ora)) {
+                col2 = '<span>FINALIZATĂ</span>';
+            } else if (!inProgram) {
                 col2 = `<span>${eBlocat ? 'BLOCAT' : 'OCUPAT'}</span><small class="program-in-afara">În afara programului actual</small>`;
             }
 
@@ -450,6 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (data && !error) {
             contLogatGlobal = data;
+            window.dispatchEvent(new CustomEvent('spotivity:admin-role', { detail: { userId: data.user_id, isSuper: data.is_super === true, generation: adminAuthGeneration } }));
             document.getElementById('sectiune-login').style.display = 'none';
             document.getElementById('sectiune-dashboard').style.display = 'flex';
             document.getElementById('text-rol-activ').innerText = window.lang === 'hu' ? `Bejelentkezve mint: \n${contLogatGlobal.nume_admin}` : `Logat ca: ${contLogatGlobal.nume_admin}`;
@@ -636,6 +639,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 containerMeniu.innerHTML = htmlMeniu;
                 containerModale.innerHTML = htmlModale;
+                window.applySportAppearance?.();
                 
                 // Reatașează observerul pentru scroll pe noile modale create
                 document.querySelectorAll('.modal').forEach(m => {
@@ -819,6 +823,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('teren-pret').value = '';
         document.getElementById('teren-locatie').value = '';
         document.getElementById('teren-poza').value = '';
+        window.refreshAdminBaseOptions?.();
+        const baseSelect = document.getElementById('teren-baza');
+        if (baseSelect) baseSelect.value = '';
         document.getElementById('modal-adauga-teren').style.display = 'flex';
     };
 
@@ -831,6 +838,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const pretMinge = document.getElementById('teren-pret-minge').value.trim().replace(/\.$/, '');
         const locatie = document.getElementById('teren-locatie').value.trim().replace(/\.$/, '');
         const fileInput = document.getElementById('teren-poza');
+        const bazaSportivaId = document.getElementById('teren-baza')?.value || null;
+        const createAuthRequest = adminAuthGeneration;
+        if (!contLogatGlobal?.is_super) return alert('Doar superadminul poate adăuga terenuri.');
 
         if (!nume || !pret || !locatie) return alert("Completează câmpurile!");
         const btn = document.getElementById('btn-adauga-teren'); btn.innerText = "Se salvează..."; btn.disabled = true;
@@ -859,12 +869,14 @@ document.addEventListener('DOMContentLoaded', () => {
             urlPoza = publicUrlData.publicUrl;
         }
 
+        if (createAuthRequest !== adminAuthGeneration || !contLogatGlobal?.is_super) return;
         const { error } = await db.from('terenuri').insert([{
-            nume, sport, oras, pret: parseInt(pret), optiune_minge: minge, pret_minge: parseInt(pretMinge), locatie, poza: urlPoza, este_activ: true
+            nume, sport, oras, pret: parseInt(pret), optiune_minge: minge, pret_minge: parseInt(pretMinge), locatie, poza: urlPoza, este_activ: true, baza_sportiva_id: bazaSportivaId
         }]);
+        if (createAuthRequest !== adminAuthGeneration) return;
         
         if (error) alert("Eroare DB: " + error.message);
-        else { alert("Teren adăugat!"); document.getElementById('modal-adauga-teren').style.display='none'; window.incarcaTerenuriAdmin(); window.actualizeazaBifeTerenuri(); }
+        else { alert("Teren adăugat!"); document.getElementById('modal-adauga-teren').style.display='none'; window.incarcaTerenuriAdmin(); window.actualizeazaBifeTerenuri(); window.refreshAdminBases?.(); }
         btn.innerText = "Adaugă Teren"; btn.disabled = false;
     });
 
@@ -983,6 +995,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // LOGICĂ CHAT ADMIN
     // ==========================================
     let chatAdminRealtime = null;
+    let chatAdminRealtimeGeneration = 0;
     let chatAdminMesajeToate = [];
     let chatAdminConversatieCurenta = null; // Un obiect { email_client, teren }
     
@@ -998,14 +1011,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function initializareRealtimeChatAdmin() {
         const authRequest = adminAuthGeneration;
-        if (chatAdminRealtime) db.removeChannel(chatAdminRealtime);
+        const realtimeRequest = ++chatAdminRealtimeGeneration;
+        if (chatAdminRealtime) {
+            const previous = chatAdminRealtime;
+            chatAdminRealtime = null;
+            await db.removeChannel(previous);
+        }
         if (!contLogatGlobal) return;
         
         await incarcaMesajeAdmin(false); 
         if (!contLogatGlobal || authRequest !== adminAuthGeneration) return;
         
+        if (realtimeRequest !== chatAdminRealtimeGeneration) return;
         // Adminul primește notificări pentru orice mesaj legat de terenurile lui
-        chatAdminRealtime = db.channel('mesaje_chat_admin')
+        chatAdminRealtime = db.channel(`mesaje_chat_admin_${authRequest}_${realtimeRequest}`)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'mesaje_chat' }, payload => {
                 if (!contLogatGlobal || authRequest !== adminAuthGeneration) return;
                 const terenMesaj = payload.new ? payload.new.teren : null;
@@ -1278,15 +1297,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btnTrimiteChatAdmin) btnTrimiteChatAdmin.disabled = true;
     });
 
-    const originalLoginAdminBtn = document.getElementById('login-admin-btn');
-    if (originalLoginAdminBtn) {
-        originalLoginAdminBtn.addEventListener('click', () => {
-            setTimeout(() => { if (contLogatGlobal) initializareRealtimeChatAdmin(); }, 1500);
-        });
-    }
-
     function clearAdminSessionView() {
+        chatAdminRealtimeGeneration++;
         adminAuthGeneration++;
+        window.dispatchEvent(new Event('spotivity:admin-clear'));
         programRequestGeneration++;
         manualHoursRequestGeneration++;
         contLogatGlobal = null;

@@ -58,3 +58,16 @@ Configurația publică Supabase este deja în codul site-ului. Nu adăuga creden
 Site-ul folosit este [GitHub Pages](https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/), cu panoul [admin.html](https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/admin.html). Publicarea servește fișierele statice din `main`. Verifică ultimul deployment `github-pages` după actualizare.
 
 Programul rezervabil se schimbă în setările fiecărui teren din admin: ore de început 09:00–22:00. Terenurile existente păstrează 12:00–22:00 până le modifici. Migrarea `supabase/003_court_hours.sql` este aplicată în proiectul existent; [instrucțiunile Supabase](supabase/README.md) explică pașii, rolurile și verificările. Nu rula din nou migrarea 001 după 003.
+
+
+## Baze sportive și istoricul rezervărilor
+
+Din pagina principală, butonul **Vezi bazele sportive** (sau **Baze sportive** pe telefon) deschide lista pentru orașul ales. Fiecare bază are descriere, terenuri și buton **Distribuie**. Rezervarea folosește formularul existent.
+
+În `admin.html`, superadminul deschide **Baze sportive** pentru a crea o bază sau a-i modifica numele, orașul, descrierea și terenurile. Bifează terenurile existente, apoi apasă **Salvează baza**. Pentru un teren nou, folosește **Adaugă Teren → Baza sportivă**. Pentru mutarea unui teren, scoate-l întâi din baza veche și salvează. O bază fără terenuri active nu apare public.
+
+În aceeași fereastră, **Cine poate edita descrierea** acordă explicit acces unui administrator. Acest acces permite doar descrierea; nu extinde accesul la rezervări, clienți sau alte terenuri. Superadminul are acces la toate bazele.
+
+Rezervările finalizate rămân în istoric fără buton de anulare. O rezervare pe o oră se încheie la sfârșitul acelei ore: pentru 10:00, limita este 11:00, în fusul Europe/Bucharest. Rezervările viitoare și cele în desfășurare se pot anula conform permisiunilor existente. Regula este verificată și de baza de date, pentru client, admin și superadmin.
+
+Migrările aferente sunt `supabase/006_sports_bases.sql` și `supabase/007_completed_booking_cancellation.sql`; nu rula fișierele din `supabase/tests/` în proiectul real.

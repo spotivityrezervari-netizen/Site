@@ -14,8 +14,9 @@
     <script src="js/db.js?v=2"></script>
     <script src="js/security.js?v=2"></script>
     <script src="js/sport-appearance.js?v=1" defer></script>
-    <script src="js/admin.js?v=21" defer></script>
-    <link rel="stylesheet" href="css/admin.css?v=2">
+    <script src="js/admin.js?v=22" defer></script>
+    <script src="js/admin-baze.js?v=1" defer></script>
+    <link rel="stylesheet" href="css/admin.css?v=3">
     
 </head>
 <body class="admin-page">
@@ -53,7 +54,7 @@
             <div class="grila-sporturi" style="max-width: 100%; padding: 0;">
                 
                 <!-- PANOURI SUPER ADMIN -->
-                <button type="button" class="card-sport admin-menu-card super-admin-only" style="display: none; padding: 20px;" onclick="document.getElementById('modal-adauga-teren').style.display='flex'">
+                <button type="button" class="card-sport admin-menu-card super-admin-only" style="display: none; padding: 20px;" onclick="window.deschideModalAdaugaTeren()">
                     <h2 style="font-size: 18px;">Adaugă Teren</h2>
                 </button>
                 <button type="button" class="card-sport admin-menu-card super-admin-only" style="display: none; padding: 20px;" onclick="document.getElementById('modal-creeaza-cont').style.display='flex'">
@@ -71,6 +72,11 @@
                     <h2 style="font-size: 18px;"><span data-trad="t-istoric-titlu-scurt">Toate Rezervările</span></h2>
                 </button>
 
+                <button type="button" id="btn-baze-admin" class="card-sport admin-menu-card" hidden>
+                    <h2>Baze sportive</h2>
+                    <span class="admin-card-detail">Descrieri și terenuri</span>
+                </button>
+
                 <!-- Aici JS-ul va injecta cardurile pentru setările terenurilor alocate -->
                 <div id="container-meniu-terenuri" style="display: contents;"></div>
             </div>
@@ -79,6 +85,31 @@
     </div> <!-- End fundal-water -->
 
     <!-- ===================== ZONA DE MODALE (POP-UP-URI) ===================== -->
+
+    <div class="modal" id="modal-baze-admin">
+        <section class="modal-continut modal-mare admin-baze-dialog" role="dialog" aria-modal="true" aria-labelledby="admin-baze-title">
+            <button type="button" class="buton-inchidere" id="btn-inchide-baze-admin" aria-label="Închide">X</button>
+            <h2 class="titlu-modal" id="admin-baze-title">Baze sportive</h2>
+            <p id="admin-baza-status" role="status" aria-live="polite"></p>
+            <div id="admin-baze-directory">
+                <p class="admin-baze-help">Alege o bază pentru a-i actualiza prezentarea.</p>
+                <button type="button" class="btn-cont" id="btn-baza-noua" hidden>Adaugă bază sportivă</button>
+                <div id="admin-baze-list" class="admin-baze-list"></div>
+            </div>
+            <form id="admin-baza-form" hidden>
+                <button type="button" class="btn-cont" id="btn-inapoi-baze">Înapoi la baze</button>
+                <div id="admin-baza-structura" class="admin-baza-fields">
+                    <div class="grup-input"><label for="baza-nume">Numele bazei sportive</label><input id="baza-nume" type="text" maxlength="160" required></div>
+                    <div class="grup-input"><label for="baza-oras">Oraș</label><input id="baza-oras" type="text" maxlength="120" required></div>
+                    <label class="admin-baza-check"><input id="baza-activa" type="checkbox"><span>Vizibilă pe site când are terenuri active</span></label>
+                </div>
+                <div class="grup-input"><label for="baza-descriere">Descrierea bazei sportive</label><textarea id="baza-descriere" maxlength="2000" rows="5" placeholder="Facilități, acces și informații utile pentru clienți"></textarea><span class="admin-baze-help">Maximum 2.000 de caractere. Descrierea apare pe site.</span></div>
+                <fieldset id="admin-baza-terenuri-section"><legend>Terenurile bazei</legend><p class="admin-baze-help">Bifează terenurile pe care le adaugi în această bază. Debifează pentru a le scoate. Pentru a muta un teren din altă bază, scoate-l mai întâi de acolo.</p><div id="baza-terenuri" class="admin-baza-options"></div></fieldset>
+                <fieldset id="admin-baza-admini-section"><legend>Cine poate edita descrierea</legend><p class="admin-baze-help">Superadminii au deja acces. Permisiunea de aici permite doar editarea descrierii; accesul la terenuri se stabilește separat.</p><div id="baza-admini" class="admin-baza-options"></div></fieldset>
+                <button type="submit" id="btn-salveaza-baza" class="buton-rezervare">Salvează baza</button>
+            </form>
+        </section>
+    </div>
 
     <div class="modal" id="modal-adauga-teren">
         <div class="modal-continut modal-mare" style="border-color: #f59e0b; width: 100%; max-width: 550px;">
@@ -90,6 +121,7 @@
                 <div class="grup-input"><label>Nume Teren</label><input type="text" id="teren-nume"></div>
                 <div class="grup-input"><label>Sport</label><select id="teren-sport"><option value="Fotbal">Fotbal</option><option value="Baschet">Baschet</option><option value="Tenis">Tenis</option><option value="Volei">Volei</option></select></div>
                 <div class="grup-input"><label>Oraș</label><input type="text" id="teren-oras" placeholder="Ex: Târgu Mureș"></div>
+                <div class="grup-input"><label for="teren-baza">Baza sportivă</label><select id="teren-baza"><option value="">Fără bază sportivă</option></select></div>
                 <div class="grup-input"><label>Preț/oră (Lei)</label><input type="number" id="teren-pret"></div>
                 <div class="grup-input admin-toggle-row" style="display:flex; justify-content:space-between; margin-top:10px;"><label>Ofertă Minge?</label><input type="checkbox" id="teren-minge" checked style="width:20px;height:20px;"></div>
                 <div class="grup-input" style="margin-top:10px;"><label>Preț Minge (Lei)</label><input type="number" id="teren-pret-minge" value="15"></div>
