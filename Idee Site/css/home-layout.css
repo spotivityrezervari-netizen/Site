@@ -1,11 +1,18 @@
-/* Responsive public layout; theme.css supplies the shared black and gold palette. */
-html { background: #100f0c; }
+/* Forest green public background with the shared gold accents from theme.css. */
+html,
+body.pagina-publica { background: #101a14; }
 .pagina-publica .home-shell,
-.pagina-publica .home-main { background: #100f0c; }
+.pagina-publica .home-main { background: #101a14; }
+.pagina-publica .home-city-region { background: linear-gradient(110deg, #203226, #18271d); }
+.pagina-publica #filtru-oras-global,
+.pagina-publica #filtru-oras-global option { background: #1b2d20; }
+.pagina-publica .home-header { background: rgba(20, 34, 25, .96); }
+.pagina-publica .home-mobile-menu:not([hidden]),
+.pagina-publica .home-footer { background: #142219; }
 .pagina-publica .home-sport-hero {
     display: block;
     padding: 0 0 32px;
-    background: linear-gradient(180deg, #100f0c, #000 25%, #000 80%, #100f0c);
+    background: linear-gradient(180deg, #101a14, #000 25%, #000 80%, #101a14);
     border-bottom: 0;
     text-align: center;
 }
@@ -60,7 +67,7 @@ html { background: #100f0c; }
     min-height: 44px;
     border: 1px solid var(--spotivity-gold-border);
     border-radius: 14px;
-    background: #211c14;
+    background: #1b2d20;
     color-scheme: dark;
     overflow: hidden;
 }
