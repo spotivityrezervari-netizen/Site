@@ -1,0 +1,112 @@
+/* Administrative screens share the public forest green and gold palette.
+   Inline booking, court visibility and chat status colours remain authoritative. */
+html,
+body.admin-page { background: #101a14; color: var(--spotivity-cream); }
+.admin-page .admin-shell {
+    background: #101a14;
+    background-image: radial-gradient(ellipse at 85% 0%, rgba(216, 182, 106, .07), transparent 55%);
+}
+.admin-page .admin-header {
+    background: #142219 !important;
+    border-color: var(--spotivity-gold-border) !important;
+}
+.admin-page #text-rol-activ { color: var(--spotivity-gold-light) !important; }
+.admin-page .modal { --modal-veil: rgba(6, 16, 10, .8); }
+.admin-page .modal-continut {
+    background-color: rgba(20, 32, 24, .97);
+    color: var(--spotivity-cream);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .6);
+}
+.admin-page .admin-menu-card,
+.admin-page .admin-base-card {
+    background: linear-gradient(145deg, #223023, #17251b);
+    border-color: var(--spotivity-gold-border);
+    color: var(--spotivity-cream);
+}
+.admin-page .admin-menu-card:hover,
+.admin-page .admin-base-card:hover { background: #293b2b; border-color: #b89b5e; }
+.admin-page :is(.admin-card-detail, .admin-baze-help, .admin-base-card span, .admin-baza-check small) { color: var(--spotivity-muted); }
+.admin-page :is(.admin-base-card small, .ore-teren-setari legend, .admin-baze-dialog legend) { color: var(--spotivity-gold-light); }
+.admin-page :is(.ore-teren-setari, .admin-baze-dialog fieldset, .admin-baza-check) { border-color: var(--spotivity-gold-border); }
+.admin-page .admin-baza-check { background: rgba(9, 22, 13, .4); }
+.admin-page .admin-baza-check:has(input:checked) { border-color: var(--spotivity-gold); background: rgba(216, 182, 106, .08); }
+
+/* Gold section accents leave inactive courts and reservation states distinct. */
+.admin-page :is(#modal-adauga-teren, #modal-creeaza-cont, #modal-rezervare-manuala,
+    #modal-tabel-program, #modal-istoric, #modal-chat-admin) > .modal-continut {
+    border-color: var(--spotivity-gold-border) !important;
+}
+.admin-page :is(#modal-adauga-teren, #modal-creeaza-cont, #modal-rezervare-manuala,
+    #modal-tabel-program, #modal-istoric) .titlu-modal,
+.admin-page #modal-chat-admin .chat-header h2 { color: var(--spotivity-gold-light) !important; }
+.admin-page .admin-city-header h1 { color: var(--spotivity-cream) !important; }
+.admin-page [id^="modal-setari-"] > .modal-continut[style*="#3b82f6"] {
+    border-color: var(--spotivity-gold-border) !important;
+}
+.admin-page [id^="modal-setari-"] .titlu-modal[style*="#3b82f6"],
+.admin-page .grup-input label[style*="#a1eafb"] { color: var(--spotivity-gold-light) !important; }
+.admin-page .admin-toggle-row:has(input[id^="are-chat-"]) {
+    background: rgba(216, 182, 106, .06) !important;
+    border-color: var(--spotivity-gold-border) !important;
+}
+
+/* Only backgrounds override inline form decoration: status select borders stay intact. */
+.admin-page :is(input:not([type="checkbox"]), select, textarea) {
+    background-color: #1b2d20 !important;
+    color: var(--spotivity-cream);
+    color-scheme: dark;
+}
+.admin-page .grup-input :is(input:not([type="checkbox"]), select, textarea):not(:disabled),
+.admin-page .admin-baze-dialog textarea { border-color: var(--spotivity-gold-border); }
+.admin-page :is(input, textarea)::placeholder { color: #aebbaa; opacity: 1; }
+.admin-page :is(input:not([type="checkbox"]), select, textarea):disabled { background-color: #15231a !important; color: #a4b19f; }
+.admin-page :is(input:not([type="checkbox"]), select, textarea):not(:disabled):focus { border-color: var(--spotivity-gold); }
+.admin-page input[type="checkbox"] { accent-color: var(--spotivity-gold); }
+.admin-page input[type="date"]::-webkit-calendar-picker-indicator { filter: none; }
+.admin-page input::file-selector-button {
+    background: #293b2b;
+    color: var(--spotivity-cream);
+    border-color: var(--spotivity-gold-border);
+}
+.admin-page :is(button, a, input, select, textarea):focus-visible { outline-color: var(--spotivity-gold-light) !important; }
+
+/* Named primary actions exclude delete, cancellation and block/unblock buttons. */
+.admin-page :is(#login-admin-btn, #btn-adauga-teren, #creeaza-supervisor-btn,
+    #btn-rezervare-manuala, #btn-istoric, #btn-salveaza-baza, #btn-baza-poza-save,
+    [id^="btn-save-"], .program-reincarca):not(:disabled) {
+    background: #d8b66a linear-gradient(135deg, #edca82, #cfaa58) !important;
+    color: #20190f !important;
+    box-shadow: 0 4px 18px rgba(216, 182, 106, .12);
+}
+.admin-page :is(#login-admin-btn, #btn-adauga-teren, #creeaza-supervisor-btn,
+    #btn-rezervare-manuala, #btn-istoric, #btn-salveaza-baza, #btn-baza-poza-save,
+    [id^="btn-save-"], .program-reincarca):not(:disabled):hover { background: var(--spotivity-gold-light) !important; }
+.admin-page :is(#login-admin-btn, #btn-adauga-teren, #creeaza-supervisor-btn,
+    #btn-rezervare-manuala, #btn-istoric, #btn-salveaza-baza, #btn-baza-poza-save,
+    [id^="btn-save-"], .program-reincarca):disabled {
+    background: #293b2b !important;
+    color: #a4b19f !important;
+    box-shadow: none;
+}
+.admin-page .btn-cont { background: rgba(216, 182, 106, .07); border-color: var(--spotivity-gold-border); }
+.admin-page .btn-cont:hover { background: rgba(216, 182, 106, .15); color: var(--spotivity-gold-light); }
+
+.admin-page .program-filtre,
+.admin-page .program-tabel th { background: #142219; }
+.admin-page .program-scroll { background: #101a14; border-color: var(--spotivity-gold-border); }
+.admin-page :is(.admin-existing-court, .admin-history-card) { background: #18271d !important; }
+.admin-page .btn-tabel-chat {
+    background: rgba(216, 182, 106, .08) !important;
+    border-color: var(--spotivity-gold-border) !important;
+    color: var(--spotivity-gold-light) !important;
+}
+
+.admin-page .chat-header,
+.admin-page .lista-mesaje { border-color: var(--spotivity-gold-border); }
+.admin-page .lista-mesaje { background: #101a14; }
+.admin-page .card-conversatie:not(.necitit) { background: #1b2d20; border-color: rgba(216, 182, 106, .18); }
+.admin-page .card-conversatie:not(.necitit):hover { background: #293b2b; border-color: var(--spotivity-gold-border); }
+.admin-page #chat-admin-btn-trimite:not(:disabled) { background: var(--spotivity-gold); }
+.admin-page #chat-admin-btn-trimite:not(:disabled):hover { background: var(--spotivity-gold-light); }
+.admin-page #chat-admin-btn-trimite:not(:disabled) svg { stroke: #20190f; }
+.admin-page .bulina-notificare { border-color: #142219; }
