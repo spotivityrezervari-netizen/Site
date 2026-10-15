@@ -15,9 +15,10 @@
     <script src="js/security.js?v=2"></script>
     <script src="js/sport-appearance.js?v=1" defer></script>
     <script src="js/admin.js?v=22" defer></script>
-    <script src="js/admin-baze.js?v=2" defer></script>
+    <script src="js/admin-baze.js?v=3" defer></script>
     <link rel="stylesheet" href="css/admin.css?v=3">
     <link rel="stylesheet" href="css/theme.css?v=2">
+    <link rel="stylesheet" href="css/base-media.css?v=1">
     
 </head>
 <body class="admin-page">
@@ -105,8 +106,25 @@
                     <label class="admin-baza-check"><input id="baza-activa" type="checkbox"><span>Vizibilă pe site când are terenuri active</span></label>
                 </div>
                 <div class="grup-input"><label for="baza-descriere">Descrierea bazei sportive</label><textarea id="baza-descriere" maxlength="2000" rows="5" placeholder="Facilități, acces și informații utile pentru clienți"></textarea><span class="admin-baze-help">Maximum 2.000 de caractere. Descrierea apare pe site.</span></div>
+                <fieldset id="admin-baza-photo-section" class="admin-base-photo">
+                    <legend>Fotografia bazei sportive</legend>
+                    <p id="baza-poza-hint" class="admin-baze-help">JPG, PNG, WebP, AVIF sau GIF, maximum 5 MB. Fotografia apare pe site după salvare.</p>
+                    <img id="baza-poza-preview" class="admin-base-photo-preview" alt="Fotografia bazei sportive" hidden>
+                    <p id="baza-poza-empty" class="admin-baze-help">Baza nu are încă o fotografie.</p>
+                    <div class="grup-input">
+                        <label for="baza-poza-file">Alege o fotografie</label>
+                        <input id="baza-poza-file" type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/gif,.jpg,.jpeg,.png,.webp,.avif,.gif" aria-describedby="baza-poza-hint baza-poza-selection">
+                    </div>
+                    <p id="baza-poza-selection" class="admin-baze-help" role="status"></p>
+                    <div class="admin-base-photo-actions">
+                        <button type="button" id="btn-baza-poza-save" class="btn-cont" disabled>Salvează fotografia</button>
+                        <button type="button" id="btn-baza-poza-clear" class="btn-cont" hidden>Renunță la selecție</button>
+                        <button type="button" id="btn-baza-poza-remove" class="btn-cont" hidden>Elimină fotografia</button>
+                    </div>
+                    <p id="admin-baza-photo-status" class="admin-base-photo-status" role="status" aria-live="polite"></p>
+                </fieldset>
                 <fieldset id="admin-baza-terenuri-section"><legend>Terenurile bazei</legend><p class="admin-baze-help">Bifează terenurile pe care le adaugi în această bază. Debifează pentru a le scoate. Pentru a muta un teren din altă bază, scoate-l mai întâi de acolo.</p><div id="baza-terenuri" class="admin-baza-options"></div></fieldset>
-                <fieldset id="admin-baza-admini-section"><legend>Cine poate edita descrierea</legend><p class="admin-baze-help">Superadminii au deja acces. Permisiunea de aici permite doar editarea descrierii; accesul la terenuri se stabilește separat.</p><div id="baza-admini" class="admin-baza-options"></div></fieldset>
+                <fieldset id="admin-baza-admini-section"><legend>Cine poate edita descrierea și fotografia</legend><p class="admin-baze-help">Superadminii au deja acces. Permisiunea de aici permite editarea descrierii și a fotografiei bazei; accesul la terenuri se stabilește separat.</p><div id="baza-admini" class="admin-baza-options"></div></fieldset>
                 <button type="submit" id="btn-salveaza-baza" class="buton-rezervare">Salvează baza</button>
             </form>
         </section>

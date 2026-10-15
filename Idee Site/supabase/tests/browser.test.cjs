@@ -3,6 +3,8 @@
 const {PGlite} = require('@electric-sql/pglite');
 const {chromium} = require('playwright');
 const {readFileSync,mkdirSync} = require('node:fs');
+const {execFileSync} = require('node:child_process');
+const {createHash} = require('node:crypto');
 const {join} = require('node:path');
 const assert = require('node:assert/strict');
 const uid = n => `00000000-0000-0000-0000-${String(n).padStart(12,'0')}`;
@@ -19,6 +21,17 @@ const token = person => {
 const ident = value => { assert.match(value,/^[a-zA-Z_][a-zA-Z0-9_]*$/); return `"${value}"`; };
 let checks = 0;
 
+async function openProfile(page) {
+  const profile = page.locator('#btn-top-cont');
+  if (await profile.isVisible()) {
+    await profile.click();
+    return;
+  }
+  const menu = page.locator('#home-mobile-menu');
+  if (!await menu.isVisible()) await page.locator('#btn-mobile-menu').click();
+  await menu.locator('[data-profile-target]').click();
+}
+
 (async () => {
   const pg = new PGlite();
   let browser;
@@ -31,6 +44,7 @@ let checks = 0;
     await pg.exec(readFileSync(join(__dirname,'../006_sports_bases.sql'),'utf8'));
     await pg.exec(readFileSync(join(__dirname,'../007_completed_booking_cancellation.sql'),'utf8'));
     await pg.exec(readFileSync(join(__dirname,'../008_profile_edit.sql'),'utf8'));
+    await pg.exec(readFileSync(join(__dirname,'../009_base_photos.sql'),'utf8'));
     await pg.exec("update public.terenuri set poza='assets/imagini/avatar2.png'");
     const tomorrow=(await pg.query("select ((now() at time zone 'Europe/Bucharest')::date+1)::text as d")).rows[0].d;
     let queue=Promise.resolve();
@@ -162,10 +176,19 @@ let checks = 0;
     const proxyUrl=process.env.HTTPS_PROXY || process.env.https_proxy;
     if (proxyUrl) { const u=new URL(proxyUrl);options.proxy={server:u.origin,bypass:'127.0.0.1,localhost'}; }
     browser=await chromium.launch(options);
+    // Curl uses managed HTTPS trust; verify the pinned SRI before passing the
+    // same SDK bytes to Chromium, which also enforces the page's integrity tag.
+    const html=readFileSync(join(__dirname,'..','..','index.html'),'utf8');
+    const sdkTag=html.match(/<script src="(https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@[^\"]+)" integrity="(sha384-[^\"]+)"/);
+    assert.ok(sdkTag,'The application must pin Supabase SDK with SRI');
+    const sdk=execFileSync('curl',['--fail','--location','--silent','--show-error','--max-time','30',sdkTag[1]],{maxBuffer:2*1024*1024});
+    assert.equal('sha384-'+createHash('sha384').update(sdk).digest('base64'),sdkTag[2],'Downloaded SDK must match application SRI');
     const contexts=[];
     const browserErrors=[];
     const pageFor = async () => {
       const context=await browser.newContext({timezoneId:'Europe/Bucharest'}); contexts.push(context);
+      await context.route(sdkTag[1],route=>route.fulfill({status:200,contentType:'application/javascript',body:sdk,
+        headers:{'access-control-allow-origin':'*'}}));
       await context.route(url=>url.hostname===host,api);
       await context.routeWebSocket(url=>url.hostname===host,ws=>ws.close());
       const page=await context.newPage();
@@ -421,7 +444,7 @@ let checks = 0;
       await pg.exec('reset role');
       return (await pg.query("select id from public.rezervari where stare='activa' and ora='13:00'")).rows[0].id;
     });
-    await page.locator('#btn-top-cont').click();
+    await openProfile(page);
     await page.locator('#btn-vezi-active').click();
     await page.locator(`.anulare-client[data-id="${futureId}"]`).click();
     await page.locator(`.anulare-client[data-id="${futureId}"]`).waitFor({state:'hidden'});
@@ -454,12 +477,12 @@ let checks = 0;
     });
     pass('finished bookings remain in history without cancellation controls and direct API cancellation is denied');
     await page.locator('#inchide-istoric-client').click();
-    await page.locator('#btn-top-cont').click();
+    await openProfile(page);
     await page.locator('#btn-logout').click();
     await page.locator('#modal-profil').waitFor({state:'hidden'});
     assert.equal(logoutCount,1);
     pass('logout signs out of Supabase, not just the UI');
-    await page.locator('#btn-top-cont').click();
+    await openProfile(page);
     await page.locator('#login-email').fill(' alice@example.test ');
     const recoveryResponse=page.waitForResponse(response=>{
       const url=new URL(response.url());
@@ -609,7 +632,7 @@ let checks = 0;
     pass('manual hour choices match settings and the schedule retains occupied hours outside the new program');
     const configuredClient=await pageFor();
     await configuredClient.goto(base,{waitUntil:'networkidle'});
-    await configuredClient.locator('#btn-top-cont').click();
+    await openProfile(configuredClient);
     await configuredClient.locator('#login-email').fill('alice@example.test');
     await configuredClient.locator('#login-parola').fill(' test-password. ');
     await configuredClient.locator('#btn-executa-login').click();
@@ -635,7 +658,7 @@ let checks = 0;
       await pg.exec('reset role');
       return (await pg.query("select * from public.rezervari where teren='Court A' and data_str=$1 and ora='12:00' and stare='activa'",[tomorrow])).rows[0];
     });
-    await configuredClient.locator('#btn-top-cont').click();
+    await openProfile(configuredClient);
     await configuredClient.locator('#btn-vezi-active').click();
     await configuredClient.locator(`.anulare-client[data-id="${outsideHour.id}"]`).click();
     await configuredClient.locator(`.anulare-client[data-id="${outsideHour.id}"]`).waitFor({state:'hidden'});
@@ -690,7 +713,7 @@ let checks = 0;
       await route.fulfill({response});
     });
     await subpathPage.goto(nested.href,{waitUntil:'networkidle'});
-    await subpathPage.locator('#btn-top-cont').click();
+    await openProfile(subpathPage);
     await subpathPage.locator('#login-email').fill('alice@example.test');
     const beforeRecovery=requests.length;
     const nestedRecovery=subpathPage.waitForResponse(response=>new URL(response.url()).pathname==='/auth/v1/recover' && response.request().method()==='POST');
@@ -747,7 +770,7 @@ let checks = 0;
     };
     await chatPage.evaluate(async()=>{await db.auth.signInWithPassword({email:'alice@example.test',password:' test-password. '})});
     await chatPage.waitForFunction(()=>document.getElementById('btn-top-cont').innerText.includes('Contul'));
-    await chatPage.locator('#btn-top-cont').click();await chatPage.locator('#modal-profil').waitFor({state:'visible'});
+    await openProfile(chatPage);await chatPage.locator('#modal-profil').waitFor({state:'visible'});
     await chatPage.locator('#btn-vezi-chat').click();await chatPage.locator('#modal-chat-client').waitFor({state:'visible'});
     await selectSettledClientCourt('Court A');
     const chatPause=pauseChatPreflight(chatPage);await chatPage.locator('#chat-client-input').fill('Message intended for Court A');
@@ -916,7 +939,7 @@ let checks = 0;
       await mobile.evaluate(()=>window.scrollTo(0,0));
       await assertFits(mobile,'.home-main',`stacked homepage ${width}px`);
       await assertFits(mobile,'#home-city-region',`homepage city and language controls ${width}px`);
-      const headerControls=await mobile.evaluate(()=>['home-brand','btn-top-cont','btn-mobile-menu','filtru-oras-global','selector-limba'].map(id=>{
+      const headerControls=await mobile.evaluate(()=>['home-brand','home-nav-search','btn-top-cont','btn-mobile-menu','filtru-oras-global','selector-limba'].map(id=>{
         const node=document.getElementById(id),box=node.getBoundingClientRect();
         return {id,left:box.left,right:box.right,top:box.top,bottom:box.bottom,visible:!!(box.width && box.height && getComputedStyle(node).visibility!=='hidden')};
       }).filter(control=>control.visible));
@@ -928,10 +951,12 @@ let checks = 0;
           JSON.stringify({width,overlapping:[a,b]}));
       }
       assert.equal(await mobile.locator('#filtru-oras-global').isVisible(),true);
+      assert.equal(await mobile.locator('#home-nav-search').isVisible(),true);
       const desktopNav=mobile.locator('.home-desktop-nav');
       const hamburger=mobile.locator('#btn-mobile-menu');
       if (await hamburger.isVisible()) {
         assert.equal(await desktopNav.isVisible(),false);
+        assert.equal(await mobile.locator('#btn-top-cont').isVisible(),false);
         await hamburger.click();
         const menu=mobile.locator('#home-mobile-menu');
         await menu.waitFor({state:'visible'});
@@ -944,6 +969,7 @@ let checks = 0;
         assert.ok(bounds.left<=0 && bounds.right>=bounds.width && bounds.top<=bounds.toggleBottom+1 && bounds.bottom>=bounds.height-1,JSON.stringify(bounds));
         assert.deepEqual(await menu.locator('[data-sport-target]').evaluateAll(nodes=>nodes.map(node=>node.dataset.sportTarget).sort()),['Baschet','Fotbal','Tenis','Volei']);
         assert.equal(await menu.locator('[data-profile-target]').count(),1);
+        assert.equal(await menu.locator('button').first().evaluate(button=>button.hasAttribute('data-profile-target')),true,'Profile must be the first mobile menu action');
         await mobile.keyboard.press('Tab');
         assert.equal(await mobile.evaluate(()=>document.activeElement.id==='btn-mobile-menu' || !!document.activeElement.closest('#home-mobile-menu')),true);
         if (screenshotDir) await mobile.screenshot({path:join(screenshotDir,`spotivity-mobile-menu-${width}.png`)});
@@ -967,6 +993,7 @@ let checks = 0;
         await mobile.keyboard.press('Escape');
       } else {
         assert.equal(await desktopNav.isVisible(),true);
+        assert.equal(await mobile.locator('#btn-top-cont').isVisible(),true);
         assert.deepEqual(await desktopNav.locator('[data-sport-target]').evaluateAll(nodes=>nodes.map(node=>node.dataset.sportTarget).sort()),['Baschet','Fotbal','Tenis','Volei']);
         await desktopNav.locator('[data-sport-target="Tenis"]').click();
         await mobile.locator('#modal-terenuri').waitFor({state:'visible'});
@@ -1000,7 +1027,7 @@ let checks = 0;
       assert.ok((await mobile.evaluate(()=>window.scrollY))>originalScroll,`Closing the chooser must restore homepage scrolling at ${width}px`);
       pass(`stacked homepage scroll remains locked under the full blurred chooser and returns to its original position at ${width}px`);
       await mobile.evaluate(()=>window.scrollTo(0,0));
-      await mobile.locator('#btn-top-cont').click();
+      await openProfile(mobile);
       await mobile.locator('#modal-auth').waitFor({state:'visible'});
       await mobile.locator('#tab-register').click();
       await assertFits(mobile,'#modal-auth .modal-continut',`public signup ${width}px`);

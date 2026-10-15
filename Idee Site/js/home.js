@@ -30,7 +30,7 @@
         const menu = document.getElementById('home-mobile-menu');
         const toggle = document.getElementById('btn-mobile-menu');
         const profile = document.getElementById('btn-top-cont');
-        const search = document.getElementById('btn-home-search');
+        const search = document.getElementById('home-nav-search');
         if (!menu || !toggle || !profile) return;
         const desktop = window.matchMedia('(min-width: 768px)');
         const backgroundRegions = ['home-city-region', 'home-main', 'home-footer']
@@ -87,6 +87,11 @@
         });
         document.querySelectorAll('[data-search-target]').forEach(button => {
             button.addEventListener('click', () => { closeMenu(false); window.openCourtSearch?.(); });
+        });
+        document.getElementById('home-nav-search')?.addEventListener('submit', event => {
+            event.preventDefault();
+            closeMenu(false);
+            window.openCourtSearch?.(document.getElementById('home-nav-search-input')?.value || '', document.getElementById('home-nav-search-input'));
         });
         document.querySelectorAll('[data-bases-target]').forEach(button => {
             button.addEventListener('click', () => {

@@ -1,6 +1,6 @@
 # Instalarea protecțiilor Supabase și a rolurilor Spotivity
 
-**Actualizare 14 octombrie 2026:** în Rendez-Vous sunt deja aplicate migrările **1, 3, 4, 5, 6, 7**, inclusiv bazele sportive și refuzarea anulării rezervărilor finalizate. Nu trebuie să copiezi sau să rulezi din nou SQL pentru actualizarea curentă. Pașii de instalare de mai jos sunt pentru proiecte noi; istoricul datat descrie aplicările anterioare. Gestionează bazele din **Admin → Baze sportive**.
+**Actualizare 15 octombrie 2026:** în Rendez-Vous sunt deja aplicate migrările **1, 3, 4, 5, 6, 7, 8, 9**, inclusiv profilul editabil, fotografiile bazelor sportive și refuzarea anulării rezervărilor finalizate. Nu trebuie să copiezi sau să rulezi din nou SQL pentru actualizarea curentă. Pașii de instalare de mai jos sunt pentru proiecte noi; istoricul datat descrie aplicările anterioare. Gestionează bazele din **Admin → Baze sportive**.
 
 Acest pachet conține migrarea bazei de date și frontend-ul compatibil. Pregătirea fișierelor în GitHub nu execută automat SQL-ul în Supabase. Instrucțiunile de mai jos permit aplicarea din Dashboard; accesul administrativ configurat separat permite și aplicarea asistată prin Management API. Testele automate folosesc date fictive într-un PostgreSQL izolat.
 
@@ -54,7 +54,7 @@ Pe **12 octombrie 2026**, migrarea 003 a fost aplicată în **Rendez-Vous** prin
 
 Adresele de redirect Auth sunt exacte; wildcardul vechi pentru spotivity.ro a fost eliminat. La cererea proprietarului, parola nouă are în continuare minimum **6 caractere**. Confirmarea automată și absența SMTP au fost păstrate; configurarea emailului și datele firmei sunt amânate de proprietar. Raportul de verificare și pașii rămași sunt în [PRODUCTION_REVIEW.md](../PRODUCTION_REVIEW.md).
 
-Pentru **alt proiect**, ordinea migrărilor este **001 → 003 → 004 → 005 → 006 → 007** după inventar/backup și verificarea datelor. 002 conține numai exemple de roluri pentru conturi Auth existente și confirmate. Fișierele `tests/` se rulează exclusiv în baza izolată. Instrucțiunile istorice de mai jos pentru reinstalarea 001 se aplică numai proiectelor fără migrări ulterioare.
+Pentru **alt proiect**, ordinea migrărilor este **001 → 003 → 004 → 005 → 006 → 007 → 008 → 009** după inventar/backup și verificarea datelor. 002 conține numai exemple de roluri pentru conturi Auth existente și confirmate. Fișierele `tests/` se rulează exclusiv în baza izolată. Instrucțiunile istorice de mai jos pentru reinstalarea 001 se aplică numai proiectelor fără migrări ulterioare.
 
 ## Căutare și afișare pe telefon
 
@@ -297,3 +297,15 @@ Aplică `008_profile_edit.sql` după 007. Această migrare validează numai nume
 Schimbarea emailului se solicită din frontend prin `auth.updateUser({email}, {emailRedirectTo: siteHomeUrl()})`. Păstrează **Secure email change** activ și configurează SMTP propriu pentru livrarea către utilizatori publici. Nu actualiza manual emailul din `clienti` și nu dezactiva confirmarea pentru a ocoli problemele de livrare. Migrarea nu configurează SMTP și nu schimbă politica de înregistrare.
 
 Testele `profile-edit.test.cjs` și `profile-edit-browser.test.cjs` verifică modificările proprii, refuzul accesului la alte profiluri, confirmarea explicită, starea emailului în așteptare și continuitatea rezervărilor/chatului după confirmare. Nu executa fișierele din `supabase/tests/` în proiectul real.
+
+## 009 — fotografiile bazelor sportive
+
+`009_base_photos.sql` este deja aplicată în proiectul existent după 008. Pentru un proiect nou, aplică întregul fișier numai după toate migrările precedente. Nu reinstala migrările vechi peste cele noi.
+
+Migrarea adaugă `baze_sportive.poza` nullable și bucketul public `poze_baze_sportive`, limitat la JPEG/PNG/WebP/AVIF/GIF și 5 MiB. Nu folosește bucketul fotografiilor terenurilor. Calea canonică este `UUID-bază/UUID-imagine.ext`, iar atribuirea fotografiei cere un obiect existent în acel bucket pentru aceeași bază. Un administrator cu alocare explicită poate modifica descrierea și fotografia; structura bazei rămâne gestionată de superadmin. Grantul nu extinde accesul la alte terenuri, rezervări, clienți sau chat.
+
+Politicile restrictive Storage verifică ambele căi la mutare/înlocuire și împiedică politicile permisive generale vechi să deschidă acest bucket. Retragerea permisiunii sau a rolului admin blochează imediat scrierile. URL-urile fotografiilor sunt publice; nu încărca documente private în acest bucket.
+
+Aplicarea a fost precedată de o probă live cu rollback și verificări de păstrare a datelor/trigger-elor. După aplicare, probele cu rolul real `authenticated` au confirmat încărcarea metadatelor și atribuirea fotografiei propriei baze, refuzul altei baze și refuzul după revocare; toate probele au fost anulate prin rollback. Nu au fost încărcate fișiere demonstrative în Storage live.
+
+`base-photos.test.cjs` verifică 47 de scenarii cu UUID și 47 cu ID numeric. `discovery-media-browser.test.cjs` verifică uploadul prin SDK real într-un Storage izolat, refuzul fișierelor nevalide, înlocuirea/ștergerea/curățarea după erori, afișarea publică, căutarea din antet și derularea automată. Nu executa testele în SQL Editor-ul proiectului real.

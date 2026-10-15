@@ -1,9 +1,69 @@
 const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
+const {readFileSync, mkdtempSync, rmSync} = require('node:fs');
+const {join} = require('node:path');
+const {tmpdir} = require('node:os');
+const {execFile} = require('node:child_process');
+const {promisify} = require('node:util');
+const {createHash} = require('node:crypto');
+const runFile = promisify(execFile);
 const baseUrl = process.env.SITE_BASE_URL || 'http://127.0.0.1:8000/';
 const siteBaseUrl = new URL(baseUrl);
 if (!siteBaseUrl.pathname.endsWith('/')) siteBaseUrl.pathname += '/';
 const siteOrigin = siteBaseUrl.origin;
+// Opt in when Chromium does not inherit the cloud machine's HTTPS trust store.
+// This transports real responses; no API responses or images are substituted.
+const tlsTransport = process.env.SPOTIVITY_SMOKE_TLS_TRANSPORT || 'browser';
+assert.ok(['browser', 'curl'].includes(tlsTransport), 'SPOTIVITY_SMOKE_TLS_TRANSPORT must be browser or curl');
+
+async function verifiedHttpsRead(request) {
+  const url = new URL(request.url());
+  assert.equal(url.protocol, 'https:');
+  assert.ok(['GET', 'HEAD', 'OPTIONS'].includes(request.method()), 'Smoke transport permits read requests only');
+  const directory = mkdtempSync(join(tmpdir(), 'spotivity-smoke-https-'));
+  const headersFile = join(directory, 'headers');
+  const bodyFile = join(directory, 'body');
+  try {
+    const args = ['--silent', '--show-error', '--location', '--compressed', '--max-time', '30',
+      '--proto', '=https', '--proto-redir', '=https', '--request', request.method(),
+      '--dump-header', headersFile, '--output', bodyFile, '--write-out', '%{http_code}'];
+    if (request.method() === 'HEAD') args.push('--head');
+    // Reuse the browser's current public API key/Auth binding. Never print
+    // request headers or curl's argument list, including on a process error.
+    for (const [name, value] of Object.entries(await request.allHeaders())) {
+      if (['host', 'connection', 'content-length', 'accept-encoding'].includes(name.toLowerCase())) continue;
+      args.push('--header', `${name}: ${value}`);
+    }
+    args.push('--url', url.href);
+    let result;
+    try { result = await runFile('curl', args, {maxBuffer: 1024*1024}); }
+    catch { throw new Error(`TLS-validated HTTPS transport failed for ${url.hostname}${url.pathname}`); }
+    const status = Number(result.stdout);
+    assert.ok(status >= 100 && status <= 599, 'Curl must return an HTTP status');
+    const blocks = readFileSync(headersFile, 'utf8').split(/\r?\n\r?\n/).filter(block => /^HTTP\//.test(block));
+    assert.ok(blocks.length, 'Curl must return HTTPS response headers');
+    const headers = {};
+    for (const line of blocks.at(-1).split(/\r?\n/).slice(1)) {
+      const colon = line.indexOf(':');
+      if (colon < 1) continue;
+      const name = line.slice(0, colon).trim().toLowerCase();
+      if (['content-encoding', 'content-length', 'transfer-encoding', 'connection'].includes(name)) continue;
+      headers[name] = line.slice(colon+1).trim();
+    }
+    return {status, headers, body: readFileSync(bodyFile)};
+  } finally { rmSync(directory, {recursive: true, force: true}); }
+}
+
+async function openProfile(page) {
+  const profile = page.locator('#btn-top-cont');
+  if (await profile.isVisible()) {
+    await profile.click();
+    return;
+  }
+  const menu = page.locator('#home-mobile-menu');
+  if (!await menu.isVisible()) await page.locator('#btn-mobile-menu').click();
+  await menu.locator('[data-profile-target]').click();
+}
 
 (async () => {
   const proxyUrl = process.env.HTTPS_PROXY || process.env.https_proxy;
@@ -17,8 +77,31 @@ const siteOrigin = siteBaseUrl.origin;
   const browser = await chromium.launch(options);
   try {
     const context = await browser.newContext({ timezoneId: 'Europe/Bucharest' });
-    await context.route('**/*', route => {
+    const transportErrors = [];
+    let verifiedSdk = false;
+    const sdkTag = tlsTransport === 'curl' && readFileSync(join(__dirname, '..', 'index.html'), 'utf8')
+      .match(/<script src="(https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@[^\"]+)" integrity="(sha384-[^\"]+)"/);
+    if (tlsTransport === 'curl') assert.ok(sdkTag, 'The application must pin Supabase SDK with SRI');
+    await context.route('**/*', async route => {
       if (!['GET', 'HEAD', 'OPTIONS'].includes(route.request().method())) return route.abort();
+      const request = route.request(), url = new URL(request.url());
+      if (tlsTransport === 'curl' && url.protocol === 'https:'
+          && (url.hostname === 'cdn.jsdelivr.net' || url.hostname === 'ndubcdwohqzgxpuiowye.supabase.co' || url.origin === siteOrigin)) {
+        let response;
+        try {
+          response = await verifiedHttpsRead(request);
+          if (url.href === sdkTag[1] && request.method() === 'GET') {
+            assert.equal(response.status, 200, 'The real pinned SDK must download successfully');
+            assert.equal('sha384-' + createHash('sha384').update(response.body).digest('base64'), sdkTag[2],
+              'TLS-validated SDK bytes must match the exact application SRI');
+            verifiedSdk = true;
+          }
+        } catch (error) {
+          transportErrors.push(error.message);
+          return route.abort();
+        }
+        return route.fulfill(response);
+      }
       return route.continue();
     });
     const page = await context.newPage();
@@ -42,7 +125,8 @@ const siteOrigin = siteBaseUrl.origin;
     await page.evaluate(() => window.spotivitySportAppearanceReady);
     assert.equal(await page.locator('.card-sport').count(), 4);
     assert.equal(await page.evaluate(() => typeof supabase.createClient), 'function');
-    await page.locator('#btn-top-cont').click();
+    if (tlsTransport === 'curl') assert.equal(verifiedSdk, true, 'The SDK must pass TLS and exact SRI verification');
+    await openProfile(page);
     await page.locator('#modal-auth').waitFor({state:'visible'});
     assert.ok(await page.locator('#form-login').isVisible());
     await page.keyboard.press('Escape');
@@ -75,12 +159,16 @@ const siteOrigin = siteBaseUrl.origin;
     assert.deepEqual(imageFailures, []);
     console.log('PASS homepage: SDK loaded, all four sport dialogs, login dialog, Escape, and images');
     await page.setViewportSize({width:390,height:844});
+    assert.equal(await page.locator('#home-nav-search').isVisible(),true);
     await page.locator('#btn-mobile-menu').click();
     await page.locator('#home-mobile-menu').waitFor({state:'visible'});
     assert.equal(await page.locator('#home-mobile-menu [data-sport-target]').count(),4);
+    assert.equal(await page.locator('#home-mobile-menu button').first().evaluate(button=>button.hasAttribute('data-profile-target')),true);
+    assert.equal(await page.locator('#btn-top-cont').isVisible(),false);
+    assert.equal(await page.locator('#home-nav-search').isVisible(),false);
     await page.keyboard.press('Escape');
     await page.locator('#home-mobile-menu').waitFor({state:'hidden'});
-    await page.locator('#btn-top-cont').click();
+    await openProfile(page);
     await page.locator('#modal-auth').waitFor({state:'visible'});
     await page.keyboard.press('Escape');
     await page.locator('#modal-auth').waitFor({state:'hidden'});
@@ -132,6 +220,7 @@ const siteOrigin = siteBaseUrl.origin;
     assert.ok(!(await page.locator('#sectiune-dashboard').isVisible()));
     assert.deepEqual(failedSiteAssets, []);
     assert.deepEqual(jsErrors, []);
+    assert.deepEqual(transportErrors, []);
     console.log('PASS admin: login visible, dashboard hidden; no JavaScript exceptions or failed site assets');
     console.log('Backend read results:', JSON.stringify(backend));
     const read = await page.evaluate(async () => {
@@ -145,6 +234,7 @@ const siteOrigin = siteBaseUrl.origin;
     assert.ok(read.appearanceStatus === 200 && read.appearanceCount === 4 && !read.appearanceError,
       `Required Supabase sport appearance read failed: ${JSON.stringify(read)}`);
     console.log('PASS live Supabase: read-only court and all four sport appearance queries returned HTTP 200');
+    if (tlsTransport === 'curl') console.log('PASS HTTPS transport: real CDN/Supabase responses validated with curl TLS and exact pinned SDK SRI');
     await context.close();
   } finally {
     await browser.close();

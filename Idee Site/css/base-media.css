@@ -1,0 +1,14 @@
+.pagina-publica .sports-base-photo {
+    display: block; width: 100%; height: auto; aspect-ratio: 16 / 9;
+    object-fit: cover; border-radius: 12px; background: #edf2e8;
+}
+.pagina-publica .sports-base-photo-detail { margin-bottom: 18px; max-height: 320px; }
+.admin-page .admin-base-photo { min-width: 0; border: 1px solid rgba(216,182,106,.28); border-radius: 14px; padding: 14px; }
+.admin-page .admin-base-photo-preview { display: block; width: 100%; max-width: 520px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 10px; }
+.admin-page .admin-base-photo-preview[hidden] { display: none; }
+.admin-page .admin-base-photo-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.admin-page .admin-base-photo-actions button { flex: 1 1 160px; min-height: 44px; margin: 0; }
+.admin-page .admin-base-photo input[type="file"] { width: 100%; min-width: 0; max-width: 100%; font-size: 14px; }
+.admin-page #baza-poza-selection { overflow-wrap: anywhere; }
+.admin-page .admin-base-photo-status { margin-block: 10px; overflow-wrap: anywhere; font-size: 14px; line-height: 1.5; }
+.admin-page .admin-base-photo-status.is-error { color: #f6b8aa; }

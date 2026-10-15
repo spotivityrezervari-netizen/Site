@@ -22,13 +22,24 @@ const token = person => {
 const ident = value => { assert.match(value, /^[a-zA-Z_][a-zA-Z0-9_]*$/); return `"${value}"`; };
 let checks = 0;
 
+async function openProfile(page) {
+  const profile = page.locator('#btn-top-cont');
+  if (await profile.isVisible()) {
+    await profile.click();
+    return;
+  }
+  const menu = page.locator('#home-mobile-menu');
+  if (!await menu.isVisible()) await page.locator('#btn-mobile-menu').click();
+  await menu.locator('[data-profile-target]').click();
+}
+
 (async () => {
   const pg = new PGlite();
   let browser;
   try {
     await pg.exec(readFileSync(join(__dirname, 'schema.sql'), 'utf8'));
     for (const file of ['001_security.sql', '003_court_hours.sql', '004_admin_scope_hardening.sql',
-      '005_sport_appearance.sql', '006_sports_bases.sql', '007_completed_booking_cancellation.sql', '008_profile_edit.sql']) {
+      '005_sport_appearance.sql', '006_sports_bases.sql', '007_completed_booking_cancellation.sql', '008_profile_edit.sql', '009_base_photos.sql']) {
       await pg.exec(readFileSync(join(__dirname, '..', file), 'utf8'));
     }
     await pg.exec("alter table auth.users add column new_email text; update public.terenuri set poza='assets/imagini/avatar2.png'");
@@ -174,7 +185,7 @@ let checks = 0;
     };
     const openEditor = async () => {
       if (await page.locator('#modal-editare-profil').isVisible()) await page.locator('#inchide-editare-profil').click();
-      if (!await page.locator('#modal-profil').isVisible()) await page.locator('#btn-top-cont').click();
+      if (!await page.locator('#modal-profil').isVisible()) await openProfile(page);
       await page.locator('#btn-editeaza-profil').click();
       await page.locator('#profil-edit-fields').waitFor({state: 'visible'});
       await page.waitForFunction(() => !document.getElementById('btn-profil-continua').disabled);
@@ -308,13 +319,13 @@ let checks = 0;
     assert.match(await page.locator('#profil-email-pending').innerText(), /confirm/i);
     await page.reload({waitUntil: 'networkidle'});
     await page.waitForFunction(() => window.getSpotivityProfileUser()?.newEmail === 'confirmed-next@example.test');
-    await page.locator('#btn-top-cont').click();
+    await openProfile(page);
     assert.match(await page.locator('#profil-email-pending').innerText(), /confirmed-next@example\.test/);
     pass('email uses Auth, remains pending after reload and preserves the old verified identity until confirmation');
 
     await page.locator('#inchide-profil').click();
     await asOwner(() => pg.query('update auth.users set email=new_email,new_email=null where id=$1', [uid(1)]));
-    await page.locator('#btn-top-cont').click();
+    await openProfile(page);
     await page.locator('#modal-profil').waitFor({state: 'visible'});
     await page.waitForFunction(() => window.getSpotivityProfileUser()?.email === 'confirmed-next@example.test');
     assert.equal((await ownProfile(1)).email, 'confirmed-next@example.test');

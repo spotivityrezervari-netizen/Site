@@ -1,0 +1,250 @@
+/* Public dialogs follow the bright page palette; the admin keeps its own theme. */
+.pagina-publica .modal,
+.pagina-publica :is(#modal-terenuri, #modal-rezervare, #modal-legal) {
+    --modal-veil: rgba(218, 227, 223, .66);
+}
+
+.pagina-publica .modal-continut,
+.pagina-publica :is(#modal-terenuri, #modal-rezervare) .modal-continut {
+    background-color: #fffefb;
+    color: var(--spotivity-cream);
+    border-color: rgba(149, 125, 75, .25);
+    box-shadow: 0 20px 65px rgba(42, 61, 59, .19), 0 2px 8px rgba(42, 61, 59, .08);
+}
+.pagina-publica :is(#modal-terenuri, #modal-rezervare) .modal-continut {
+    /* Keep each sport image available while the form stays bright and legible. */
+    background-image: linear-gradient(rgba(255, 251, 245, .96), rgba(255, 251, 245, .96)), var(--fundal-ales) !important;
+}
+
+.pagina-publica :is(.titlu-modal, .profil-header h2, .subtitlu-modal) {
+    color: var(--spotivity-cream);
+}
+.pagina-publica :is(.buton-inchidere, .home-search-panel label, .grup-input label) {
+    color: var(--spotivity-muted);
+}
+.pagina-publica .buton-inchidere:hover { color: var(--spotivity-gold-light); }
+.pagina-publica :is(.taburi-auth, .filtre-terenuri, .optiune-minge) {
+    background: #f5f5ee;
+    border-color: var(--spotivity-gold-border);
+}
+.pagina-publica .tab-auth { color: var(--spotivity-muted); }
+.pagina-publica .tab-auth.activ { background: #e8ca85; color: #34270f; }
+
+.pagina-publica :is(.grup-input input, #filtru-nume, #filtru-ora, #filtru-data,
+    #home-search-input, .sports-bases-copy-fallback input, .chat-input-zona input) {
+    background: #fff;
+    color: var(--spotivity-cream);
+    border-color: #cbd5cf;
+    color-scheme: light;
+}
+.pagina-publica :is(.grup-input input, #filtru-nume, #home-search-input,
+    .sports-bases-copy-fallback input, .chat-input-zona input)::placeholder {
+    color: #68766e;
+    opacity: 1;
+}
+.pagina-publica :is(.grup-input input, #filtru-nume, #filtru-ora,
+    #home-search-input, .sports-bases-copy-fallback input, .chat-input-zona input):focus {
+    border-color: var(--spotivity-gold-light);
+}
+.pagina-publica :is(#filtru-oras-global, #filtru-ora) option {
+    color: var(--spotivity-cream);
+    background: #fff;
+}
+.pagina-publica .filtru-data-control::before {
+    background: #fff;
+    border-color: #cbd5cf;
+}
+.pagina-publica .filtru-data-control:focus-within::before {
+    outline-color: var(--spotivity-gold-light);
+}
+.pagina-publica input[type="date"]::-webkit-calendar-picker-indicator { filter: none; }
+/* These filter labels are created with muted dark-theme inline colors. */
+.pagina-publica .filtre-terenuri label[style] { color: var(--spotivity-muted) !important; }
+
+.pagina-publica :is(.btn-cont, .buton-locatie, .buton-inapoi, .btn-harta-activa) {
+    background: #f6f0e2;
+    color: #5e4a22;
+    border-color: var(--spotivity-gold-border);
+}
+.pagina-publica :is(.btn-cont, .buton-locatie, .buton-inapoi, .btn-harta-activa):hover {
+    background: #efe0bf;
+    color: #493618;
+}
+.pagina-publica .buton-rezervare:not(:disabled):not([style*="background"]),
+.pagina-publica #modal-editare-profil :is(#btn-profil-continua, #btn-profil-confirma):not(:disabled) {
+    background: linear-gradient(135deg, #eed291, #dbb56c);
+    color: #34270f;
+    box-shadow: 0 4px 16px rgba(160, 123, 49, .13);
+}
+.pagina-publica .buton-rezervare:not(:disabled):not([style*="background"]):hover,
+.pagina-publica #modal-editare-profil :is(#btn-profil-continua, #btn-profil-confirma):not(:disabled):is(:hover, :focus-visible) {
+    background: #edca82;
+    color: #34270f;
+}
+.pagina-publica .buton-rezervare:disabled {
+    background: #e5e9e4;
+    color: #667268;
+}
+.pagina-publica #inapoi-la-profil {
+    background: #f6f0e2 !important;
+    color: #5e4a22;
+    border: 1px solid var(--spotivity-gold-border);
+    box-shadow: none;
+}
+.pagina-publica :is(.btn-deconectare, .btn-anulare) {
+    background: #fff0eb;
+    color: #a8322a;
+    border-color: #e5b5a8;
+}
+.pagina-publica :is(.btn-deconectare, .btn-anulare):hover {
+    background: #fbe0d7;
+    color: #8f2922;
+}
+
+.pagina-publica .detalii-utilizator p,
+.pagina-publica .detalii-utilizator > div {
+    background: #f3f7f3 !important;
+    border-color: #dce5db !important;
+}
+.pagina-publica #profil-nume { color: var(--spotivity-cream) !important; }
+.pagina-publica .profil-header > div > div {
+    background: #eff6ed !important;
+    border-color: #d5e5d2 !important;
+    box-shadow: 0 5px 12px rgba(66, 96, 61, .12) !important;
+}
+.pagina-publica #profil-email-pending {
+    background: #fff7df;
+    color: #73530f;
+}
+.pagina-publica .profile-refresh-status,
+.pagina-publica #profil-edit-status[data-kind="error"] {
+    color: #a8322a;
+}
+.pagina-publica .profile-refresh-status {
+    background: #fff0eb;
+    border-color: #e5b5a8;
+}
+.pagina-publica #profil-edit-status[data-kind="success"] { color: #236440; }
+.pagina-publica #profil-edit-summary { background: #fbf7ed; }
+
+.pagina-publica :is(.sports-base-description, .sports-bases-message,
+    .sports-base-court-price, .sports-bases-copy-fallback, .home-booking-court) {
+    color: var(--spotivity-muted);
+}
+.pagina-publica :is(.card-teren-poza, .card-rezervare-item) {
+    background: #f3f7f3;
+    color: var(--spotivity-cream);
+    border-color: #d5e3d4;
+}
+.pagina-publica .card-teren-poza:hover { background: #edf4eb; border-color: #a6c5a2; }
+.pagina-publica .info-teren-poza p { color: #5f740f; }
+.pagina-publica #container-dinamic-terenuri > p { color: var(--spotivity-muted) !important; }
+
+/* Keep the booking state colors distinct and readable on the light surface. */
+.pagina-publica :is(.btn-zi, .btn-ora, .pastila-zi, .pastila-ora) {
+    background: #f2f6f0;
+    color: #344538;
+    border-color: #d1ddcd;
+}
+.pagina-publica :is(.btn-zi, .btn-ora, .pastila-zi, .pastila-ora):hover {
+    background: #e4efdf;
+}
+.pagina-publica :is(.btn-zi.selectat, .btn-ora.selectat) {
+    background: #227548 !important;
+    border-color: #227548;
+    color: #fff;
+}
+.pagina-publica :is(.pastila-zi.activa, .pastila-ora.activa) {
+    background: #227548;
+    border-color: #227548;
+    color: #fff;
+}
+.pagina-publica .btn-ora.ocupat {
+    background: #fff0eb;
+    border-color: #deaaa1;
+    color: #a8322a;
+}
+.pagina-publica .slider { background-color: #bcc8ba; }
+.pagina-publica input:checked + .slider { background-color: #227548; }
+.pagina-publica .disclaimer-anulare {
+    color: #a8322a;
+    background: #fff0eb;
+    border-color: #e5b5a8;
+}
+.pagina-publica .cum-anulez { color: var(--spotivity-muted); }
+.pagina-publica .pasi-anulare {
+    background: #f8f1eb;
+    color: var(--spotivity-muted);
+    border-color: #e8dacf;
+}
+
+/* History markup contains inline theme colors; only its text/card surface changes. */
+.pagina-publica #container-rezervari > div {
+    color: var(--spotivity-cream) !important;
+    background: #f7f9f5 !important;
+    opacity: 1 !important;
+}
+.pagina-publica #container-rezervari > p { color: var(--spotivity-muted) !important; }
+.pagina-publica #container-rezervari :is(h4, span)[style*="#22c55e"] { color: #227548 !important; }
+.pagina-publica #container-rezervari :is(h4, span)[style*="#ef4444"] { color: #a8322a !important; }
+.pagina-publica #container-rezervari :is(h4, span)[style*="#9ca3af"] { color: #596675 !important; }
+.pagina-publica #container-rezervari .btn-anulare {
+    background: #b8352d !important;
+    color: #fff !important;
+}
+.pagina-publica #container-rezervari button[onclick] { background: #2463a0 !important; }
+.pagina-publica #container-rezervari .chat-teren-client { background: #7651ab !important; }
+.pagina-publica #container-rezervari button:disabled {
+    background: #e5e9e4 !important;
+    color: #667268 !important;
+}
+
+.pagina-publica :is(.chat-header, .modal-chat-box.conversatie-activa .lista-conversații-side) {
+    border-color: #dbe4dc;
+}
+.pagina-publica .lista-mesaje { background: #f0f6ef; border-color: #dbe4dc; }
+.pagina-publica .card-conversatie { background: #f6f8f2; border-color: #d9e4d4; }
+.pagina-publica .card-conversatie:hover { background: #eaf2e5; border-color: #aac29f; }
+.pagina-publica .card-conversatie.necitit {
+    background: #eaf2fc;
+    border-color: #6393c4;
+    box-shadow: none;
+}
+.pagina-publica .card-conversatie[style*="white"] { border-color: #b18832 !important; }
+.pagina-publica :is(.card-conversatie h4, #chat-client-teren-titlu, #btn-inapoi-conversatie-client) {
+    color: var(--spotivity-cream) !important;
+}
+.pagina-publica :is(.card-conversatie p, #chat-client-lista-terenuri > p, #chat-client-mesaje > p) {
+    color: var(--spotivity-muted) !important;
+}
+.pagina-publica .mesaj-trimis { background: #dcefcf; color: #29412a; }
+.pagina-publica .mesaj-primit { background: #fff; color: var(--spotivity-cream); border-color: #dbe4dc; }
+.pagina-publica .mesaj-timestamp { color: #526b54; }
+.pagina-publica .bife-albastre { color: #176d9e; }
+.pagina-publica .bife-gri { color: #65796b; }
+.pagina-publica .chat-input-zona input:disabled { background: #eef0e9; border-color: #ccd4c8; opacity: .8; }
+.pagina-publica .chat-btn-trimite { background: #2463a0; }
+.pagina-publica .chat-btn-trimite:hover { background: #194f85; }
+.pagina-publica .chat-btn-trimite:disabled { background: #84988b; }
+.pagina-publica #chat-client-avertisment { color: #a8322a !important; }
+.pagina-publica .bulina-notificare { border-color: #fffefb; }
+
+.pagina-publica .notificare-rezervare {
+    color: #29412a;
+    background: rgba(243, 250, 239, .97);
+    border-color: #bad3b3;
+    box-shadow: 0 8px 30px rgba(52, 79, 46, .16);
+}
+.pagina-publica .notificare-rezervare svg { color: #227548; }
+
+/* The legal panel uses inline styles rather than the shared dialog class. */
+.pagina-publica #modal-legal > div {
+    background: #fffefb !important;
+    color: var(--spotivity-cream) !important;
+    border-color: var(--spotivity-gold-border) !important;
+    box-shadow: 0 20px 65px rgba(42, 61, 59, .19) !important;
+}
+.pagina-publica #modal-legal :is(strong, button) { color: var(--spotivity-cream) !important; }
+.pagina-publica #modal-legal :is(div > div, p[data-i18n="copyright_footer"]) { color: var(--spotivity-muted) !important; }
+.pagina-publica #modal-legal :is(h2, a) { color: #2463a0 !important; }
+.pagina-publica #modal-legal hr { border-top-color: #dbe4dc !important; }

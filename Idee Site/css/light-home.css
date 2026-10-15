@@ -1,0 +1,128 @@
+/* Bright public landing page; administrative screens retain their own palette. */
+html { background: #fcf8f0; color-scheme: light; }
+body.pagina-publica {
+    --spotivity-cream: #2b3440;
+    --spotivity-muted: #596675;
+    --spotivity-gold-light: #8a5c08;
+    --spotivity-gold-border: rgba(153, 112, 40, .28);
+    --spotivity-panel: #fff;
+    background: #fcf8f0;
+    color: var(--spotivity-cream);
+}
+.pagina-publica .home-shell { background: #fcf8f0; color: var(--spotivity-cream); }
+.pagina-publica #fundal-imagine-sport { display: none; }
+.pagina-publica .home-city-region {
+    background: linear-gradient(115deg, #f9e8bd, #f6f0df 60%, #e7f1e4);
+    box-shadow: inset 0 -1px 0 rgba(153, 112, 40, .16);
+}
+.pagina-publica .home-city-copy { color: #515b47; }
+.pagina-publica #filtru-oras-global { background: #fffdf7; border-color: #d9c998; color: #343c43; }
+.pagina-publica .home-city-chevron { stroke: #8a5c08; }
+.pagina-publica #filtru-oras-global option { background: #fffdf7; color: #343c43; }
+.pagina-publica .btn-lang { color: #4e554d !important; }
+.pagina-publica .btn-lang:hover { background: rgba(153, 112, 40, .1) !important; }
+.pagina-publica .home-header { background: rgba(255, 253, 247, .96); box-shadow: 0 2px 14px rgba(89, 80, 53, .06); }
+.pagina-publica .home-brand img { filter: drop-shadow(0 2px 4px rgba(104, 84, 35, .12)); }
+.pagina-publica .home-desktop-nav button,
+.pagina-publica .home-profile-button,
+.pagina-publica .home-search-button { color: #39453c; }
+.pagina-publica .home-desktop-nav button:hover,
+.pagina-publica .home-profile-button:hover,
+.pagina-publica .home-search-button:hover { color: #8a5c08; }
+.pagina-publica .home-search-button svg { stroke: #8a5c08; }
+.pagina-publica .home-menu-toggle span { background: #8a5c08; }
+.pagina-publica .home-mobile-menu:not([hidden]) { background: linear-gradient(145deg, #fff8e7, #f3f6ee); }
+.pagina-publica .home-mobile-links button { color: #8a5c08; }
+.pagina-publica .home-mobile-links button:hover { color: #57410c; }
+
+.pagina-publica .home-hero-fotbal { --sport-tint: #e5f3e6; --sport-ink: #245c3c; }
+.pagina-publica .home-hero-baschet { --sport-tint: #fff0df; --sport-ink: #8a4c22; }
+.pagina-publica .home-hero-tenis { --sport-tint: #e7f2ff; --sport-ink: #2d567c; }
+.pagina-publica .home-hero-volei { --sport-tint: #f1eafd; --sport-ink: #684686; }
+.pagina-publica .home-sport-hero {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: center;
+    gap: 28px 36px;
+    padding: 44px max(24px, calc((100% - 1000px) / 2));
+    background: linear-gradient(180deg, #fcf8f0, var(--sport-tint) 18%, var(--sport-tint) 76%, #fcf8f0);
+    border-bottom: 0;
+    text-align: left;
+}
+.pagina-publica .home-hero-copy { min-width: 0; padding: 0; }
+.pagina-publica .home-sport-heading { justify-content: flex-start; }
+.pagina-publica .home-sport-heading :is(h1, h2) { color: var(--sport-ink); }
+.pagina-publica .home-hero-subtitle { color: #4d5c5c; }
+.pagina-publica .home-hero-actions { justify-content: flex-start; }
+.pagina-publica .home-reserve-button { box-shadow: 0 5px 16px rgba(133, 97, 24, .13); }
+.pagina-publica .home-reserve-button:hover { background: #edca82; color: #20190f; }
+.pagina-publica .home-hero-art {
+    min-width: 0;
+    width: 100%;
+    max-width: 520px;
+    aspect-ratio: 1672 / 941;
+    margin: 0;
+    border: 6px solid rgba(255, 255, 255, .9);
+    border-radius: 26px;
+    overflow: hidden;
+    box-shadow: 0 12px 28px rgba(63, 74, 66, .12);
+}
+.pagina-publica .home-hero-art img { object-fit: contain; }
+.pagina-publica .home-courts-wrap { grid-column: 1 / -1; width: 100%; min-width: 0; margin: 0; padding: 0; }
+.pagina-publica .home-court-card,
+.pagina-publica .sports-base-card,
+.pagina-publica .sports-base-court {
+    background: #fffefb;
+    border-color: #dbe2d5;
+    color: #2b3440;
+    box-shadow: 0 4px 14px rgba(70, 84, 72, .06);
+}
+.pagina-publica .home-court-card:hover,
+.pagina-publica .sports-base-card:hover { background: #fff9eb; border-color: #c6a561; }
+.pagina-publica .home-court-meta,
+.pagina-publica .home-base-summary,
+.pagina-publica .sports-base-count,
+.pagina-publica .home-discovery-message { color: #596675; }
+.pagina-publica .home-court-price,
+.pagina-publica .sports-base-city,
+.pagina-publica .sports-base-court-sport { color: #8a5c08; }
+.pagina-publica .home-courts-strip { scrollbar-color: #c2ab75 transparent; }
+.pagina-publica .home-courts-strip::-webkit-scrollbar-thumb { background: #c2ab75; }
+.pagina-publica .home-bases-section .sports-base-card { color: #2b3440; }
+.pagina-publica .home-section-heading h2 { color: #5d572f; }
+.pagina-publica .sports-bases-action:not(.sports-bases-share):hover { background: #edca82; color: #20190f; }
+.pagina-publica .home-footer { background: #ede7d7; box-shadow: inset 0 1px 0 #dcd2b8; }
+.pagina-publica #btn-legal { color: #5f655b; }
+.pagina-publica .home-legal-link { color: #8a5c08; }
+
+@media (max-width: 767px) {
+    .pagina-publica .home-sport-hero { grid-template-columns: minmax(0, 1fr); gap: 24px; padding: 32px 18px 24px; text-align: center; }
+    .pagina-publica .home-sport-heading,
+    .pagina-publica .home-hero-actions { justify-content: center; }
+    .pagina-publica .home-hero-art { max-width: 440px; margin: 0 auto; border-radius: 22px; }
+    .pagina-publica .home-hero-tenis .home-hero-art { aspect-ratio: 1672 / 941; }
+}
+
+/* Search fills the header between the brand and mobile menu. */
+.pagina-publica .home-nav { gap: 18px; }
+.pagina-publica .home-desktop-nav { flex: 0 1 auto; gap: 12px; }
+.pagina-publica .home-nav-search {
+    display: flex; align-items: center; flex: 1 1 0; min-width: 0;
+    min-height: 44px; border: 1px solid #d8cda9; border-radius: 14px;
+    background: #fff; overflow: hidden;
+}
+.pagina-publica #home-nav-search-input {
+    flex: 1 1 0; min-width: 0; width: 0; height: 44px;
+    padding: 0 12px; border: 0; border-radius: 0; background: transparent;
+    color: #343c43; font-size: 16px; outline: none;
+}
+.pagina-publica #home-nav-search-input::placeholder { color: #6d7468; opacity: 1; }
+.pagina-publica .home-nav-search:focus-within { border-color: #8a5c08; box-shadow: 0 0 0 2px rgba(138, 92, 8, .12); }
+.pagina-publica #btn-home-search { flex: 0 0 44px; width: 44px; min-width: 44px; padding: 0; }
+@media (max-width: 767px) {
+    .pagina-publica .home-nav { gap: 8px; padding-inline: 12px; }
+    .pagina-publica .home-brand { margin-right: 0; }
+    .pagina-publica .home-profile-button { display: none; }
+    .pagina-publica .home-nav-search { flex: 1 1 0; }
+    .pagina-publica.home-menu-open .home-nav-search { visibility: hidden; }
+}

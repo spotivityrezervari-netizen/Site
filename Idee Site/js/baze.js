@@ -205,7 +205,8 @@
                 const heading = element('h3', 'sports-bases-section-title', t('courts'));
                 const grid = element('div', 'sports-base-courts');
                 baseCourts(base.id).forEach(court => grid.append(renderCourt(court)));
-                content.replaceChildren(city, description, shareButton, status, heading, grid);
+                const photo = window.createSportsBasePhoto?.(base, 'sports-base-photo sports-base-photo-detail');
+                content.replaceChildren(...(photo ? [photo] : []), city, description, shareButton, status, heading, grid);
                 return;
             }
             const selectedCity = document.getElementById('filtru-oras-global')?.value || 'ALL';
@@ -215,6 +216,8 @@
             visible.forEach(base => {
                 const card = button('sports-base-card', '', () => open(base.id));
                 card.dataset.baseId = base.id;
+                const photo = window.createSportsBasePhoto?.(base, 'sports-base-photo');
+                if (photo) card.append(photo);
                 card.append(element('span', 'sports-base-city', base.oras), element('span', 'sports-base-name', base.nume));
                 const count = baseCourts(base.id).length;
                 card.append(element('span', 'sports-base-count', `${count} ${t(count === 1 ? 'single' : 'count')}`));
@@ -263,7 +266,7 @@
             const timeout = window.setTimeout(() => requestController.abort(), 15000);
             try {
                 const [baseResult, courtResult] = await Promise.all([
-                    db.from('baze_sportive').select('id,nume,oras,descriere,este_activa').eq('este_activa', true)
+                    db.from('baze_sportive').select('id,nume,oras,descriere,este_activa,poza').eq('este_activa', true)
                         .order('nume').abortSignal(requestController.signal),
                     db.from('terenuri').select('id,nume,sport,oras,pret,poza,baza_sportiva_id,este_activ').eq('este_activ', true)
                         .order('nume').abortSignal(requestController.signal)
