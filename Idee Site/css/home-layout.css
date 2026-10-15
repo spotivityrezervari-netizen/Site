@@ -3,37 +3,34 @@ html { background: #100f0c; }
 .pagina-publica .home-shell,
 .pagina-publica .home-main { background: #100f0c; }
 .pagina-publica .home-sport-hero {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: center;
-    gap: 28px 36px;
-    padding: 44px max(24px, calc((100% - 1000px) / 2));
-    background: linear-gradient(180deg, #100f0c, #1c1710 36%, #1c1710 64%, #100f0c);
+    display: block;
+    padding: 0 0 32px;
+    background: linear-gradient(180deg, #100f0c, #000 25%, #000 80%, #100f0c);
     border-bottom: 0;
-    text-align: left;
+    text-align: center;
 }
-.pagina-publica .home-hero-copy { min-width: 0; padding: 0; }
+.pagina-publica .home-hero-copy { min-width: 0; padding: 58px 24px 14px; }
 .pagina-publica .home-sport-heading,
-.pagina-publica .home-hero-actions { justify-content: flex-start; }
+.pagina-publica .home-hero-actions { justify-content: center; }
 .pagina-publica .home-hero-art {
     min-width: 0;
-    width: 100%;
-    max-width: 520px;
+    width: min(100%, 1280px);
+    max-width: none;
     aspect-ratio: 1672 / 941;
-    margin: 0;
-    border: 1px solid var(--spotivity-gold-border);
-    border-radius: 26px;
+    margin: -12px auto 0;
+    border: 0;
+    border-radius: 0;
     overflow: hidden;
-    background: #050504;
-    box-shadow: 0 12px 30px rgba(0, 0, 0, .25);
+    background: #000;
+    box-shadow: none;
 }
 .pagina-publica .home-hero-art img { object-fit: contain; }
 .pagina-publica .home-courts-wrap {
-    grid-column: 1 / -1;
     width: 100%;
+    max-width: 1048px;
     min-width: 0;
-    margin: 0;
-    padding: 0;
+    margin: 0 auto;
+    padding: 0 24px;
 }
 .pagina-publica .home-courts-strip { scrollbar-color: #9d854f transparent; }
 .pagina-publica .home-courts-strip::-webkit-scrollbar-thumb { background: #9d854f; }
@@ -81,13 +78,12 @@ html { background: #100f0c; }
     .pagina-publica .home-nav-search { flex: 1 1 0; }
     .pagina-publica.home-menu-open .home-nav-search { visibility: hidden; }
     .pagina-publica .home-sport-hero {
-        grid-template-columns: minmax(0, 1fr);
-        gap: 24px;
-        padding: 32px 18px 24px;
-        text-align: center;
+        padding: 0 0 24px;
     }
-    .pagina-publica .home-sport-heading,
-    .pagina-publica .home-hero-actions { justify-content: center; }
-    .pagina-publica .home-hero-art { max-width: 440px; margin: 0 auto; border-radius: 22px; }
+    .pagina-publica .home-hero-copy { padding: 42px 18px 12px; }
+    .pagina-publica .home-hero-art { width: 100%; aspect-ratio: 4 / 3; margin: 8px auto 0; }
+    .pagina-publica .home-hero-art img { object-fit: cover; }
     .pagina-publica .home-hero-tenis .home-hero-art { aspect-ratio: 1672 / 941; }
+    .pagina-publica .home-hero-tenis .home-hero-art img { object-fit: contain; }
+    .pagina-publica .home-courts-wrap { padding: 0 18px; }
 }
