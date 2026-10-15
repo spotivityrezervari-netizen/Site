@@ -357,7 +357,9 @@ let checks = 0;
       assert.equal(await homepage.locator('#home-search-input').inputValue(), 'tenis bucuresti');
       assert.deepEqual(await homepage.locator('#home-search-results [data-discovery-court] strong').allTextContents(), ['Court B']);
       await homepage.locator('#inchide-cautare-terenuri').click();
-      if (screenshots) await homepage.screenshot({path: join(screenshots, `discovery-header-${width}.png`)});
+      const background = await homepage.evaluate(() => getComputedStyle(document.body).backgroundColor.match(/[\d.]+/g).slice(0, 3).map(Number));
+      assert.ok(background.every(channel => channel < 70), `The homepage must retain its dark theme: ${background}`);
+      if (screenshots) await homepage.screenshot({path: join(screenshots, `discovery-header-dark-${width}.png`)});
       pass(`header contains a usable search field at ${width}px and submits global city/sport queries with Enter`);
     }
 
@@ -369,38 +371,84 @@ let checks = 0;
     pass('mobile profile remains reachable from the first drawer entry after moving search into the header');
 
     const strip = homepage.locator('[data-home-courts="Fotbal"]');
-    const toggle = homepage.locator('[data-home-motion-toggle="Fotbal"]');
+    const visualPosition = () => strip.evaluate(node => node.getBoundingClientRect().left
+      - node.querySelector('[data-discovery-court]').getBoundingClientRect().left);
+    const waitMoving = start => homepage.waitForFunction(start => {
+      const node = document.querySelector('[data-home-courts="Fotbal"]');
+      return node.getBoundingClientRect().left-node.querySelector('[data-discovery-court]').getBoundingClientRect().left > start+4;
+    }, start, {timeout: 12000});
     await strip.scrollIntoViewIfNeeded();
     await homepage.mouse.move(0, 0);
-    await toggle.waitFor({state: 'visible'});
+    assert.equal(await homepage.locator('[data-home-motion-toggle],.home-courts-motion-toggle').count(), 0,
+      'The removed pause/resume buttons must not remain hidden in the DOM');
     assert.equal(await strip.locator('[data-discovery-court]').count(), 9, 'Autoplay must never duplicate cards or booking buttons');
-    const startingScroll = await strip.evaluate(node => node.scrollLeft);
-    await homepage.waitForFunction(start => document.querySelector('[data-home-courts="Fotbal"]').scrollLeft > start+4, startingScroll, {timeout: 12000});
-    await toggle.click();
-    assert.equal(await toggle.getAttribute('data-paused'), 'true');
+    await waitMoving(await visualPosition());
+    const framePositions = await strip.evaluate(node => new Promise(resolve => {
+      const positions = [];
+      const sample = () => {
+        positions.push(node.querySelector('[data-discovery-court]').getBoundingClientRect().left);
+        if (positions.length === 30) resolve(positions);
+        else requestAnimationFrame(sample);
+      };
+      requestAnimationFrame(sample);
+    }));
+    const steps = framePositions.slice(1).map((position, index) => Math.abs(position-framePositions[index]));
+    assert.ok(steps.filter(step => step > .025 && Math.abs(step-Math.round(step)) > .025).length >= 6,
+      `Slow autoplay must render actual fractional-pixel movement: ${JSON.stringify(steps)}`);
+
+    await strip.hover();
     await homepage.waitForFunction(() => document.querySelector('[data-home-courts="Fotbal"]').dataset.autoScroll === 'paused');
-    const pausedScroll = await strip.evaluate(node => node.scrollLeft);
+    const hoveredPosition = await visualPosition();
     await homepage.waitForTimeout(400);
-    assert.ok(Math.abs(await strip.evaluate(node => node.scrollLeft)-pausedScroll) < 1);
-    await toggle.click();
-    await toggle.evaluate(node => node.blur());
+    assert.ok(Math.abs(await visualPosition()-hoveredPosition) < 1, 'Cards must stay still under the pointer');
+    await strip.locator('[data-discovery-court]').first().focus();
     await homepage.mouse.move(0, 0);
-    assert.equal(await toggle.getAttribute('data-paused'), 'false');
-    await homepage.waitForFunction(start => document.querySelector('[data-home-courts="Fotbal"]').scrollLeft > start+4, pausedScroll, {timeout: 12000});
-    pass('overflowing court cards autoplay without clones, pause on request and resume without intercepting booking controls');
+    const focusedPosition = await visualPosition();
+    await homepage.waitForTimeout(400);
+    assert.ok(Math.abs(await visualPosition()-focusedPosition) < 1, 'Keyboard focus must keep its card still after hover ends');
+    await strip.locator('[data-discovery-court]').first().evaluate(node => node.blur());
+    await waitMoving(await visualPosition());
+
+    await strip.hover();
+    await homepage.mouse.wheel(250, 0);
+    await homepage.mouse.move(0, 0);
+    await homepage.waitForFunction(() => document.querySelector('[data-home-courts="Fotbal"]').dataset.autoScroll === 'paused');
+    await homepage.waitForTimeout(250); // Allow the native wheel gesture to settle before measuring its grace period.
+    const manualPosition = await visualPosition();
+    await homepage.waitForTimeout(4500);
+    assert.ok(Math.abs(await visualPosition()-manualPosition) < 1, 'Autoplay must leave time to read after manual scrolling');
+    await waitMoving(manualPosition);
+
+    // Dispatch trusted touch input through Chromium, rather than synthesizing
+    // DOM events, so the browser's native horizontal gesture still works.
+    const touch = await homepage.context().newCDPSession(homepage);
+    await touch.send('Emulation.setTouchEmulationEnabled', {enabled: true});
+    const bounds = await strip.boundingBox();
+    const point = {x: bounds.x+Math.min(250, bounds.width-25), y: bounds.y+Math.min(100, bounds.height/2)};
+    await touch.send('Input.dispatchTouchEvent', {type: 'touchStart', touchPoints: [point]});
+    await homepage.waitForFunction(() => document.querySelector('[data-home-courts="Fotbal"]').dataset.autoScroll === 'paused');
+    const heldPosition = await visualPosition();
+    await homepage.waitForTimeout(350);
+    assert.ok(Math.abs(await visualPosition()-heldPosition) < 1, 'Touch must stop autoplay before the drag');
+    await touch.send('Input.dispatchTouchEvent', {type: 'touchMove', touchPoints: [{x: point.x-100, y: point.y}]});
+    await touch.send('Input.dispatchTouchEvent', {type: 'touchEnd', touchPoints: []});
+    await touch.send('Emulation.setTouchEmulationEnabled', {enabled: false});
+    await touch.detach();
+    assert.equal(await homepage.locator('#modal-rezervare').isVisible(), false, 'A horizontal touch drag must not open a booking');
+    pass('cards move in fractional pixels without clones or controls, pause for hover/focus/touch/manual scrolling and resume after the interaction grace period');
 
     await homepage.locator('#home-nav-search-input').fill('Court');
     await homepage.locator('#btn-home-search').click();
     await homepage.locator('#modal-cautare-terenuri').waitFor({state: 'visible'});
     await homepage.waitForFunction(() => document.querySelector('[data-home-courts="Fotbal"]').dataset.autoScroll === 'paused');
-    const modalScroll = await strip.evaluate(node => node.scrollLeft);
+    const modalScroll = await visualPosition();
     await homepage.waitForTimeout(400);
-    assert.ok(Math.abs(await strip.evaluate(node => node.scrollLeft)-modalScroll) < 1);
+    assert.ok(Math.abs(await visualPosition()-modalScroll) < 1);
     await homepage.locator('#inchide-cautare-terenuri').click();
     await homepage.emulateMedia({reducedMotion: 'reduce'});
-    await toggle.waitFor({state: 'hidden'});
-    await homepage.waitForFunction(() => document.querySelector('[data-home-courts="Fotbal"]').dataset.autoScroll !== 'running');
-    assert.equal(await toggle.isVisible(), false);
+    await homepage.waitForFunction(() => matchMedia('(prefers-reduced-motion: reduce)').matches
+      && document.querySelector('[data-home-courts="Fotbal"]').dataset.autoScroll === 'idle');
+    assert.equal(await homepage.locator('[data-home-motion-toggle],.home-courts-motion-toggle').count(), 0);
     const reducedScroll = await strip.evaluate(node => node.scrollLeft);
     await homepage.waitForTimeout(400);
     assert.ok(Math.abs(await strip.evaluate(node => node.scrollLeft)-reducedScroll) < 1);
@@ -411,7 +459,8 @@ let checks = 0;
     await homepage.waitForFunction(start => document.querySelector('[data-home-courts="Fotbal"]').scrollLeft > start+10,
       reducedScroll, {timeout: 5000});
     await homepage.emulateMedia({reducedMotion: 'no-preference'});
-    await toggle.waitFor({state: 'visible'});
+    await homepage.waitForFunction(() => !matchMedia('(prefers-reduced-motion: reduce)').matches
+      && document.querySelector('[data-home-courts="Fotbal"]').dataset.autoScroll !== 'idle');
     pass('autoplay stops behind dialogs and respects live reduced-motion changes while preserving manual scrolling');
 
     await homepage.locator('#home-nav-search-input').fill('Court B');
@@ -427,7 +476,7 @@ let checks = 0;
     for (const width of [390, 1440]) {
       await homepage.setViewportSize({width, height: width < 768 ? 844 : 1000});
       await homepage.locator('#buton-confirma').scrollIntoViewIfNeeded();
-      if (screenshots) await homepage.screenshot({path: join(screenshots, `booking-confirm-light-${width}.png`), animations: 'disabled'});
+      if (screenshots) await homepage.screenshot({path: join(screenshots, `booking-confirm-dark-${width}.png`), animations: 'disabled'});
     }
     await homepage.locator('#inchide-rezervare').click();
     assert.deepEqual(await immutableState(), beforeBusiness);
@@ -449,7 +498,7 @@ let checks = 0;
     for (const width of [390, 1440]) {
       await homepage.setViewportSize({width, height: width < 768 ? 844 : 1000});
       await homepage.locator('#btn-profil-confirma').scrollIntoViewIfNeeded();
-      if (screenshots) await homepage.screenshot({path: join(screenshots, `profile-confirm-light-${width}.png`), animations: 'disabled'});
+      if (screenshots) await homepage.screenshot({path: join(screenshots, `profile-confirm-dark-${width}.png`), animations: 'disabled'});
       const appearance = await homepage.locator('#btn-profil-confirma').evaluate(button => {
         const style = getComputedStyle(button), panel = getComputedStyle(button.closest('.modal-continut'));
         const luminance = text => text.match(/[\d.]+/g).slice(0, 3).map(Number).map(channel => {
@@ -461,13 +510,13 @@ let checks = 0;
           const background = luminance(color); return (Math.max(foreground, background)+.05)/(Math.min(foreground, background)+.05);
         })};
       });
-      assert.ok(appearance.panel >= .8, JSON.stringify(appearance));
+      assert.ok(appearance.panel < .15, JSON.stringify(appearance));
       assert.equal(appearance.opacity, '1');
       assert.ok(appearance.contrast.length > 0 && appearance.contrast.every(value => value >= 4.5), JSON.stringify(appearance));
     }
     await homepage.locator('#btn-profil-anuleaza').click();
     assert.deepEqual(await immutableState(), beforeBusiness);
-    pass('the profile confirmation remains readable on light mobile/desktop dialogs and cancelling leaves the profile unchanged');
+    pass('the profile confirmation remains readable on dark/gold mobile/desktop dialogs and cancelling leaves the profile unchanged');
     assert.deepEqual(errors, [], 'No browser runtime errors');
     console.log(`Discovery media browser checks passed: ${checks}`);
   } finally {

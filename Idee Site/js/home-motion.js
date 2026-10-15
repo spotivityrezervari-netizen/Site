@@ -1,11 +1,6 @@
 /* Gentle motion enhances the existing cards without cloning or changing booking controls. */
 (() => {
     'use strict';
-    const copy = {
-        ro: { pause: 'Pauză derulare', resume: 'Reia derularea' },
-        hu: { pause: 'Görgetés szüneteltetése', resume: 'Görgetés folytatása' },
-        en: { pause: 'Pause scrolling', resume: 'Resume scrolling' }
-    };
 
     function init() {
         const main = document.getElementById('home-main');
@@ -13,9 +8,9 @@
         const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
         const strips = new Map();
         const revealed = new WeakSet();
-        let frame = 0, measurement = 0, wakeTimer = 0, previousTime = 0, nextId = 0;
+        let frame = 0, measurement = 0, wakeTimer = 0, previousTime = 0;
         let blocked = false;
-        const speed = 18, interactionDelay = 6000, edgeDelay = 1200;
+        const speed = 22, acceleration = 20, interactionDelay = 6000;
 
         function setStatus(state, status) {
             if (state.strip.dataset.autoScroll !== status) state.strip.dataset.autoScroll = status;
@@ -33,27 +28,38 @@
             previousTime = time;
             let running = false, nextWake = Infinity;
             for (const state of strips.values()) {
-                if (state.max <= 1 || reducedMotion.matches) { setStatus(state, 'idle'); continue; }
-                if (blocked || state.paused || state.hovered || state.focused || state.pointer || !state.visible) {
+                if (state.max <= 1 || reducedMotion.matches) { state.velocity = 0; setStatus(state, 'idle'); continue; }
+                if (blocked || state.hovered || state.focused || state.pointer || !state.visible) {
+                    state.velocity = 0;
                     setStatus(state, 'paused');
                     continue;
                 }
                 if (time < state.resumeAfter) {
                     nextWake = Math.min(nextWake, state.resumeAfter - time);
+                    state.velocity = 0;
                     setStatus(state, 'paused');
                     continue;
                 }
                 setStatus(state, 'running');
                 running = true;
-                state.position += state.direction * speed * elapsed / 1000;
+                const seconds = elapsed / 1000;
+                const remaining = state.direction > 0 ? state.max - state.position : state.position;
+                // Brake before each edge and accelerate gently after a pause or reversal.
+                const targetSpeed = Math.min(speed, Math.sqrt(2 * acceleration * Math.max(0, remaining)));
+                const targetVelocity = state.direction * targetSpeed;
+                const maxChange = acceleration * seconds;
+                state.velocity += Math.max(-maxChange, Math.min(maxChange, targetVelocity - state.velocity));
+                state.position += state.velocity * seconds;
                 if ((state.direction > 0 && state.position >= state.max) || (state.direction < 0 && state.position <= 0)) {
                     state.position = Math.max(0, Math.min(state.max, state.position));
-                    state.direction = state.position === 0 ? 1 : -1;
-                    state.resumeAfter = time + edgeDelay;
+                    state.direction *= -1;
+                    state.velocity = 0;
                 }
                 state.strip.scrollLeft = state.position;
-                // Browsers may round fractional pixels; retain the accumulated position.
                 state.expected = state.strip.scrollLeft;
+                // Native scrolling can round to whole pixels. Composite the remainder
+                // so the cards still advance by a fraction of a pixel on every frame.
+                state.strip.style.setProperty('--home-courts-offset', `${(state.expected - state.position).toFixed(4)}px`);
             }
             if (running && !blocked) frame = requestAnimationFrame(animate);
             else {
@@ -68,34 +74,19 @@
             wake();
         }
 
-        function updateButton(state) {
-            const labels = copy[window.lang] || copy.ro;
-            const label = state.paused ? labels.resume : labels.pause;
-            const sport = window.dict?.[window.lang]?.[state.strip.dataset.homeCourts.toLowerCase()] || state.strip.dataset.homeCourts;
-            if (state.button.textContent !== label) state.button.textContent = label;
-            state.button.setAttribute('aria-label', `${label} — ${sport}`);
-            state.button.dataset.paused = String(state.paused);
-            const hidden = state.max <= 1 || reducedMotion.matches;
-            if (hidden && document.activeElement === state.button) state.strip.focus({ preventScroll: true });
-            state.button.hidden = hidden;
-            // Keep native snap from moving cards after autoplay pauses beneath a pointer.
-            state.strip.classList.toggle('home-courts-autoplay', !hidden);
+        function updateMotion(state) {
+            const enabled = state.max > 1 && !reducedMotion.matches;
+            // Native snap must not pull the row backwards between animation frames.
+            state.strip.classList.toggle('home-courts-autoplay', enabled);
+            if (!enabled) state.strip.style.removeProperty('--home-courts-offset');
         }
 
         function addStrip(strip) {
             const wrapper = strip.closest('.home-courts-wrap');
             if (!wrapper) return;
-            if (!strip.id) strip.id = `home-courts-motion-${++nextId}`;
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'home-courts-motion-toggle';
-            button.dataset.homeMotionToggle = strip.dataset.homeCourts;
-            button.setAttribute('aria-controls', strip.id);
-            button.hidden = true;
-            wrapper.append(button);
             const state = {
-                strip, wrapper, button, max: 0, position: strip.scrollLeft, expected: strip.scrollLeft,
-                direction: 1, resumeAfter: performance.now() + edgeDelay, paused: false,
+                strip, max: 0, position: strip.scrollLeft, expected: strip.scrollLeft,
+                direction: 1, velocity: 0, resumeAfter: performance.now() + 400,
                 hovered: false, focused: wrapper.contains(document.activeElement), pointer: false, visible: false, listeners: []
             };
             strips.set(strip, state);
@@ -103,12 +94,6 @@
                 target.addEventListener(name, listener, options);
                 state.listeners.push(() => target.removeEventListener(name, listener, options));
             };
-            listen(button, 'click', () => {
-                state.paused = !state.paused;
-                state.resumeAfter = performance.now() + 300;
-                updateButton(state);
-                wake();
-            });
             listen(wrapper, 'pointerenter', event => { if (event.pointerType !== 'touch') { state.hovered = true; wake(); } });
             listen(wrapper, 'pointerleave', event => { if (event.pointerType !== 'touch') { state.hovered = false; wake(); } });
             listen(wrapper, 'focusin', () => { state.focused = true; wake(); });
@@ -124,6 +109,7 @@
                 const position = strip.scrollLeft;
                 if (Math.abs(position - state.expected) > .75) {
                     state.position = state.expected = position;
+                    state.strip.style.removeProperty('--home-courts-offset');
                     pauseForInteraction(state);
                 }
             }, { passive: true });
@@ -154,17 +140,21 @@
             for (const [strip, state] of strips) {
                 if (!strip.isConnected) {
                     state.listeners.forEach(remove => remove());
-                    state.button.remove();
                     resizeObserver?.unobserve(strip);
                     visibilityObserver?.unobserve(strip);
                     strips.delete(strip);
                     continue;
                 }
                 state.max = Math.max(0, strip.scrollWidth - strip.clientWidth);
-                state.position = state.expected = strip.scrollLeft;
+                if (Math.abs(strip.scrollLeft - state.expected) > .75) {
+                    state.position = state.expected = strip.scrollLeft;
+                    strip.style.removeProperty('--home-courts-offset');
+                    state.velocity = 0;
+                }
+                state.position = Math.max(0, Math.min(state.max, state.position));
                 const bounds = strip.getBoundingClientRect();
                 state.visible = bounds.bottom > 0 && bounds.top < innerHeight && bounds.right > 0 && bounds.left < innerWidth;
-                updateButton(state);
+                updateMotion(state);
                 if (state.max <= 1 || reducedMotion.matches) setStatus(state, 'idle');
             }
             if (revealObserver) {
@@ -191,7 +181,10 @@
                 cancelAnimationFrame(frame);
                 clearTimeout(wakeTimer);
                 frame = wakeTimer = previousTime = 0;
-                for (const state of strips.values()) setStatus(state, state.max > 1 && !reducedMotion.matches ? 'paused' : 'idle');
+                for (const state of strips.values()) {
+                    state.velocity = 0;
+                    setStatus(state, state.max > 1 && !reducedMotion.matches ? 'paused' : 'idle');
+                }
             } else wake();
         }
 

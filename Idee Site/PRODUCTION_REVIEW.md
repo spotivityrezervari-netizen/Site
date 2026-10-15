@@ -123,3 +123,13 @@ Migrarea 009 a fost aplicată în Rendez-Vous după testarea izolată și o prob
 Au trecut 326 verificări SQL relevante: fotografii 47×2, baze 32×2, rezervări finalizate 29×2 și profil 55×2. Au trecut și 81 verificări browser complete, plus 21 pentru editarea profilului, cu SDK real și PostgreSQL izolat. Browserul a verificat 320, 390, 768 și 1440 px și păstrează TLS/SRI; SDK-ul pinuit poate fi transportat prin curl cu TLS validat în mediile în care Chromium nu poate citi NSS. Aceste teste nu confirmă Safari/iPhone fizic sau livrarea SMTP.
 
 Au trecut și **16 verificări browser noi** pentru fotografiile bazelor, căutarea din antet, derularea automată, pauză/mișcare redusă și formularele luminoase de rezervare/profil. Smoke testul local a folosit citiri reale Supabase și imagini Storage, toate HTTP 200, cu scrierile blocate și fără erori JavaScript. Total pentru această actualizare: **444 verificări automate**, plus smoke live read-only, probe RLS native cu rollback, sintaxă și review vizual al capturilor.
+
+## Revenire la tema neagră și derulare mai lină — 15 octombrie 2026
+
+La cererea proprietarului, tema publică a revenit la negru cu accente gold, inclusiv formularele și culoarea barei browserului. Fișierele temei luminoase au fost eliminate; `home-layout.css` păstrează căutarea lată, structura adaptată telefonului și tranzițiile continue dintre secțiuni.
+
+Butoanele de pauză/reluare a cardurilor au fost eliminate complet. Mișcarea compensează rotunjirea derulării native la pixeli întregi și folosește accelerare/încetinire graduală la pornire și schimbarea direcției. Interacțiunea cu cardurile și deschiderea formularelor opresc temporar mișcarea; preferința pentru mișcare redusă rămâne respectată. Cardurile și comenzile de rezervare nu sunt duplicate. Fotografii, permisiuni și date Supabase: fără modificări.
+
+Verificate vizual dimensiunile 320, 390, 768 și 1440 px, inclusiv căutarea dintre logo și meniu, lipsa butoanelor de derulare și confirmarea profilului fără suprapuneri. Suita pentru fotografii/căutare/animații a trecut 16 verificări, inclusiv pașii vizuali fracționari și oprirea la atingere, hover, focus și scroll manual. Suita profilului a trecut 21 de verificări. Smoke testul cu citiri reale Supabase și imagini Storage a trecut cu HTTP 200, fără scrieri sau erori JavaScript.
+
+Au trecut și toate cele 81 de verificări browser pentru fluxurile existente, inclusiv rezervări/RLS și refuzul anulării rezervărilor finalizate. Totalul rulat pentru această revenire vizuală: **118 verificări browser**, plus smoke live read-only, sintaxă JS, review independent al animației și verificarea capturilor.

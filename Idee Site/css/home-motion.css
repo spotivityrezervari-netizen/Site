@@ -3,33 +3,14 @@
     scroll-snap-type: none;
     scroll-behavior: auto;
 }
-.pagina-publica .home-courts-motion-toggle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 40px;
-    max-width: 100%;
-    margin: 2px 0 0 auto;
-    padding: 8px 14px;
-    border: 1px solid #b7944c;
-    border-radius: 999px;
-    background: #fffaf0;
-    color: #765113;
-    font-size: 13px;
-    font-weight: 600;
-    line-height: 1.4;
-    text-align: center;
-    cursor: pointer;
-    transition: background .18s ease, border-color .18s ease;
+.pagina-publica .home-courts-strip.home-courts-autoplay > .home-court-card {
+    transform: translate3d(var(--home-courts-offset, 0px), 0, 0);
 }
-.pagina-publica .home-courts-motion-toggle[hidden] { display: none !important; }
-.pagina-publica .home-courts-motion-toggle:hover { background: #f6e4b6; border-color: #916817; }
-.pagina-publica .home-courts-motion-toggle:focus-visible { outline: 2px solid #8a5c08 !important; outline-offset: 3px; }
-.pagina-publica .home-section-reveal { transition: opacity .55s ease, transform .55s cubic-bezier(.2, .65, .3, 1); }
-.pagina-publica .home-section-pending { opacity: 0; transform: translateY(16px); }
+.pagina-publica .home-section-reveal { transition: opacity .8s ease, transform .8s cubic-bezier(.22, .61, .36, 1); }
+.pagina-publica .home-section-pending { opacity: 0; transform: translateY(10px); }
 .pagina-publica .home-section-reveal:focus-within { opacity: 1; transform: none; transition: none; }
 @media (prefers-reduced-motion: reduce) {
+    .pagina-publica .home-courts-strip.home-courts-autoplay > .home-court-card { transform: none; }
     .pagina-publica .home-section-reveal,
     .pagina-publica .home-section-pending { opacity: 1; transform: none; transition: none; }
-    .pagina-publica .home-courts-motion-toggle { transition: none; }
 }

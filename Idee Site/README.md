@@ -100,11 +100,11 @@ Pentru confirmări către clienți este necesar **SMTP propriu** în Supabase. E
 
 Verificările izolate noi sunt `supabase/tests/profile-edit.test.cjs` (cu și fără `SPOTIVITY_TEST_INTEGER_IDS=1`) și `supabase/tests/profile-edit-browser.test.cjs`. Testele browser folosesc SDK-ul real, PostgreSQL izolat și confirmări Auth simulate; nu trimit mesaje și nu schimbă conturi live.
 
-## Tema luminoasă, căutare și fotografii — 15 octombrie 2026
+## Tema neagră, căutare și fotografii — 15 octombrie 2026
 
-Pagina publică folosește crem, accente gold și fundaluri pastel pentru fiecare sport. Pe telefon, câmpul de căutare ocupă spațiul dintre logo și meniu; scrie numele, sportul sau orașul și apasă Enter ori lupa. Căutarea rămâne globală, indiferent de orașul selectat. Profilul este primul în meniul mobil.
+Pagina publică folosește tema neagră cu accente gold și tranziții discrete între sporturi. Pe telefon, câmpul de căutare ocupă spațiul dintre logo și meniu; scrie numele, sportul sau orașul și apasă Enter ori lupa. Căutarea rămâne globală, indiferent de orașul selectat. Profilul este primul în meniul mobil.
 
-Rândurile de terenuri care depășesc lățimea disponibilă se derulează automat, lent, în ambele sensuri. Butonul **Pauză derulare** oprește mișcarea. Hoverul, focusul, atingerea, derularea manuală și formularele deschise o suspendă; preferința sistemului pentru mișcare redusă dezactivează animațiile. Secțiunile apar gradual, cu fundaluri care se îmbină lin. Cardurile existente și formularul de rezervare sunt păstrate.
+Rândurile de terenuri care depășesc lățimea disponibilă se derulează automat, lent, în ambele sensuri, cu accelerare și încetinire graduală. Nu au butoane de pornire/oprire. Hoverul, focusul, atingerea, derularea manuală și formularele deschise o suspendă; preferința sistemului pentru mișcare redusă dezactivează animațiile. Secțiunile apar gradual, cu fundaluri care se îmbină lin. Cardurile existente și formularul de rezervare sunt păstrate.
 
 În **Admin → Setări baze sportive → selectează baza → Fotografia bazei sportive**, alege un JPG, PNG, WebP, AVIF sau GIF de maximum 5 MB și apasă **Salvează fotografia**. Poți înlocui sau elimina fotografia. Pentru o bază nouă, salvează întâi baza și redeschide setările. Fotografia se salvează separat de descriere și apare în secțiunea de pe prima pagină, în lista bazelor și în detaliile bazei.
 

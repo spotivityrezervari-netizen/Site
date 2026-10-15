@@ -1,0 +1,93 @@
+/* Responsive public layout; theme.css supplies the shared black and gold palette. */
+html { background: #100f0c; }
+.pagina-publica .home-shell,
+.pagina-publica .home-main { background: #100f0c; }
+.pagina-publica .home-sport-hero {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: center;
+    gap: 28px 36px;
+    padding: 44px max(24px, calc((100% - 1000px) / 2));
+    background: linear-gradient(180deg, #100f0c, #1c1710 36%, #1c1710 64%, #100f0c);
+    border-bottom: 0;
+    text-align: left;
+}
+.pagina-publica .home-hero-copy { min-width: 0; padding: 0; }
+.pagina-publica .home-sport-heading,
+.pagina-publica .home-hero-actions { justify-content: flex-start; }
+.pagina-publica .home-hero-art {
+    min-width: 0;
+    width: 100%;
+    max-width: 520px;
+    aspect-ratio: 1672 / 941;
+    margin: 0;
+    border: 1px solid var(--spotivity-gold-border);
+    border-radius: 26px;
+    overflow: hidden;
+    background: #050504;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, .25);
+}
+.pagina-publica .home-hero-art img { object-fit: contain; }
+.pagina-publica .home-courts-wrap {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+}
+.pagina-publica .home-courts-strip { scrollbar-color: #9d854f transparent; }
+.pagina-publica .home-courts-strip::-webkit-scrollbar-thumb { background: #9d854f; }
+.pagina-publica img.sports-base-photo { background: #211e18; }
+
+/* The search field fills the space between the brand and the mobile menu. */
+.pagina-publica .home-nav { gap: 18px; }
+.pagina-publica .home-desktop-nav { flex: 0 1 auto; gap: 12px; }
+.pagina-publica .home-nav-search {
+    display: flex;
+    align-items: center;
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 44px;
+    border: 1px solid var(--spotivity-gold-border);
+    border-radius: 14px;
+    background: #211c14;
+    color-scheme: dark;
+    overflow: hidden;
+}
+.pagina-publica #home-nav-search-input {
+    flex: 1 1 0;
+    min-width: 0;
+    width: 0;
+    height: 44px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--spotivity-cream);
+    font-size: 16px;
+    outline: none;
+}
+.pagina-publica #home-nav-search-input::placeholder { color: var(--spotivity-muted); opacity: 1; }
+.pagina-publica .home-nav-search:focus-within {
+    border-color: var(--spotivity-gold);
+    box-shadow: 0 0 0 2px rgba(216, 182, 106, .16);
+}
+.pagina-publica #btn-home-search { flex: 0 0 44px; width: 44px; min-width: 44px; padding: 0; }
+
+@media (max-width: 767px) {
+    .pagina-publica .home-nav { gap: 8px; padding-inline: 12px; }
+    .pagina-publica .home-brand { margin-right: 0; }
+    .pagina-publica .home-profile-button { display: none; }
+    .pagina-publica .home-nav-search { flex: 1 1 0; }
+    .pagina-publica.home-menu-open .home-nav-search { visibility: hidden; }
+    .pagina-publica .home-sport-hero {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 24px;
+        padding: 32px 18px 24px;
+        text-align: center;
+    }
+    .pagina-publica .home-sport-heading,
+    .pagina-publica .home-hero-actions { justify-content: center; }
+    .pagina-publica .home-hero-art { max-width: 440px; margin: 0 auto; border-radius: 22px; }
+    .pagina-publica .home-hero-tenis .home-hero-art { aspect-ratio: 1672 / 941; }
+}
