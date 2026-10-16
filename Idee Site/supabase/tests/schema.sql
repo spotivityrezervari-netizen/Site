@@ -30,7 +30,7 @@ create table public.mesaje_chat (
   expeditor text, mesaj text, citit boolean default false, created_at timestamptz default now()
 );
 create table storage.buckets(id text primary key, name text, public boolean, file_size_limit bigint, allowed_mime_types text[]);
-create table storage.objects(id uuid primary key default gen_random_uuid(), bucket_id text, name text);
+create table storage.objects(id uuid primary key default gen_random_uuid(), bucket_id text, name text, metadata jsonb);
 alter table storage.objects enable row level security;
 grant select, insert, update, delete on storage.objects to anon, authenticated, service_role;
 -- Deliberately unsafe legacy policies: the migration must override them.

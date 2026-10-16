@@ -29,7 +29,7 @@ let checks = 0;
   try {
     await pg.exec(readFileSync(join(__dirname, 'schema.sql'), 'utf8'));
     for (const file of ['001_security.sql', '003_court_hours.sql', '004_admin_scope_hardening.sql',
-      '005_sport_appearance.sql', '006_sports_bases.sql', '007_completed_booking_cancellation.sql', '008_profile_edit.sql', '009_base_photos.sql', '010_foot_tennis.sql']) {
+      '005_sport_appearance.sql', '006_sports_bases.sql', '007_completed_booking_cancellation.sql', '008_profile_edit.sql', '009_base_photos.sql', '010_foot_tennis.sql', '011_club_requests.sql']) {
       await pg.exec(readFileSync(join(__dirname, '..', file), 'utf8'));
     }
     let queue = Promise.resolve();
@@ -143,7 +143,7 @@ let checks = 0;
           return reply(405, {message: 'Unexpected Storage fixture method'});
         }
         const table = url.pathname.split('/').pop();
-        assert.ok(['clienti', 'users_admin', 'terenuri', 'rezervari', 'rezervari_disponibilitate', 'mesaje_chat', 'site_sporturi', 'baze_sportive', 'baze_sportive_admini'].includes(table));
+        assert.ok(['clienti', 'users_admin', 'terenuri', 'rezervari', 'rezervari_disponibilitate', 'mesaje_chat', 'site_sporturi', 'baze_sportive', 'baze_sportive_admini', 'cereri_baze_sportive'].includes(table));
         await pg.exec(`set role ${person ? 'authenticated' : 'anon'}`);
         const params = [], conditions = [];
         for (const [field, value] of url.searchParams) {
@@ -157,6 +157,10 @@ let checks = 0;
           }
         }
         const where = conditions.length ? ' where ' + conditions.join(' and ') : '';
+        if (request.method() === 'HEAD') {
+          const total = Number((await pg.query(`select count(*) total from public.${ident(table)}${where}`, params)).rows[0].total);
+          return route.fulfill({status: 200, headers: {'content-range': `*/${total}`, 'access-control-expose-headers': 'content-range'}, body: ''});
+        }
         let query;
         if (request.method() === 'GET') {
           const columns = (url.searchParams.get('select') || '*').split(',').map(c => c === '*' ? '*' : ident(c)).join(',');

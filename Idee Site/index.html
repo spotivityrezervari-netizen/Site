@@ -27,6 +27,8 @@
     <link rel="stylesheet" href="css/base-media.css?v=1">
     <script src="js/base-media.js?v=1" defer></script>
     <script src="js/home-motion.js?v=2" defer></script>
+    <link rel="stylesheet" href="css/club-registration.css?v=1">
+    <script src="js/club-registration.js?v=1" defer></script>
 
 </head>
 <body class="pagina-publica">
@@ -179,12 +181,56 @@
                 </div>
                 <div id="home-bases-directory" class="sports-bases-grid" aria-live="polite" aria-busy="true"></div>
             </section>
+            <section class="club-registration-section" id="inscrie-baza" aria-labelledby="club-registration-heading">
+                <div class="club-registration-copy">
+                    <span class="club-registration-eyebrow" data-club-i18n="eyebrow">Pentru cluburi și baze sportive</span>
+                    <h2 id="club-registration-heading" data-club-i18n="title">Înscrie-ți baza sportivă</h2>
+                    <p data-club-i18n="intro">Ai unul sau mai multe terenuri? Trimite-ne detaliile și hai să le aducem mai aproape de jucători.</p>
+                </div>
+                <button type="button" id="btn-club-registration" class="club-registration-primary" aria-controls="modal-club-registration" aria-haspopup="dialog" data-club-i18n="open">Înscrie baza sportivă</button>
+            </section>
         </main>
         <footer class="home-footer" id="home-footer">
             <button type="button" id="btn-legal" onclick="document.getElementById('modal-legal').style.display='flex'">
                 <span data-i18n="copyright_text">&copy; 2026 Numele SRL</span> &bull; <span data-i18n="drepturi_rezervate">Toate drepturile rezervate</span> &bull; <span class="home-legal-link" data-i18n="info_legale">Info Legale</span>
             </button>
         </footer>
+    </div>
+
+    <div class="modal" id="modal-club-registration" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="club-request-title" aria-describedby="club-request-privacy">
+        <section class="modal-continut club-registration-panel" tabindex="-1">
+            <div class="modal-antet">
+                <h2 id="club-request-title" class="titlu-modal" data-club-i18n="title">Înscrie-ți baza sportivă</h2>
+                <button type="button" class="buton-inchidere" id="close-club-registration" aria-label="Închide">X</button>
+            </div>
+            <p class="club-request-privacy" id="club-request-privacy" data-club-i18n="privacy">Cererea și fotografia sunt vizibile doar superadminului. Trimiterea nu publică automat baza.</p>
+            <form id="club-registration-form" novalidate>
+                <fieldset id="club-request-fields">
+                    <legend class="club-visually-hidden" data-club-i18n="details">Datele bazei sportive</legend>
+                    <div class="club-request-grid">
+                        <label class="club-request-wide" for="club-request-name"><span data-club-i18n="name">Numele bazei / clubului *</span><input id="club-request-name" name="nume_baza" required minlength="2" maxlength="120" autocomplete="organization"></label>
+                        <label for="club-request-contact"><span data-club-i18n="contact">Persoană de contact *</span><input id="club-request-contact" name="nume_contact" required minlength="2" maxlength="120" autocomplete="name"></label>
+                        <label for="club-request-city"><span data-club-i18n="city">Oraș *</span><input id="club-request-city" name="oras" required minlength="2" maxlength="100" autocomplete="address-level2"></label>
+                        <label for="club-request-email"><span data-club-i18n="email">Email de contact *</span><input id="club-request-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email"></label>
+                        <label for="club-request-phone"><span data-club-i18n="phone">Număr de telefon *</span><input id="club-request-phone" name="telefon" type="tel" required minlength="7" maxlength="30" autocomplete="tel" inputmode="tel"></label>
+                        <label class="club-request-wide" for="club-request-address"><span data-club-i18n="address">Adresă</span><input id="club-request-address" name="adresa" maxlength="250" autocomplete="street-address"></label>
+                        <label class="club-request-wide" for="club-request-maps"><span data-club-i18n="maps">Link Google Maps *</span><input id="club-request-maps" name="link_maps" type="url" required maxlength="2048" inputmode="url" placeholder="https://maps.app.goo.gl/…" aria-describedby="club-request-maps-hint"><small id="club-request-maps-hint" data-club-i18n="mapsHint">Copiază linkul locației din Google Maps.</small></label>
+                    </div>
+                    <div class="club-request-courts-heading"><h3 data-club-i18n="courts">Terenurile tale</h3><span data-club-i18n="courtsHint">Adaugă fiecare teren și sportul său. Maximum 20.</span></div>
+                    <div id="club-request-courts"></div>
+                    <button type="button" id="club-request-add-court" class="club-registration-secondary" data-club-i18n="addCourt">+ Adaugă un teren</button>
+                    <label class="club-request-block" for="club-request-description"><span data-club-i18n="description">Alte detalii</span><textarea id="club-request-description" name="descriere" maxlength="3000" rows="3"></textarea></label>
+                    <label class="club-request-block" for="club-request-photo"><span data-club-i18n="photo">Fotografie (opțional)</span><input id="club-request-photo" name="poza" type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/gif" aria-describedby="club-request-photo-hint"><small id="club-request-photo-hint" data-club-i18n="photoHint">JPG, PNG, WebP, AVIF sau GIF, maximum 5 MB. Nu include documente sau date personale în fotografie.</small></label>
+                    <div id="club-request-photo-preview" hidden><img id="club-request-photo-image" alt=""><button type="button" id="club-request-remove-photo" class="club-registration-secondary" data-club-i18n="removePhoto">Elimină fotografia</button></div>
+                    <label class="club-request-consent" for="club-request-consent"><input type="checkbox" id="club-request-consent" required><span data-club-i18n="consent">Sunt de acord să fiu contactat în legătură cu această cerere.</span></label>
+                </fieldset>
+                <p id="club-request-status" role="status" aria-live="polite" aria-atomic="true"></p>
+                <div class="club-request-actions">
+                    <button type="submit" id="club-request-submit" class="club-registration-primary" data-club-i18n="submit">Trimite cererea</button>
+                    <button type="button" id="club-request-login" class="club-registration-secondary" hidden data-club-i18n="login">Autentifică-te pentru a trimite</button>
+                </div>
+            </form>
+        </section>
     </div>
 
     <div class="modal" id="modal-cautare-terenuri" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="home-search-title">

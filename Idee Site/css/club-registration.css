@@ -1,0 +1,110 @@
+.pagina-publica .club-registration-section {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 32px;
+    width: calc(100% - 48px);
+    max-width: 1000px;
+    margin: 12px auto 64px;
+    padding: 32px;
+    border: 1px solid rgba(216, 182, 106, .28);
+    border-radius: 24px;
+    background: radial-gradient(ellipse at right top, rgba(216, 182, 106, .13), transparent 70%), #18271d;
+}
+.club-registration-copy { max-width: 610px; min-width: 0; }
+.club-registration-eyebrow { color: #d8b66a; font-size: 12px; letter-spacing: .07em; text-transform: uppercase; }
+.pagina-publica .club-registration-copy h2 { margin: 10px 0; color: #f7f3e8; font-size: clamp(24px, 3vw, 32px); line-height: 1.2; }
+.club-registration-copy p { margin: 0; color: #c9c0b2; line-height: 1.65; font-size: 14px; }
+.pagina-publica :is(.club-registration-primary, .club-registration-secondary) {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 46px;
+    margin: 0;
+    padding: 12px 18px;
+    border: 1px solid rgba(216, 182, 106, .4);
+    border-radius: 12px;
+    font: inherit;
+    font-size: 14px;
+    line-height: 1.4;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    transform: none;
+}
+.pagina-publica .club-registration-primary {
+    flex-shrink: 0;
+    background: linear-gradient(135deg, #edca82, #cfaa58);
+    color: #20190f;
+}
+.pagina-publica .club-registration-primary:not(:disabled):hover { background: #edca82; color: #20190f; }
+.pagina-publica .club-registration-secondary { background: #1b2d20; color: #edca82; }
+.pagina-publica .club-registration-secondary:not(:disabled):hover { background: #243a2a; color: #f7f3e8; }
+#modal-club-registration { z-index: 10003; padding: 16px; box-sizing: border-box; }
+#modal-club-registration [hidden] { display: none !important; }
+#modal-club-registration .modal-continut {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 700px;
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
+    padding: 30px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: #142219;
+    border: 1px solid rgba(216, 182, 106, .3);
+}
+#modal-club-registration .titlu-modal { color: #edca82; margin: 4px 30px 18px 0; text-align: left; font-size: 26px; line-height: 1.25; }
+#modal-club-registration .buton-inchidere { color: #edca82; }
+#modal-club-registration :focus-visible, .club-registration-section :focus-visible { outline: 2px solid #edca82; outline-offset: 3px; }
+#modal-club-registration .club-request-privacy { color: #c9c0b2; font-size: 13px; line-height: 1.6; margin: 0 0 24px; }
+#club-request-fields { min-width: 0; border: 0; padding: 0; margin: 0; }
+.club-request-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.club-request-wide { grid-column: 1 / -1; }
+#club-registration-form label { display: grid; gap: 7px; min-width: 0; color: #f7f3e8; font-size: 14px; }
+#club-registration-form :is(input:not([type="checkbox"]), select, textarea) {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: 46px;
+    margin: 0;
+    padding: 12px;
+    background: #1b2d20;
+    border: 1px solid rgba(216, 182, 106, .3);
+    border-radius: 10px;
+    font: inherit;
+    font-size: 16px;
+    color: #f7f3e8;
+}
+#club-registration-form textarea { resize: vertical; min-height: 88px; }
+#club-registration-form small, .club-request-courts-heading > span { color: #c9c0b2; font-size: 12px; line-height: 1.6; }
+.club-request-courts-heading { margin: 24px 0 14px; }
+.club-request-courts-heading h3 { margin: 0 0 5px; font-size: 17px; color: #edca82; }
+#club-request-courts { display: grid; gap: 14px; margin-bottom: 12px; }
+.club-request-court { padding: 14px; border: 1px solid rgba(216, 182, 106, .2); border-radius: 12px; background: rgba(216, 182, 106, .035); }
+.club-request-court-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; color: #edca82; font-size: 13px; }
+#club-registration-form .club-request-court-remove { padding: 5px 10px; min-height: 34px; font-size: 12px; }
+#club-registration-form .club-request-block { margin-top: 20px; }
+#club-request-photo-preview { display: flex; align-items: center; gap: 14px; margin-top: 12px; }
+#club-request-photo-image { width: 100px; height: 76px; border-radius: 10px; object-fit: cover; }
+#club-registration-form .club-request-consent { display: flex; align-items: flex-start; gap: 10px; margin: 22px 0 0; font-size: 13px; line-height: 1.6; }
+#club-request-consent { flex: 0 0 auto; width: 18px; height: 18px; margin: 2px 0 0; accent-color: #d8b66a; }
+#club-request-status { margin: 18px 0; min-height: 1.5em; font-size: 14px; line-height: 1.6; color: #edca82; overflow-wrap: anywhere; }
+#club-request-status[data-kind="error"] { color: #f6b8aa; }
+#club-request-status[data-kind="success"] { color: #d9e9bf; }
+.club-request-actions { display: grid; gap: 12px; }
+#club-registration-form button:disabled { opacity: .55; cursor: wait; }
+.club-visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+@media (max-width: 767px) {
+    .pagina-publica .club-registration-section { width: calc(100% - 36px); margin-bottom: 40px; padding: 24px; flex-direction: column; align-items: stretch; gap: 22px; }
+}
+@media (max-width: 480px) {
+    #modal-club-registration { padding: 12px; }
+    #modal-club-registration .modal-continut { padding: 23px 18px; border-radius: 20px; max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); }
+    #modal-club-registration .titlu-modal { font-size: 23px; }
+    #modal-club-registration .buton-inchidere { top: 16px; right: 17px; }
+    .club-request-grid { grid-template-columns: minmax(0, 1fr); }
+    .club-request-court { padding: 12px; }
+}

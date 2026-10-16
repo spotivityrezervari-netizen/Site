@@ -1,6 +1,6 @@
 const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
-const {readFileSync, mkdtempSync, rmSync} = require('node:fs');
+const {readFileSync, mkdtempSync, rmSync, mkdirSync} = require('node:fs');
 const {join} = require('node:path');
 const {tmpdir} = require('node:os');
 const {execFile} = require('node:child_process');
@@ -156,7 +156,7 @@ async function openProfile(page) {
       await page.locator('#modal-terenuri').waitFor({state:'hidden'});
     }
     await page.waitForFunction(() => [...document.images].every(img => img.complete));
-    const imageFailures = await page.locator('img').evaluateAll(imgs => imgs.filter(i => i.naturalWidth === 0).map(i => i.getAttribute('src')));
+    const imageFailures = await page.locator('img').evaluateAll(imgs => imgs.filter(i => (i.getAttribute('src') || i.getClientRects().length) && i.naturalWidth === 0).map(i => i.getAttribute('src')));
     assert.deepEqual(imageFailures, []);
     console.log('PASS homepage: SDK loaded, all five sport dialogs, login dialog, Escape, and images');
     await page.setViewportSize({width:390,height:844});
@@ -214,6 +214,26 @@ async function openProfile(page) {
     await page.keyboard.press('Escape');
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     console.log('PASS live discovery: global name search, empty results, existing reservation form, one action per sport and separate bases section');
+    for (const width of [390, 1440]) {
+      await page.setViewportSize({width, height: 844});
+      await page.locator('#btn-club-registration').click();
+      await page.locator('#modal-club-registration').waitFor({state: 'visible'});
+      assert.equal(await page.locator('#club-request-name').isVisible(), true);
+      assert.equal(await page.locator('#club-request-email').getAttribute('type'), 'email');
+      assert.equal(await page.locator('[data-club-court-sport] option').count(), 5);
+      assert.equal(await page.locator('#club-request-photo').getAttribute('type'), 'file');
+      const bounds = await page.locator('.club-registration-panel').boundingBox();
+      assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= width + 1);
+      if (process.env.SPOTIVITY_SMOKE_SCREENSHOT_DIR) {
+        mkdirSync(process.env.SPOTIVITY_SMOKE_SCREENSHOT_DIR, {recursive: true});
+        await page.locator('.club-registration-panel').evaluate(node => { node.scrollTop = 0; });
+        await page.screenshot({path: join(process.env.SPOTIVITY_SMOKE_SCREENSHOT_DIR, `registration-${width}.png`)});
+      }
+      await page.keyboard.press('Escape');
+      await page.locator('#modal-club-registration').waitFor({state: 'hidden'});
+    }
+    console.log('PASS club registration: public multi-sport form, contact fields, photo picker, responsive layout and Escape; no submission writes');
+
 
     assert.equal((await page.goto(new URL('admin.html', siteBaseUrl).href, {waitUntil:'networkidle'})).status(), 200);
     assert.ok(await page.locator('#sectiune-login').isVisible());
@@ -222,6 +242,7 @@ async function openProfile(page) {
     assert.deepEqual(failedSiteAssets, []);
     assert.deepEqual(jsErrors, []);
     assert.deepEqual(transportErrors, []);
+    assert.equal(await page.locator('#btn-cereri-baze-admin').isVisible(), false);
     console.log('PASS admin: login visible, dashboard hidden; no JavaScript exceptions or failed site assets');
     console.log('Backend read results:', JSON.stringify(backend));
     const read = await page.evaluate(async () => {

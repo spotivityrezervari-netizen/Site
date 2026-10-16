@@ -1,0 +1,79 @@
+/* Private application management follows the existing forest and gold admin theme. */
+.admin-page #btn-cereri-baze-admin { flex-direction: column; }
+.admin-club-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 25px;
+    min-height: 25px;
+    margin-left: 4px;
+    padding: 2px 7px;
+    border-radius: 99px;
+    background: #d8b66a;
+    color: #20190f;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+}
+.admin-page #modal-cereri-baze-admin .admin-club-dialog { max-width: 1060px; }
+.admin-club-help { color: var(--spotivity-muted, #c8c5b7); font-size: 13px; line-height: 1.5; }
+.admin-club-toolbar { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; }
+.admin-club-toolbar .grup-input { flex: 1 1 200px; margin: 0; min-width: 0; }
+.admin-club-toolbar .btn-cont { margin: 0; min-height: 46px; }
+.admin-club-workspace { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 20px; }
+.admin-club-workspace:has(.admin-club-detail:not([hidden])) { grid-template-columns: minmax(230px, .8fr) minmax(0, 1.6fr); }
+.admin-club-directory, .admin-club-list { display: grid; gap: 10px; min-width: 0; }
+.admin-club-list { max-height: 62vh; max-height: 62dvh; overflow-y: auto; overscroll-behavior: contain; padding: 2px; }
+.admin-club-request {
+    display: grid;
+    justify-items: start;
+    gap: 6px;
+    width: 100%;
+    min-height: 100px;
+    margin: 0;
+    padding: 14px;
+    border: 1px solid var(--spotivity-gold-border, #655e40);
+    border-radius: 12px;
+    background: #18271d;
+    color: var(--spotivity-cream, #f4f0e4);
+    text-align: left;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+}
+.admin-club-request:hover { background: #223526; border-color: #d8b66a; }
+.admin-club-request[aria-current="true"] { border-color: #edca82; box-shadow: inset 3px 0 #d8b66a; background: #223526; }
+.admin-club-request-name { font-size: 16px; font-weight: 650; line-height: 1.4; }
+.admin-club-state { border: 1px solid #796b45; border-radius: 99px; padding: 3px 9px; font-size: 12px; color: #edca82; }
+.admin-club-state[data-state="noua"] { background: #d8b66a; color: #20190f; border-color: #d8b66a; font-weight: 650; }
+.admin-club-state[data-state="acceptata"] { color: #b3e3ad; border-color: #56734f; }
+.admin-club-state[data-state="respinsa"] { color: #ffc4bb; border-color: #935c54; }
+.admin-club-date { color: var(--spotivity-muted, #c8c5b7); font-size: 12px; }
+.admin-club-detail { display: grid; align-content: start; gap: 14px; min-width: 0; padding: 16px; background: #142219; border: 1px solid var(--spotivity-gold-border, #655e40); border-radius: 14px; }
+.admin-club-detail h3 { color: #edca82; font-size: 21px; margin: 0; line-height: 1.4; overflow-wrap: anywhere; }
+.admin-club-detail h4 { margin: 16px 0 8px; font-size: 15px; color: #edca82; }
+.admin-club-detail .btn-cont { justify-self: start; margin: 0; }
+.admin-club-fields { display: grid; gap: 12px; margin: 0; }
+.admin-club-fields > div { display: grid; gap: 3px; min-width: 0; }
+.admin-club-fields dt { color: var(--spotivity-muted, #c8c5b7); font-size: 12px; }
+.admin-club-fields dd { margin: 0; font-size: 15px; line-height: 1.5; overflow-wrap: anywhere; white-space: pre-wrap; }
+.admin-club-fields a { color: #edca82; text-decoration: underline; text-underline-offset: 3px; }
+.admin-club-courts { display: grid; gap: 7px; margin: 0; padding-left: 19px; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.admin-club-description { margin: 0; font-size: 14px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.admin-club-photo { display: block; width: 100%; max-height: 330px; object-fit: contain; border-radius: 10px; background: #101a14; }
+#admin-cerere-form { display: grid; gap: 14px; min-width: 0; }
+#admin-cerere-form .grup-input { display: grid; gap: 7px; margin: 0; min-width: 0; }
+#admin-cerere-form :is(textarea, select), #admin-cereri-filter { width: 100%; min-width: 0; min-height: 46px; padding: 12px; box-sizing: border-box; border: 1px solid var(--spotivity-gold-border, #655e40); border-radius: 9px; font: inherit; font-size: 16px; }
+#admin-cerere-note { resize: vertical; }
+#admin-cerere-save { margin: 0; min-height: 48px; line-height: 1.4; padding: 12px 16px; }
+#admin-cerere-save:disabled { background: #293b2b; color: #a4b19f; box-shadow: none; }
+#admin-cereri-status, #admin-cerere-save-status { font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+#admin-cereri-status:empty, #admin-cerere-save-status:empty, #admin-cerere-photo-status:empty { display: none; }
+#modal-cereri-baze-admin .is-error { color: #ffc4bb; }
+@media (max-width: 700px) {
+    .admin-club-workspace:has(.admin-club-detail:not([hidden])) { grid-template-columns: minmax(0, 1fr); }
+    .admin-club-directory.has-selected-request { display: none; }
+    .admin-club-detail { padding: 13px; }
+    .admin-club-toolbar { gap: 10px; }
+    .admin-club-toolbar .grup-input { flex-basis: 100%; }
+    .admin-club-toolbar .btn-cont { width: 100%; }
+    .admin-club-list { max-height: none; }
+}

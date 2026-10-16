@@ -111,3 +111,12 @@ Rândurile de terenuri care depășesc lățimea disponibilă se derulează auto
 Migrarea `supabase/009_base_photos.sql` este aplicată după 008 în proiectul existent. Adminii obișnuiți pot încărca fotografii numai pentru bazele cu permisiune explicită; superadminul poate gestiona toate bazele. Bucketul public `poze_baze_sportive` și coloana `baze_sportive.poza` păstrează o cale de forma `UUID-bază/UUID-imagine.ext`. RLS verifică permisiunile curente, inclusiv după revocare; descrierile, terenurile și rezervările existente sunt păstrate.
 
 Testele noi sunt `supabase/tests/base-photos.test.cjs` (UUID și ID numeric) și `supabase/tests/discovery-media-browser.test.cjs`. Folosesc numai date izolate; nu încarcă fotografii în proiectul real.
+
+
+## Înscrierea bazelor sportive
+
+Secțiunea **Înscrie-ți baza sportivă** deschide un formular pentru numele bazei/clubului, persoana de contact, oraș, email, telefon, adresă opțională, link Google Maps, unul sau mai multe terenuri cu sportul fiecăruia, descriere și o fotografie opțională. Trimiterea cere autentificare; detaliile completate se păstrează în memorie în timpul autentificării. Nu se trimit emailuri și nu se publică automat terenuri sau baze.
+
+În `admin.html`, numai superadminul are meniul **Cereri înscriere baze**. Acesta poate consulta datele și fotografia privată, filtra cererile și salva o stare plus note interne. Acceptarea unei cereri nu creează conturi, roluri, terenuri sau o bază publică; acestea se configurează separat după verificare.
+
+Configurația este în `supabase/011_club_requests.sql`. Cererile din `cereri_baze_sportive` și fotografiile atașate sunt accesibile numai superadminilor actuali, prin RLS. Bucketul `cereri_baze_sportive` este privat; imaginile sunt afișate în panou prin adrese semnate de scurtă durată. Retrimiterea după pierderea confirmării folosește același identificator, iar serverul limitează trimiterea la cinci cereri pe cont în 24 de ore.

@@ -54,7 +54,7 @@ Pe **12 octombrie 2026**, migrarea 003 a fost aplicată în **Rendez-Vous** prin
 
 Adresele de redirect Auth sunt exacte; wildcardul vechi pentru spotivity.ro a fost eliminat. La cererea proprietarului, parola nouă are în continuare minimum **6 caractere**. Confirmarea automată și absența SMTP au fost păstrate; configurarea emailului și datele firmei sunt amânate de proprietar. Raportul de verificare și pașii rămași sunt în [PRODUCTION_REVIEW.md](../PRODUCTION_REVIEW.md).
 
-Pentru **alt proiect**, ordinea migrărilor este **001 → 003 → 004 → 005 → 006 → 007 → 008 → 009 → 010** după inventar/backup și verificarea datelor. 002 conține numai exemple de roluri pentru conturi Auth existente și confirmate. Fișierele `tests/` se rulează exclusiv în baza izolată. Instrucțiunile istorice de mai jos pentru reinstalarea 001 se aplică numai proiectelor fără migrări ulterioare.
+Pentru **alt proiect**, ordinea migrărilor este **001 → 003 → 004 → 005 → 006 → 007 → 008 → 009 → 010 → 011** după inventar/backup și verificarea datelor. 002 conține numai exemple de roluri pentru conturi Auth existente și confirmate. Fișierele `tests/` se rulează exclusiv în baza izolată. Instrucțiunile istorice de mai jos pentru reinstalarea 001 se aplică numai proiectelor fără migrări ulterioare.
 
 ## Căutare și afișare pe telefon
 
@@ -319,3 +319,14 @@ Pagina principală, navigarea, căutarea, filtrarea pe oraș, rezervarea direct�
 RLS permite în continuare citirea publică a imaginilor și modificarea configurării numai de către superadmin. Nu se extind permisiunile administratorilor obișnuiți. Rolurile, bazele, terenurile, rezervările, chatul și obiectele Storage rămân neschimbate. Interdicția anulării rezervărilor finalizate rămâne activă.
 
 `foot-tennis.test.cjs` verifică separat ID-uri UUID și numerice: migrarea și reaplicarea, păstrarea datelor/politicilor/funcțiilor/trigger-elor, accesul pe roluri, rezervarea cu sportul și prețul controlate de server și refuzul anulării după finalizare. Testele de browser folosesc numai date izolate.
+
+
+## 011 — cereri private de înscriere a bazelor
+
+`011_club_requests.sql` este aplicată în proiectul existent după 010. Aplicarea a fost precedată de o probă live cu rollback și verificări de păstrare a datelor, rolurilor, politicilor, funcțiilor și trigger-elor. O probă ulterioară cu rolurile reale a confirmat trimiterea, reîncercarea fără dublare, citirea/modificarea doar de către superadmin și fotografia privată; toate datele probei au fost anulate prin rollback. Pentru un proiect nou, se aplică după 010. Adaugă tabelul `public.cereri_baze_sportive`, RPC-ul autentificat `submit_club_request` și bucketul privat `cereri_baze_sportive`. Formularul public trimite datele de contact și locația, 1–20 de terenuri cu sporturi dintre cele cinci categorii, detalii și opțional o fotografie raster de maximum 5 MiB. Validarea este repetată în server; RPC-ul returnează numai UUID-ul de confirmare.
+
+Numai superadminii verificați din `users_admin.user_id` pot citi cererile și fotografiile atașate. Granturile permit modificarea doar a stării și notei interne; triggerul înregistrează persoana și ora verificării. Datele depuse sunt păstrate. Utilizatorii și administratorii obișnuiți nu pot lista cererile. Un utilizator își poate citi/curăța numai fotografiile proprii încă neatașate; după trimitere acestea sunt private superadminilor și nu mai pot fi înlocuite de solicitant. Politicile restrictive împiedică politicile Storage permisive vechi să deschidă bucketul nou.
+
+RPC-ul folosește un UUID stabil pentru confirmarea/reîncercarea aceleiași cereri și o limită de cinci cereri pe cont în 24 de ore. Blocarea se face pe solicitant, fără blocarea globală a rezervărilor. O cerere acceptată nu publică automat o bază, nu creează terenuri și nu acordă roluri. Meniul **Cereri înscriere baze** este disponibil numai superadminului în `admin.html`.
+
+`club-requests.test.cjs` verifică în PostgreSQL izolat validarea, granturile/RLS, confidențialitatea fotografiilor, reîncercarea, limitele și păstrarea funcționalității existente, atât cu UUID cât și cu ID numeric pentru terenuri. `club-requests-browser.test.cjs` folosește SDK-ul real și Storage izolat pentru formular, fotografii, autentificare, gestionare, revocarea accesului și afișarea pe telefon/desktop. Nu executa testele în proiectul real.

@@ -47,6 +47,7 @@ async function openProfile(page) {
     await pg.exec(readFileSync(join(__dirname,'../008_profile_edit.sql'),'utf8'));
     await pg.exec(readFileSync(join(__dirname,'../009_base_photos.sql'),'utf8'));
     await pg.exec(readFileSync(join(__dirname,'../010_foot_tennis.sql'),'utf8'));
+    await pg.exec(readFileSync(join(__dirname,'../011_club_requests.sql'),'utf8'));
     await pg.exec("update public.terenuri set poza='assets/imagini/avatar2.png'");
     const tomorrow=(await pg.query("select ((now() at time zone 'Europe/Bucharest')::date+1)::text as d")).rows[0].d;
     let queue=Promise.resolve();
@@ -132,7 +133,7 @@ async function openProfile(page) {
           return reply(200,result.rows[0].id);
         }
         const table=url.pathname.split('/').pop();
-        assert.ok(['clienti','users_admin','terenuri','rezervari','rezervari_disponibilitate','mesaje_chat','site_sporturi','baze_sportive','baze_sportive_admini'].includes(table));
+        assert.ok(['clienti','users_admin','terenuri','rezervari','rezervari_disponibilitate','mesaje_chat','site_sporturi','baze_sportive','baze_sportive_admini','cereri_baze_sportive'].includes(table));
         await pg.exec(`set role ${person ? 'authenticated' : 'anon'}`);
         const params=[], conditions=[];
         for (const [field,value] of url.searchParams) {
@@ -149,6 +150,10 @@ async function openProfile(page) {
           }
         }
         const where=conditions.length ? ' where '+conditions.join(' and ') : '';
+        if (request.method()==='HEAD') {
+          const total=Number((await pg.query(`select count(*) total from public.${ident(table)}${where}`,params)).rows[0].total);
+          return route.fulfill({status:200,headers:{'content-range':`*/${total}`,'access-control-expose-headers':'content-range'},body:''});
+        }
         let query;
         if (request.method()==='GET') {
           const columns=(url.searchParams.get('select') || '*').split(',').map(c=>c==='*' ? '*' : ident(c)).join(',');
