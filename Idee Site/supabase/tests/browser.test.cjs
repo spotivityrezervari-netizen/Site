@@ -9,6 +9,7 @@ const {join} = require('node:path');
 const assert = require('node:assert/strict');
 const uid = n => `00000000-0000-0000-0000-${String(n).padStart(12,'0')}`;
 const host = 'ndubcdwohqzgxpuiowye.supabase.co';
+const sports = ['Fotbal','Baschet','Tenis','Volei','Tenis Picior'];
 const base = process.env.SITE_BASE_URL || 'http://127.0.0.1:8002/';
 const screenshotDir = process.env.SPOTIVITY_TEST_SCREENSHOT_DIR;
 if (screenshotDir) mkdirSync(screenshotDir,{recursive:true});
@@ -45,6 +46,7 @@ async function openProfile(page) {
     await pg.exec(readFileSync(join(__dirname,'../007_completed_booking_cancellation.sql'),'utf8'));
     await pg.exec(readFileSync(join(__dirname,'../008_profile_edit.sql'),'utf8'));
     await pg.exec(readFileSync(join(__dirname,'../009_base_photos.sql'),'utf8'));
+    await pg.exec(readFileSync(join(__dirname,'../010_foot_tennis.sql'),'utf8'));
     await pg.exec("update public.terenuri set poza='assets/imagini/avatar2.png'");
     const tomorrow=(await pg.query("select ((now() at time zone 'Europe/Bucharest')::date+1)::text as d")).rows[0].d;
     let queue=Promise.resolve();
@@ -399,7 +401,7 @@ async function openProfile(page) {
     assert.equal(await page.locator('#modal-terenuri').isVisible(),false);
     assert.equal(await page.locator('#fundal-imagine-sport').evaluate(node=>node.style.opacity),'0');
     await page.waitForFunction(()=>!document.body.classList.contains('fara-scroll'));
-    assert.equal(await page.locator('.home-sport-hero').count(),4);
+    assert.equal(await page.locator('.home-sport-hero').count(),sports.length);
     const notice=page.locator('#notificare-rezervare');
     await notice.waitFor({state:'visible'});
     assert.equal(await notice.getAttribute('role'),'status');
@@ -903,6 +905,10 @@ async function openProfile(page) {
         await superAdmin.locator(`.card-sport[onclick*="${id === 'modal-adauga-teren' ? 'deschideModalAdaugaTeren' : id}"]`).click();
         await superAdmin.locator(`#${id}`).waitFor({state:'visible'});
         if (id==='modal-adauga-teren') await superAdmin.locator('#container-lista-terenuri').getByText(longCourt,{exact:false}).waitFor();
+        if (id==='modal-adauga-teren') {
+          assert.deepEqual((await superAdmin.locator('#teren-sport option').evaluateAll(nodes=>nodes.map(node=>node.value))).sort(),[...sports].sort());
+          assert.equal(await superAdmin.locator('#teren-sport option[value="Tenis Picior"]').innerText(),'Tenis de picior');
+        }
         if (id==='modal-creeaza-cont') await superAdmin.locator('#container-checkbox-terenuri').getByText(longCourt,{exact:false}).waitFor();
         await assertFits(superAdmin,`#${id} .modal-continut`,`superadmin ${id} ${width}px`);
         assert.doesNotMatch(await superAdmin.locator(`#${id}`).innerText(),/\p{Extended_Pictographic}/u);
@@ -914,15 +920,16 @@ async function openProfile(page) {
     const mobile=await pageFor();
     await mobile.goto(base,{waitUntil:'networkidle'});
     await mobile.evaluate(()=>window.spotivitySportAppearanceReady);
-    assert.equal(await mobile.locator('.home-sport-hero').count(),4);
-    assert.equal(await mobile.locator('.card-sport[data-sport]').count(),4);
+    assert.equal(await mobile.locator('.home-sport-hero').count(),sports.length);
+    assert.equal(await mobile.locator('.card-sport[data-sport]').count(),sports.length);
     assert.equal(await mobile.locator('#home-brand img').getAttribute('src'),'assets/imagini/avatar2.png');
     await assertPngLoaded(mobile.locator('#home-brand img'));
     const appearanceRows=await serial(async()=>{
       await pg.exec('reset role');
       return (await pg.query('select sport,icona_url,fundal_url from public.site_sporturi order by ordine')).rows;
     });
-    assert.equal(appearanceRows.length,4);
+    assert.equal(appearanceRows.length,sports.length);
+    assert.deepEqual(appearanceRows.map(row=>row.sport),sports);
     for (const appearance of appearanceRows) {
       const hero=mobile.locator(`.home-sport-hero[data-home-sport="${appearance.sport}"]`);
       assert.equal(await hero.count(),1);
@@ -933,7 +940,83 @@ async function openProfile(page) {
 
     }
     assert.ok(requests.some(request=>request.path==='/rest/v1/site_sporturi' && request.method==='GET' && !request.person));
-    pass('the four sport sections have text-only headings and Supabase-configured realistic backgrounds with the avatar2 brand');
+    pass('all five sport sections have text-only headings and Supabase-configured realistic backgrounds with the avatar2 brand');
+    await mobile.evaluate(()=>window.spotivityDiscoveryReady);
+    const footCourt=superCourts.find(court=>court.sport==='Tenis Picior');
+    assert.ok(footCourt);
+    const footStrip=mobile.locator('[data-home-courts="Tenis Picior"]');
+    assert.deepEqual(await footStrip.locator('[data-discovery-court]').evaluateAll(nodes=>nodes.map(node=>node.dataset.discoveryCourt)),[String(footCourt.id)]);
+    assert.equal(await mobile.locator(`[data-home-courts="Fotbal"] [data-discovery-court="${footCourt.id}"]`).count(),0);
+    await mobile.locator('#filtru-oras-global').selectOption('Test City');
+    assert.equal(await footStrip.locator('[data-discovery-court]').count(),0);
+    await mobile.locator('#filtru-oras-global').selectOption(longCity);
+    assert.deepEqual(await footStrip.locator('[data-discovery-court]').evaluateAll(nodes=>nodes.map(node=>node.dataset.discoveryCourt)),[String(footCourt.id)]);
+    assert.equal(await mobile.locator('[data-home-courts="Fotbal"] [data-discovery-court]').count(),0);
+    await mobile.locator('#filtru-oras-global').selectOption('ALL');
+    await mobile.locator('.card-sport[data-sport="Fotbal"]').click();
+    await assertCourtNames(mobile,['Court A']);
+    await mobile.locator('#inchide-terenuri').click();
+    await mobile.locator('.card-sport[data-sport="Tenis Picior"]').click();
+    assert.equal(await mobile.locator('#titlu-sport').innerText(),'Alege Terenul - Tenis de picior');
+    await assertCourtNames(mobile,['Picior Court']);
+    assert.match(await mobile.locator('#modal-terenuri .modal-continut').evaluate(node=>getComputedStyle(node).backgroundImage),/RealistTenispicior\.png/);
+    await mobile.locator('#inchide-terenuri').click();
+    pass('foot tennis is a separate city-filtered sport strip and court chooser, with no foot courts included under football');
+
+    for (const [language,label] of [['hu','Lábtenisz'],['en','Foot tennis'],['ro','Tenis de picior']]) {
+      await mobile.evaluate(language=>window.schimbaLimba(language),language);
+      assert.equal(await mobile.locator('[data-home-sport="Tenis Picior"] .home-sport-heading').innerText(),label);
+      assert.equal(await mobile.locator('.home-desktop-nav [data-sport-target="Tenis Picior"]').innerText(),label);
+      assert.equal(await mobile.locator('#home-mobile-menu [data-sport-target="Tenis Picior"]').innerText(),label);
+      for (const width of viewportWidths) {
+        await mobile.setViewportSize({width,height:844});
+        await assertFits(mobile,'#home-header',`${language} five-sport navigation ${width}px`);
+        await assertFits(mobile,'[data-home-sport="Tenis Picior"] .home-hero-copy',`${language} foot-tennis title and action ${width}px`);
+        if (screenshotDir) {
+          await mobile.locator('[data-home-sport="Tenis Picior"]').scrollIntoViewIfNeeded();
+          await mobile.locator('[data-home-sport="Tenis Picior"]').screenshot({path:join(screenshotDir,`spotivity-foot-tennis-${language}-${width}.png`)});
+        }
+      }
+      await mobile.locator('.card-sport[data-sport="Tenis Picior"]').click();
+      assert.equal(await mobile.locator('#titlu-sport').innerText(),`${await mobile.evaluate(()=>window.dict[window.lang].alege_terenul)} - ${label}`);
+      await assertCourtNames(mobile,['Picior Court']);
+      await mobile.locator('#inchide-terenuri').click();
+    }
+    pass('the fifth sport has distinct Romanian, Hungarian and English headings and navigation labels without changing its canonical court key');
+
+    await mobile.evaluate(async()=>{
+      const {error}=await db.auth.signInWithPassword({email:'alice@example.test',password:' test-password. '});
+      if(error)throw error;
+    });
+    await mobile.waitForFunction(()=>window.getSpotivityProfileUser()?.email==='alice@example.test');
+    await mobile.locator('.card-sport[data-sport="Tenis Picior"]').click();
+    await mobile.locator('#filtru-data').fill(tomorrow);
+    await mobile.locator('#filtru-data').dispatchEvent('change');
+    await assertCourtNames(mobile,['Picior Court']);
+    await mobile.locator('.btn-teren').click();
+    await mobile.locator('.btn-ora').filter({hasText:/^12:00$/}).click();
+    const footBookingResponse=mobile.waitForResponse(response=>new URL(response.url()).pathname==='/rest/v1/rezervari' && response.request().method()==='POST');
+    await mobile.locator('#buton-confirma').click();
+    assert.equal((await footBookingResponse).status(),201);
+    await mobile.locator('#modal-rezervare').waitFor({state:'hidden'});
+    await serial(async()=>{
+      await pg.exec('reset role');
+      const rows=(await pg.query("select sport,teren,client_user_id,pret_total from public.rezervari where teren='Picior Court' and data_str=$1 and ora='12:00' and stare='activa'",[tomorrow])).rows;
+      assert.deepEqual(rows,[{sport:'Tenis Picior',teren:'Picior Court',client_user_id:uid(1),pret_total:'100 RON'}]);
+    });
+    await mobile.evaluate(()=>db.auth.signOut({scope:'local'}));
+    await mobile.waitForFunction(()=>window.getSpotivityProfileUser()===null);
+    await mobile.locator('#home-nav-search-input').fill('tenis de picior');
+    await mobile.locator('#home-nav-search-input').press('Enter');
+    await mobile.locator('#modal-cautare-terenuri').waitFor({state:'visible'});
+    assert.deepEqual(await mobile.locator('#home-search-results [data-discovery-court]').evaluateAll(nodes=>nodes.map(node=>node.dataset.discoveryCourt)),[String(footCourt.id)]);
+    await mobile.locator('#home-search-results [data-discovery-court]').click();
+    await mobile.locator('#modal-rezervare').waitFor({state:'visible'});
+    assert.equal(await mobile.locator('#rezervare-teren-selectat').innerText(),'Picior Court');
+    assert.match(await mobile.locator('#modal-rezervare .modal-continut').evaluate(node=>getComputedStyle(node).backgroundImage),/RealistTenispicior\.png/);
+    await mobile.keyboard.press('Escape');
+    await mobile.locator('#home-nav-search-input').fill('');
+    pass('a real SDK foot-tennis booking persists its canonical sport, server price and owner UUID, and global search opens the same independent reservation flow');
     for (const width of viewportWidths) {
       await mobile.setViewportSize({width,height:844});
       await mobile.evaluate(()=>window.scrollTo(0,0));
@@ -967,7 +1050,7 @@ async function openProfile(page) {
           return {left:box.left,right:box.right,top:box.top,bottom:box.bottom,width:innerWidth,height:innerHeight,toggleBottom:toggle.bottom};
         });
         assert.ok(bounds.left<=0 && bounds.right>=bounds.width && bounds.top<=bounds.toggleBottom+1 && bounds.bottom>=bounds.height-1,JSON.stringify(bounds));
-        assert.deepEqual(await menu.locator('[data-sport-target]').evaluateAll(nodes=>nodes.map(node=>node.dataset.sportTarget).sort()),['Baschet','Fotbal','Tenis','Volei']);
+        assert.deepEqual(await menu.locator('[data-sport-target]').evaluateAll(nodes=>nodes.map(node=>node.dataset.sportTarget).sort()),[...sports].sort());
         assert.equal(await menu.locator('[data-profile-target]').count(),1);
         assert.equal(await menu.locator('button').first().evaluate(button=>button.hasAttribute('data-profile-target')),true,'Profile must be the first mobile menu action');
         await mobile.keyboard.press('Tab');
@@ -987,6 +1070,12 @@ async function openProfile(page) {
         assert.equal(await mobile.locator('#filtru-ora').isVisible(),true);
         await mobile.locator('#inchide-terenuri').click();
         await hamburger.click();
+        await menu.locator('[data-sport-target="Tenis Picior"]').click();
+        await menu.waitFor({state:'hidden'});
+        assert.equal(await mobile.locator('#titlu-sport').innerText(),'Alege Terenul - Tenis de picior');
+        await assertCourtNames(mobile,['Picior Court']);
+        await mobile.locator('#inchide-terenuri').click();
+        await hamburger.click();
         await menu.locator('[data-profile-target]').click();
         await menu.waitFor({state:'hidden'});
         await mobile.locator('#modal-auth').waitFor({state:'visible'});
@@ -994,13 +1083,17 @@ async function openProfile(page) {
       } else {
         assert.equal(await desktopNav.isVisible(),true);
         assert.equal(await mobile.locator('#btn-top-cont').isVisible(),true);
-        assert.deepEqual(await desktopNav.locator('[data-sport-target]').evaluateAll(nodes=>nodes.map(node=>node.dataset.sportTarget).sort()),['Baschet','Fotbal','Tenis','Volei']);
+        assert.deepEqual(await desktopNav.locator('[data-sport-target]').evaluateAll(nodes=>nodes.map(node=>node.dataset.sportTarget).sort()),[...sports].sort());
         await desktopNav.locator('[data-sport-target="Tenis"]').click();
         await mobile.locator('#modal-terenuri').waitFor({state:'visible'});
         assert.ok((await mobile.locator('#titlu-sport').innerText()).includes('Tenis'));
         assert.equal(await mobile.locator('#filtru-nume').isVisible(),true);
         assert.equal(await mobile.locator('#filtru-data').isVisible(),true);
         assert.equal(await mobile.locator('#filtru-ora').isVisible(),true);
+        await mobile.locator('#inchide-terenuri').click();
+        await desktopNav.locator('[data-sport-target="Tenis Picior"]').click();
+        assert.equal(await mobile.locator('#titlu-sport').innerText(),'Alege Terenul - Tenis de picior');
+        await assertCourtNames(mobile,['Picior Court']);
         await mobile.locator('#inchide-terenuri').click();
       }
       pass(`homepage navigation and sport menu fit ${width}px, use the existing sport/profile dialogs and preserve all chooser filters`);
@@ -1061,7 +1154,8 @@ async function openProfile(page) {
     await unavailableAppearance.goto(base,{waitUntil:'networkidle'});
     await unavailableAppearance.evaluate(()=>window.spotivitySportAppearanceReady);
     assert.equal(await unavailableAppearance.locator('.home-sport-hero [data-sport-icon]').count(),0);
-    assert.equal(await unavailableAppearance.locator('[data-sport-background="Fotbal"]').getAttribute('src'),'assets/imagini/RealistFotbal.png');
+    assert.equal(await unavailableAppearance.locator('[data-sport-background="Fotbal"]').getAttribute('src'),'assets/imagini/RealistFotbal1.png');
+    assert.equal(await unavailableAppearance.locator('[data-sport-background="Tenis Picior"]').getAttribute('src'),'assets/imagini/RealistTenispicior.png');
     await unavailableAppearance.locator('.card-sport[data-sport="Fotbal"]').click();
     await unavailableAppearance.locator('#modal-terenuri').waitFor({state:'visible'});
     await unavailableAppearance.locator('#filtru-nume').fill('Court A');
@@ -1103,7 +1197,7 @@ async function openProfile(page) {
     await basesPage.evaluate(()=>window.spotivityDiscoveryReady);
     assert.equal(await basesPage.locator('.home-nav [data-bases-target]').count(),0);
     assert.equal(await basesPage.locator('.home-explore-button').count(),0);
-    for (const sport of ['Fotbal','Baschet','Tenis','Volei']) {
+    for (const sport of sports) {
       assert.equal(await basesPage.locator(`[data-home-sport="${sport}"] .home-hero-actions button`).count(),1);
       assert.equal(await basesPage.locator(`[data-home-sport="${sport}"] .home-hero-actions button`).innerText(),'Rezervă un teren');
     }
@@ -1309,7 +1403,7 @@ async function openProfile(page) {
     await superAdmin.locator('.card-sport[onclick*="deschideModalAdaugaTeren"]').click();
     await superAdmin.locator('#teren-baza').selectOption(createdBase.id);
     await superAdmin.locator('#teren-nume').fill('Teren creat direct în bază');
-    await superAdmin.locator('#teren-sport').selectOption('Baschet');
+    await superAdmin.locator('#teren-sport').selectOption('Tenis Picior');
     await superAdmin.locator('#teren-oras').fill('Cluj-Napoca');
     await superAdmin.locator('#teren-pret').fill('100');
     await superAdmin.locator('#teren-locatie').fill('https://maps.google.com/');
@@ -1317,10 +1411,11 @@ async function openProfile(page) {
     await superAdmin.locator('#modal-adauga-teren').waitFor({state:'hidden'});
     await serial(async()=>{
       await pg.exec('reset role');
-      const row=(await pg.query("select baza_sportiva_id from public.terenuri where nume='Teren creat direct în bază'")).rows[0];
+      const row=(await pg.query("select baza_sportiva_id,sport from public.terenuri where nume='Teren creat direct în bază'")).rows[0];
       assert.equal(row?.baza_sportiva_id,createdBase.id);
+      assert.equal(row?.sport,'Tenis Picior');
     });
-    pass('the existing add-court form can create a court directly inside the selected sports base');
+    pass('the existing add-court form creates a foot-tennis court with its canonical sport directly inside the selected sports base');
     const baseAdmin=await pageFor();
     await baseAdmin.goto(new URL('admin.html',base).href,{waitUntil:'networkidle'});
     await baseAdmin.locator('#login-email-admin').fill('admin@example.test');

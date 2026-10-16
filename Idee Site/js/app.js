@@ -115,7 +115,7 @@
 window.dict = {
     'ro': {
         'rezervare_succes': 'Rezervarea a fost realizată cu succes.',
-        'contul_meu': 'Contul Meu', 'login_cont': 'Login / Cont', 'fotbal': 'Fotbal', 'baschet': 'Baschet', 'tenis': 'Tenis', 'volei': 'Volei',
+        'contul_meu': 'Contul Meu', 'login_cont': 'Login / Cont', 'fotbal': 'Fotbal', 'baschet': 'Baschet', 'tenis': 'Tenis', 'volei': 'Volei', 'tenis picior': 'Tenis de picior',
         'autentificare': 'Autentificare', 'creare_cont': 'Creare Cont', 'email': 'Adresă Email', 'parola': 'Parolă', 'telefon': 'Număr de Telefon',
         'nume_complet': 'Nume Complet (Username)',
         'intra_cont': 'Intră în cont', 'btn_creare_cont': 'Creează Cont', 'profil_titlu': 'Profilul Tău', 'rez_active': 'Rezervări Active',
@@ -130,7 +130,7 @@ window.dict = {
         'chat_cauta_conv': 'Se caută conversații...', 'chat_alege_conv': 'Alege o conversație',
         'chat_selecteaza_stanga': 'Selectează un teren din stânga pentru a vedea mesajele.', 'chat_scrie': 'Scrie un mesaj...',
         'chat_avertisment': 'Este nevoie de rezervare pentru a trimite un chat', 'nume_nesetat': 'Nume Nesetat',
-        'fotbal_tenis_picior': 'Fotbal<br><span style="font-size: 0.8em; font-weight: normal; opacity: 0.8;">Tenis Picior</span>', 'copyright_text': '© 2026 Numele SRL', 'drepturi_rezervate': 'Toate drepturile rezervate',
+        'fotbal_tenis_picior': 'Fotbal', 'copyright_text': '© 2026 Numele SRL', 'drepturi_rezervate': 'Toate drepturile rezervate',
         'info_legale': 'Info Legale', 'info_legale_titlu': 'Informații Legale', 'legal_denumire': 'Denumire:', 'legal_reg': 'Reg. Comerțului:',
         'legal_sediu': 'Sediu Social:', 'legal_contact': 'Contact:', 'legal_anpc': 'Protecția Consumatorilor (ANPC):', 'legal_sol': 'Soluționare Online a Litigiilor (SOL):',
         'legal_termeni': 'Termeni și Condiții', 'legal_gdpr': 'Politica de Confidențialitate (GDPR)', 'legal_cookies': 'Politica de Cookies',
@@ -138,7 +138,7 @@ window.dict = {
     },
     'hu': {
         'rezervare_succes': 'A foglalás sikeresen megtörtént.',
-        'contul_meu': 'Fiókom', 'login_cont': 'Belépés / Fiók', 'fotbal': 'Foci', 'baschet': 'Kosárlabda', 'tenis': 'Tenisz', 'volei': 'Röplabda',
+        'contul_meu': 'Fiókom', 'login_cont': 'Belépés / Fiók', 'fotbal': 'Foci', 'baschet': 'Kosárlabda', 'tenis': 'Tenisz', 'volei': 'Röplabda', 'tenis picior': 'Lábtenisz',
         'autentificare': 'Bejelentkezés', 'creare_cont': 'Regisztráció', 'email': 'E-mail cím', 'parola': 'Jelszó', 'telefon': 'Telefonszám',
         'nume_complet': 'Teljes Név (Felhasználónév)',
         'intra_cont': 'Belépés', 'btn_creare_cont': 'Fiók létrehozása', 'profil_titlu': 'Profilod', 'rez_active': 'Aktív foglalások',
@@ -153,7 +153,7 @@ window.dict = {
         'chat_cauta_conv': 'Beszélgetések keresése...', 'chat_alege_conv': 'Válassz egy beszélgetést',
         'chat_selecteaza_stanga': 'Válassz egy pályát balról az üzenetek megtekintéséhez.', 'chat_scrie': 'Írj egy üzenetet...',
         'chat_avertisment': 'Üzenet küldéséhez aktív foglalás szükséges',
-        'fotbal_tenis_picior': 'Foci<br><span style="font-size: 0.8em; font-weight: normal; opacity: 0.8;">Lábtenisz</span>', 'copyright_text': '© 2026 Numele SRL', 'drepturi_rezervate': 'Minden jog fenntartva',
+        'fotbal_tenis_picior': 'Foci', 'copyright_text': '© 2026 Numele SRL', 'drepturi_rezervate': 'Minden jog fenntartva',
         'info_legale': 'Jogi Információk', 'info_legale_titlu': 'Jogi Információk', 'legal_denumire': 'Cégnév:', 'legal_reg': 'Cégjegyzékszám:',
         'legal_sediu': 'Székhely:', 'legal_contact': 'Kapcsolat:', 'legal_anpc': 'Fogyasztóvédelem (ANPC):', 'legal_sol': 'Online vitarendezés (SOL):',
         'legal_termeni': 'Feltételek és Szabályok', 'legal_gdpr': 'Adatvédelmi Irányelvek (GDPR)', 'legal_cookies': 'Süti Szabályzat',
@@ -161,7 +161,7 @@ window.dict = {
     },
     'en': {
         'rezervare_succes': 'Booking completed successfully.',
-        'contul_meu': 'My Account', 'login_cont': 'Login / Account', 'fotbal': 'Football', 'baschet': 'Basketball', 'tenis': 'Tennis', 'volei': 'Volleyball',
+        'contul_meu': 'My Account', 'login_cont': 'Login / Account', 'fotbal': 'Football', 'baschet': 'Basketball', 'tenis': 'Tennis', 'volei': 'Volleyball', 'tenis picior': 'Foot tennis',
         'autentificare': 'Login', 'creare_cont': 'Register', 'email': 'Email Address', 'parola': 'Password', 'telefon': 'Phone Number',
         'nume_complet': 'Full Name (Username)',
         'intra_cont': 'Sign In', 'btn_creare_cont': 'Create Account', 'profil_titlu': 'Your Profile', 'rez_active': 'Active Bookings',
@@ -176,7 +176,7 @@ window.dict = {
         'chat_cauta_conv': 'Searching for conversations...', 'chat_alege_conv': 'Choose a conversation',
         'chat_selecteaza_stanga': 'Select a court from the left to view messages.', 'chat_scrie': 'Type a message...',
         'chat_avertisment': 'An active booking is required to send a message', 'nume_nesetat': 'Name Not Set',
-        'fotbal_tenis_picior': 'Football<br><span style="font-size: 0.8em; font-weight: normal; opacity: 0.8;">Foot Tennis</span>', 'copyright_text': '© 2026 Numele SRL', 'drepturi_rezervate': 'All rights reserved',
+        'fotbal_tenis_picior': 'Football', 'copyright_text': '© 2026 Numele SRL', 'drepturi_rezervate': 'All rights reserved',
         'info_legale': 'Legal Info', 'info_legale_titlu': 'Legal Information', 'legal_denumire': 'Company Name:', 'legal_reg': 'Registration Number:',
         'legal_sediu': 'Headquarters:', 'legal_contact': 'Contact:', 'legal_anpc': 'Consumer Protection (ANPC):', 'legal_sol': 'Online Dispute Resolution (ODR):',
         'legal_termeni': 'Terms and Conditions', 'legal_gdpr': 'Privacy Policy (GDPR)', 'legal_cookies': 'Cookies Policy',
@@ -713,7 +713,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- LOGICA TERENURI ---
     document.querySelectorAll('.card-sport').forEach(card => {
         card.addEventListener('click', async () => {
-            sportCurent = card.getAttribute('data-sport'); 
+            sportCurent = window.normalizeSportName(card.getAttribute('data-sport'));
             const numeSportTradus = window.dict[window.lang][sportCurent.toLowerCase()] || sportCurent;
             
             document.getElementById('titlu-sport').innerText = `${window.dict[window.lang]['alege_terenul']} - ${numeSportTradus}`;
@@ -722,17 +722,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Schimba fundalul cu imaginea sportului
             const bgDiv = document.getElementById('fundal-imagine-sport');
             if(bgDiv && sportCurent) {
-                const sportStr = sportCurent.toLowerCase().replace(/\s+/g, '_');
-                const bgStr = (sportStr === 'tenis_picior') ? 'fotbal' : sportStr;
                 
                 // Punem background-ul pe ecranul principal (in spatele modalului)
-                seteazaFundalSport(bgDiv, bgStr);
+                seteazaFundalSport(bgDiv, sportCurent);
                 bgDiv.style.opacity = '1';
                 
                 // Punem background-ul STRICT IN FEREASTRA (modal-continut)
                 const modalContinut = document.querySelector('#modal-terenuri .modal-continut');
                 if (modalContinut) {
-                    seteazaFundalSport(modalContinut, bgStr, true);
+                    seteazaFundalSport(modalContinut, sportCurent, true);
                 }
             }
             
@@ -775,7 +773,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const orasSelectat = document.getElementById('filtru-oras-global')?.value || 'ALL';
         const terenuriPentruAcestSport = terenuriDinDB.filter(t =>
-            (t.sport === sportCurent || (sportCurent === 'Fotbal' && t.sport === 'Tenis Picior')) &&
+            window.normalizeSportName(t.sport) === sportCurent &&
             t.este_activ !== false && (orasSelectat === 'ALL' || (t.oras && t.oras.trim().replace(/\.+$/, '') === orasSelectat)));
         const selectedHour = filtruOra.value;
         const availableHours = window.bookingHourOptions.filter(hour =>
@@ -853,9 +851,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Aplica fundalul sportului si pe modal-rezervare
         const modalRezervare = document.querySelector('#modal-rezervare .modal-continut');
         if (modalRezervare && sportCurent) {
-            const sportStr = sportCurent.toLowerCase().replace(/\s+/g, '_');
-            const bgStr = (sportStr === 'tenis_picior') ? 'fotbal' : sportStr;
-            seteazaFundalSport(modalRezervare, bgStr, true);
+            seteazaFundalSport(modalRezervare, sportCurent, true);
         }
         
         window.genereazaZile();
@@ -874,7 +870,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const {data: court, error} = await query.maybeSingle();
             if (signal?.aborted || request !== baseCourtRequest || generation !== authGeneration ||
                 bookingGeneration !== bookingContextGeneration || error || !court || court.este_activ === false) return false;
-            sportCurent = court.sport === 'Tenis Picior' ? 'Fotbal' : court.sport;
+            sportCurent = window.normalizeSportName(court.sport);
             const translatedSport = window.dict[window.lang][sportCurent.toLowerCase()] || sportCurent;
             document.getElementById('titlu-sport').textContent = `${window.dict[window.lang]['alege_terenul']} - ${translatedSport}`;
             document.getElementById('filtru-data').value = window.siteDate();
@@ -905,17 +901,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Schimba fundalul cu imaginea sportului
             const bgDiv = document.getElementById('fundal-imagine-sport');
             if(bgDiv && sportCurent) {
-                const sportStr = sportCurent.toLowerCase().replace(/\s+/g, '_');
-                const bgStr = (sportStr === 'tenis_picior') ? 'fotbal' : sportStr;
                 
                 // Punem background-ul pe ecranul principal (in spatele modalului)
-                seteazaFundalSport(bgDiv, bgStr);
+                seteazaFundalSport(bgDiv, sportCurent);
                 bgDiv.style.opacity = '1';
                 
                 // Punem background-ul STRICT IN FEREASTRA (modal-continut)
                 const modalContinut = document.querySelector('#modal-terenuri .modal-continut');
                 if (modalContinut) {
-                    seteazaFundalSport(modalContinut, bgStr, true);
+                    seteazaFundalSport(modalContinut, sportCurent, true);
                 }
             } });
     document.getElementById('inchide-rezervare')?.addEventListener('click', () => {

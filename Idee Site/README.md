@@ -82,7 +82,7 @@ Migrările aferente sunt `supabase/006_sports_bases.sql` și `supabase/007_compl
 
 Navigarea conține **Caută un teren**: caută după nume, sport sau oraș, fără să limiteze rezultatele la orașul ales. Diacriticele nu sunt obligatorii. Sunt afișate numai terenurile active accesibile public; încărcarea este paginată. Un card deschide formularul existent, care verifică din nou terenul prin Supabase.
 
-Fiecare sport are un singur buton **Rezervă un teren** și o listă de carduri mici cu scroll lateral pentru orașul selectat. Tenisul de picior rămâne în secțiunea Fotbal. **Baze sportive** are o secțiune separată cu baze active care au terenuri active, filtrată după oraș.
+Fiecare sport are un singur buton **Rezervă un teren** și o listă de carduri mici cu scroll lateral pentru orașul selectat. Tenisul de picior are secțiune proprie, cu aceleași filtre, carduri și flux de rezervare ca celelalte sporturi. **Baze sportive** are o secțiune separată cu baze active care au terenuri active, filtrată după oraș.
 
 În admin, **Setări baze sportive** apare pentru superadmin și pentru adminii obișnuiți cu alocare explicită în `baze_sportive_admini`. Adminul obișnuit poate edita descrierea și fotografia bazelor alocate. Superadminul acordă acces din **Cine poate edita descrierea și fotografia**; alocarea unui teren nu acordă automat acces la setările bazei. Nu se extind drepturile asupra rezervărilor sau altor terenuri.
 

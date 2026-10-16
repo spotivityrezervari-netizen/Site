@@ -41,7 +41,7 @@
         let bookingController = null, loadingController = null;
         let bookingBusy = false, previousFocus = null;
         const isOpen = () => modal.style.display === 'flex';
-        const translatedSport = court => window.dict?.[window.lang]?.[String(court.sport).toLowerCase()] || court.sport;
+        const translatedSport = court => window.dict?.[window.lang]?.[window.normalizeSportName(court.sport).toLowerCase()] || court.sport;
         const selectedCity = () => document.getElementById('filtru-oras-global')?.value || 'ALL';
         const matchesCity = court => selectedCity() === 'ALL' || cityName(court.oras) === selectedCity();
 
@@ -105,12 +105,13 @@
         function renderCourts() {
             for (const strip of strips) {
                 strip.setAttribute('aria-busy', String(courtsState === 'loading'));
-                strip.setAttribute('aria-label', `${window.dict?.[window.lang]?.[strip.dataset.homeCourts.toLowerCase()] || strip.dataset.homeCourts} — ${selectedCity()}`);
+                const sport = window.normalizeSportName(strip.dataset.homeCourts);
+                strip.setAttribute('aria-label', `${window.dict?.[window.lang]?.[sport.toLowerCase()] || sport} — ${selectedCity()}`);
                 if (courtsState !== 'ready') {
                     message(strip, t(courtsState === 'loading' ? 'loading' : 'error'), courtsState === 'error');
                     continue;
                 }
-                const visible = courts.filter(court => matchesCity(court) && (court.sport === strip.dataset.homeCourts || strip.dataset.homeCourts === 'Fotbal' && court.sport === 'Tenis Picior'));
+                const visible = courts.filter(court => matchesCity(court) && window.normalizeSportName(court.sport) === sport);
                 strip.replaceChildren();
                 const feedback = strip.parentElement.querySelector('.home-courts-status') || node('p', 'home-courts-status');
                 feedback.setAttribute('role', 'status');

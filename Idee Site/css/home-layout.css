@@ -33,9 +33,9 @@ body.pagina-publica { background: #101a14; }
 }
 .pagina-publica .home-hero-art img { object-fit: contain; }
 /* Blend the bright ground into the court row without fading the ball or racket. */
-.pagina-publica .home-hero-fotbal { --home-art-fade: clamp(40px, 10vw, 140px); }
+.pagina-publica :is(.home-hero-fotbal, .home-hero-tenis-picior) { --home-art-fade: clamp(40px, 10vw, 140px); }
 .pagina-publica .home-hero-tenis { --home-art-fade: clamp(26px, 8vw, 105px); }
-.pagina-publica :is(.home-hero-fotbal, .home-hero-tenis) .home-hero-art {
+.pagina-publica :is(.home-hero-fotbal, .home-hero-tenis, .home-hero-tenis-picior) .home-hero-art {
     --home-art-mask: linear-gradient(to bottom,
         #000 calc(100% - var(--home-art-fade)),
         rgba(0, 0, 0, .92) calc(100% - var(--home-art-fade) * .65),

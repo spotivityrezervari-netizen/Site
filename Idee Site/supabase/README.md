@@ -54,7 +54,7 @@ Pe **12 octombrie 2026**, migrarea 003 a fost aplicată în **Rendez-Vous** prin
 
 Adresele de redirect Auth sunt exacte; wildcardul vechi pentru spotivity.ro a fost eliminat. La cererea proprietarului, parola nouă are în continuare minimum **6 caractere**. Confirmarea automată și absența SMTP au fost păstrate; configurarea emailului și datele firmei sunt amânate de proprietar. Raportul de verificare și pașii rămași sunt în [PRODUCTION_REVIEW.md](../PRODUCTION_REVIEW.md).
 
-Pentru **alt proiect**, ordinea migrărilor este **001 → 003 → 004 → 005 → 006 → 007 → 008 → 009** după inventar/backup și verificarea datelor. 002 conține numai exemple de roluri pentru conturi Auth existente și confirmate. Fișierele `tests/` se rulează exclusiv în baza izolată. Instrucțiunile istorice de mai jos pentru reinstalarea 001 se aplică numai proiectelor fără migrări ulterioare.
+Pentru **alt proiect**, ordinea migrărilor este **001 → 003 → 004 → 005 → 006 → 007 → 008 → 009 → 010** după inventar/backup și verificarea datelor. 002 conține numai exemple de roluri pentru conturi Auth existente și confirmate. Fișierele `tests/` se rulează exclusiv în baza izolată. Instrucțiunile istorice de mai jos pentru reinstalarea 001 se aplică numai proiectelor fără migrări ulterioare.
 
 ## Căutare și afișare pe telefon
 
@@ -309,3 +309,13 @@ Politicile restrictive Storage verifică ambele căi la mutare/înlocuire și î
 Aplicarea a fost precedată de o probă live cu rollback și verificări de păstrare a datelor/trigger-elor. După aplicare, probele cu rolul real `authenticated` au confirmat încărcarea metadatelor și atribuirea fotografiei propriei baze, refuzul altei baze și refuzul după revocare; toate probele au fost anulate prin rollback. Nu au fost încărcate fișiere demonstrative în Storage live.
 
 `base-photos.test.cjs` verifică 47 de scenarii cu UUID și 47 cu ID numeric. `discovery-media-browser.test.cjs` verifică uploadul prin SDK real într-un Storage izolat, refuzul fișierelor nevalide, înlocuirea/ștergerea/curățarea după erori, afișarea publică, căutarea din antet și derularea automată. Nu executa testele în SQL Editor-ul proiectului real.
+
+## 010 — Tenis de picior și fundalul de Fotbal
+
+`010_foot_tennis.sql` este aplicată în proiectul existent după 009, după 42 de verificări SQL și o probă live cu rollback. Aplicarea a confirmat păstrarea datelor Auth, a rezervărilor, a rolurilor, a Storage și a politicilor/funcțiilor/trigger-elor. Pentru un proiect nou, se aplică după 009. Adaugă categoria vizuală separată `Tenis Picior`, afișată public ca **Tenis de picior**, cu fundalul `assets/imagini/RealistTenispicior.png` și ordinea 5. La prima aplicare schimbă numai fundalul categoriei Fotbal în `assets/imagini/RealistFotbal1.png`. Celelalte configurări sunt păstrate, iar reaplicarea nu suprascrie personalizările ulterioare.
+
+Pagina principală, navigarea, căutarea, filtrarea pe oraș, rezervarea directă și formularul de adăugare a terenului din admin folosesc noua categorie. Un superadmin poate adăuga un teren real alegând **Tenis de picior**; migrarea nu creează terenuri demonstrative și nu schimbă sportul terenurilor existente.
+
+RLS permite în continuare citirea publică a imaginilor și modificarea configurării numai de către superadmin. Nu se extind permisiunile administratorilor obișnuiți. Rolurile, bazele, terenurile, rezervările, chatul și obiectele Storage rămân neschimbate. Interdicția anulării rezervărilor finalizate rămâne activă.
+
+`foot-tennis.test.cjs` verifică separat ID-uri UUID și numerice: migrarea și reaplicarea, păstrarea datelor/politicilor/funcțiilor/trigger-elor, accesul pe roluri, rezervarea cu sportul și prețul controlate de server și refuzul anulării după finalizare. Testele de browser folosesc numai date izolate.

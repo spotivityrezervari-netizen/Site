@@ -13,16 +13,16 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3" integrity="sha384-dl/4LkSyQ4uEucc48NM6VDZLAjLLq9yMzZ5JLXumBq7Ld33XBof73hseOqPhO89+" crossorigin="anonymous"></script>
     <script src="js/db.js?v=2"></script>
     <script src="js/security.js?v=2"></script>
-    <script src="js/sport-appearance.js?v=1"></script>
-    <script src="js/app.js?v=27" defer></script>
+    <script src="js/sport-appearance.js?v=2"></script>
+    <script src="js/app.js?v=28" defer></script>
     <link rel="stylesheet" href="css/home.css?v=3">
     <link rel="stylesheet" href="css/theme.css?v=2">
     <script src="js/home.js?v=5" defer></script>
-    <script src="js/baze.js?v=2" defer></script>
-    <script src="js/home-discovery.js?v=2" defer></script>
+    <script src="js/baze.js?v=3" defer></script>
+    <script src="js/home-discovery.js?v=3" defer></script>
     <link rel="stylesheet" href="css/profile-editor.css?v=2">
     <script src="js/profile-editor.js?v=1" defer></script>
-    <link rel="stylesheet" href="css/home-layout.css?v=4">
+    <link rel="stylesheet" href="css/home-layout.css?v=5">
     <link rel="stylesheet" href="css/home-motion.css?v=2">
     <link rel="stylesheet" href="css/base-media.css?v=1">
     <script src="js/base-media.js?v=1" defer></script>
@@ -60,6 +60,7 @@
                     <button type="button" data-sport-target="Baschet" data-i18n="baschet">Baschet</button>
                     <button type="button" data-sport-target="Tenis" data-i18n="tenis">Tenis</button>
                     <button type="button" data-sport-target="Volei" data-i18n="volei">Volei</button>
+                    <button type="button" data-sport-target="Tenis Picior" data-i18n="tenis picior">Tenis de picior</button>
                 </div>
                 <form id="home-nav-search" class="home-nav-search" role="search" aria-label="Caută un teren">
                     <input type="search" id="home-nav-search-input" autocomplete="off" placeholder="Caută un teren" data-i18n-placeholder="home_search" aria-label="Caută un teren">
@@ -84,6 +85,7 @@
                     <button type="button" data-sport-target="Baschet" data-i18n="baschet">Baschet</button>
                     <button type="button" data-sport-target="Tenis" data-i18n="tenis">Tenis</button>
                     <button type="button" data-sport-target="Volei" data-i18n="volei">Volei</button>
+                    <button type="button" data-sport-target="Tenis Picior" data-i18n="tenis picior">Tenis de picior</button>
                     <button type="button" data-search-target data-i18n="home_search">Caută un teren</button>
                 </nav>
             </div>
@@ -152,6 +154,22 @@
                 </div>
                 <div class="home-courts-wrap">
                     <div class="home-courts-strip" data-home-courts="Volei" role="region" aria-label="Terenuri Volei" tabindex="0" aria-busy="true"></div>
+                </div>
+            </section>
+            <section class="home-sport-hero home-hero-tenis-picior" id="sport-tenis-picior" data-home-sport="Tenis Picior" aria-labelledby="home-title-tenis-picior">
+                <div class="home-hero-copy">
+                    <div class="home-sport-heading">
+                        <h2 id="home-title-tenis-picior" data-i18n="tenis picior">Tenis de picior</h2>
+                    </div>
+                    <div class="home-hero-actions">
+                        <button type="button" class="card-sport home-reserve-button" data-sport="Tenis Picior" data-i18n="home_rezerva">Rezervă un teren</button>
+                    </div>
+                </div>
+                <div class="home-hero-art">
+                    <img src="assets/imagini/RealistTenispicior.png" data-sport-background="Tenis Picior" alt="" width="1672" height="941" loading="lazy" decoding="async">
+                </div>
+                <div class="home-courts-wrap">
+                    <div class="home-courts-strip" data-home-courts="Tenis Picior" role="region" aria-label="Terenuri Tenis de picior" tabindex="0" aria-busy="true"></div>
                 </div>
             </section>
             <section class="home-bases-section" id="home-bases-section" aria-labelledby="home-bases-title">

@@ -172,7 +172,7 @@
                 image.addEventListener('error', () => image.remove(), { once: true });
                 card.append(image);
             }
-            const sportKey = String(court.sport || '').toLowerCase();
+            const sportKey = window.normalizeSportName(court.sport).toLowerCase();
             const sport = window.dict?.[window.lang]?.[sportKey] || court.sport;
             card.append(element('p', 'sports-base-court-sport', sport), element('h4', '', court.nume));
             if (court.pret !== null && court.pret !== undefined && Number.isFinite(Number(court.pret))) {
