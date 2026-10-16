@@ -17,7 +17,7 @@
     <script src="js/app.js?v=28" defer></script>
     <link rel="stylesheet" href="css/home.css?v=3">
     <link rel="stylesheet" href="css/theme.css?v=2">
-    <script src="js/home.js?v=5" defer></script>
+    <script src="js/home.js?v=6" defer></script>
     <script src="js/baze.js?v=3" defer></script>
     <script src="js/home-discovery.js?v=3" defer></script>
     <link rel="stylesheet" href="css/profile-editor.css?v=2">
@@ -28,7 +28,7 @@
     <script src="js/base-media.js?v=1" defer></script>
     <script src="js/home-motion.js?v=2" defer></script>
     <link rel="stylesheet" href="css/club-registration.css?v=1">
-    <script src="js/club-registration.js?v=1" defer></script>
+    <script src="js/club-registration.js?v=2" defer></script>
 
 </head>
 <body class="pagina-publica">
@@ -83,6 +83,7 @@
                 <nav class="home-mobile-links" aria-label="Meniu principal">
                     <button type="button" data-profile-target data-i18n="home_profil">Profilul meu</button>
                     <button type="button" data-bases-target data-i18n="home_vezi_baza" aria-controls="modal-baze-sportive">Vezi baza sportivă</button>
+                    <button type="button" data-club-registration-target data-i18n="home_inscrie_baza" aria-controls="modal-club-registration" aria-haspopup="dialog">Înscrie-ți baza</button>
                     <button type="button" data-sport-target="Fotbal" data-i18n="fotbal">Fotbal</button>
                     <button type="button" data-sport-target="Baschet" data-i18n="baschet">Baschet</button>
                     <button type="button" data-sport-target="Tenis" data-i18n="tenis">Tenis</button>
@@ -203,7 +204,7 @@
                 <h2 id="club-request-title" class="titlu-modal" data-club-i18n="title">Înscrie-ți baza sportivă</h2>
                 <button type="button" class="buton-inchidere" id="close-club-registration" aria-label="Închide">X</button>
             </div>
-            <p class="club-request-privacy" id="club-request-privacy" data-club-i18n="privacy">Cererea și fotografia sunt vizibile doar superadminului. Trimiterea nu publică automat baza.</p>
+            <p class="club-request-privacy" id="club-request-privacy" data-club-i18n="privacy">Cererea și fotografia sunt vizibile doar superadminului. Trimiterea necesită autentificare și nu publică automat baza.</p>
             <form id="club-registration-form" novalidate>
                 <fieldset id="club-request-fields">
                     <legend class="club-visually-hidden" data-club-i18n="details">Datele bazei sportive</legend>

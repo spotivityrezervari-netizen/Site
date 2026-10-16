@@ -164,11 +164,16 @@ async function openProfile(page) {
     await page.locator('#btn-mobile-menu').click();
     await page.locator('#home-mobile-menu').waitFor({state:'visible'});
     assert.equal(await page.locator('#home-mobile-menu [data-sport-target]').count(),5);
+    assert.equal(await page.locator('#home-mobile-menu [data-club-registration-target]').innerText(),'Înscrie-ți baza');
     assert.equal(await page.locator('#home-mobile-menu button').first().evaluate(button=>button.hasAttribute('data-profile-target')),true);
     assert.equal(await page.locator('#btn-top-cont').isVisible(),false);
     assert.equal(await page.locator('#home-nav-search').isVisible(),false);
-    await page.keyboard.press('Escape');
+    await page.locator('#home-mobile-menu [data-club-registration-target]').click();
     await page.locator('#home-mobile-menu').waitFor({state:'hidden'});
+    await page.locator('#modal-club-registration').waitFor({state:'visible'});
+    await page.keyboard.press('Escape');
+    await page.locator('#modal-club-registration').waitFor({state:'hidden'});
+    assert.equal(await page.locator('#btn-mobile-menu').evaluate(node=>node===document.activeElement),true);
     await openProfile(page);
     await page.locator('#modal-auth').waitFor({state:'visible'});
     await page.keyboard.press('Escape');
