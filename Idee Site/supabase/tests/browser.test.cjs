@@ -609,7 +609,10 @@ async function openProfile(page) {
     });
     await settingsReload;
     await admin.waitForFunction(id=>document.getElementById(`btn-save-${id}`)?.disabled===false,settingsId);
-    await admin.keyboard.press('Escape');
+    // The integrated refresh may already have replaced and closed the editor.
+    // Escape on the workspace itself intentionally returns to the profile.
+    if (await admin.locator(`#modal-setari-${settingsId}`).isVisible()) await admin.keyboard.press('Escape');
+    assert.equal(await admin.locator('#base-admin-workspace').isVisible(),true);
     const cityBack=admin.locator('.sub-pagina-oras:visible [onclick*="inchideSubPaginaOras"]');
     if (await cityBack.count()) await cityBack.click();
     pass('allocated admin changes the court hours to 09:00, 10:00 and 11:00 through settings and the real SDK');
