@@ -123,7 +123,9 @@ async function openProfile(page) {
     assert.equal((await page.goto(siteBaseUrl.href, {waitUntil:'networkidle'})).status(), 200);
     await page.waitForFunction(() => typeof window.actualizeazaButonCont === 'function');
     await page.evaluate(() => window.spotivitySportAppearanceReady);
-    assert.equal(await page.locator('.card-sport').count(), 5);
+    assert.equal(await page.locator('.card-sport[data-sport]').count(), 5);
+    assert.equal(await page.locator('#btn-administreaza-baza').isVisible(), false);
+    assert.equal(await page.locator('#base-admin-workspace').isVisible(), false);
     assert.equal(await page.evaluate(() => typeof supabase.createClient), 'function');
     if (tlsTransport === 'curl') assert.equal(verifiedSdk, true, 'The SDK must pass TLS and exact SRI verification');
     await openProfile(page);

@@ -39,7 +39,7 @@ async function openProfile(page) {
   try {
     await pg.exec(readFileSync(join(__dirname, 'schema.sql'), 'utf8'));
     for (const file of ['001_security.sql', '003_court_hours.sql', '004_admin_scope_hardening.sql',
-      '005_sport_appearance.sql', '006_sports_bases.sql', '007_completed_booking_cancellation.sql', '008_profile_edit.sql', '009_base_photos.sql', '010_foot_tennis.sql', '011_club_requests.sql', '012_club_approval.sql']) {
+      '005_sport_appearance.sql', '006_sports_bases.sql', '007_completed_booking_cancellation.sql', '008_profile_edit.sql', '009_base_photos.sql', '010_foot_tennis.sql', '011_club_requests.sql', '012_club_approval.sql', '013_admin_integration.sql']) {
       await pg.exec(readFileSync(join(__dirname, '..', file), 'utf8'));
     }
     await pg.exec("alter table auth.users add column new_email text; update public.terenuri set poza='assets/imagini/avatar2.png'");
@@ -109,6 +109,11 @@ async function openProfile(page) {
             }
             return reply(401, {message: 'No fixture session'});
           }
+          if (url.pathname === '/rest/v1/rpc/get_admin_access') {
+            assert.equal(request.method(), 'POST');
+            await pg.exec(`set role ${person ? 'authenticated' : 'anon'}`);
+            return reply(200, (await pg.query('select public.get_admin_access() value')).rows[0].value);
+          }
           const table = url.pathname.split('/').pop();
           assert.ok(['clienti', 'users_admin', 'terenuri', 'rezervari', 'rezervari_disponibilitate',
             'mesaje_chat', 'site_sporturi', 'baze_sportive', 'baze_sportive_admini', 'cereri_baze_sportive'].includes(table));
@@ -125,7 +130,9 @@ async function openProfile(page) {
               conditions.push(`${ident(field)} in (${values.map(v => { params.push(v); return `$${params.length}`; }).join(',')})`);
             } else {
               const match = value.match(/^(eq|neq|ilike)\.(.*)$/s); assert.ok(match, value);
-              params.push(match[2]); conditions.push(`${ident(field)} ${{eq: '=', neq: '<>', ilike: 'ilike'}[match[1]]} $${params.length}`);
+              const booleanField = ['is_super', 'este_activ', 'este_activa', 'are_chat', 'optiune_minge', 'citit'].includes(field);
+              params.push(booleanField && ['true', 'false'].includes(match[2]) ? match[2] === 'true' : match[2]);
+              conditions.push(`${ident(field)} ${{eq: '=', neq: '<>', ilike: 'ilike'}[match[1]]} $${params.length}`);
             }
           }
           const where = conditions.length ? ' where ' + conditions.join(' and ') : '';

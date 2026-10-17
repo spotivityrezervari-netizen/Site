@@ -144,3 +144,29 @@ Fotografiile nefolosite `teren-fotbal1.png` și `teren-fotbal2.png`, cu stadioan
 Au fost inspectate și cele cinci fotografii publice ale terenurilor din Supabase, fără conținut Apple. Patru afișează aceeași fotografie Camp Nou, cu identitate FC Barcelona/Nike; proiectul nu conține date despre licența acelei fotografii.
 
 Metadatele tehnice `apple-mobile-*`, regulile WebKit și mențiunile despre browserele/dispozitivele netestate sunt păstrate pentru compatibilitate și acuratețea raportului. SDK-ul Supabase cu licență MIT și notificările de copyright proprii rămân păstrate. Această inspecție nu certifică drepturile de utilizare ale imaginilor încărcate de proprietar.
+
+## Separarea superadminului de administrarea bazelor — 17 octombrie 2026
+
+Codul noii interfețe este pregătit pentru branchul `codex/integrated-base-admin`. Migrarea [013_admin_integration.sql](supabase/013_admin_integration.sql) și testele SQL sunt publicate separat pe `main` în **4816944**. Fișierele active ale site-ului nu au fost schimbate prin acel commit. Activarea interfeței pe `main` așteaptă aplicarea și verificarea migrării în Supabase; publicarea fișierului SQL în GitHub nu îl execută.
+
+În noua interfață, `admin.html` acceptă numai superadminul. Administratorii obișnuiți deschid **Profilul meu → Administrează baza sportivă** fără navigare sau autentificare suplimentară. Formularele existente sunt reutilizate în același document pentru rezervări manuale, program/blocaje, tarife, fotografii, setări de teren, istoric și chat. Selectorul include bazele cu drepturi reale, inclusiv alocările parțiale și terenurile fără bază. Descrierea/fotografia bazei cer în continuare grantul separat; nu se acordă automat acces la celelalte terenuri. Cererile, aprobările/respingerea, conturile admin și administrarea globală rămân la superadmin.
+
+Autoritatea vine din `get_admin_access()`, calculată din UUID-ul Auth și alocările curente, fără roluri din metadata sau stocarea locală. Aprobarea devine vizibilă la deschiderea profilului/revenirea în filă sau verificarea periodică de maximum 30 de secunde în fila vizibilă. Revocarea este impusă de RLS la fiecare cerere; interfața își curăță datele la schimbarea contului sau accesului. Migrarea adaugă 31 de limite RLS restrictive și protejează rezervările finalizate inclusiv contra ștergerii și a mutării în viitor urmate de anulare. Nu rescrie date, roluri sau alocări. Frontend-ul păstrează exclusiv cheia publică `anon`.
+
+Verificări executate în această sesiune, fără scrieri în proiectul real:
+
+| Verificare | Rezultat |
+| --- | --- |
+| 11 suite SQL existente, UUID și ID numeric | 966 verificări trecute la țintele istorice respective |
+| `admin-integration.test.cjs`, UUID și ID numeric | 38 verificări trecute pentru 013 și limitele curente |
+| `club-applications-edge.test.cjs` | 36 verificări trecute |
+| `browser.test.cjs` | 84 verificări trecute cu 013 și interfața integrată |
+| Fotografii/căutare/animații, profil și recuperare Auth | 16 + 21 + 6 verificări browser trecute |
+| `club-requests-browser.test.cjs` | 18 verificări trecute pentru înscriere/aprobare/respingere și accesul integrat |
+| `integrated-admin-browser.test.cjs` | 17 verificări trecute, inclusiv aprobarea fără reconectare, revocarea cu JWT activ și în timpul unei fotografii |
+
+Revizuirea independentă nu a găsit ocoliri ale autorizării în codul verificat. Au fost corectate continuările asincrone după schimbarea contului/bazei, încărcarea fotografiei terenului, navigarea cu Escape inclusiv cu focus pe BODY și încadrarea butonului Chat pe telefon. Handlerul cardurilor publice este limitat la `[data-sport]`, astfel încât meniurile administrative să nu deschidă în fundal selectorul public de terenuri. Cele 28 de capturi și verificările de layout acoperă 320, 390, 768 și 1440 px. Chromium a folosit SDK-ul real fixat cu SRI și transport TLS verificat; Auth, REST și Storage sunt conectate la fixture-uri izolate, cu RLS SQL real. Nu s-au testat livrări SMTP reale sau dispozitive fizice.
+
+Blocaje live: legătura existentă `supbase` este prezentă, dar Management API răspunde **HTTP 401, JWT could not be decoded**, atât prin Python cât și curl. Proxy-ul refuză cu **403 CONNECT** destinațiile `ndubcdwohqzgxpuiowye.supabase.co` și `spotivityrezervari-netizen.github.io`. Smoke test-ul cu citiri reale a eșuat prin indisponibilitatea răspunsurilor Supabase; acest rezultat nu validează backendul live. Accesul Git HTTPS și publicarea commitului pe `main` au fost confirmate. GitHub API nu este accesibil prin autentificarea disponibilă, deci ultimul deployment Pages nu a fost inspectat.
+
+În draftul mediului au fost salvate `install_script`, `start_skill` și adăugările de rețea de mai sus, păstrând `api.supabase.com` și presetările existente. Instalarea dependențelor izolate a fost repetată cu succes; serverul local răspunde HTTP 200. Salvarea draftului nu aplică SQL, nu schimbă procesul curent și nu publică mediul. Pentru continuare, corectează securizat bindingul existent și salvează configurația de rețea din setările mediului; apoi verifică schema live, aplică 013 cu inventar/amprente de păstrare, probe cu roluri reale și rollback, și abia apoi publică interfața verificată pe `main`. Revizuiește/salvează și publică mediul cloud după finalizarea configurării.

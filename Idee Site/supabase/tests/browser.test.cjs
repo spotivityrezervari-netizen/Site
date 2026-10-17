@@ -49,6 +49,7 @@ async function openProfile(page) {
     await pg.exec(readFileSync(join(__dirname,'../010_foot_tennis.sql'),'utf8'));
     await pg.exec(readFileSync(join(__dirname,'../011_club_requests.sql'),'utf8'));
     await pg.exec(readFileSync(join(__dirname,'../012_club_approval.sql'),'utf8'));
+    await pg.exec(readFileSync(join(__dirname,'../013_admin_integration.sql'),'utf8'));
     await pg.exec("update public.terenuri set poza='assets/imagini/avatar2.png'");
     const tomorrow=(await pg.query("select ((now() at time zone 'Europe/Bucharest')::date+1)::text as d")).rows[0].d;
     let queue=Promise.resolve();
@@ -125,6 +126,11 @@ async function openProfile(page) {
           }
           return reply(401,{message:'No fixture session'});
         }
+        if (url.pathname==='/rest/v1/rpc/get_admin_access') {
+          assert.equal(request.method(),'POST');
+          await pg.exec(`set role ${person ? 'authenticated' : 'anon'}`);
+          return reply(200,(await pg.query('select public.get_admin_access() value')).rows[0].value);
+        }
         if (url.pathname==='/rest/v1/rpc/save_sports_base') {
           assert.equal(request.method(),'POST');
           const body=request.postDataJSON(); recorded.body=body;
@@ -147,7 +153,9 @@ async function openProfile(page) {
             conditions.push(`${ident(field)} in (${placeholders.join(',')})`);
           } else {
             const match=value.match(/^(eq|neq|ilike)\.(.*)$/s); assert.ok(match,value);
-            params.push(match[2]); conditions.push(`${ident(field)} ${{eq:'=',neq:'<>',ilike:'ilike'}[match[1]]} $${params.length}`);
+            const booleanField=['is_super','este_activ','este_activa','are_chat','optiune_minge','citit'].includes(field);
+            params.push(booleanField && ['true','false'].includes(match[2]) ? match[2]==='true' : match[2]);
+            conditions.push(`${ident(field)} ${{eq:'=',neq:'<>',ilike:'ilike'}[match[1]]} $${params.length}`);
           }
         }
         const where=conditions.length ? ' where '+conditions.join(' and ') : '';
@@ -205,6 +213,20 @@ async function openProfile(page) {
       return page;
     };
     const pass = label => {checks++;console.log('PASS',label);};
+    const openBaseAdmin = async target => {
+      await target.goto(base,{waitUntil:'networkidle'});
+      await openProfile(target);
+      await target.locator('#login-email').fill('admin@example.test');
+      await target.locator('#login-parola').fill(' test-password. ');
+      await target.locator('#btn-executa-login').click();
+      await target.locator('#modal-auth').waitFor({state:'hidden'});
+      await openProfile(target);
+      await target.locator('#btn-administreaza-baza').click();
+      await target.locator('#base-admin-workspace').waitFor({state:'visible'});
+      await target.locator('#sectiune-dashboard').waitFor({state:'visible'});
+      assert.equal(new URL(target.url()).pathname,new URL(base).pathname,'Administration stays within the current site');
+      assert.equal(await target.locator('#login-admin-btn').count(),0,'The integrated workspace reuses the current login');
+    };
     const viewportWidths=[320,390,768,1440];
     const assertPngLoaded=async locator=>{
       const loaded=await locator.evaluate(async image=>{
@@ -529,16 +551,11 @@ async function openProfile(page) {
       await pg.query('update public.users_admin set nume_admin=$1 where user_id=$2',['Manager_'+'UnbrokenRoleName'.repeat(8),uid(3)]);
     });
     const admin=await pageFor();
-    await admin.goto(new URL('admin.html',base).href,{waitUntil:'networkidle'});
-    assert.doesNotMatch(await admin.locator('#sectiune-login').innerText(),/\p{Extended_Pictographic}/u);
-    await admin.locator('#login-email-admin').fill('admin@example.test');
-    await admin.locator('#login-parola').fill(' test-password. ');
-    await admin.locator('#login-admin-btn').click();
-    await admin.locator('#sectiune-dashboard').waitFor({state:'visible'});
+    await openBaseAdmin(admin);
     await admin.waitForFunction(()=>document.querySelector('[id^="modal-setari-"]')!==null);
     assert.equal(await admin.locator('[id^="modal-setari-"]').count(),1);
-    assert.ok(requests.some(r=>r.path.endsWith('/users_admin') && r.search.includes('user_id=eq.')));
-    pass('admin login uses the Auth UUID and exposes settings only for its allocated court');
+    assert.ok(requests.some(r=>r.path.endsWith('/rpc/get_admin_access') && r.person===3));
+    pass('the integrated workspace reuses the Auth session and exposes settings only for its allocated court');
     await admin.locator('[onclick*="modal-tabel-program"]').click();
     await admin.locator('#tabel-data').fill(tomorrow);
     await admin.locator('#tabel-data').dispatchEvent('change');
@@ -582,7 +599,7 @@ async function openProfile(page) {
     }
     await admin.locator(`#oras-${settingsId}`).fill('Test City');
     const settingsResponse=admin.waitForResponse(response=>new URL(response.url()).pathname==='/rest/v1/terenuri' && response.request().method()==='PATCH');
-    const settingsReload=admin.waitForRequest(request=>new URL(request.url()).pathname==='/auth/v1/token' && request.method()==='POST');
+    const settingsReload=admin.waitForRequest(request=>new URL(request.url()).pathname==='/rest/v1/rpc/get_admin_access' && request.method()==='POST');
     await admin.locator(`#btn-save-${settingsId}`).click();
     assert.equal((await settingsResponse).status(),200);
     await serial(async () => {
@@ -591,7 +608,7 @@ async function openProfile(page) {
       assert.equal((await pg.query("select oras from public.terenuri where nume='Court A'")).rows[0].oras,'Test City');
     });
     await settingsReload;
-    await admin.waitForFunction(()=>document.getElementById('login-admin-btn').disabled===false);
+    await admin.waitForFunction(id=>document.getElementById(`btn-save-${id}`)?.disabled===false,settingsId);
     await admin.keyboard.press('Escape');
     const cityBack=admin.locator('.sub-pagina-oras:visible [onclick*="inchideSubPaginaOras"]');
     if (await cityBack.count()) await cityBack.click();
@@ -816,6 +833,10 @@ async function openProfile(page) {
         }
         if (id==='modal-chat-admin') {
           const conversation=admin.locator('#chat-admin-lista-conversații .card-conversatie').first();
+          // Reopening refreshes the message and client queries. An empty list
+          // during that refresh does not mean a mobile conversation is open.
+          await conversation.waitFor({state:'attached'});
+          await admin.waitForLoadState('networkidle');
           if (!(await conversation.isVisible())) await admin.locator('#btn-inapoi-conversatie-admin').click();
           await assertFits(admin,'#modal-chat-admin .modal-continut',`admin chat conversation list ${width}px`);
           await conversation.click();
@@ -832,7 +853,8 @@ async function openProfile(page) {
     }
     // A sign-out from another tab must remove cached privileged data.
     await admin.evaluate(async()=>{await db.auth.signOut({scope:'local'})});
-    await admin.locator('#sectiune-login').waitFor({state:'visible'});
+    await admin.locator('#base-admin-workspace').waitFor({state:'hidden'});
+    assert.equal(await admin.locator('#btn-administreaza-baza').isVisible(),false);
     assert.ok(!(await admin.locator('#sectiune-dashboard').isVisible()));
     assert.equal(await admin.locator('#container-meniu-terenuri').innerText(),'');
     assert.equal(await admin.locator('#chat-admin-mesaje').innerText(),'');
@@ -1423,14 +1445,12 @@ async function openProfile(page) {
     });
     pass('the existing add-court form creates a foot-tennis court with its canonical sport directly inside the selected sports base');
     const baseAdmin=await pageFor();
-    await baseAdmin.goto(new URL('admin.html',base).href,{waitUntil:'networkidle'});
-    await baseAdmin.locator('#login-email-admin').fill('admin@example.test');
-    await baseAdmin.locator('#login-parola').fill(' test-password. ');
-    await baseAdmin.locator('#login-admin-btn').click();
-    await baseAdmin.locator('#sectiune-dashboard').waitFor({state:'visible'});
+    await openBaseAdmin(baseAdmin);
+    assert.deepEqual((await baseAdmin.locator('#base-admin-select option').evaluateAll(nodes=>nodes.map(node=>node.value))).sort(),[baseIds.a,createdBase.id].sort());
+    await baseAdmin.locator('#base-admin-select').selectOption(createdBase.id);
     await baseAdmin.locator('#btn-baze-admin').click();
     await baseAdmin.locator(`[data-edit-base="${createdBase.id}"]`).waitFor();
-    assert.deepEqual((await baseAdmin.locator('[data-edit-base]').evaluateAll(nodes=>nodes.map(node=>node.dataset.editBase))).sort(),[baseIds.a,createdBase.id].sort());
+    assert.deepEqual(await baseAdmin.locator('[data-edit-base]').evaluateAll(nodes=>nodes.map(node=>node.dataset.editBase)),[createdBase.id]);
     assert.equal(await baseAdmin.locator('#btn-baza-noua').isVisible(),false);
     await baseAdmin.locator(`[data-edit-base="${createdBase.id}"]`).click();
     assert.ok(!(await baseAdmin.locator('#baza-nume').isEditable()));
@@ -1479,7 +1499,8 @@ async function openProfile(page) {
     assert.doesNotMatch(await baseAdmin.locator('#admin-baza-status').innerText(),/^.*salvat[ăa]? cu succes.*$/i);
     pass('revoking a description grant while its editor is open prevents the save and never reports a false success');
     await baseAdmin.evaluate(async()=>{await db.auth.signOut({scope:'local'});});
-    await baseAdmin.locator('#sectiune-login').waitFor({state:'visible'});
+    await baseAdmin.locator('#base-admin-workspace').waitFor({state:'hidden'});
+    assert.equal(await baseAdmin.locator('#btn-administreaza-baza').isVisible(),false);
     assert.equal(await baseAdmin.locator('#modal-baze-admin').isVisible(),false);
     assert.equal(await baseAdmin.locator('#admin-baze-list').innerText(),'');
     assert.equal(await baseAdmin.locator('#baza-descriere').inputValue(),'');

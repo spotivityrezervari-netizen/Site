@@ -46,7 +46,8 @@
 
     const currentBase = () => bases.find(base => base.id === editingId);
     const canEditPhoto = () => !!role && !!editingId && !!currentBase()
-        && (role.isSuper || grants.some(grant => grant.baza_id === editingId && grant.user_id === role.userId));
+        && (role.isSuper || role.baseAccess?.some(base => base.id === editingId && base.can_edit_details === true)
+            || grants.some(grant => grant.baza_id === editingId && grant.user_id === role.userId));
 
     function discardPhotoDraft() {
         photoSelection++;
@@ -256,6 +257,7 @@
 
     function baseOptions() {
         const select = byId('teren-baza');
+        if (!select) return;
         const previous = select.value;
         select.replaceChildren(new Option('Fără bază sportivă', ''));
         if (role?.isSuper) {
@@ -319,7 +321,11 @@
             if (!sameRole(captured) || request !== requestGeneration) return false;
             if (results.some(result => result.error)) throw new Error('Bazele sportive nu pot fi încărcate. Încearcă din nou.');
             grants = results[1].data || [];
-            bases = (results[0].data || []).filter(base => role.isSuper || grants.some(grant => grant.baza_id === base.id && grant.user_id === role.userId));
+            bases = (results[0].data || []).filter(base => {
+                if (role.selectedBaseId && base.id !== role.selectedBaseId) return false;
+                if (role.baseAccess) return role.baseAccess.some(allowed => allowed.id === base.id && allowed.can_edit_details === true);
+                return role.isSuper || grants.some(grant => grant.baza_id === base.id && grant.user_id === role.userId);
+            });
             courts = role.isSuper ? results[2].data || [] : [];
             admins = role.isSuper ? results[3].data || [] : [];
             renderDirectory();

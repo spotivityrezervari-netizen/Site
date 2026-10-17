@@ -15,8 +15,8 @@ const jsonResponse = (status,data,extra={}) => new Response(data===undefined?nul
 async function createFixture() {
   const pg = new PGlite();
   await pg.exec(readFileSync(join(__dirname,'schema.sql'),'utf8'));
-  const migrations = ['001_security.sql','003_court_hours.sql','004_admin_scope_hardening.sql','005_sport_appearance.sql','006_sports_bases.sql','007_completed_booking_cancellation.sql','008_profile_edit.sql','009_base_photos.sql','010_foot_tennis.sql',...readdirSync(join(__dirname,'..')).filter(name=>/^01[12]_.*\.sql$/.test(name)).sort()];
-  assert.equal(migrations.length,11);
+  const migrations = ['001_security.sql','003_court_hours.sql','004_admin_scope_hardening.sql','005_sport_appearance.sql','006_sports_bases.sql','007_completed_booking_cancellation.sql','008_profile_edit.sql','009_base_photos.sql','010_foot_tennis.sql',...readdirSync(join(__dirname,'..')).filter(name=>/^01[1-9]_.*\.sql$/.test(name)).sort()];
+  assert.ok(migrations.length>=11);
   for(const name of migrations) await pg.exec(readFileSync(join(__dirname,'..',name),'utf8'));
   // Bucket configuration is read internally by the Storage transport, while object RLS remains real.
   await pg.exec('grant select on storage.buckets to anon,authenticated,service_role');
@@ -32,17 +32,18 @@ async function createFixture() {
   const session=async account=>({access_token:token(account.id),refresh_token:'fixture-refresh-'+account.id,expires_in:3600,token_type:'bearer',user:await getUser(account.id)});
   const pauseNext=(path,method)=>{let enter,release,timer;const entered=new Promise((resolve,reject)=>{timer=setTimeout(()=>reject(new Error(`Expected ${method} ${path}`)),15000);enter=()=>{clearTimeout(timer);resolve();};});const wait=new Promise(resolve=>release=resolve);gate={path,method,enter,wait};return {entered,release};};
   const rpc=async(path,body)=>{
-    const name=path.split('/').pop();assert.ok(['submit_club_application','submit_club_request','approve_club_request','reject_club_request'].includes(name),name);
+    const name=path.split('/').pop();assert.ok(['get_admin_access','save_sports_base','submit_club_application','submit_club_request','approve_club_request','reject_club_request'].includes(name),name);
     const keys=Object.keys(body);for(const key of keys)assert.match(key,/^p_[a-z_]+$/);
     const jsonKeys=new Set(['p_terenuri','p_prices']);
-    const result=await pg.query(`select public.${ident(name)}(${keys.map((key,i)=>`${key} => $${i+1}${jsonKeys.has(key)?'::jsonb':key.endsWith('_id')?'::uuid':key==='p_expected_updated_at'?'::timestamptz':''}`).join(',')}) value`,keys.map(key=>jsonKeys.has(key)?JSON.stringify(body[key]):body[key]));
+    const casts={p_id:'::uuid',p_admin_ids:'::uuid[]',p_court_ids:'::text[]',p_este_activa:'::boolean'};
+    const result=await pg.query(`select public.${ident(name)}(${keys.map((key,i)=>`${key} => $${i+1}${casts[key]||(jsonKeys.has(key)?'::jsonb':key.endsWith('_id')?'::uuid':key==='p_expected_updated_at'?'::timestamptz':'')}`).join(',')}) value`,keys.map(key=>jsonKeys.has(key)?JSON.stringify(body[key]):body[key]));
     return result.rows[0].value;
   };
   const transport=async(input,init={},source='edge')=>{
     const request=input instanceof Request?input:new Request(input,init),url=new URL(request.url);
     assert.equal(url.hostname,host,'No fixture request may reach hosted services');
     const credential=(request.headers.get('authorization')||'').replace(/^Bearer /,''),id=tokens.get(credential),service=credential===serviceKey;
-    const record={source,path:url.pathname,method:request.method,userId:id,service,status:null};requests.push(record);
+    const record={source,path:url.pathname,search:url.search,method:request.method,userId:id,service,status:null};requests.push(record);
     const reply=(status,data,headers)=>{record.status=status;return jsonResponse(status,data,headers);};
     try {
       await pg.exec('reset role');await pg.query("select set_config('request.jwt.claim.sub',$1,false)",[id||'']);
@@ -124,7 +125,7 @@ async function createFixture() {
         if(field==='or'){const terms=value.slice(1,-1).split(',').map(term=>{const [,col,operand]=term.match(/^([a-z_]+)\.eq\.(.*)$/)||[];assert.ok(col);params.push(operand);return `${ident(col)}=$${params.length}`;});conditions.push('('+terms.join(' or ')+')');continue;}
         if(value==='is.null'||value==='not.is.null')conditions.push(`${ident(field)} is ${value==='not.is.null'?'not ':''}null`);
         else if(value.startsWith('in.('))conditions.push(`${ident(field)} in (${value.slice(4,-1).split(',').map(v=>{params.push(v.replace(/^"|"$/g,''));return `$${params.length}`;}).join(',')})`);
-        else{const match=value.match(/^(eq|neq|ilike|lt|lte|gt|gte)\.(.*)$/s);assert.ok(match,value);params.push(match[2]);conditions.push(`${ident(field)} ${{eq:'=',neq:'<>',ilike:'ilike',lt:'<',lte:'<=',gt:'>',gte:'>='}[match[1]]} $${params.length}`);}
+        else{const match=value.match(/^(eq|neq|ilike|lt|lte|gt|gte)\.(.*)$/s);assert.ok(match,value);const bool=['is_super','este_activ','este_activa','are_chat','optiune_minge','citit'].includes(field)&&['true','false'].includes(match[2]);params.push(bool?match[2]==='true':match[2]);conditions.push(`${ident(field)} ${{eq:'=',neq:'<>',ilike:'ilike',lt:'<',lte:'<=',gt:'>',gte:'>='}[match[1]]} $${params.length}`);}
       }
       const where=conditions.length?' where '+conditions.join(' and '):'';let query;
       if(['GET','HEAD'].includes(request.method)){
@@ -132,12 +133,17 @@ async function createFixture() {
         if(url.searchParams.has('order'))query+=' order by '+url.searchParams.get('order').split(',').map(o=>{const[col,dir]=o.split('.');return ident(col)+(dir==='desc'?' desc':' asc');}).join(',');
         if(url.searchParams.has('limit')){params.push(Number(url.searchParams.get('limit')));query+=` limit $${params.length}`;}
         if(url.searchParams.has('offset')){params.push(Number(url.searchParams.get('offset')));query+=` offset $${params.length}`;}
+      }else if(request.method==='POST'){
+        const body=await request.json();record.body=body;const rows=Array.isArray(body)?body:[body],fields=Object.keys(rows[0]);
+        const values=rows.map(row=>'('+fields.map(field=>{params.push(row[field]);return `$${params.length}`;}).join(',')+')');
+        query=`insert into public.${ident(table)}(${fields.map(ident).join(',')}) values ${values.join(',')} returning *`;
       }else if(request.method==='PATCH'){
         const body=await request.json();record.body=body;query=`update public.${ident(table)} set ${Object.entries(body).map(([key,value])=>{params.push(value);return `${ident(key)}=$${params.length}`;}).join(',')}${where} returning *`;
-      }else return reply(405,{message:'Unexpected table mutation'});
+      }else if(request.method==='DELETE')query=`delete from public.${ident(table)}${where} returning *`;
+      else return reply(405,{message:'Unexpected table mutation'});
       const result=await pg.query(query,params),single=(request.headers.get('accept')||'').includes('vnd.pgrst.object');
       if(single&&result.rows.length!==1)return reply(406,{code:'PGRST116',message:'Expected exactly one row'});
-      return reply(200,request.method==='HEAD'?undefined:single?result.rows[0]:result.rows,{'content-range':`0-${Math.max(0,result.rows.length-1)}/${result.rows.length}`});
+      return reply(request.method==='POST'?201:200,request.method==='HEAD'?undefined:single?result.rows[0]:result.rows,{'content-range':`0-${Math.max(0,result.rows.length-1)}/${result.rows.length}`});
     }catch(error){record.error=error.message;const status=error.code==='42501'?403:['23505','40001'].includes(error.code)?409:error.code?400:500;return reply(status,{code:error.code||'FIXTURE',message:error.message});}
   };
   const browserRoute=async route=>{

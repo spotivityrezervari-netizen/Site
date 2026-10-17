@@ -143,9 +143,10 @@ let checks=0;
     const applicant=await pageFor();await applicant.goto(new URL('admin.html',base).href,{waitUntil:'networkidle'});await login(applicant,'owner@example.test',password);
     assert.equal(await applicant.locator('#sectiune-dashboard').isVisible(),false);assert.equal(await applicant.locator('#sectiune-login').isVisible(),true);
     pass('even a confirmed applicant with the chosen password cannot enter admin before superadmin acceptance');
-    const ordinary=await pageFor();await ordinary.goto(new URL('admin.html',base).href,{waitUntil:'networkidle'});await login(ordinary,'admin@example.test');await ordinary.locator('#sectiune-dashboard').waitFor({state:'visible'});
+    const ordinary=await pageFor();await ordinary.goto(new URL('admin.html',base).href,{waitUntil:'networkidle'});await login(ordinary,'admin@example.test');
+    assert.equal(await ordinary.locator('#sectiune-dashboard').isVisible(),false);assert.equal(await ordinary.locator('#sectiune-login').isVisible(),true);
     assert.equal(await ordinary.locator('#btn-cereri-baze-admin').isVisible(),false);const denied=await ordinary.evaluate(async path=>({rows:(await db.from('cereri_baze_sportive').select('*')).data,photo:(await db.storage.from('cereri_baze_sportive').createSignedUrl(path,60)).data}),first.poza_path);assert.equal(denied.rows?.length||0,0);assert.equal(denied.photo,null);
-    pass('ordinary administrators cannot see the management menu, applications or their private photos');
+    pass('ordinary administrators cannot enter the superadmin dashboard or read applications or their private photos');
 
     const superPage=await pageFor();await superPage.goto(new URL('admin.html',base).href,{waitUntil:'networkidle'});await login(superPage,'super@example.test');await superPage.locator('#btn-cereri-baze-admin').click();
     await superPage.locator(`[data-club-request-id="${first.id}"]`).click();await superPage.waitForFunction(()=>document.getElementById('admin-cerere-photo').naturalWidth>0);
@@ -165,11 +166,16 @@ let checks=0;
     assert.equal(duplicate.status,200);assert.equal(duplicate.body.base_id,created.base.id);assert.equal((await root(()=>pg.query('select id from public.terenuri where baza_sportiva_id=$1',[created.base.id]))).rows.length,5);
     pass('a retried acceptance returns the existing published base without duplicating courts or expanding scope');
 
-    await login(applicant,'owner@example.test',password);await applicant.locator('#sectiune-dashboard').waitFor({state:'visible'});assert.equal(await applicant.locator('#btn-cereri-baze-admin').isVisible(),false);await applicant.locator('#btn-baze-admin').waitFor({state:'visible'});
+    await applicant.goto(base,{waitUntil:'networkidle'});
+    // The earlier rejected admin.html attempt retains normal Auth, so the
+    // already signed-in owner opens the public profile without authenticating again.
+    await applicant.locator('#btn-top-cont').click();await applicant.locator('#modal-profil').waitFor({state:'visible'});
+    await applicant.locator('#btn-administreaza-baza').waitFor({state:'visible'});await applicant.locator('#btn-administreaza-baza').click();
+    await applicant.locator('#base-admin-workspace').waitFor({state:'visible'});assert.equal(await applicant.locator('#btn-cereri-baze-admin').isVisible(),false);await applicant.locator('#btn-baze-admin').waitFor({state:'visible'});
     const scoped=await applicant.evaluate(async({baseId,priorBase})=>({own:await db.from('baze_sportive').update({descriere:'Actualizat de proprietar'}).eq('id',baseId).select('id'),other:await db.from('baze_sportive').update({descriere:'Intrus'}).eq('id',priorBase).select('id'),court:await db.from('terenuri').update({pret:1}).eq('nume','Court A').select('id'),requests:await db.from('cereri_baze_sportive').select('*')}),{baseId:created.base.id,priorBase});
     assert.equal(scoped.own.data?.length,1);assert.equal(scoped.other.data?.length||0,0);assert.equal(scoped.court.data?.length||0,0);assert.equal(scoped.requests.data?.length||0,0);
     pass('the accepted applicant signs in with the chosen password and can edit only their base, with no superadmin or unrelated court access');
-    const visitor=await pageFor();await visitor.goto(new URL(`index.html?baza=${created.base.id}`,base).href,{waitUntil:'networkidle'});await visitor.locator('#modal-baze-sportive').waitFor({state:'visible'});assert.equal(await visitor.locator('[data-base-court]').count(),5);assert.ok((await visitor.locator('#baze-sportive-continut').innerText()).includes('Club nou'));await visitor.waitForFunction(()=>[...document.querySelectorAll('#baze-sportive-continut img')].some(image=>image.naturalWidth>0&&image.src.includes('/poze_baze_sportive/')));
+    const visitor=await pageFor();await visitor.goto(new URL(`index.html?baza=${created.base.id}`,base).href,{waitUntil:'networkidle'});await visitor.locator('#modal-baze-sportive').waitFor({state:'visible'});await visitor.waitForFunction(()=>document.querySelectorAll('[data-base-court]').length===5);assert.equal(await visitor.locator('[data-base-court]').count(),5);assert.ok((await visitor.locator('#baze-sportive-continut').innerText()).includes('Club nou'));await visitor.waitForFunction(()=>[...document.querySelectorAll('#baze-sportive-continut img')].some(image=>image.naturalWidth>0&&image.src.includes('/poze_baze_sportive/')));
     pass('the published base, its five reservable courts and submitted photo are visible to signed-out public visitors');
 
     await superPage.locator('#admin-cerere-back').click();await superPage.locator(`[data-club-request-id="${retryRequest.id}"]`).click();await superPage.locator('#admin-cerere-note').fill('Nu corespunde criteriilor.');await superPage.locator('#admin-cerere-reject').click();await superPage.locator('#admin-cerere-confirm').waitFor({state:'visible'});await fit(superPage,'#modal-cereri-baze-admin .modal-continut','admin-reject');

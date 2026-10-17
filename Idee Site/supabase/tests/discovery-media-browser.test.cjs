@@ -29,7 +29,7 @@ let checks = 0;
   try {
     await pg.exec(readFileSync(join(__dirname, 'schema.sql'), 'utf8'));
     for (const file of ['001_security.sql', '003_court_hours.sql', '004_admin_scope_hardening.sql',
-      '005_sport_appearance.sql', '006_sports_bases.sql', '007_completed_booking_cancellation.sql', '008_profile_edit.sql', '009_base_photos.sql', '010_foot_tennis.sql', '011_club_requests.sql', '012_club_approval.sql']) {
+      '005_sport_appearance.sql', '006_sports_bases.sql', '007_completed_booking_cancellation.sql', '008_profile_edit.sql', '009_base_photos.sql', '010_foot_tennis.sql', '011_club_requests.sql', '012_club_approval.sql', '013_admin_integration.sql']) {
       await pg.exec(readFileSync(join(__dirname, '..', file), 'utf8'));
     }
     let queue = Promise.resolve();
@@ -142,6 +142,11 @@ let checks = 0;
           }
           return reply(405, {message: 'Unexpected Storage fixture method'});
         }
+        if (url.pathname === '/rest/v1/rpc/get_admin_access') {
+          assert.equal(request.method(), 'POST');
+          await pg.exec(`set role ${person ? 'authenticated' : 'anon'}`);
+          return reply(200, (await pg.query('select public.get_admin_access() value')).rows[0].value);
+        }
         const table = url.pathname.split('/').pop();
         assert.ok(['clienti', 'users_admin', 'terenuri', 'rezervari', 'rezervari_disponibilitate', 'mesaje_chat', 'site_sporturi', 'baze_sportive', 'baze_sportive_admini', 'cereri_baze_sportive'].includes(table));
         await pg.exec(`set role ${person ? 'authenticated' : 'anon'}`);
@@ -153,7 +158,9 @@ let checks = 0;
             conditions.push(`${ident(field)} in (${value.slice(4, -1).split(',').map(v => {params.push(v.replace(/^"|"$/g, '')); return `$${params.length}`;}).join(',')})`);
           } else {
             const match = value.match(/^(eq|neq|ilike)\.(.*)$/s); assert.ok(match, value);
-            params.push(match[2]); conditions.push(`${ident(field)} ${{eq: '=', neq: '<>', ilike: 'ilike'}[match[1]]} $${params.length}`);
+            const booleanField = ['is_super', 'este_activ', 'este_activa', 'are_chat', 'optiune_minge', 'citit'].includes(field);
+            params.push(booleanField && ['true', 'false'].includes(match[2]) ? match[2] === 'true' : match[2]);
+            conditions.push(`${ident(field)} ${{eq: '=', neq: '<>', ilike: 'ilike'}[match[1]]} $${params.length}`);
           }
         }
         const where = conditions.length ? ' where ' + conditions.join(' and ') : '';
@@ -216,10 +223,17 @@ let checks = 0;
     };
     const png = readFileSync(join(__dirname, '..', '..', 'assets/imagini/avatar2.png'));
     const admin = await pageFor();
-    await admin.goto(new URL('admin.html', base).href, {waitUntil: 'networkidle'});
-    await admin.locator('#login-email-admin').fill('admin@example.test');
+    await admin.goto(base, {waitUntil: 'networkidle'});
+    await admin.locator('#btn-top-cont').click();
+    await admin.locator('#login-email').fill('admin@example.test');
     await admin.locator('#login-parola').fill('fixture-password');
-    await admin.locator('#login-admin-btn').click();
+    await admin.locator('#btn-executa-login').click();
+    await admin.locator('#modal-auth').waitFor({state: 'hidden'});
+    await admin.locator('#btn-top-cont').click();
+    await admin.locator('#btn-administreaza-baza').click();
+    await admin.locator('#base-admin-workspace').waitFor({state: 'visible'});
+    assert.equal(new URL(admin.url()).pathname, new URL(base).pathname);
+    assert.equal(await admin.locator('#login-admin-btn').count(), 0);
     await admin.locator('#btn-baze-admin').waitFor({state: 'visible'});
     await admin.locator('#btn-baze-admin').click();
     await admin.locator('[data-edit-base]').first().waitFor({state: 'visible'});

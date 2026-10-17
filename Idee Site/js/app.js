@@ -711,7 +711,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // --- LOGICA TERENURI ---
-    document.querySelectorAll('.card-sport').forEach(card => {
+    document.querySelectorAll('.card-sport[data-sport]').forEach(card => {
         card.addEventListener('click', async () => {
             sportCurent = window.normalizeSportName(card.getAttribute('data-sport'));
             const numeSportTradus = window.dict[window.lang][sportCurent.toLowerCase()] || sportCurent;

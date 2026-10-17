@@ -1,5 +1,7 @@
 # Instalarea protecțiilor Supabase și a rolurilor Spotivity
 
+**17 octombrie 2026 — separarea administrării:** versiunea curentă necesită și [013_admin_integration.sql](013_admin_integration.sql), după 012. Aplicarea live a acestei migrări nu este încă verificată: credențialul administrativ al mediului răspunde cu HTTP 401. Nu reinstala migrările vechi. Detaliile și verificările noii versiuni sunt în secțiunea 013 de la sfârșitul acestui document.
+
 **Actualizare 15 octombrie 2026:** în Rendez-Vous sunt deja aplicate migrările **1, 3, 4, 5, 6, 7, 8, 9**, inclusiv profilul editabil, fotografiile bazelor sportive și refuzarea anulării rezervărilor finalizate. Nu trebuie să copiezi sau să rulezi din nou SQL pentru actualizarea curentă. Pașii de instalare de mai jos sunt pentru proiecte noi; istoricul datat descrie aplicările anterioare. Gestionează bazele din **Admin → Baze sportive**.
 
 Acest pachet conține migrarea bazei de date și frontend-ul compatibil. Pregătirea fișierelor în GitHub nu execută automat SQL-ul în Supabase. Instrucțiunile de mai jos permit aplicarea din Dashboard; accesul administrativ configurat separat permite și aplicarea asistată prin Management API. Testele automate folosesc date fictive într-un PostgreSQL izolat.
@@ -35,12 +37,12 @@ Verificarea înainte/după aplicarea 005 a confirmat aceleași **8 conturi Auth,
 
 Pentru a modifica programul:
 
-1. Deschide [panoul admin](https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/admin.html) și autentifică-te.
-2. Dacă ești superadmin, deschide **Setări [oraș]**, apoi terenul. Ca admin obișnuit, deschide direct **Setări [teren]** din meniu; sunt afișate doar terenurile alocate.
+1. Ca superadmin, deschide [panoul admin](https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/admin.html). Ca administrator al unei baze, conectează-te în site-ul principal și deschide **Profilul meu → Administrează baza sportivă**.
+2. Dacă ești superadmin, deschide **Setări [oraș]**, apoi terenul. În administrarea integrată, alege baza și deschide direct **Setări [teren]**; sunt afișate doar terenurile alocate.
 3. În **Ore rezervabile**, bifează orele de început dorite și apasă **Salvează**. De exemplu, bifează 09:00–21:00 dacă terenul trebuie să închidă la 22:00.
 4. Deschide terenul din pagina publică: apar numai orele bifate. Filtrul de oră folosește programele terenurilor afișate; rezervarea manuală și blocarea unei zile respectă același program.
 
-Fără nicio bifă nu se acceptă rezervări noi. Rezervările existente nu sunt șterse sau anulate automat când programul se schimbă; cele din afara programului nou rămân în tabelul admin, cu anulare și chat. Clienții își pot anula rezervările oricând. Adminii obișnuiți pot schimba numai terenurile alocate, iar superadminul poate modifica programul tuturor terenurilor. Supabase refuză o rezervare nouă la o oră nebifată, inclusiv dintr-o pagină rămasă deschisă înaintea modificării. Pagina citește programul la deschiderea terenului și la actualizarea periodică a disponibilității. Confirmarea păstrează datele selectate la click și se oprește dacă utilizatorul schimbă ziua sau terenul în timpul verificării.
+Fără nicio bifă nu se acceptă rezervări noi. Rezervările existente nu sunt șterse sau anulate automat când programul se schimbă; cele din afara programului nou rămân în tabelul admin, cu chat și anulare numai înainte de finalizare. Clienții își pot anula rezervările înainte de sfârșitul orei rezervate. Adminii obișnuiți pot schimba numai terenurile alocate, iar superadminul poate modifica programul tuturor terenurilor. Supabase refuză o rezervare nouă la o oră nebifată, inclusiv dintr-o pagină rămasă deschisă înaintea modificării. Pagina citește programul la deschiderea terenului și la actualizarea periodică a disponibilității. Confirmarea păstrează datele selectate la click și se oprește dacă utilizatorul schimbă ziua sau terenul în timpul verificării.
 
 Pentru alt proiect care are deja migrarea 001, copiază întregul **Raw** din `003_court_hours.sql` în **Supabase → SQL Editor → New query**, rol `postgres`, apoi **Run**. În proiectul Rendez-Vous aplicarea asistată este consemnată mai jos; nu este necesar să rulezi din nou fișierele 000/001/002 sau să recreezi conturile. `001_security.sql` se oprește dacă 003 este deja instalată, pentru a evita restaurarea regulilor vechi.
 
@@ -50,7 +52,7 @@ Pe **12 octombrie 2026**, migrarea 003 a fost aplicată în **Rendez-Vous** prin
 
 [004_admin_scope_hardening.sql](004_admin_scope_hardening.sql) este **deja aplicat** în proiectul Rendez-Vous. Verificarea live a confirmat migrațiile **1, 3 și 4**, RLS pe toate cele șase tabele și păstrarea datelor și a definițiilor/stărilor trigger-elor. **Nu rula din nou 001 sau 003 în acest proiect**: ar restaura reguli vechi; scripturile actuale opresc această operație.
 
-004 împiedică un admin obișnuit să lege o rezervare manuală de un cont client neautorizat doar ghicindu-i emailul. Rezervarea rămâne manuală, fără UUID client, până există o relație autorizată; superadminul poate lega orice cont existent. După realocare, adminul nu poate modifica/șterge o poză proprie încă folosită de un teren nealocat. Pozele fără prefix UUID, încărcate înaintea protecțiilor, se gestionează de superadmin. Politicile anonime Storage restricționează scrierile separat, păstrând citirea publică. Superadminul poate anula și o rezervare istorică al cărei teren a fost șters.
+004 împiedică un admin obișnuit să lege o rezervare manuală de un cont client neautorizat doar ghicindu-i emailul. Rezervarea rămâne manuală, fără UUID client, până există o relație autorizată; superadminul poate lega orice cont existent. După realocare, adminul nu poate modifica/șterge o poză proprie încă folosită de un teren nealocat. Pozele fără prefix UUID, încărcate înaintea protecțiilor, se gestionează de superadmin. Politicile anonime Storage restricționează scrierile separat, păstrând citirea publică. Superadminul poate anula și o rezervare nefinalizată al cărei teren a fost șters; finalizarea o protejează de anulare.
 
 Adresele de redirect Auth sunt exacte; wildcardul vechi pentru spotivity.ro a fost eliminat. La cererea proprietarului, parola nouă are în continuare minimum **6 caractere**. Confirmarea automată și absența SMTP au fost păstrate; configurarea emailului și datele firmei sunt amânate de proprietar. Raportul de verificare și pașii rămași sunt în [PRODUCTION_REVIEW.md](../PRODUCTION_REVIEW.md).
 
@@ -226,7 +228,7 @@ Verifică disponibilitatea în două ferestre și chat-ul între client și admi
 1. Validează mai întâi proiectul Supabase de test și copia frontend-ului de test.
 2. Pentru producție, repetă preflight-ul, backup-ul, migrarea și verificarea rolurilor în proiectul real.
 3. Frontend-ul compatibil este deja în `main`. Pentru actualizări viitoare, compară ramura de lucru cu `main` și integrează modificările după ce baza reală este pregătită. Publicarea poate porni automat când actualizezi `main`, dacă hostingul urmărește acea ramură; verifică setarea hostingului înainte de integrare.
-4. Publică toate fișierele compatibile împreună: `index.html`, `admin.html`, `js/app.js`, `js/admin.js`, `js/security.js`, `css/style.css` și `css/admin.css`. Dacă hostingul servește `Idee Site/`, păstrează acea rădăcină de publicare. Documentația și SQL-ul nu înlocuiesc fișierele frontend.
+4. Aplică întâi migrarea necesară și publică împreună fișierele frontend compatibile din commitul verificat. Pentru administrarea integrată, include și `js/base-admin.js`, `js/admin-baze.js` și `css/base-admin.css`, pe lângă `index.html`, `admin.html` și fișierele lor existente. Dacă hostingul servește `Idee Site/`, păstrează acea rădăcină de publicare. Documentația și SQL-ul nu înlocuiesc fișierele frontend.
 5. Verifică în `js/db.js` publicat URL-ul și cheia publică ale proiectului real. Invalidează cache-ul/CDN dacă există și reîncarcă pagina; paginile actualizate folosesc versiuni noi pentru fișierele JS.
 
 Nu publica frontend-ul nou înainte de migrare: folosește coloane și tabelul de disponibilitate care lipsesc din vechea schemă. Revenirea la frontend-ul vechi nu anulează migrarea bazei; pentru o restaurare folosește un plan verificat și backup-ul corespunzător.
@@ -363,3 +365,15 @@ Testele SQL acoperă permisiuni, publicare atomică, rollback, prețuri, fotogra
 
 
 Verificarea live a inclus o probă SQL complet anulată prin rollback și un test HTTPS cu conturi QA temporare: înscriere anonimă cu parolă, zero permisiuni înainte de aprobare, publicarea bazei/terenului și copierea reală a fotografiei, acces obișnuit limitat și respingere fără resurse. Toate datele QA au fost șterse prin API-urile corespunzătoare. Amprentele datelor existente (clienți, admini, terenuri, baze, rezervări și cereri reale) au rămas identice. Nicio cerere reală nu a fost aprobată sau respinsă în test.
+
+## 013 — administrare integrată și limite de acces
+
+Aplică [013_admin_integration.sql](013_admin_integration.sql) **după 012**, înainte de activarea noului frontend. Nu modifică rândurile existente, conturile, rolurile, alocările, fotografiile sau rezervările. La data acestei actualizări, aplicarea în proiectul live rămâne neverificată din cauza răspunsului HTTP 401 al credențialului Management API disponibil în mediu. Verificările automate folosesc exclusiv PostgreSQL izolat.
+
+`get_admin_access()` este apelabil numai de utilizatori autentificați și derivă identitatea din `auth.uid()`, cu `search_path` fix. Returnează numai terenurile alocate și bazele aferente sau bazele cu drept explicit de prezentare. Câmpul `can_edit_details` păstrează separarea dintre alocările la terenuri și dreptul asupra descrierii/fotografiei bazei. Funcția nu acceptă identitatea sau rolul din browser. Aprobarea prin RPC-ul existent acordă accesul care apare la următoarea verificare, fără o nouă autentificare.
+
+Politicile restrictive suplimentare protejează operațiunile globale și limitele existente chiar dacă se adaugă ulterior o politică permisivă generală. Trigger-ele și politicile Storage anterioare rămân active. Un trigger separat păstrează rezervările finalizate: refuză ștergerea și schimbarea stării/datei/orei de către un utilizator autentificat, inclusiv o mutare în viitor urmată de anulare. Mentenanța privilegiată a serverului rămâne disponibilă fără o identitate Auth.
+
+`admin.html` verifică rolul curent de superadmin; administratorii obișnuiți folosesc **Profilul meu → Administrează baza sportivă** în `index.html`, cu sesiunea existentă. Gestionarea cererilor și administrarea globală nu sunt incluse în interfața integrată. RLS și funcțiile existente verifică aceleași limite la cereri directe REST/RPC, indiferent de interfața folosită.
+
+Testele noi sunt `tests/admin-integration.test.cjs` (UUID și ID numeric) și `tests/integrated-admin-browser.test.cjs`. Fixture-urile nu se execută în proiectul real. Pentru aplicarea asistată, actualizează securizat credențialul existent `supbase` către `api.supabase.com` în setările mediului; nu include tokenul în repository sau chat. Accesul de rețea către `ndubcdwohqzgxpuiowye.supabase.co` și `spotivityrezervari-netizen.github.io` este necesar pentru verificările live și ale publicării.

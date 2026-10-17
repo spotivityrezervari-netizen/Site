@@ -1,6 +1,10 @@
 // Real Auth SDK with HTTP/WebSocket fixtures only; no hosted Auth writes or emails.
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
+const {readFileSync}=require('node:fs');
+const {execFileSync}=require('node:child_process');
+const {createHash}=require('node:crypto');
+const {join}=require('node:path');
 const base=process.env.SITE_BASE_URL||'http://127.0.0.1:8010/';
 const host='ndubcdwohqzgxpuiowye.supabase.co';
 const uid=n=>`00000000-0000-0000-0000-${String(n).padStart(12,'0')}`;
@@ -15,8 +19,14 @@ let passed=0;
  if(proxy){const u=new URL(proxy);options.proxy={server:u.origin,bypass:'127.0.0.1,localhost'};if(u.username)options.proxy.username=decodeURIComponent(u.username);if(u.password)options.proxy.password=decodeURIComponent(u.password)}
  const browser=await chromium.launch(options);const contexts=[];const errors=[];
  try{
+  const html=readFileSync(join(__dirname,'..','..','index.html'),'utf8');
+  const sdkTag=html.match(/<script src="(https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@[^\"]+)" integrity="(sha384-[^\"]+)"/);
+  assert.ok(sdkTag,'The application must pin the real SDK with SRI');
+  const sdk=execFileSync('curl',['--fail','--location','--silent','--show-error','--max-time','30',sdkTag[1]],{maxBuffer:2*1024*1024});
+  assert.equal('sha384-'+createHash('sha384').update(sdk).digest('base64'),sdkTag[2]);
   async function fixture({delayApp=false}={}){
    const context=await browser.newContext({timezoneId:'Europe/Bucharest'});contexts.push(context);
+   await context.route(sdkTag[1],route=>route.fulfill({status:200,contentType:'application/javascript',body:sdk,headers:{'access-control-allow-origin':'*'}}));
    const writes=[];const alerts=[];let userGate=null;
    let initialUserResolve;const initialUser=new Promise(resolve=>{initialUserResolve=resolve});
    if(context.routeWebSocket)await context.routeWebSocket(url=>url.hostname===host,ws=>ws.close());
@@ -35,12 +45,17 @@ let passed=0;
      return reply(200,user(n));
     }
     if(u.pathname.startsWith('/rest/v1/')){
+     if(u.pathname.endsWith('/rpc/get_admin_access')){
+      assert.equal(r.method(),'POST');
+      return reply(200,{is_super:false,can_manage:false,courts:[],bases:[]});
+     }
      assert.equal(r.method(),'GET','Unexpected fixture business write');
      if(u.pathname.endsWith('/site_sporturi'))return reply(200,[
       {sport:'Fotbal',icona_url:'assets/imagini/fotbalrealist.png',fundal_url:'assets/imagini/RealistFotbal.png',ordine:1},
       {sport:'Baschet',icona_url:'assets/imagini/baschetrealist.png',fundal_url:'assets/imagini/RealisBaschet.png',ordine:2},
       {sport:'Tenis',icona_url:'assets/imagini/tenisrealist.png',fundal_url:'assets/imagini/RealistTenis.png',ordine:3},
-      {sport:'Volei',icona_url:'assets/imagini/voleirealist.png',fundal_url:'assets/imagini/RealistVolei.png',ordine:4}
+      {sport:'Volei',icona_url:'assets/imagini/voleirealist.png',fundal_url:'assets/imagini/RealistVolei.png',ordine:4},
+      {sport:'Tenis Picior',icona_url:'assets/imagini/fotbalrealist.png',fundal_url:'assets/imagini/RealistFotbal.png',ordine:5}
      ]);
      if(u.pathname.endsWith('/terenuri'))return reply(200,[{id:1,nume:'Court A',sport:'Fotbal',pret:100,poza:null,este_activ:true,are_chat:true,oras:'Test',ore_rezervabile:['12:00']}]);
      return reply(200,[]);
@@ -70,7 +85,7 @@ let passed=0;
   console.log('PASS a recovery URL marker cannot reset an unrelated existing login');passed++;
   const expired=await fixture();await expired.page.goto(new URL(base).href+'#error=access_denied&error_code=otp_expired&type=recovery',{waitUntil:'networkidle'});
   assert.equal(await expired.page.locator('#modal-parola-noua').count(),0);assert.equal(expired.writes.length,0);assert.ok(expired.alerts.some(s=>s.includes('invalid sau a expirat')));
-  assert.equal(await expired.page.locator('.card-sport').count(),4);
+  assert.equal(await expired.page.locator('.card-sport[data-sport]').count(),5);
   console.log('PASS an expired link leaves the site usable and sends no password update');passed++;
   const switched=await fixture();await switched.page.goto(recoveryUrl(),{waitUntil:'networkidle'});await switched.page.locator('#modal-parola-noua').waitFor({state:'visible'});
   const gate=switched.pauseUser();await switched.page.locator('#input-noua-parola-js').fill('654321');await switched.page.locator('#btn-salveaza-parola-js').click();await gate.entered;
