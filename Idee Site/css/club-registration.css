@@ -60,7 +60,11 @@
 #modal-club-registration .buton-inchidere { color: #edca82; }
 #modal-club-registration :focus-visible, .club-registration-section :focus-visible { outline: 2px solid #edca82; outline-offset: 3px; }
 #modal-club-registration .club-request-privacy { color: #c9c0b2; font-size: 13px; line-height: 1.6; margin: 0 0 24px; }
-#club-request-fields { min-width: 0; border: 0; padding: 0; margin: 0; }
+#club-request-fields, #club-request-account-fields { min-width: 0; border: 0; padding: 0; margin: 0; }
+#club-request-account-fields { margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(216, 182, 106, .22); }
+#club-request-account-fields legend { padding: 0 6px 0 0; color: #edca82; font-size: 17px; font-weight: 600; }
+#club-request-account-fields p { color: #c9c0b2; font-size: 13px; line-height: 1.65; margin: 0 0 12px; }
+#club-request-account-fields small { display: block; margin-top: 10px; }
 .club-request-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .club-request-wide { grid-column: 1 / -1; }
 #club-registration-form label { display: grid; gap: 7px; min-width: 0; color: #f7f3e8; font-size: 14px; }

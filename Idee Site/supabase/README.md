@@ -54,7 +54,7 @@ Pe **12 octombrie 2026**, migrarea 003 a fost aplicată în **Rendez-Vous** prin
 
 Adresele de redirect Auth sunt exacte; wildcardul vechi pentru spotivity.ro a fost eliminat. La cererea proprietarului, parola nouă are în continuare minimum **6 caractere**. Confirmarea automată și absența SMTP au fost păstrate; configurarea emailului și datele firmei sunt amânate de proprietar. Raportul de verificare și pașii rămași sunt în [PRODUCTION_REVIEW.md](../PRODUCTION_REVIEW.md).
 
-Pentru **alt proiect**, ordinea migrărilor este **001 → 003 → 004 → 005 → 006 → 007 → 008 → 009 → 010 → 011** după inventar/backup și verificarea datelor. 002 conține numai exemple de roluri pentru conturi Auth existente și confirmate. Fișierele `tests/` se rulează exclusiv în baza izolată. Instrucțiunile istorice de mai jos pentru reinstalarea 001 se aplică numai proiectelor fără migrări ulterioare.
+Pentru **alt proiect**, ordinea migrărilor este **001 → 003 → 004 → 005 → 006 → 007 → 008 → 009 → 010 → 011 → 012** după inventar/backup și verificarea datelor. 002 conține numai exemple de roluri pentru conturi Auth existente și confirmate. Fișierele `tests/` se rulează exclusiv în baza izolată. Instrucțiunile istorice de mai jos pentru reinstalarea 001 se aplică numai proiectelor fără migrări ulterioare.
 
 ## Căutare și afișare pe telefon
 
@@ -327,6 +327,39 @@ RLS permite în continuare citirea publică a imaginilor și modificarea configu
 
 Numai superadminii verificați din `users_admin.user_id` pot citi cererile și fotografiile atașate. Granturile permit modificarea doar a stării și notei interne; triggerul înregistrează persoana și ora verificării. Datele depuse sunt păstrate. Utilizatorii și administratorii obișnuiți nu pot lista cererile. Un utilizator își poate citi/curăța numai fotografiile proprii încă neatașate; după trimitere acestea sunt private superadminilor și nu mai pot fi înlocuite de solicitant. Politicile restrictive împiedică politicile Storage permisive vechi să deschidă bucketul nou.
 
-RPC-ul folosește un UUID stabil pentru confirmarea/reîncercarea aceleiași cereri și o limită de cinci cereri pe cont în 24 de ore. Blocarea se face pe solicitant, fără blocarea globală a rezervărilor. O cerere acceptată nu publică automat o bază, nu creează terenuri și nu acordă roluri. Meniul **Cereri înscriere baze** este disponibil numai superadminului în `admin.html`.
+RPC-ul folosește un UUID stabil pentru confirmarea/reîncercarea aceleiași cereri și o limită de cinci cereri pe cont în 24 de ore. Blocarea se face pe solicitant, fără blocarea globală a rezervărilor. În versiunea istorică 011, acceptarea era doar o etichetă; migrarea 012 introduce publicarea și accesul admin la acceptare. Meniul **Cereri înscriere baze** este disponibil numai superadminului în `admin.html`.
 
 `club-requests.test.cjs` verifică în PostgreSQL izolat validarea, granturile/RLS, confidențialitatea fotografiilor, reîncercarea, limitele și păstrarea funcționalității existente, atât cu UUID cât și cu ID numeric pentru terenuri. `club-requests-browser.test.cjs` folosește SDK-ul real și Storage izolat pentru formular, fotografii, autentificare, gestionare, revocarea accesului și afișarea pe telefon/desktop. Nu executa testele în proiectul real.
+
+
+## 012 — înscriere fără conectare și aprobare cu publicare
+
+`012_club_approval.sql` este aplicată în proiectul existent după 011, iar funcția Edge este publicată. Pentru alt proiect, aplică migrarea după 011. Păstrează cererile existente fără să le aprobe automat, rezervă un UUID stabil pentru viitoarea bază și adaugă metadatele publicării și tarifele propuse. Cererile vechi pot fi aprobate după completarea tarifelor. Fotografiile vechi cu nume UUID aleator sunt compatibile.
+
+Deployează și directorul `functions/club-applications` ca Edge Function **club-applications**, cu `verify_jwt=false`: ruta de înscriere este publică; rutele de acceptare/respingere verifică explicit JWT-ul prin Auth și rolul real curent din `users_admin`. Runtime-ul primește `SUPABASE_URL`, `SUPABASE_ANON_KEY` și `SUPABASE_SERVICE_ROLE_KEY` din mediul Supabase. Nu publica aceste secrete în frontend. Nu modifica setările de confirmare email sau SMTP ca parte a instalării.
+
+Exemplu cu Supabase CLI conectat la proiectul potrivit:
+
+```bash
+supabase functions deploy club-applications --project-ref ndubcdwohqzgxpuiowye --no-verify-jwt
+```
+
+Funcția validează formularul și fotografia înainte de Auth. Pentru un cont existent verifică parola; pentru unul nou folosește înscrierea normală Supabase Auth. Nu resetează parola unui cont existent și nu returnează sesiuni. RPC-ul `submit_club_application` este executabil numai de `service_role`, iar vechiul `submit_club_request` nu mai este executabil din browser. Parolele nu sunt parametri SQL și nu sunt salvate în cereri.
+
+`approve_club_request` și `reject_club_request` sunt disponibile utilizatorilor autentificați, dar verifică în server rolul actual de superadmin și emailul confirmat al acestuia. Acceptarea cere contul real al solicitantului cu emailul confirmat și identic cu cererea. Într-o singură tranzacție creează baza activă, terenurile active, rolul obișnuit și permisiunea explicită asupra bazei; păstrează orice permisiuni anterioare și nu acordă `is_super`. Tarifele sunt numere întregi 0–100000 RON/oră, câte unul pentru fiecare teren; zero trebuie introdus explicit. Reîncercarea nu dublează publicarea. Respingerea nu acordă roluri și nu publică nimic.
+
+Fotografia privată este copiată de Edge într-o cale UUID proprie fiecărei încercări, în baza rezervată, verificată de SQL înainte de aprobare. Dacă tranzacția eșuează sigur, copia nouă nereferită este curățată; un rezultat incert nu poate șterge fotografia unei baze deja publicate. După publicare, cererea nu mai poate fi respinsă sau folosită pentru o altă bază. RLS și protecția rezervărilor finalizate rămân active.
+
+Verificări izolate, fără acces la datele live:
+
+```bash
+node supabase/tests/club-approval.test.cjs
+SPOTIVITY_TEST_INTEGER_IDS=1 node supabase/tests/club-approval.test.cjs
+node --test supabase/tests/club-applications-edge.test.cjs
+SITE_BASE_URL=http://127.0.0.1:8002/ node supabase/tests/club-requests-browser.test.cjs
+```
+
+Testele SQL acoperă permisiuni, publicare atomică, rollback, prețuri, fotografii, păstrarea datelor și reîncercări. Testele browser folosesc SDK-ul real, handlerul Edge real și RPC-urile/RLS în PostgreSQL izolat, cu Auth și Storage simulate. Nu executa fixture-urile în proiectul real.
+
+
+Verificarea live a inclus o probă SQL complet anulată prin rollback și un test HTTPS cu conturi QA temporare: înscriere anonimă cu parolă, zero permisiuni înainte de aprobare, publicarea bazei/terenului și copierea reală a fotografiei, acces obișnuit limitat și respingere fără resurse. Toate datele QA au fost șterse prin API-urile corespunzătoare. Amprentele datelor existente (clienți, admini, terenuri, baze, rezervări și cereri reale) au rămas identice. Nicio cerere reală nu a fost aprobată sau respinsă în test.

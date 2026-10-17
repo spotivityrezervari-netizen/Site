@@ -16,12 +16,12 @@
     <script src="js/sport-appearance.js?v=2" defer></script>
     <script src="js/admin.js?v=22" defer></script>
     <script src="js/admin-baze.js?v=3" defer></script>
-    <script src="js/admin-club-requests.js?v=1" defer></script>
+    <script src="js/admin-club-requests.js?v=2" defer></script>
     <link rel="stylesheet" href="css/admin.css?v=3">
     <link rel="stylesheet" href="css/theme.css?v=2">
     <link rel="stylesheet" href="css/base-media.css?v=1">
     <link rel="stylesheet" href="css/admin-theme.css?v=1">
-    <link rel="stylesheet" href="css/admin-club-requests.css?v=1">
+    <link rel="stylesheet" href="css/admin-club-requests.css?v=2">
     
 </head>
 <body class="admin-page">
@@ -100,7 +100,7 @@
         <section class="modal-continut admin-club-dialog" role="dialog" aria-modal="true" aria-labelledby="admin-cereri-title" tabindex="-1">
             <button type="button" class="buton-inchidere" id="admin-cereri-close" aria-label="Închide cererile de înscriere">X</button>
             <h2 class="titlu-modal" id="admin-cereri-title">Cereri înscriere baze</h2>
-            <p class="admin-club-help">Datele și fotografiile din cereri sunt vizibile numai superadminilor.</p>
+            <p class="admin-club-help">Cererile și datele de contact sunt private. Acceptarea publică baza, terenurile și fotografia și activează accesul administratorului bazei.</p>
             <div class="admin-club-toolbar">
                 <div class="grup-input">
                     <label for="admin-cereri-filter">Starea cererii</label>
@@ -129,14 +129,12 @@
                     <img id="admin-cerere-photo" class="admin-club-photo" alt="Fotografia trimisă a bazei sportive" referrerpolicy="no-referrer" decoding="async" hidden>
                     <p id="admin-cerere-photo-status" class="admin-club-help" role="status"></p>
                     <form id="admin-cerere-form">
-                        <div class="grup-input">
+                        <div class="grup-input" id="admin-cerere-state-field">
                             <label for="admin-cerere-state">Starea cererii</label>
                             <select id="admin-cerere-state" required>
                                 <option value="noua">Nouă</option>
                                 <option value="in_analiza">În analiză</option>
                                 <option value="contactata">Contactată</option>
-                                <option value="acceptata">Acceptată</option>
-                                <option value="respinsa">Respinsă</option>
                                 <option value="arhivata">Arhivată</option>
                             </select>
                         </div>
@@ -144,10 +142,31 @@
                             <label for="admin-cerere-note">Notă internă</label>
                             <textarea id="admin-cerere-note" rows="4" maxlength="2000" placeholder="Discuții, verificări și următorii pași"></textarea>
                         </div>
-                        <p class="admin-club-help">Acceptarea cererii nu publică automat baza pe site. Baza, terenurile și permisiunile se configurează separat după verificare.</p>
                         <button type="submit" class="buton-rezervare" id="admin-cerere-save">Salvează modificările</button>
                         <p id="admin-cerere-save-status" role="status" aria-live="polite"></p>
                     </form>
+                    <section id="admin-cerere-decision" class="admin-club-decision" aria-labelledby="admin-cerere-decision-title" hidden>
+                        <h4 id="admin-cerere-decision-title">Decizia de publicare</h4>
+                        <p class="admin-club-help">Verifică tariful fiecărui teren. Acceptarea creează baza și terenurile active, le publică pe site și acordă solicitantului acces de admin numai la baza sa.</p>
+                        <fieldset id="admin-cerere-prices" class="admin-club-prices">
+                            <legend>Tarife de publicat · lei/oră</legend>
+                            <div id="admin-cerere-price-fields"></div>
+                        </fieldset>
+                        <div class="admin-club-decision-buttons">
+                            <button type="button" class="buton-rezervare" id="admin-cerere-approve">Acceptă și publică</button>
+                            <button type="button" class="btn-cont admin-club-reject" id="admin-cerere-reject">Respinge cererea</button>
+                        </div>
+                        <section id="admin-cerere-confirm" class="admin-club-confirm" aria-labelledby="admin-cerere-confirm-title" hidden>
+                            <h4 id="admin-cerere-confirm-title" tabindex="-1">Confirmă decizia</h4>
+                            <p id="admin-cerere-confirm-description"></p>
+                            <ul id="admin-cerere-confirm-prices" class="admin-club-courts"></ul>
+                            <div class="admin-club-decision-buttons">
+                                <button type="button" class="buton-rezervare" id="admin-cerere-confirm-submit">Confirmă</button>
+                                <button type="button" class="btn-cont" id="admin-cerere-confirm-cancel">Înapoi la verificare</button>
+                            </div>
+                        </section>
+                    </section>
+                    <p id="admin-cerere-decision-status" role="status" aria-live="polite"></p>
                 </section>
             </div>
         </section>

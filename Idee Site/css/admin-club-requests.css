@@ -61,12 +61,33 @@
 .admin-club-photo { display: block; width: 100%; max-height: 330px; object-fit: contain; border-radius: 10px; background: #101a14; }
 #admin-cerere-form { display: grid; gap: 14px; min-width: 0; }
 #admin-cerere-form .grup-input { display: grid; gap: 7px; margin: 0; min-width: 0; }
-#admin-cerere-form :is(textarea, select), #admin-cereri-filter { width: 100%; min-width: 0; min-height: 46px; padding: 12px; box-sizing: border-box; border: 1px solid var(--spotivity-gold-border, #655e40); border-radius: 9px; font: inherit; font-size: 16px; }
+#admin-cerere-form :is(textarea, select), #admin-cereri-filter, .admin-club-prices input { width: 100%; min-width: 0; min-height: 46px; padding: 12px; box-sizing: border-box; border: 1px solid var(--spotivity-gold-border, #655e40); border-radius: 9px; font: inherit; font-size: 16px; }
 #admin-cerere-note { resize: vertical; }
 #admin-cerere-save { margin: 0; min-height: 48px; line-height: 1.4; padding: 12px 16px; }
 #admin-cerere-save:disabled { background: #293b2b; color: #a4b19f; box-shadow: none; }
-#admin-cereri-status, #admin-cerere-save-status { font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
-#admin-cereri-status:empty, #admin-cerere-save-status:empty, #admin-cerere-photo-status:empty { display: none; }
+#admin-cereri-status, #admin-cerere-save-status, #admin-cerere-decision-status { font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+#admin-cereri-status:empty, #admin-cerere-save-status:empty, #admin-cerere-photo-status:empty, #admin-cerere-decision-status:empty { display: none; }
+#admin-cerere-decision-status a { color: #edca82; text-decoration: underline; text-underline-offset: 3px; }
+.admin-club-decision { display: grid; gap: 14px; min-width: 0; padding-top: 4px; border-top: 1px solid var(--spotivity-gold-border, #655e40); }
+.admin-club-decision > h4, .admin-club-confirm > h4 { margin-bottom: 0; }
+.admin-club-decision p { margin: 0; }
+.admin-club-prices { min-width: 0; margin: 0; padding: 14px; border: 1px solid var(--spotivity-gold-border, #655e40); border-radius: 10px; }
+.admin-club-prices legend { padding: 0 6px; color: #edca82; font-size: 14px; line-height: 1.5; }
+#admin-cerere-price-fields { display: grid; gap: 12px; }
+.admin-club-prices .grup-input { display: grid; gap: 6px; min-width: 0; margin: 0; }
+.admin-club-prices label { font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.admin-club-prices input { background: #1b2d20; color: #f4f0e4; }
+.admin-club-prices input::placeholder { color: #bac2b2; opacity: 1; }
+.admin-club-prices input:disabled { opacity: .65; }
+.admin-club-decision-buttons { display: flex; flex-wrap: wrap; gap: 12px; min-width: 0; }
+.admin-page .admin-club-decision-buttons :is(.buton-rezervare, .btn-cont) { flex: 1 1 190px; width: auto; min-width: 0; min-height: 48px; margin: 0; padding: 12px 16px; font-size: 15px; line-height: 1.5; white-space: normal; overflow-wrap: anywhere; }
+.admin-page .admin-club-decision-buttons .admin-club-reject { color: #ffc4bb; border: 1px solid #a66b62; background: #38221f; box-shadow: none; }
+.admin-page .admin-club-decision-buttons .admin-club-reject:hover { background: #4a2a25; border-color: #ffc4bb; }
+.admin-club-decision-buttons button:disabled { opacity: .65; cursor: wait; }
+.admin-club-confirm { display: grid; gap: 12px; padding: 14px; border: 1px solid #d8b66a; border-radius: 10px; background: #203226; }
+.admin-club-confirm h4 { margin-top: 0; }
+.admin-club-confirm p { font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+#modal-cereri-baze-admin [hidden] { display: none !important; }
 #modal-cereri-baze-admin .is-error { color: #ffc4bb; }
 @media (max-width: 700px) {
     .admin-club-workspace:has(.admin-club-detail:not([hidden])) { grid-template-columns: minmax(0, 1fr); }

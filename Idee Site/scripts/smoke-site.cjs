@@ -227,6 +227,10 @@ async function openProfile(page) {
       await page.locator('#modal-club-registration').waitFor({state: 'visible'});
       assert.equal(await page.locator('#club-request-name').isVisible(), true);
       assert.equal(await page.locator('#club-request-email').getAttribute('type'), 'email');
+      assert.equal(await page.locator('#club-request-password').getAttribute('type'), 'password');
+      assert.equal(await page.locator('#club-request-password-confirm').getAttribute('type'), 'password');
+      assert.equal(await page.locator('[data-club-court-price]').getAttribute('step'), '1');
+      assert.equal(await page.locator('#club-request-submit').isEnabled(), true);
       assert.equal(await page.locator('[data-club-court-sport] option').count(), 5);
       assert.equal(await page.locator('#club-request-photo').getAttribute('type'), 'file');
       const bounds = await page.locator('.club-registration-panel').boundingBox();

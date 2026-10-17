@@ -1,15 +1,16 @@
-/* Club applications are private. RLS remains the authority for every read and review. */
+/* Applications and contacts stay private; the approval service alone publishes bases and access. */
 (() => {
     'use strict';
     const table = 'cereri_baze_sportive';
     const bucket = 'cereri_baze_sportive';
     const pageSize = 50;
     const summaryFields = 'id,created_at,nume_baza,nume_contact,oras,terenuri,stare';
-    const detailFields = 'id,created_at,updated_at,solicitant_user_id,nume_baza,nume_contact,email,telefon,oras,adresa,link_maps,terenuri,descriere,poza_path,stare,nota_interna,reviewer_user_id,reviewed_at';
+    const detailFields = 'id,created_at,updated_at,solicitant_user_id,nume_baza,nume_contact,email,telefon,oras,adresa,link_maps,terenuri,descriere,poza_path,stare,nota_interna,reviewer_user_id,reviewed_at,reserved_base_id,approved_base_id,approved_court_ids,preturi_solicitate';
     const states = {
         noua: 'Nouă', in_analiza: 'În analiză', contactata: 'Contactată',
         acceptata: 'Acceptată', respinsa: 'Respinsă', arhivata: 'Arhivată'
     };
+    const reviewStates = new Set(['noua', 'in_analiza', 'contactata', 'arhivata']);
     const uuid = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
     const photoPattern = new RegExp(`^${uuid}/${uuid}/${uuid}\\.(?:jpg|jpeg|png|webp|avif|gif)$`, 'i');
     const byId = id => document.getElementById(id);
@@ -27,6 +28,7 @@
     let hasMore = false;
     let lastFocus = null;
     let verificationTimer = null;
+    let pendingDecision = null;
 
     const isOpen = () => byId('modal-cereri-baze-admin')?.style.display === 'flex';
     const current = context => role?.isSuper === true && context.generation === generation
@@ -65,6 +67,14 @@
         photo.removeAttribute('src');
         message('admin-cerere-photo-status', '');
     }
+    function clearDecision(restoreFocus = false) {
+        const previous = pendingDecision?.action;
+        pendingDecision = null;
+        byId('admin-cerere-confirm').hidden = true;
+        byId('admin-cerere-confirm-description').textContent = '';
+        byId('admin-cerere-confirm-prices').replaceChildren();
+        if (restoreFocus) byId(previous === 'reject' ? 'admin-cerere-reject' : 'admin-cerere-approve').focus();
+    }
     function clearDetail() {
         detailGeneration++;
         selected = null;
@@ -75,13 +85,21 @@
         byId('admin-cerere-title').textContent = '';
         byId('admin-cerere-data').replaceChildren();
         byId('admin-cerere-state').value = 'noua';
+        byId('admin-cerere-state-field').hidden = false;
         byId('admin-cerere-note').value = '';
         byId('admin-cerere-save').disabled = false;
         byId('admin-cerere-state').disabled = false;
         byId('admin-cerere-note').disabled = false;
         byId('admin-cerere-save').textContent = 'Salvează modificările';
         byId('admin-cerere-form').setAttribute('aria-busy', 'false');
+        clearDecision();
+        byId('admin-cerere-decision').hidden = true;
+        byId('admin-cerere-price-fields').replaceChildren();
+        byId('admin-cerere-prices').disabled = false;
+        for (const id of ['admin-cerere-approve', 'admin-cerere-reject', 'admin-cerere-confirm-submit', 'admin-cerere-confirm-cancel', 'admin-cerere-back', 'admin-cereri-filter', 'admin-cereri-refresh', 'admin-cereri-more']) byId(id).disabled = false;
+        byId('admin-cerere-decision').setAttribute('aria-busy', 'false');
         message('admin-cerere-save-status', '');
+        message('admin-cerere-decision-status', '');
         for (const node of byId('admin-cereri-list').querySelectorAll('[aria-current]')) node.removeAttribute('aria-current');
     }
     function clearView() {
@@ -134,7 +152,7 @@
             clear();
             throw new Error('Sesiunea a expirat. Conectează-te din nou.');
         }
-        // Freeze this operation to the verified account, including Storage and UPDATE requests.
+        // Freeze this operation to the verified account, including Storage, UPDATE and approval requests.
         const client = createClient(supabaseUrl, supabaseKey, {
             auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
         });
@@ -284,6 +302,64 @@
         item.append(data);
         list.append(item);
     }
+    function isPublished(record) {
+        return typeof record?.approved_base_id === 'string' && new RegExp(`^${uuid}$`, 'i').test(record.approved_base_id);
+    }
+    const isProvisioned = record => isPublished(record) || Array.isArray(record?.approved_court_ids);
+    function renderDecision(record) {
+        clearDecision();
+        const published = isPublished(record);
+        const final = isProvisioned(record) || record.stare === 'respinsa';
+        byId('admin-cerere-state-field').hidden = final || record.stare === 'acceptata';
+        byId('admin-cerere-save').textContent = final || record.stare === 'acceptata' ? 'Salvează nota internă' : 'Salvează modificările';
+        byId('admin-cerere-decision').hidden = final;
+        const fields = byId('admin-cerere-price-fields');
+        fields.replaceChildren();
+        if (published) {
+            const status = byId('admin-cerere-decision-status');
+            status.classList.remove('is-error');
+            const link = element('a', 'Vezi baza publicată');
+            const url = new URL('index.html', window.location.href);
+            url.searchParams.set('baza', record.approved_base_id);
+            link.href = url.href;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            status.replaceChildren(document.createTextNode('Bază publicată, acces admin activ. '), link);
+            return;
+        }
+        if (isProvisioned(record)) {
+            message('admin-cerere-decision-status', 'Cererea a fost acceptată anterior. Baza nu mai este disponibilă; această cerere nu poate crea din nou baza sau accesul de admin.');
+            return;
+        }
+        if (record.stare === 'respinsa') {
+            message('admin-cerere-decision-status', 'Cerere respinsă. Nu au fost create baza, terenurile sau permisiuni de admin.');
+            return;
+        }
+        message('admin-cerere-decision-status', '');
+        const courts = Array.isArray(record.terenuri) ? record.terenuri : [];
+        const prices = Array.isArray(record.preturi_solicitate) ? record.preturi_solicitate : [];
+        courts.forEach((court, index) => {
+            const group = element('div', undefined, 'grup-input');
+            const id = `admin-cerere-price-${index}`;
+            const label = element('label', `${court.nume || `Teren ${index + 1}`} · ${sportLabel(court.sport)}`);
+            label.htmlFor = id;
+            const input = document.createElement('input');
+            input.id = id;
+            input.type = 'number';
+            input.min = '0';
+            input.max = '100000';
+            input.step = '1';
+            input.required = true;
+            input.inputMode = 'numeric';
+            input.dataset.courtPriceIndex = String(index);
+            input.setAttribute('aria-label', `Tarif lei/oră pentru ${court.nume || `terenul ${index + 1}`}`);
+            input.placeholder = 'Tarif lei/oră';
+            // Legacy requests have no tariff: require an explicit price, including an intentional zero.
+            if (Number.isInteger(prices[index]) && prices[index] >= 0 && prices[index] <= 100000) input.value = String(prices[index]);
+            group.append(label, input);
+            fields.append(group);
+        });
+    }
     function renderDetail(record) {
         selected = record;
         byId('admin-cerere-title').textContent = record.nume_baza;
@@ -306,8 +382,9 @@
             courts.append(element('li', `${court.nume || 'Teren'} · ${sportLabel(court.sport)}`));
         }
         content.replaceChildren(details, courtsTitle, courts, element('h4', 'Descriere'), element('p', record.descriere || 'Nu a fost adăugată o descriere.', 'admin-club-description'));
-        byId('admin-cerere-state').value = Object.hasOwn(states, record.stare) ? record.stare : 'noua';
+        byId('admin-cerere-state').value = reviewStates.has(record.stare) ? record.stare : 'noua';
         byId('admin-cerere-note').value = record.nota_interna || '';
+        renderDecision(record);
         byId('admin-cerere-detail').hidden = false;
         byId('admin-cereri-directory').classList.add('has-selected-request');
         renderList();
@@ -339,7 +416,9 @@
             photo.alt = `Fotografia trimisă · ${record.nume_baza}`;
             photo.src = url.href;
             photo.hidden = false;
-            message('admin-cerere-photo-status', 'Fotografie privată, disponibilă numai superadminilor.');
+            message('admin-cerere-photo-status', isPublished(record)
+                ? 'Fotografia cererii rămâne privată; o copie a fost publicată la baza acceptată.'
+                : 'Fotografie privată. Acceptarea va publica o copie la baza sportivă.');
         } catch (error) {
             if (current(context) && selected?.id === record.id) {
                 clearPhoto();
@@ -371,22 +450,26 @@
 
     function savingControls(value) {
         saving = value;
-        for (const id of ['admin-cerere-save', 'admin-cerere-state', 'admin-cerere-note']) byId(id).disabled = value;
-        byId('admin-cerere-save').textContent = value ? 'Se salvează…' : 'Salvează modificările';
+        for (const id of ['admin-cerere-save', 'admin-cerere-state', 'admin-cerere-note', 'admin-cerere-approve', 'admin-cerere-reject', 'admin-cerere-confirm-submit', 'admin-cerere-confirm-cancel', 'admin-cerere-back', 'admin-cereri-filter', 'admin-cereri-refresh', 'admin-cereri-more']) byId(id).disabled = value;
+        byId('admin-cerere-prices').disabled = value;
+        byId('admin-cerere-save').textContent = value ? 'Se salvează…'
+            : selected && (isProvisioned(selected) || ['acceptata', 'respinsa'].includes(selected.stare)) ? 'Salvează nota internă' : 'Salvează modificările';
         byId('admin-cerere-form').setAttribute('aria-busy', String(value));
+        byId('admin-cerere-decision').setAttribute('aria-busy', String(value));
     }
     async function save(event) {
         event.preventDefault();
         if (saving || !selected || !role?.isSuper) return;
         const context = operation({ view: true, detail: true });
         const record = selected;
-        const state = byId('admin-cerere-state').value;
+        const state = isProvisioned(record) || ['acceptata', 'respinsa'].includes(record.stare) ? record.stare : byId('admin-cerere-state').value;
         const note = byId('admin-cerere-note').value.trim();
-        if (!Object.hasOwn(states, state) || note.length > 2000) {
+        if ((!reviewStates.has(state) && state !== record.stare) || !Object.hasOwn(states, state) || note.length > 2000) {
             finish(context);
             return message('admin-cerere-save-status', 'Alege o stare validă și o notă de cel mult 2.000 de caractere.', true);
         }
         savingControls(true);
+        clearDecision();
         message('admin-cerere-save-status', '');
         try {
             const client = await authorizedClient(context);
@@ -405,6 +488,122 @@
             if (current(context)) message('admin-cerere-save-status', error.message || 'Salvarea nu a reușit.', true);
         } finally {
             if (current(context)) savingControls(false);
+            finish(context);
+        }
+    }
+
+    function readPrices() {
+        const courts = Array.isArray(selected?.terenuri) ? selected.terenuri : [];
+        if (!courts.length) throw new Error('Cererea nu conține terenuri care pot fi publicate.');
+        return courts.map((_, index) => {
+            const input = byId(`admin-cerere-price-${index}`);
+            if (!input || !/^\d+$/.test(input.value) || !Number.isInteger(Number(input.value))
+                || Number(input.value) < 0 || Number(input.value) > 100000 || !input.checkValidity()) {
+                input?.focus();
+                input?.reportValidity();
+                throw new Error('Completează pentru fiecare teren un tarif întreg între 0 și 100.000 lei/oră.');
+            }
+            return Number(input.value);
+        });
+    }
+    function prepareDecision(action) {
+        if (saving || !selected || !role?.isSuper || isProvisioned(selected) || selected.stare === 'respinsa') return;
+        clearDecision();
+        message('admin-cerere-decision-status', '');
+        try {
+            if (action === 'approve' && selected.stare === 'arhivata') throw new Error('Schimbă starea cererii arhivate în „În analiză” și salvează înainte de a o accepta.');
+            const note = byId('admin-cerere-note').value.trim();
+            if (note.length > 2000) throw new Error('Nota internă poate avea cel mult 2.000 de caractere.');
+            const prices = action === 'approve' ? readPrices() : [];
+            pendingDecision = { action, id: selected.id, updatedAt: selected.updated_at, prices, note };
+            const approve = action === 'approve';
+            byId('admin-cerere-confirm-title').textContent = approve ? 'Confirmă acceptarea și publicarea' : 'Confirmă respingerea';
+            byId('admin-cerere-confirm-description').textContent = approve
+                ? `Publici „${selected.nume_baza}” în ${selected.oras}, cu ${prices.length} ${prices.length === 1 ? 'teren activ' : 'terenuri active'} și fotografia trimisă, dacă există. Solicitantul primește acces de admin numai la această bază. Datele sale de contact rămân private.`
+                : `Respingi cererea „${selected.nume_baza}”. Nu se publică o bază și nu se acordă acces de admin. Nota internă rămâne vizibilă numai superadminilor.`;
+            const list = byId('admin-cerere-confirm-prices');
+            prices.forEach((price, index) => list.append(element('li', `${selected.terenuri[index].nume || `Teren ${index + 1}`} · ${price} lei/oră`)));
+            byId('admin-cerere-confirm-submit').textContent = approve ? 'Confirmă acceptarea și publică' : 'Confirmă respingerea';
+            byId('admin-cerere-confirm-submit').classList.toggle('admin-club-reject', !approve);
+            byId('admin-cerere-confirm').hidden = false;
+            byId('admin-cerere-confirm-title').focus();
+        } catch (error) {
+            message('admin-cerere-decision-status', error.message || 'Verifică datele cererii.', true);
+        }
+    }
+    function decisionError(response, payload) {
+        const codes = {
+            email_confirmation_required: 'Solicitantul trebuie să confirme adresa de email înainte de acceptare. Cererea nu a fost publicată.',
+            conflict: 'Cererea a fost modificată între timp. Reîncarcă lista și verifică din nou datele.',
+            already_published: 'Baza acestei cereri este deja publicată. Reîncarcă lista.',
+            forbidden: 'Permisiunea de superadmin nu mai este disponibilă.',
+            unauthorized: 'Sesiunea a expirat. Conectează-te din nou.'
+        };
+        return codes[payload?.code] || (typeof payload?.error === 'string' && payload.error.length <= 500 ? payload.error : '')
+            || (response.status === 409 ? codes.conflict : 'Decizia nu a putut fi salvată. Reîncarcă cererea pentru a verifica starea ei înainte de a reîncerca.');
+    }
+    async function submitDecision() {
+        if (saving || !pendingDecision || !selected || !role?.isSuper || isProvisioned(selected) || selected.stare === 'respinsa') return;
+        const decision = pendingDecision;
+        const record = selected;
+        if (decision.id !== record.id || decision.updatedAt !== record.updated_at) {
+            clearDecision();
+            return message('admin-cerere-decision-status', 'Cererea s-a schimbat. Verifică din nou datele înainte de confirmare.', true);
+        }
+        const context = operation({ view: true, detail: true });
+        if (!context) return;
+        savingControls(true);
+        byId('admin-cerere-confirm-submit').textContent = decision.action === 'approve' ? 'Se publică baza…' : 'Se respinge cererea…';
+        message('admin-cerere-decision-status', decision.action === 'approve' ? 'Se verifică și se publică baza sportivă…' : 'Se înregistrează respingerea…');
+        try {
+            const client = await authorizedClient(context);
+            const { data: sessionData, error: sessionError } = await client.auth.getSession();
+            check(context);
+            if (sessionError || sessionData?.session?.user?.id !== context.userId || !sessionData?.session?.access_token) {
+                throw new Error('Sesiunea a expirat. Conectează-te din nou.');
+            }
+            const body = {
+                action: decision.action, request_id: record.id, expected_updated_at: record.updated_at,
+                note: decision.note
+            };
+            if (decision.action === 'approve') body.prices = decision.prices;
+            const response = await fetch(`${supabaseUrl}/functions/v1/club-applications`, {
+                method: 'POST', headers: {
+                    'Content-Type': 'application/json', apikey: supabaseKey,
+                    Authorization: `Bearer ${sessionData.session.access_token}`
+                }, body: JSON.stringify(body), signal: context.controller.signal
+            });
+            const payload = await response.json().catch(() => null);
+            check(context);
+            if (!response.ok) throw new Error(decisionError(response, payload));
+            const expectedStatus = decision.action === 'approve' ? 'acceptata' : 'respinsa';
+            if (payload?.request_id !== record.id || payload?.status !== expectedStatus
+                || (decision.action === 'approve' && !isPublished({ approved_base_id: payload.base_id }))) {
+                throw new Error('Răspunsul publicării nu a putut fi verificat. Reîncarcă cererea înainte de a reîncerca.');
+            }
+            // Read the committed record instead of presenting a locally invented approval state.
+            const { data, error } = await client.from(table).select(detailFields).eq('id', record.id)
+                .abortSignal(context.controller.signal).maybeSingle();
+            check(context);
+            if (error || !data || data.stare !== expectedStatus
+                || (decision.action === 'approve' && data.approved_base_id !== payload.base_id)) {
+                clearDecision();
+                byId('admin-cerere-decision').hidden = true;
+                throw new Error('Decizia a fost înregistrată, dar detaliile nu au putut fi reîncărcate. Reîncarcă lista pentru a vedea rezultatul.');
+            }
+            renderDetail(data);
+            message('admin-cerere-save-status', decision.action === 'approve'
+                ? 'Cererea a fost acceptată. Baza și terenurile sunt publicate, iar accesul de admin la această bază este activ.'
+                : 'Cererea a fost respinsă. Nu s-a acordat acces de admin.');
+            await Promise.allSettled([loadList(false, true), refreshCount()]);
+        } catch (error) {
+            if (current(context)) message('admin-cerere-decision-status', error.message || 'Decizia nu a putut fi salvată.', true);
+        } finally {
+            if (current(context)) {
+                savingControls(false);
+                if (pendingDecision) byId('admin-cerere-confirm-submit').textContent = pendingDecision.action === 'approve'
+                    ? 'Confirmă acceptarea și publică' : 'Confirmă respingerea';
+            }
             finish(context);
         }
     }
@@ -463,6 +662,13 @@
             (button || byId('admin-cereri-filter')).focus();
         });
         byId('admin-cerere-form').addEventListener('submit', save);
+        byId('admin-cerere-approve').addEventListener('click', () => prepareDecision('approve'));
+        byId('admin-cerere-reject').addEventListener('click', () => prepareDecision('reject'));
+        byId('admin-cerere-confirm-submit').addEventListener('click', submitDecision);
+        byId('admin-cerere-confirm-cancel').addEventListener('click', () => clearDecision(true));
+        for (const id of ['admin-cerere-price-fields', 'admin-cerere-note']) byId(id).addEventListener('input', () => {
+            if (!saving) clearDecision();
+        });
         byId('admin-cerere-photo').addEventListener('error', () => {
             if (!selected) return;
             clearPhoto();

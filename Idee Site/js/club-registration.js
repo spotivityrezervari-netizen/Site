@@ -1,21 +1,21 @@
-/* Registration requests stay private. Supabase enforces submission and review permissions. */
+/* Public submissions use the server endpoint. Only approved applicants receive scoped admin access. */
 (() => {
     'use strict';
     const copy = {
         ro: {
             eyebrow: 'Pentru cluburi și baze sportive', title: 'Înscrie-ți baza sportivă', intro: 'Ai unul sau mai multe terenuri? Trimite-ne detaliile și hai să le aducem mai aproape de jucători.', open: 'Înscrie baza sportivă',
-            privacy: 'Cererea și fotografia sunt vizibile doar superadminului. Trimiterea necesită autentificare și nu publică automat baza.', details: 'Datele bazei sportive', name: 'Numele bazei / clubului *', contact: 'Persoană de contact *', email: 'Email de contact *', phone: 'Număr de telefon *', city: 'Oraș *', address: 'Adresă', maps: 'Link Google Maps *', mapsHint: 'Copiază linkul locației din Google Maps.', courts: 'Terenurile tale', courtsHint: 'Adaugă fiecare teren și sportul său. Maximum 20.', court: 'Terenul {n}', courtName: 'Numele terenului *', sport: 'Sport *', addCourt: '+ Adaugă un teren', removeCourt: 'Elimină', description: 'Alte detalii', photo: 'Fotografie (opțional)', photoHint: 'JPG, PNG, WebP, AVIF sau GIF, maximum 5 MB. Nu include documente sau date personale în fotografie.', removePhoto: 'Elimină fotografia', consent: 'Sunt de acord să fiu contactat în legătură cu această cerere.', submit: 'Trimite cererea', login: 'Autentifică-te pentru a trimite', close: 'Închide',
-            loginHint: 'Autentifică-te pentru a trimite cererea. Detaliile rămân completate, iar trimiterea se face doar când apeși din nou butonul.', ready: 'Te-ai autentificat. Verifică detaliile și apasă „Trimite cererea” când ești gata.', uploading: 'Se încarcă fotografia în siguranță…', sending: 'Se trimite cererea…', success: 'Cererea a fost trimisă superadminului. Te vom contacta după verificare.', failed: 'Cererea nu a putut fi trimisă. Detaliile au rămas completate. Încearcă din nou.', photoFailed: 'Fotografia nu a putut fi încărcată. Detaliile au rămas completate. Încearcă din nou.', invalidPhoto: 'Alege o fotografie JPG, PNG, WebP, AVIF sau GIF de maximum 5 MB.', invalidMaps: 'Introdu un link HTTPS valid de la Google Maps.', invalidPhone: 'Introdu un număr de telefon valid, cu 7–15 cifre.', invalidCourt: 'Completează numele și sportul fiecărui teren. Numele terenurilor trebuie să fie diferite.', invalidForm: 'Verifică și completează câmpurile obligatorii.', rate: 'Ai atins limita de 5 cereri pe zi. Poți încerca din nou mâine.', session: 'Sesiunea s-a schimbat. Autentifică-te din nou înainte de trimitere.', uncertain: 'Nu am primit confirmarea trimiterii. Apasă „Verifică trimiterea” pentru a verifica aceeași cerere, fără să o dublezi.', retry: 'Verifică trimiterea', photoUncertain: 'Încărcarea fotografiei nu a fost confirmată. Apasă „Reîncearcă trimiterea” pentru a continua aceeași cerere.', retryUpload: 'Reîncearcă trimiterea', busy: 'Trimiterea este în curs. Așteaptă confirmarea.'
+            privacy: 'Cererea și datele de contact sunt vizibile doar superadminului. Baza, terenurile și fotografia vor fi publicate doar după acceptare.', details: 'Datele bazei sportive', name: 'Numele bazei / clubului *', contact: 'Persoană de contact *', email: 'Email de contact *', phone: 'Număr de telefon *', city: 'Oraș *', address: 'Adresă', maps: 'Link Google Maps *', mapsHint: 'Copiază linkul locației din Google Maps.', courts: 'Terenurile tale', courtsHint: 'Adaugă fiecare teren și sportul său. Maximum 20.', court: 'Terenul {n}', courtName: 'Numele terenului *', sport: 'Sport *', price: 'Tarif pe oră (RON) *', addCourt: '+ Adaugă un teren', removeCourt: 'Elimină', description: 'Alte detalii', photo: 'Fotografie (opțional)', photoHint: 'JPG, PNG, WebP, AVIF sau GIF, maximum 5 MB. Nu include documente sau date personale în fotografie.', removePhoto: 'Elimină fotografia', consent: 'Sunt de acord să fiu contactat în legătură cu această cerere.', submit: 'Trimite cererea', close: 'Închide', account: 'Accesul la administrarea bazei', accountHint: 'Alege o parolă pentru emailul de contact. Vei putea administra baza cu acest email și această parolă doar după acceptarea cererii.', existingAccount: 'Pentru un email deja înregistrat, folosește parola acelui cont.', password: 'Parolă *', confirmPassword: 'Confirmă parola *', passwordHint: 'Folosește cel puțin 6 caractere.', invalidPassword: 'Parola trebuie să aibă minimum 6 caractere.', invalidPasswordLong: 'Parola este prea lungă. Alege una mai scurtă.', passwordMismatch: 'Parolele nu coincid.', credentials: 'Verifică emailul și parola. Pentru un email deja înregistrat, folosește parola acelui cont.', invalidPrice: 'Introdu pentru fiecare teren un tarif întreg între 0 și 100.000 RON pe oră.', retryPassword: 'Pentru a verifica aceeași cerere, introdu din nou parola folosită la trimitere.', confirmation: 'Confirmă adresa de email înainte de a retrimite cererea.', successConfirm: 'Cererea a fost trimisă și așteaptă verificarea. Confirmă adresa de email pentru ca baza să poată fi aprobată. Accesul la administrare se activează doar după acceptare.',
+            sending: 'Se trimite cererea…', success: 'Cererea a fost trimisă superadminului și este în așteptare. Vei putea intra în administrarea bazei cu emailul și parola alese doar după aprobare.', failed: 'Cererea nu a putut fi trimisă. Detaliile au rămas completate. Încearcă din nou.', invalidPhoto: 'Alege o fotografie JPG, PNG, WebP, AVIF sau GIF de maximum 5 MB.', invalidMaps: 'Introdu un link HTTPS valid de la Google Maps.', invalidPhone: 'Introdu un număr de telefon valid, cu 7–15 cifre.', invalidCourt: 'Completează numele și sportul fiecărui teren. Numele terenurilor trebuie să fie diferite.', invalidForm: 'Verifică și completează câmpurile obligatorii.', rate: 'Ai atins limita de 5 cereri pe zi. Poți încerca din nou mâine.', uncertain: 'Nu am primit confirmarea trimiterii. Apasă „Verifică trimiterea” pentru a verifica aceeași cerere, fără să o dublezi.', retry: 'Verifică trimiterea', busy: 'Trimiterea este în curs. Așteaptă confirmarea.'
         },
         hu: {
             eyebrow: 'Kluboknak és sportközpontoknak', title: 'Regisztráld sportközpontodat', intro: 'Egy vagy több sportpályád van? Küldd el az adataikat, és segítsünk a játékosoknak megtalálni őket.', open: 'Sportközpont regisztrálása',
-            privacy: 'A kérelmet és a fényképet csak a főadminisztrátor láthatja. Az elküldéshez bejelentkezés szükséges, és nem teszi közzé automatikusan a sportközpontot.', details: 'A sportközpont adatai', name: 'A sportközpont / klub neve *', contact: 'Kapcsolattartó neve *', email: 'Kapcsolattartási email *', phone: 'Telefonszám *', city: 'Város *', address: 'Cím', maps: 'Google Maps hivatkozás *', mapsHint: 'Másold ide a hely Google Maps hivatkozását.', courts: 'Sportpályáid', courtsHint: 'Add hozzá a pályákat és sportágukat. Legfeljebb 20 pálya.', court: '{n}. pálya', courtName: 'A pálya neve *', sport: 'Sportág *', addCourt: '+ Pálya hozzáadása', removeCourt: 'Törlés', description: 'További információk', photo: 'Fénykép (nem kötelező)', photoHint: 'JPG, PNG, WebP, AVIF vagy GIF, legfeljebb 5 MB. Ne szerepeljenek dokumentumok vagy személyes adatok a képen.', removePhoto: 'Fénykép eltávolítása', consent: 'Hozzájárulok, hogy megkeressenek ezzel a kérelemmel kapcsolatban.', submit: 'Kérelem elküldése', login: 'Jelentkezz be az elküldéshez', close: 'Bezárás',
-            loginHint: 'A kérelem elküldéséhez jelentkezz be. A kitöltött adatok megmaradnak; a küldéshez újra meg kell nyomnod a gombot.', ready: 'Sikeres bejelentkezés. Ellenőrizd az adatokat, majd küldd el a kérelmet.', uploading: 'A fénykép biztonságos feltöltése…', sending: 'Kérelem küldése…', success: 'A kérelmet elküldtük a főadminisztrátornak. Az ellenőrzés után felvesszük veled a kapcsolatot.', failed: 'A kérelmet nem sikerült elküldeni. A kitöltött adatok megmaradtak. Próbáld újra.', photoFailed: 'A fényképet nem sikerült feltölteni. A kitöltött adatok megmaradtak. Próbáld újra.', invalidPhoto: 'Válassz legfeljebb 5 MB méretű JPG, PNG, WebP, AVIF vagy GIF képet.', invalidMaps: 'Adj meg egy érvényes HTTPS Google Maps hivatkozást.', invalidPhone: 'Adj meg egy érvényes, 7–15 számjegyből álló telefonszámot.', invalidCourt: 'Add meg minden pálya nevét és sportágát. A pályanevek legyenek különbözők.', invalidForm: 'Ellenőrizd és töltsd ki a kötelező mezőket.', rate: 'Elérted a napi 5 kérelem korlátját. Próbáld újra holnap.', session: 'A munkamenet megváltozott. Küldés előtt jelentkezz be újra.', uncertain: 'Nem érkezett visszaigazolás. Nyomd meg a „Küldés ellenőrzése” gombot ugyanannak a kérelemnek az ellenőrzéséhez, másolat létrehozása nélkül.', retry: 'Küldés ellenőrzése', photoUncertain: 'A fénykép feltöltése nem lett visszaigazolva. Ugyanennek a kérelemnek a folytatásához próbáld újra.', retryUpload: 'Küldés újrapróbálása', busy: 'A küldés folyamatban van. Várd meg a visszaigazolást.'
+            privacy: 'A kérelmet és az elérhetőségeket csak a főadminisztrátor láthatja. A sportközpont, a pályák és a fénykép csak jóváhagyás után jelennek meg nyilvánosan.', details: 'A sportközpont adatai', name: 'A sportközpont / klub neve *', contact: 'Kapcsolattartó neve *', email: 'Kapcsolattartási email *', phone: 'Telefonszám *', city: 'Város *', address: 'Cím', maps: 'Google Maps hivatkozás *', mapsHint: 'Másold ide a hely Google Maps hivatkozását.', courts: 'Sportpályáid', courtsHint: 'Add hozzá a pályákat és sportágukat. Legfeljebb 20 pálya.', court: '{n}. pálya', courtName: 'A pálya neve *', sport: 'Sportág *', price: 'Óradíj (RON) *', addCourt: '+ Pálya hozzáadása', removeCourt: 'Törlés', description: 'További információk', photo: 'Fénykép (nem kötelező)', photoHint: 'JPG, PNG, WebP, AVIF vagy GIF, legfeljebb 5 MB. Ne szerepeljenek dokumentumok vagy személyes adatok a képen.', removePhoto: 'Fénykép eltávolítása', consent: 'Hozzájárulok, hogy megkeressenek ezzel a kérelemmel kapcsolatban.', submit: 'Kérelem elküldése', close: 'Bezárás', account: 'Hozzáférés a sportközpont kezeléséhez', accountHint: 'Válassz jelszót a kapcsolattartási emailhez. Csak a kérelem jóváhagyása után kezelheted a sportközpontot ezzel az emaillel és jelszóval.', existingAccount: 'Ha az email már regisztrálva van, használd a meglévő fiók jelszavát.', password: 'Jelszó *', confirmPassword: 'Jelszó megerősítése *', passwordHint: 'Használj legalább 6 karaktert.', invalidPassword: 'A jelszó legalább 6 karakter legyen.', invalidPasswordLong: 'A jelszó túl hosszú. Válassz rövidebbet.', passwordMismatch: 'A jelszavak nem egyeznek.', credentials: 'Ellenőrizd az emailt és a jelszót. Regisztrált emailnél a meglévő fiók jelszavát használd.', invalidPrice: 'Minden pályához 0 és 100 000 RON közötti egész óradíjat adj meg.', retryPassword: 'Ugyanennek a kérelemnek az ellenőrzéséhez add meg újra a küldéskor használt jelszót.', confirmation: 'Erősítsd meg az emailcímed, mielőtt újra elküldöd a kérelmet.', successConfirm: 'A kérelmet elküldtük, és ellenőrzésre vár. Erősítsd meg az emailcímed a sportközpont jóváhagyásához. A kezelőfelület csak jóváhagyás után érhető el.',
+            sending: 'Kérelem küldése…', success: 'A kérelmet elküldtük a főadminisztrátornak, és jóváhagyásra vár. Csak jóváhagyás után léphetsz be a sportközpont kezeléséhez a választott emaillel és jelszóval.', failed: 'A kérelmet nem sikerült elküldeni. A kitöltött adatok megmaradtak. Próbáld újra.', invalidPhoto: 'Válassz legfeljebb 5 MB méretű JPG, PNG, WebP, AVIF vagy GIF képet.', invalidMaps: 'Adj meg egy érvényes HTTPS Google Maps hivatkozást.', invalidPhone: 'Adj meg egy érvényes, 7–15 számjegyből álló telefonszámot.', invalidCourt: 'Add meg minden pálya nevét és sportágát. A pályanevek legyenek különbözők.', invalidForm: 'Ellenőrizd és töltsd ki a kötelező mezőket.', rate: 'Elérted a napi 5 kérelem korlátját. Próbáld újra holnap.', uncertain: 'Nem érkezett visszaigazolás. Nyomd meg a „Küldés ellenőrzése” gombot ugyanannak a kérelemnek az ellenőrzéséhez, másolat létrehozása nélkül.', retry: 'Küldés ellenőrzése', busy: 'A küldés folyamatban van. Várd meg a visszaigazolást.'
         },
         en: {
             eyebrow: 'For clubs and sports centres', title: 'Register your sports centre', intro: 'Have one court or several? Send us the details and help more players find their next game.', open: 'Register your sports centre',
-            privacy: 'Only the superadmin can view your request and photo. Sending requires signing in and does not automatically publish your sports centre.', details: 'Sports centre details', name: 'Sports centre / club name *', contact: 'Contact person *', email: 'Contact email *', phone: 'Phone number *', city: 'City *', address: 'Address', maps: 'Google Maps link *', mapsHint: 'Copy the location link from Google Maps.', courts: 'Your courts', courtsHint: 'Add each court and its sport. Up to 20 courts.', court: 'Court {n}', courtName: 'Court name *', sport: 'Sport *', addCourt: '+ Add a court', removeCourt: 'Remove', description: 'Additional details', photo: 'Photo (optional)', photoHint: 'JPG, PNG, WebP, AVIF or GIF, up to 5 MB. Do not include documents or personal information in the photo.', removePhoto: 'Remove photo', consent: 'I agree to be contacted about this request.', submit: 'Send request', login: 'Sign in to send', close: 'Close',
-            loginHint: 'Sign in to send your request. Your details will stay filled in; sending requires pressing the button again.', ready: 'You are signed in. Review your details and send the request when ready.', uploading: 'Uploading your photo securely…', sending: 'Sending your request…', success: 'Your request was sent to the superadmin. We will contact you after reviewing it.', failed: 'Your request could not be sent. Your details are still filled in. Please try again.', photoFailed: 'Your photo could not be uploaded. Your details are still filled in. Please try again.', invalidPhoto: 'Choose a JPG, PNG, WebP, AVIF or GIF photo up to 5 MB.', invalidMaps: 'Enter a valid HTTPS Google Maps link.', invalidPhone: 'Enter a valid phone number with 7–15 digits.', invalidCourt: 'Enter a name and sport for each court. Court names must be different.', invalidForm: 'Check and complete the required fields.', rate: 'You have reached the limit of 5 requests per day. Please try again tomorrow.', session: 'Your session changed. Sign in again before sending.', uncertain: 'We did not receive confirmation. Press “Check submission” to check the same request without sending a duplicate.', retry: 'Check submission', photoUncertain: 'The photo upload was not confirmed. Press “Retry submission” to continue the same request.', retryUpload: 'Retry submission', busy: 'Your request is being sent. Please wait for confirmation.'
+            privacy: 'Only the superadmin can view your request and contact details. Your sports centre, courts and photo will be published only after approval.', details: 'Sports centre details', name: 'Sports centre / club name *', contact: 'Contact person *', email: 'Contact email *', phone: 'Phone number *', city: 'City *', address: 'Address', maps: 'Google Maps link *', mapsHint: 'Copy the location link from Google Maps.', courts: 'Your courts', courtsHint: 'Add each court and its sport. Up to 20 courts.', court: 'Court {n}', courtName: 'Court name *', sport: 'Sport *', price: 'Hourly price (RON) *', addCourt: '+ Add a court', removeCourt: 'Remove', description: 'Additional details', photo: 'Photo (optional)', photoHint: 'JPG, PNG, WebP, AVIF or GIF, up to 5 MB. Do not include documents or personal information in the photo.', removePhoto: 'Remove photo', consent: 'I agree to be contacted about this request.', submit: 'Send request', close: 'Close', account: 'Access to manage your sports centre', accountHint: 'Choose a password for the contact email. You can manage the sports centre with this email and password only after your request is approved.', existingAccount: 'For an email that is already registered, use that account’s password.', password: 'Password *', confirmPassword: 'Confirm password *', passwordHint: 'Use at least 6 characters.', invalidPassword: 'Your password must contain at least 6 characters.', invalidPasswordLong: 'Your password is too long. Choose a shorter one.', passwordMismatch: 'The passwords do not match.', credentials: 'Check your email and password. For an email that is already registered, use that account’s password.', invalidPrice: 'Enter a whole hourly price between 0 and 100,000 RON for each court.', retryPassword: 'To check the same request, enter the password you used when sending it again.', confirmation: 'Confirm your email address before submitting the request again.', successConfirm: 'Your request has been sent and is awaiting review. Confirm your email address so the sports centre can be approved. Management access is activated only after approval.',
+            sending: 'Sending your request…', success: 'Your request was sent to the superadmin and is awaiting approval. You can sign in to manage your sports centre with your chosen email and password only after approval.', failed: 'Your request could not be sent. Your details are still filled in. Please try again.', invalidPhoto: 'Choose a JPG, PNG, WebP, AVIF or GIF photo up to 5 MB.', invalidMaps: 'Enter a valid HTTPS Google Maps link.', invalidPhone: 'Enter a valid phone number with 7–15 digits.', invalidCourt: 'Enter a name and sport for each court. Court names must be different.', invalidForm: 'Check and complete the required fields.', rate: 'You have reached the limit of 5 requests per day. Please try again tomorrow.', uncertain: 'We did not receive confirmation. Press “Check submission” to check the same request without sending a duplicate.', retry: 'Check submission', busy: 'Your request is being sent. Please wait for confirmation.'
         }
     };
     for (const [language, entries] of Object.entries(copy)) {
@@ -40,7 +40,7 @@
         const courts = document.getElementById('club-request-courts');
         const addButton = document.getElementById('club-request-add-court');
         const submitButton = document.getElementById('club-request-submit');
-        const loginButton = document.getElementById('club-request-login');
+        const accountFields = document.getElementById('club-request-account-fields');
         const status = document.getElementById('club-request-status');
         const photo = document.getElementById('club-request-photo');
         const preview = document.getElementById('club-request-photo-preview');
@@ -48,11 +48,10 @@
         const input = key => document.getElementById(`club-request-${key}`);
         const user = () => window.getSpotivityProfileUser?.() || null;
         let ownerId = user()?.id || null;
-        let generation = 0, busy = false, attempt = null, previousFocus = null, previewUrl = '', statusKey = '', statusKind = '', waitingLogin = false;
+        let generation = 0, busy = false, attempt = null, previousFocus = null, previewUrl = '', statusKey = '', statusKind = '';
         let controller = null;
-        const isOpen = () => modal.style.display === 'flex';
         const assertCurrent = captured => {
-            if (captured.generation !== generation || user()?.id !== captured.userId) throw Object.assign(new Error('Session changed'), { sessionChanged: true });
+            if (captured.generation !== generation) throw new DOMException('Request cancelled', 'AbortError');
             if (captured.controller.signal.aborted) throw new DOMException('Request aborted', 'AbortError');
         };
 
@@ -71,9 +70,10 @@
                 for (const option of row.querySelectorAll('option')) option.textContent = window.dict?.[window.lang]?.[option.value.toLowerCase()] || option.value;
             });
             fields.disabled = busy || Boolean(attempt?.uncertain);
+            accountFields.disabled = busy || Boolean(attempt?.uncertain && attempt.payload.password);
             addButton.disabled = courts.children.length >= 20;
             submitButton.disabled = busy;
-            submitButton.textContent = t(busy ? (attempt?.stage === 'upload' ? 'uploading' : 'sending') : attempt?.uncertain ? (attempt.stage === 'upload' ? 'retryUpload' : 'retry') : 'submit');
+            submitButton.textContent = t(busy ? 'sending' : attempt?.uncertain ? 'retry' : 'submit');
             form.setAttribute('aria-busy', String(busy));
             status.textContent = statusKey ? t(statusKey) : '';
             status.dataset.kind = statusKind;
@@ -106,11 +106,23 @@
             const sportText = document.createElement('span'); sportText.dataset.clubI18n = 'sport';
             const select = document.createElement('select'); select.required = true; select.dataset.clubCourtSport = '';
             for (const sport of sports) { const option = document.createElement('option'); option.value = sport; select.append(option); }
-            sportLabel.append(sportText, select); grid.append(nameLabel, sportLabel); row.append(heading, grid); courts.append(row); render();
+            sportLabel.append(sportText, select);
+            const priceLabel = document.createElement('label');
+            priceLabel.className = 'club-request-wide';
+            const priceText = document.createElement('span'); priceText.dataset.clubI18n = 'price';
+            const price = document.createElement('input');
+            price.type = 'number'; price.required = true; price.min = '0'; price.max = '100000'; price.step = '1'; price.inputMode = 'numeric'; price.dataset.clubCourtPrice = '';
+            priceLabel.append(priceText, price);
+            grid.append(nameLabel, sportLabel, priceLabel); row.append(heading, grid); courts.append(row); render();
         }
         function clearPhoto() {
             if (previewUrl) URL.revokeObjectURL(previewUrl);
             previewUrl = ''; photo.value = ''; previewImage.removeAttribute('src'); preview.hidden = true;
+        }
+        function clearPasswords() {
+            input('password').value = ''; input('password-confirm').value = '';
+            input('password').setCustomValidity(''); input('password-confirm').setCustomValidity('');
+            if (attempt) delete attempt.payload.password;
         }
         function resetDraft() {
             form.reset(); clearPhoto(); courts.replaceChildren(); attempt = null; busy = false; addCourt(); showStatus(); render();
@@ -129,22 +141,21 @@
         }
         function close() {
             if (busy) { showStatus('busy'); return; }
-            modal.style.display = 'none';
+            clearPasswords();
+            if (attempt?.uncertain) showStatus('retryPassword');
+            render(); modal.style.display = 'none';
             if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
         }
         function clearIdentity() {
-            generation++; controller?.abort(); controller = null; waitingLogin = false; ownerId = null;
+            generation++; controller?.abort(); controller = null; ownerId = null;
+            clearPasswords();
             resetDraft(); modal.style.display = 'none';
         }
         function onProfile() {
             const next = user()?.id || null;
             if (ownerId && ownerId !== next) clearIdentity();
             ownerId = next;
-            if (next && waitingLogin) {
-                waitingLogin = false;
-                prefill(); loginButton.hidden = true; showStatus('ready');
-                document.getElementById('modal-auth').style.display = 'none'; open();
-            } else prefill();
+            prefill();
         }
         async function validPhoto(file) {
             if (!file || !mimeExtensions[file.type] || file.size <= 0 || file.size > 5 * 1024 * 1024) return false;
@@ -175,7 +186,7 @@
             } catch { return false; }
         }
         function draft() {
-            for (const element of form.querySelectorAll('input,textarea')) if (!['file','checkbox'].includes(element.type)) element.value = element.value.trim();
+            for (const element of form.querySelectorAll('input,textarea')) if (!['file','checkbox','password'].includes(element.type)) element.value = element.value.trim();
             input('maps').setCustomValidity(validMaps(input('maps').value) ? '' : t('invalidMaps'));
             const digits = input('phone').value.replace(/\D/g, '');
             input('phone').setCustomValidity(/^[+\d() .-]+$/.test(input('phone').value) && digits.length >= 7 && digits.length <= 15 ? '' : t('invalidPhone'));
@@ -187,89 +198,103 @@
                 if (names.has(normalized)) row.querySelector('[data-club-court-name]').setCustomValidity(t('invalidCourt'));
                 names.add(normalized);
             });
+            const prices = [...courts.querySelectorAll('[data-club-court-price]')].map(price => {
+                const valid = /^\d+$/.test(price.value) && Number.isSafeInteger(Number(price.value)) && Number(price.value) >= 0 && Number(price.value) <= 100000;
+                price.setCustomValidity(valid ? '' : t('invalidPrice'));
+                return Number(price.value);
+            });
+            const password = readPassword();
+            if (password === null) return null;
             if (!form.checkValidity()) { showStatus('invalidForm', 'error'); form.reportValidity(); return null; }
-            return { p_nume_baza: input('name').value, p_nume_contact: input('contact').value, p_email: input('email').value, p_telefon: input('phone').value, p_oras: input('city').value, p_adresa: input('address').value, p_link_maps: input('maps').value, p_terenuri: rows, p_descriere: input('description').value };
+            return { nume_baza: input('name').value, nume_contact: input('contact').value, email: input('email').value, telefon: input('phone').value, oras: input('city').value, adresa: input('address').value, link_maps: input('maps').value, terenuri: rows, prices, descriere: input('description').value, password };
         }
-        function definite(error) {
-            return /^[0-9A-Z]{5}$/.test(error?.code || '') || /^PGRST\d+$/.test(error?.code || '');
+        function readPassword() {
+            const password = input('password').value;
+            const passwordError = [...password].length < 6 || /[\x00\r\n]/.test(password) ? 'invalidPassword' : new TextEncoder().encode(password).length > 72 ? 'invalidPasswordLong' : '';
+            input('password').setCustomValidity(passwordError ? t(passwordError) : '');
+            input('password-confirm').setCustomValidity(input('password-confirm').value === password ? '' : t('passwordMismatch'));
+            if (!input('password').checkValidity() || !input('password-confirm').checkValidity()) {
+                showStatus(passwordError || 'passwordMismatch', 'error');
+                form.reportValidity(); return null;
+            }
+            return password;
         }
         function errorKey(error) {
-            return /(?:club_request_rate_limit|request_limit|rate.limit|(?:5|five).*(?:day|zi|24 hours)|daily.limit)/i.test(error?.message || '') || error?.code === '429' ? 'rate' : 'failed';
-        }
-        async function bindClient(captured) {
-            const { data, error } = await db.auth.getSession();
-            assertCurrent(captured);
-            const session = data?.session;
-            if (error) throw new Error('Session verification is temporarily unavailable');
-            if (session?.user?.id !== captured.userId || !session.access_token) throw Object.assign(new Error('Session changed'), { sessionChanged: true });
-            const identity = await db.auth.getUser(session.access_token);
-            assertCurrent(captured);
-            if (identity.error) throw new Error('Session verification is temporarily unavailable');
-            if (identity.data?.user?.id !== captured.userId) throw Object.assign(new Error('Session changed'), { sessionChanged: true });
-            // Every write uses this verified token, even if another tab changes the shared client.
-            const nativeFetch = window.fetch.bind(window);
-            return createClient(supabaseUrl, supabaseKey, {
-                auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-                global: { headers: { Authorization: `Bearer ${session.access_token}` }, fetch: (url, options = {}) => nativeFetch(url, { ...options, signal: captured.controller.signal }) }
-            });
+            const code = String(error?.code || '');
+            if (code === 'email_confirmation_required') return 'confirmation';
+            if (error?.status === 429 || /rate.limit|request_limit/i.test(code)) return 'rate';
+            if (/credential|invalid.password|invalid.login|invalid_login|authentication|account_password/i.test(code)) return 'credentials';
+            if (/photo|image/i.test(code)) return 'invalidPhoto';
+            if (/price/i.test(code)) return 'invalidPrice';
+            return 'failed';
         }
         async function submit(event) {
             event.preventDefault();
             if (busy) return;
-            const payload = attempt?.uncertain ? attempt.payload : draft();
+            const retryingPriorUnknown = Boolean(attempt?.uncertain);
+            let payload;
+            if (retryingPriorUnknown) {
+                payload = attempt.payload;
+                if (!payload.password) {
+                    const password = readPassword();
+                    if (password === null) return;
+                    payload.password = password;
+                }
+            } else payload = draft();
             if (!payload) return;
-            if (!user()?.id) { showStatus('loginHint'); loginButton.hidden = false; loginButton.focus(); return; }
-            const preflightGeneration = generation, preflightUserId = user().id;
+            const preflightGeneration = generation;
             const chosenPhoto = attempt?.uncertain ? attempt.file : photo.files[0] || null;
             // Lock before reading the file, so repeated submit events cannot race that await.
             busy = true; render();
             const fileValid = !chosenPhoto || await validPhoto(chosenPhoto);
-            if (preflightGeneration !== generation || user()?.id !== preflightUserId) return;
+            if (preflightGeneration !== generation) return;
             if (!fileValid) { busy = false; render(); showStatus('invalidPhoto', 'error'); photo.focus(); return; }
-            const captured = { generation, userId: preflightUserId, controller: new AbortController() };
-            ownerId = captured.userId; controller = captured.controller; busy = true;
-            if (!attempt) attempt = { id: uuid(), payload, file: chosenPhoto, path: '', uploaded: false, stage: chosenPhoto ? 'upload' : 'rpc', uncertain: false };
+            const captured = { generation, controller: new AbortController() };
+            controller = captured.controller;
+            if (!attempt) attempt = { id: uuid(), payload, file: chosenPhoto, uncertain: false };
             const active = attempt;
             active.uncertain = false;
-            loginButton.hidden = true;
-            render(); showStatus(active.stage === 'upload' ? 'uploading' : 'sending');
-            const timeout = setTimeout(() => captured.controller.abort(), 30000);
-            let client;
+            render(); showStatus('sending');
+            const timeout = setTimeout(() => captured.controller.abort(), 45000);
             try {
-                client = await bindClient(captured);
+                const body = new FormData();
+                body.set('payload', JSON.stringify({ action: 'submit', request_id: active.id, ...active.payload }));
+                if (active.file) body.set('photo', active.file);
+                const response = await fetch(`${supabaseUrl}/functions/v1/club-applications`, {
+                    method: 'POST', headers: { apikey: supabaseKey }, body, signal: captured.controller.signal
+                });
                 assertCurrent(captured);
-                if (active.file && !active.uploaded) {
-                    active.stage = 'upload';
-                    if (!active.path) active.path = `${captured.userId}/${active.id}/${uuid()}.${mimeExtensions[active.file.type]}`;
-                    showStatus('uploading'); render();
-                    const result = await client.storage.from('cereri_baze_sportive').upload(active.path, active.file, { contentType: active.file.type, upsert: false, cacheControl: '0' });
-                    assertCurrent(captured);
-                    const duplicate = String(result.error?.statusCode) === '409' || result.error?.code === 'Duplicate';
-                    if (result.error && !duplicate) throw Object.assign(result.error, { uploadFailed: true });
-                    active.uploaded = true;
+                let result;
+                try { result = await response.json(); } catch { throw new Error('Submission acknowledgement was incomplete'); }
+                assertCurrent(captured);
+                if (!response.ok) {
+                    const error = new Error('Submission rejected');
+                    error.code = typeof result?.code === 'string' ? result.code : '';
+                    error.status = response.status;
+                    error.definite = response.status >= 400 && response.status < 500 && ![408, 425].includes(response.status) && !/in.progress|processing/i.test(error.code);
+                    throw error;
                 }
-                active.stage = 'rpc'; showStatus('sending'); render();
-                const result = await client.rpc('submit_club_request', { p_request_id: active.id, ...active.payload, p_poza_path: active.path || null });
-                assertCurrent(captured);
-                if (result.error) throw result.error;
-                if (result.data !== active.id) throw new Error('Submission acknowledgement was incomplete');
-                resetDraft(); loginButton.hidden = true; showStatus('success', 'success');
+                if (result?.request_id !== active.id || result?.status !== 'noua') throw new Error('Submission acknowledgement was incomplete');
+                clearPasswords(); resetDraft(); showStatus(result.email_confirmation_required === true ? 'successConfirm' : 'success', 'success');
             } catch (error) {
-                if (captured.generation !== generation || user()?.id !== captured.userId) return;
-                if (error.sessionChanged) { active.uncertain = true; showStatus('session', 'error'); loginButton.hidden = false; }
-                else if (definite(error) || error.uploadFailed && /^4\d\d$/.test(String(error.statusCode || '')) && String(error.statusCode) !== '408') {
-                    // A rejected RPC did not attach this photo; never delete on an uncertain response.
-                    if (active.uploaded && active.path && client && !captured.controller.signal.aborted) {
-                        try { await client.storage.from('cereri_baze_sportive').remove([active.path]); } catch { /* Unattached objects stay private. */ }
-                    }
-                    attempt = null; showStatus(error.uploadFailed ? 'photoFailed' : errorKey(error), 'error');
+                if (captured.generation !== generation) return;
+                if (error.definite) {
+                    const key = errorKey(error);
+                    if (retryingPriorUnknown) {
+                        // A failed retry cannot disprove that the first request committed.
+                        // Keep its UUID and snapshot even when credentials must be reentered.
+                        active.uncertain = true;
+                        if (key === 'credentials' || key === 'confirmation') clearPasswords();
+                    } else attempt = null;
+                    showStatus(key, 'error');
                 } else {
-                    active.uncertain = true;
-                    showStatus(active.stage === 'upload' ? 'photoUncertain' : 'uncertain', 'error');
+                    // Retain the UUID, snapshot, password and file only in memory until confirmed.
+                    // A retry checks the same request even if its first response was lost.
+                    active.uncertain = true; showStatus('uncertain', 'error');
                 }
             } finally {
                 clearTimeout(timeout);
-                if (captured.generation === generation && user()?.id === captured.userId) { busy = false; controller = null; render(); }
+                if (captured.generation === generation) { busy = false; controller = null; render(); }
             }
         }
         openButton.addEventListener('click', open);
@@ -296,15 +321,10 @@
             if (capturedGeneration !== generation || photo.files[0] !== file) return;
             if (!valid) { clearPhoto(); showStatus('invalidPhoto', 'error'); return; }
             previewUrl = URL.createObjectURL(file); previewImage.src = previewUrl; preview.hidden = false;
+            if (statusKey === 'invalidPhoto') showStatus();
         });
         form.addEventListener('input', event => { if (event.target.setCustomValidity) event.target.setCustomValidity(''); });
         form.addEventListener('submit', submit);
-        loginButton.addEventListener('click', () => {
-            if (busy) return;
-            waitingLogin = true; modal.style.display = 'none';
-            const auth = document.getElementById('modal-auth');
-            auth.style.display = 'flex'; auth.querySelector('input')?.focus();
-        });
         window.addEventListener('spotivity:profile-user', onProfile);
         db.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_OUT' || (ownerId && session?.user?.id && session.user.id !== ownerId)) clearIdentity();

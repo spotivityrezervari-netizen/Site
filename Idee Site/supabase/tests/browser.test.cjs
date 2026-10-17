@@ -48,6 +48,7 @@ async function openProfile(page) {
     await pg.exec(readFileSync(join(__dirname,'../009_base_photos.sql'),'utf8'));
     await pg.exec(readFileSync(join(__dirname,'../010_foot_tennis.sql'),'utf8'));
     await pg.exec(readFileSync(join(__dirname,'../011_club_requests.sql'),'utf8'));
+    await pg.exec(readFileSync(join(__dirname,'../012_club_approval.sql'),'utf8'));
     await pg.exec("update public.terenuri set poza='assets/imagini/avatar2.png'");
     const tomorrow=(await pg.query("select ((now() at time zone 'Europe/Bucharest')::date+1)::text as d")).rows[0].d;
     let queue=Promise.resolve();
