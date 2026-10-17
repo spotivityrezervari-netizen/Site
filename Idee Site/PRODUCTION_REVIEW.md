@@ -28,7 +28,7 @@ Smoke test-ul local cu citiri reale a trecut pentru noul director public, descri
 
 ## Actualizare vizuală și Supabase — 13 octombrie 2026
 
-Pagina principală a fost refăcută după captura de referință: secțiuni mari pentru Fotbal, Baschet, Tenis și Volei, sigla `avatar2`, navigare pe desktop, selector de oraș și meniu pe tot ecranul pe telefon. Pictogramele sunt fișierele `fotbalrealist`, `baschetrealist`, `tenisrealist`, `voleirealist`; fundalurile sunt `RealistFotbal`, `RealisBaschet`, `RealistTenis`, `RealistVolei`. Accesul direct la apple.com a fost refuzat de rețeaua mediului; captura proprietarului a fost referința vizuală.
+Pagina principală a fost refăcută după captura de referință: secțiuni mari pentru Fotbal, Baschet, Tenis și Volei, sigla `avatar2`, navigare pe desktop, selector de oraș și meniu pe tot ecranul pe telefon. Pictogramele sunt fișierele `fotbalrealist`, `baschetrealist`, `tenisrealist`, `voleirealist`; fundalurile sunt `RealistFotbal`, `RealisBaschet`, `RealistTenis`, `RealistVolei`. Captura proprietarului a fost referința pentru structura paginii.
 
 [005_sport_appearance.sql](supabase/005_sport_appearance.sql) a fost aplicată în Rendez-Vous după 36 de verificări SQL izolate și o probă live cu rollback. `public.site_sporturi` are patru rânduri de configurație publică; numai superadminul poate scrie prin API. Pagina și pictogramele admin citesc configurația prin SDK; valorile locale sunt fallback dacă serviciul este indisponibil. O probă izolată schimbă efectiv configurația și verifică noile imagini în pagină și în dialog, pentru a demonstra integrarea cu baza de date.
 
@@ -133,3 +133,14 @@ Butoanele de pauză/reluare a cardurilor au fost eliminate complet. Mișcarea co
 Verificate vizual dimensiunile 320, 390, 768 și 1440 px, inclusiv căutarea dintre logo și meniu, lipsa butoanelor de derulare și confirmarea profilului fără suprapuneri. Suita pentru fotografii/căutare/animații a trecut 16 verificări, inclusiv pașii vizuali fracționari și oprirea la atingere, hover, focus și scroll manual. Suita profilului a trecut 21 de verificări. Smoke testul cu citiri reale Supabase și imagini Storage a trecut cu HTTP 200, fără scrieri sau erori JavaScript.
 
 Au trecut și toate cele 81 de verificări browser pentru fluxurile existente, inclusiv rezervări/RLS și refuzul anulării rezervărilor finalizate. Totalul rulat pentru această revenire vizuală: **118 verificări browser**, plus smoke live read-only, sintaxă JS, review independent al animației și verificarea capturilor.
+
+
+## Verificarea conținutului și a denumirilor — 17 octombrie 2026
+
+Au fost verificate toate fișierele urmărite în repository și cele 27 de imagini locale. Nu au fost găsite sigle Apple, produse Apple, capturi de sistem, fonturi Apple distribuite, SF Symbols sau importuri de pe domenii Apple. Denumirea internă a comutatorului este acum `switch-toggle`, fontul folosește familia standard `system-ui`, iar comutatorul activ are accentul auriu al site-ului. Referința comercială din descrierea istorică a interfeței a fost eliminată.
+
+Fotografiile nefolosite `teren-fotbal1.png` și `teren-fotbal2.png`, cu stadioane și mărci comerciale, au fost eliminate din versiunea curentă. Nu aveau referințe în cod sau în configurarea live a terenurilor, sporturilor ori bazelor. Imaginile sportive furnizate de proprietar sunt păstrate. Proveniența și licențele lor nu pot fi stabilite numai prin inspecția fișierelor.
+
+Au fost inspectate și cele cinci fotografii publice ale terenurilor din Supabase, fără conținut Apple. Patru afișează aceeași fotografie Camp Nou, cu identitate FC Barcelona/Nike; proiectul nu conține date despre licența acelei fotografii.
+
+Metadatele tehnice `apple-mobile-*`, regulile WebKit și mențiunile despre browserele/dispozitivele netestate sunt păstrate pentru compatibilitate și acuratețea raportului. SDK-ul Supabase cu licență MIT și notificările de copyright proprii rămân păstrate. Această inspecție nu certifică drepturile de utilizare ale imaginilor încărcate de proprietar.

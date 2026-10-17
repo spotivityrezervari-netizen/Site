@@ -94,7 +94,7 @@ body.pagina-publica { background: #101a14; }
 @media (max-width: 767px) {
     .pagina-publica .home-nav { gap: 8px; padding-inline: 12px; }
     .pagina-publica .home-brand { margin-right: 0; }
-    .pagina-publica .home-profile-button { display: none; }
+    .pagina-publica .home-profile-button { display: inline-flex; flex: 0 0 44px; width: 44px; min-width: 44px; }
     .pagina-publica .home-nav-search { flex: 1 1 0; }
     .pagina-publica.home-menu-open .home-nav-search { visibility: hidden; }
     .pagina-publica .home-sport-hero {
@@ -106,4 +106,8 @@ body.pagina-publica { background: #101a14; }
     .pagina-publica .home-hero-tenis .home-hero-art { aspect-ratio: 1672 / 941; }
     .pagina-publica .home-hero-tenis .home-hero-art img { object-fit: contain; }
     .pagina-publica .home-courts-wrap { padding: 0 18px; }
+}
+
+@media (max-width: 360px) {
+    .pagina-publica .home-nav { gap: 4px; }
 }

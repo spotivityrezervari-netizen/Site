@@ -341,7 +341,7 @@ let checks = 0;
       const dimensions = await homepage.evaluate(() => {
         const rect = id => {const r = document.getElementById(id).getBoundingClientRect(); return {left: r.left, right: r.right, width: r.width, height: r.height};};
         return {width: innerWidth, pageWidth: document.documentElement.scrollWidth, brand: rect('home-brand'), search: rect('home-nav-search'),
-          input: rect('home-nav-search-input'), submit: rect('btn-home-search'), menu: rect('btn-mobile-menu'),
+          input: rect('home-nav-search-input'), submit: rect('btn-home-search'), profile: rect('btn-top-cont'), menu: rect('btn-mobile-menu'),
           profileVisible: document.getElementById('btn-top-cont').getClientRects().length > 0};
       });
       assert.ok(dimensions.pageWidth <= width+1, JSON.stringify(dimensions));
@@ -349,9 +349,10 @@ let checks = 0;
       assert.ok(dimensions.input.width >= 100 && dimensions.input.height >= 40, JSON.stringify(dimensions));
       assert.ok(dimensions.submit.width >= 40 && dimensions.submit.height >= 40, JSON.stringify(dimensions));
       if (width < 768) {
-        assert.equal(dimensions.profileVisible, false);
-        assert.ok(dimensions.search.right <= dimensions.menu.left-3, JSON.stringify(dimensions));
-        assert.ok(dimensions.search.left-dimensions.brand.right < 25 && dimensions.menu.left-dimensions.search.right < 25, JSON.stringify(dimensions));
+        assert.equal(dimensions.profileVisible, true);
+        assert.ok(dimensions.search.right <= dimensions.profile.left-3 && dimensions.profile.right <= dimensions.menu.left-3, JSON.stringify(dimensions));
+        assert.ok(dimensions.profile.width >= 44 && dimensions.profile.height >= 44, JSON.stringify(dimensions));
+        assert.ok(dimensions.search.left-dimensions.brand.right < 25 && dimensions.profile.left-dimensions.search.right < 25 && dimensions.menu.left-dimensions.profile.right < 25, JSON.stringify(dimensions));
       }
       await homepage.locator('#filtru-oras-global').selectOption('Reghin');
       await homepage.locator('#home-nav-search-input').fill('tenis bucuresti');
@@ -368,11 +369,14 @@ let checks = 0;
     }
 
     await homepage.setViewportSize({width: 390, height: 844});
+    await homepage.locator('#btn-top-cont').click();
+    await homepage.locator('#modal-auth').waitFor({state: 'visible'});
+    await homepage.locator('#inchide-auth').click();
     await homepage.locator('#btn-mobile-menu').click();
     await homepage.locator('#home-mobile-menu [data-profile-target]').click();
     await homepage.locator('#modal-auth').waitFor({state: 'visible'});
     await homepage.locator('#inchide-auth').click();
-    pass('mobile profile remains reachable from the first drawer entry after moving search into the header');
+    pass('mobile profile opens from both the header icon and the first drawer entry');
 
     const strip = homepage.locator('[data-home-courts="Fotbal"]');
     const visualPosition = () => strip.evaluate(node => node.getBoundingClientRect().left

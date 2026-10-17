@@ -1044,7 +1044,7 @@ async function openProfile(page) {
       const hamburger=mobile.locator('#btn-mobile-menu');
       if (await hamburger.isVisible()) {
         assert.equal(await desktopNav.isVisible(),false);
-        assert.equal(await mobile.locator('#btn-top-cont').isVisible(),false);
+        assert.equal(await mobile.locator('#btn-top-cont').isVisible(),true);
         await hamburger.click();
         const menu=mobile.locator('#home-mobile-menu');
         await menu.waitFor({state:'visible'});

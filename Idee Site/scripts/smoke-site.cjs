@@ -161,6 +161,8 @@ async function openProfile(page) {
     console.log('PASS homepage: SDK loaded, all five sport dialogs, login dialog, Escape, and images');
     await page.setViewportSize({width:390,height:844});
     assert.equal(await page.locator('#home-nav-search').isVisible(),true);
+    assert.equal(await page.locator('#btn-top-cont').isVisible(),true);
+    assert.equal(await page.locator('#btn-top-cont .home-profile-symbol').isVisible(),true);
     await page.locator('#btn-mobile-menu').click();
     await page.locator('#home-mobile-menu').waitFor({state:'visible'});
     assert.equal(await page.locator('#home-mobile-menu [data-sport-target]').count(),5);
