@@ -12,10 +12,10 @@
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3" integrity="sha384-dl/4LkSyQ4uEucc48NM6VDZLAjLLq9yMzZ5JLXumBq7Ld33XBof73hseOqPhO89+" crossorigin="anonymous"></script>
     <script src="js/db.js?v=2"></script>
-    <script src="js/security.js?v=2"></script>
+    <script src="js/security.js?v=3"></script>
     <script src="js/sport-appearance.js?v=2" defer></script>
-    <script src="js/admin.js?v=23" defer></script>
-    <script src="js/admin-baze.js?v=4" defer></script>
+    <script src="js/admin.js?v=25" defer></script>
+    <script src="js/admin-baze.js?v=5" defer></script>
     <script src="js/admin-club-requests.js?v=2" defer></script>
     <link rel="stylesheet" href="css/admin.css?v=3">
     <link rel="stylesheet" href="css/theme.css?v=2">
@@ -77,11 +77,11 @@
                 <button type="button" class="card-sport admin-menu-card admin-comun" style="display: none; padding: 20px;" onclick="document.getElementById('modal-rezervare-manuala').style.display='flex'">
                     <h2 style="font-size: 18px;"><span data-trad="t-rez-man-scurt">Rezervare Manuală</span></h2>
                 </button>
-                <button type="button" class="card-sport admin-menu-card admin-comun" style="display: none; padding: 20px;" onclick="document.getElementById('modal-tabel-program').style.display='flex'">
+                <button type="button" class="card-sport admin-menu-card admin-comun" style="display: none; padding: 20px;" onclick="window.deschideProgramAdmin()">
                     <h2 style="font-size: 18px;"><span data-trad="t-prog-scurt">Program & Active</span></h2>
                 </button>
                 <button type="button" class="card-sport admin-menu-card admin-comun" style="display: none; padding: 20px;" onclick="document.getElementById('modal-istoric').style.display='flex'">
-                    <h2 style="font-size: 18px;"><span data-trad="t-istoric-titlu-scurt">Toate Rezervările</span></h2>
+                    <h2 style="font-size: 18px;"><span data-trad="t-istoric-titlu-scurt">Rezervări</span></h2>
                 </button>
 
                 <button type="button" id="btn-baze-admin" class="card-sport admin-menu-card" hidden>
@@ -292,7 +292,8 @@
                     </div>
                     <div class="grup-input">
                         <label for="tabel-data" data-trad="t-data">Data Dorită</label>
-                        <input type="date" id="tabel-data">
+                        <input type="date" id="tabel-data" aria-describedby="admin-program-date-hint">
+                        <small id="admin-program-date-hint">Consultă orice dată și orice an.</small>
                     </div>
                 </div>
                 <div class="tabel-scrolabil program-scroll">
@@ -318,7 +319,8 @@
         <div class="modal-continut modal-mare" style="border-color: #3b82f6; width: 100%; max-width: 600px;">
             <button class="buton-inchidere" aria-label="Închide" onclick="this.parentElement.parentElement.style.display='none'">X</button>
             <div style="flex-shrink: 0;">
-                <h2 class="titlu-modal" style="font-size: 20px; text-align: left; margin-bottom: 15px; color: #3b82f6;" data-trad="t-istoric-titlu">Toate Rezervările (Descărcare)</h2>
+                <h2 class="titlu-modal" style="font-size: 20px; text-align: left; margin-bottom: 15px; color: #3b82f6;" data-trad="t-istoric-titlu">Rezervări viitoare și recente</h2>
+                <p class="admin-baze-help">Rezervările finalizate de peste 30 de zile sunt ascunse din această listă. Le poți consulta în „Program &amp; Active”, alegând data.</p>
                 <button type="button" id="btn-istoric" class="buton-rezervare" style="background: #3b82f6; width: 100%; margin-bottom: 15px;" data-trad="t-istoric-btn">Descarcă Rezervările</button>
             </div>
             <div id="container-istoric" style="display: flex; flex-direction: column; gap: 15px; overflow-y: auto; flex: 1; padding-right: 5px;">

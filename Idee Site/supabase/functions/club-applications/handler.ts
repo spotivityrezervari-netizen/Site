@@ -102,7 +102,7 @@ export function createHandler(config: Config, dependencies: Dependencies = {}) {
     if (response.status === 409 || ['23505','40001'].includes(data?.code) || /already|modified|changed|different|unavailable|stale|actualizat|conflict/i.test(String(data?.message ?? ''))) return new ApiError(409, 'conflict', 'Cererea a fost modificată sau identificatorul este deja folosit. Reîncarcă lista.');
     return invalid('Operațiunea nu a fost finalizată. Verifică datele și reîncearcă.');
   }
-  async function applicant(email: string, password: string): Promise<Json> {
+  async function applicant(email: string, password: string, contact: { nume: string; telefon: string }): Promise<Json> {
     const login = await jsonCall('/auth/v1/token?grant_type=password', anon, { email, password });
     if (login.response.ok && UUID.test(login.data?.user?.id ?? '') && login.data.user.email?.toLowerCase() === email) return login.data.user;
     if (login.response.status === 429 || login.response.status >= 500) throw upstream(login.response, login.data);
@@ -111,7 +111,7 @@ export function createHandler(config: Config, dependencies: Dependencies = {}) {
     // Existing confirmed addresses produce an obfuscated Auth user: a service
     // lookup and fresh account timestamp prevent attaching that fake identity.
     const started = now();
-    const signup = await jsonCall('/auth/v1/signup', anon, { email, password });
+    const signup = await jsonCall('/auth/v1/signup', anon, { email, password, data: contact });
     if (!signup.response.ok) {
       if (signup.response.status === 429 || signup.response.status >= 500) throw upstream(signup.response, signup.data);
       throw new ApiError(401, 'invalid_credentials', 'Pentru un cont existent, folosește parola lui. Verifică și confirmarea adresei de email.');
@@ -212,7 +212,7 @@ export function createHandler(config: Config, dependencies: Dependencies = {}) {
         const period = limits.get(client); const current = now();
         if (period && current - period.start < 600000) { if (++period.count > 20) throw new ApiError(429, 'rate_limit', 'Prea multe încercări. Reîncearcă mai târziu.'); }
         else { if (limits.size > 10000) limits.clear(); limits.set(client, { start: current, count: 1 }); }
-        const user = await applicant(data.email, data.password);
+        const user = await applicant(data.email, data.password, { nume: data.nume_contact, telefon: data.telefon });
         const photoPath = photoBytes && format ? `${user.id}/${data.request_id}/${data.request_id}.${format.ext}` : null;
         if (photoPath && photoBytes && format) await uploadPrivate(photoPath, photoBytes, format.mime);
         // Explicit fields ensure the password cannot enter application storage.

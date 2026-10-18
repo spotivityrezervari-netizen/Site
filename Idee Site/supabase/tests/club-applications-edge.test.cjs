@@ -63,6 +63,7 @@ test('anonymous submit proves existing credentials, stores only explicit applica
   assert.equal(response.status, 201); assert.deepEqual(body, { request_id: APP, status: 'noua', email_confirmation_required: false });
   assert.equal(calls[0].path, '/auth/v1/token'); assert.equal(calls[0].body.password, PASSWORD);
   assert.equal(calls.filter(c => c.path === '/auth/v1/signup').length, 0);
+  assert.ok(!calls.some(c => c.path === '/auth/v1/user' || c.method === 'PUT' || c.method === 'PATCH'), 'Applying with an existing account must not overwrite its profile or Auth metadata');
   const rpc = calls.find(c => c.path.endsWith('submit_club_application'));
   assert.equal(rpc.headers.get('Authorization'), `Bearer ${SECRET}`); assert.equal(rpc.body.p_applicant_user_id, USER);
   assert.deepEqual(rpc.body.p_prices, [100,80]); assert.equal(rpc.body.p_terenuri[1].sport, 'Tenis Picior');
@@ -77,7 +78,7 @@ test('new account uses normal signup and authoritative fresh Auth row without ad
   const { handler, calls } = await fixture({ fetch: c => c.path === '/auth/v1/token' ? json({ code: 'invalid_credentials' }, 400) : undefined });
   assert.equal((await handler(submission())).status, 201);
   const signup = calls.find(c => c.path === '/auth/v1/signup');
-  assert.deepEqual(signup.body, { email: 'owner@example.test', password: PASSWORD });
+  assert.deepEqual(signup.body, { email: 'owner@example.test', password: PASSWORD, data: { nume: 'Nume Contact', telefon: '+40 721 123 456' } });
   assert.equal(signup.headers.get('apikey'), 'anon-public-key');
   assert.equal(calls.filter(c => c.path.startsWith('/auth/v1/admin/users')).length, 1);
   assert.ok(calls.filter(c => c.path.startsWith('/auth/v1/admin/users')).every(c => c.method === 'GET'));

@@ -12,6 +12,15 @@
     let lastFocus = null;
     const ungrouped = '__ungrouped__';
 
+    function renderRole() {
+        const isSuper = access?.is_super === true;
+        byId('base-admin-workspace').classList.toggle('base-admin-super', isSuper);
+        const label = isSuper ? 'Deschide panoul de admin' : 'Administrează baza sportivă';
+        byId('btn-administreaza-baza').textContent = label;
+        byId('base-admin-title').textContent = isSuper ? 'Panoul de administrare' : 'Administrează baza sportivă';
+        byId('base-admin-select').closest('.base-admin-selector').hidden = isSuper;
+    }
+
     function close(returnToProfile = true) {
         const workspace = byId('base-admin-workspace');
         workspace.hidden = true;
@@ -27,9 +36,11 @@
         access = null;
         signature = '';
         selectedBaseId = null;
+        renderRole();
         byId('btn-administreaza-baza').hidden = true;
         byId('base-admin-select').replaceChildren();
         byId('base-admin-access-hint').textContent = '';
+        renderBaseCard();
         close(false);
         window.clearSpotivityAdmin?.();
     }
@@ -43,23 +54,41 @@
         clear();
     }
 
+    function renderBaseCard() {
+        const base = !access?.is_super && access?.bases.find(item => item.id === selectedBaseId);
+        byId('base-admin-base-card').hidden = !base;
+        byId('base-admin-base-photo').replaceChildren();
+        byId('base-admin-edit-base').hidden = !base?.can_edit_details;
+        if (!base) return;
+        byId('base-admin-base-name').textContent = base.nume;
+        byId('base-admin-base-description').textContent = base.descriere || 'Adaugă o descriere și fotografia bazei tale sportive.';
+        const image = window.createSportsBasePhoto?.(base, 'base-admin-base-image');
+        if (image) byId('base-admin-base-photo').append(image);
+        else {
+            const fallback = document.createElement('span');
+            fallback.textContent = 'Fotografia bazei';
+            byId('base-admin-base-photo').append(fallback);
+        }
+    }
+
     async function renderSelection() {
         if (!access?.can_manage || !userId) return;
         const base = access.bases.find(item => item.id === selectedBaseId);
-        const courts = access.courts.filter(court => selectedBaseId === ungrouped
+        const courts = access.is_super ? access.courts : access.courts.filter(court => selectedBaseId === ungrouped
             ? !court.baza_sportiva_id : court.baza_sportiva_id === selectedBaseId);
         byId('base-admin-access-hint').textContent = base
             ? `${base.nume} · ${base.oras || ''}${courts.length ? ` · ${courts.length} ${courts.length === 1 ? 'teren' : 'terenuri'} cu acces` : ' · Acces la prezentarea bazei'}${base.can_edit_details ? '' : ' · Fără permisiune de editare a prezentării'}`
             : 'Terenuri alocate fără o bază sportivă asociată.';
+        renderBaseCard();
         const profile = window.getSpotivityProfileUser?.();
-        // This workspace only renders facility operations, including for superadmins.
+        // The server RPC supplies the real role; Auth metadata is never authority.
         await window.renderSpotivityAdmin({
             user_id: userId,
-            nume_admin: profile?.nume || profile?.email || 'Administrator',
-            is_super: false,
+            nume_admin: access.nume_admin || profile?.nume || profile?.email || 'Administrator',
+            is_super: access.is_super === true,
             terenuri: courts.map(court => court.nume).join(','),
             selectedBaseId,
-            baseAccess: access.bases
+            baseAccess: access.is_super ? null : access.bases
         });
     }
 
@@ -78,11 +107,12 @@
             }
             const next = {
                 is_super: data.is_super === true,
+                nume_admin: typeof data.nume_admin === 'string' ? data.nume_admin : '',
                 can_manage: data.can_manage === true,
                 courts: Array.isArray(data.courts) ? data.courts : [],
                 bases: Array.isArray(data.bases) ? data.bases : []
             };
-            if (!next.can_manage || (!next.courts.length && !next.bases.some(base => base.can_edit_details))) {
+            if (!next.can_manage || (!next.is_super && !next.courts.length && !next.bases.some(base => base.can_edit_details))) {
                 clear();
                 return false;
             }
@@ -90,11 +120,13 @@
             const changed = nextSignature !== signature;
             access = next;
             signature = nextSignature;
+            renderRole();
             byId('btn-administreaza-baza').hidden = false;
             if (changed || force) {
                 const options = access.bases.map(base => ({ value: base.id, label: `${base.nume} · ${base.oras || ''}` }));
                 if (access.courts.some(court => !court.baza_sportiva_id)) options.push({ value: ungrouped, label: 'Terenuri fără bază sportivă' });
-                if (!options.some(option => option.value === selectedBaseId)) selectedBaseId = options[0]?.value || null;
+                if (access.is_super) selectedBaseId = null;
+                else if (!options.some(option => option.value === selectedBaseId)) selectedBaseId = options[0]?.value || null;
                 byId('base-admin-select').replaceChildren(...options.map(option => new Option(option.label, option.value)));
                 byId('base-admin-select').value = selectedBaseId;
                 byId('base-admin-select').disabled = options.length < 2;
@@ -114,13 +146,23 @@
         byId('btn-administreaza-baza').addEventListener('click', async event => {
             lastFocus = event.currentTarget;
             const owner = userId;
-            if (!await window.refreshSpotivityAdminAccess() || !owner || userId !== owner || !access?.can_manage) return;
+            if (!await window.refreshSpotivityAdminAccess({ force: true }) || !owner || userId !== owner || !access?.can_manage) return;
             byId('modal-profil').style.display = 'none';
             byId('base-admin-workspace').hidden = false;
             document.body.classList.add('base-admin-open');
             byId('btn-inchide-administrare').focus({ preventScroll: true });
         });
         byId('btn-inchide-administrare').addEventListener('click', () => close());
+        byId('base-admin-edit-base').addEventListener('click', () => {
+            const base = access?.bases.find(item => item.id === selectedBaseId && item.can_edit_details);
+            if (base) window.openSpotivityBaseEditor?.(base.id);
+        });
+        window.addEventListener('spotivity:base-updated', event => {
+            if (!access || !event.detail?.id) return;
+            access.bases = access.bases.map(base => base.id === event.detail.id ? { ...base, ...event.detail } : base);
+            signature = JSON.stringify(access);
+            renderBaseCard();
+        });
         byId('base-admin-select').addEventListener('change', async event => {
             selectedBaseId = event.target.value;
             await renderSelection();
@@ -135,6 +177,9 @@
                 event.stopPropagation();
                 if (openModal) {
                     byId('base-admin-workspace').querySelectorAll('.modal').forEach(modal => { modal.style.display = 'none'; });
+                    byId('btn-inchide-administrare').focus({ preventScroll: true });
+                } else if (Array.from(byId('base-admin-workspace').querySelectorAll('.sub-pagina-oras')).some(page => page.style.display === 'block')) {
+                    window.inchideSubPaginaOras?.();
                     byId('btn-inchide-administrare').focus({ preventScroll: true });
                 } else close();
                 return;

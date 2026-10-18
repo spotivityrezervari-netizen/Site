@@ -1,6 +1,6 @@
 # Instalarea protecțiilor Supabase și a rolurilor Spotivity
 
-**17 octombrie 2026 — separarea administrării:** versiunea curentă necesită și [013_admin_integration.sql](013_admin_integration.sql), după 012. Aplicarea live a acestei migrări nu este încă verificată: credențialul administrativ al mediului răspunde cu HTTP 401. Nu reinstala migrările vechi. Detaliile și verificările noii versiuni sunt în secțiunea 013 de la sfârșitul acestui document.
+**18 octombrie 2026:** migrarea 013 a fost verificată în proiectul live. Migrările 014–016 sunt aplicate și verificate pentru rezervări grupate, recuperarea contactelor și outboxul privat Make; funcțiile Edge aferente sunt active. Nu reinstala migrările vechi; SQL-ul și funcțiile Edge trebuie publicate separat de site.
 
 **Actualizare 15 octombrie 2026:** în Rendez-Vous sunt deja aplicate migrările **1, 3, 4, 5, 6, 7, 8, 9**, inclusiv profilul editabil, fotografiile bazelor sportive și refuzarea anulării rezervărilor finalizate. Nu trebuie să copiezi sau să rulezi din nou SQL pentru actualizarea curentă. Pașii de instalare de mai jos sunt pentru proiecte noi; istoricul datat descrie aplicările anterioare. Gestionează bazele din **Admin → Baze sportive**.
 
@@ -56,7 +56,7 @@ Pe **12 octombrie 2026**, migrarea 003 a fost aplicată în **Rendez-Vous** prin
 
 Adresele de redirect Auth sunt exacte; wildcardul vechi pentru spotivity.ro a fost eliminat. La cererea proprietarului, parola nouă are în continuare minimum **6 caractere**. Confirmarea automată și absența SMTP au fost păstrate; configurarea emailului și datele firmei sunt amânate de proprietar. Raportul de verificare și pașii rămași sunt în [PRODUCTION_REVIEW.md](../PRODUCTION_REVIEW.md).
 
-Pentru **alt proiect**, ordinea migrărilor este **001 → 003 → 004 → 005 → 006 → 007 → 008 → 009 → 010 → 011 → 012** după inventar/backup și verificarea datelor. 002 conține numai exemple de roluri pentru conturi Auth existente și confirmate. Fișierele `tests/` se rulează exclusiv în baza izolată. Instrucțiunile istorice de mai jos pentru reinstalarea 001 se aplică numai proiectelor fără migrări ulterioare.
+Pentru **alt proiect**, ordinea migrărilor este **001 → 003 → 004 → 005 → 006 → 007 → 008 → 009 → 010 → 011 → 012 → 013 → 014 → 015 → 016** după inventar/backup și verificarea datelor. 002 conține numai exemple de roluri pentru conturi Auth existente și confirmate. Fișierele `tests/` se rulează exclusiv în baza izolată. Instrucțiunile istorice de mai jos pentru reinstalarea 001 se aplică numai proiectelor fără migrări ulterioare.
 
 ## Căutare și afișare pe telefon
 
@@ -368,12 +368,35 @@ Verificarea live a inclus o probă SQL complet anulată prin rollback și un tes
 
 ## 013 — administrare integrată și limite de acces
 
-Aplică [013_admin_integration.sql](013_admin_integration.sql) **după 012**, înainte de activarea noului frontend. Nu modifică rândurile existente, conturile, rolurile, alocările, fotografiile sau rezervările. La data acestei actualizări, aplicarea în proiectul live rămâne neverificată din cauza răspunsului HTTP 401 al credențialului Management API disponibil în mediu. Verificările automate folosesc exclusiv PostgreSQL izolat.
+Aplică [013_admin_integration.sql](013_admin_integration.sql) **după 012**, înainte de activarea noului frontend. Nu modifică rândurile existente, conturile, rolurile, alocările, fotografiile sau rezervările. Aplicarea în proiectul live a fost confirmată ulterior prin comparația catalogului și probe READ ONLY cu rolurile reale.
 
 `get_admin_access()` este apelabil numai de utilizatori autentificați și derivă identitatea din `auth.uid()`, cu `search_path` fix. Returnează numai terenurile alocate și bazele aferente sau bazele cu drept explicit de prezentare. Câmpul `can_edit_details` păstrează separarea dintre alocările la terenuri și dreptul asupra descrierii/fotografiei bazei. Funcția nu acceptă identitatea sau rolul din browser. Aprobarea prin RPC-ul existent acordă accesul care apare la următoarea verificare, fără o nouă autentificare.
 
 Politicile restrictive suplimentare protejează operațiunile globale și limitele existente chiar dacă se adaugă ulterior o politică permisivă generală. Trigger-ele și politicile Storage anterioare rămân active. Un trigger separat păstrează rezervările finalizate: refuză ștergerea și schimbarea stării/datei/orei de către un utilizator autentificat, inclusiv o mutare în viitor urmată de anulare. Mentenanța privilegiată a serverului rămâne disponibilă fără o identitate Auth.
 
-`admin.html` verifică rolul curent de superadmin; administratorii obișnuiți folosesc **Profilul meu → Administrează baza sportivă** în `index.html`, cu sesiunea existentă. Gestionarea cererilor și administrarea globală nu sunt incluse în interfața integrată. RLS și funcțiile existente verifică aceleași limite la cereri directe REST/RPC, indiferent de interfața folosită.
+`admin.html` verifică rolul curent de superadmin; administratorii obișnuiți folosesc **Profilul meu → Administrează baza sportivă** în `index.html`, cu sesiunea existentă. Pentru adminii obișnuiți, gestionarea cererilor și administrarea globală rămân indisponibile. Superadminul are acum panoul complet integrat în pagina principală, deschis din profil. RLS și funcțiile existente verifică aceleași limite la cereri directe REST/RPC, indiferent de interfața folosită.
 
-Testele noi sunt `tests/admin-integration.test.cjs` (UUID și ID numeric) și `tests/integrated-admin-browser.test.cjs`. Fixture-urile nu se execută în proiectul real. Pentru aplicarea asistată, actualizează securizat credențialul existent `supbase` către `api.supabase.com` în setările mediului; nu include tokenul în repository sau chat. Accesul de rețea către `ndubcdwohqzgxpuiowye.supabase.co` și `spotivityrezervari-netizen.github.io` este necesar pentru verificările live și ale publicării.
+Testele noi sunt `tests/admin-integration.test.cjs` (UUID și ID numeric) și `tests/integrated-admin-browser.test.cjs`. Fixture-urile nu se execută în proiectul real. Accesul de rețea către `ndubcdwohqzgxpuiowye.supabase.co` și `spotivityrezervari-netizen.github.io` este necesar pentru verificările live și ale publicării. Credențialele administrative se păstrează exclusiv în mediul securizat.
+
+
+## 014–016 — rezervări grupate, telefon și notificări
+
+Aplică fișierele 014, 015 și 016 după 013. Ele păstrează rezervările, profilurile, alocările și istoricul existent. 014 adaugă gruparea privată și RPC-uri atomice pentru ore consecutive, limita globală pe persoană/sport/zi, contacte de oaspete și anulare cu token hash. Inserările directe ale clienților nu pot ocoli RPC-ul; personalul își păstrează rezervările manuale. Contactele oaspeților nu sunt asociate unui cont Auth doar pentru că emailul coincide. Identitatea unui oaspete rămâne neconfirmată; nu acordă roluri sau acces în cont.
+
+015 completează numai telefoane lipsă din surse asociate exact identității și corectează înscrierile viitoare ale bazelor. 016 adaugă outboxul privat cu joburi per rezervare și destinatar, lease-uri pentru procesare concurentă, reîncercări și revalidarea drepturilor proprietarului. Anulările mai multor ore generează o singură notificare per destinatar pentru modificarea respectivă. Anulările parțiale descriu orele anulate și cele rămase.
+
+Deployează `booking-workflow/index.ts` și `booking-notifications/index.ts` cu directoarele `_shared` alăturate și `verify_jwt=false`. Prima funcție verifică explicit JWT-ul pentru operațiunile contului și tokenul privat pentru anularea din email; a doua acceptă exclusiv cheia serverului. Configurează în secretele Edge `BOOKING_CANCELLATION_SECRET`, o valoare aleatoare de minimum 32 de octeți, independentă de cheile JWT, comună ambelor funcții. Nu publica valoarea în repository sau frontend și nu o regenera la fiecare deploy.
+
+Configurația Make rămâne `ready=false` până la verificarea scenariilor, deduplicării și destinatarilor. Nu activa folosind doar un răspuns HTTP 200 al webhookului. Urmează [MAKE_NOTIFICATIONS.md](MAKE_NOTIFICATIONS.md).
+
+Verificări izolate:
+
+```bash
+NODE_PATH=/workspace/shared/spotivity-rls-validation/node_modules:$NODE_PATH node supabase/tests/booking-groups.test.cjs
+SPOTIVITY_TEST_INTEGER_IDS=1 NODE_PATH=/workspace/shared/spotivity-rls-validation/node_modules:$NODE_PATH node supabase/tests/booking-groups.test.cjs
+NODE_PATH=/workspace/shared/spotivity-rls-validation/node_modules:$NODE_PATH node supabase/tests/profile-contact.test.cjs
+NODE_PATH=/workspace/shared/spotivity-rls-validation/node_modules:$NODE_PATH node --test supabase/tests/notification-outbox.test.cjs
+node --test supabase/tests/booking-workflow-edge.test.cjs supabase/tests/booking-notifications-edge.test.cjs supabase/tests/transactional-mail.test.cjs supabase/tests/history-retention.test.cjs
+```
+
+Testele browser pentru oaspeți și administrare folosesc SDK-ul real și PostgreSQL izolat; nicio adresă reală nu primește emailuri din aceste fixture-uri.

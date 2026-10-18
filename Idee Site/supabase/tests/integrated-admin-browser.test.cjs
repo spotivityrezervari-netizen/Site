@@ -73,9 +73,13 @@ async function fits(page,selector,label){
       const courtA=(await pg.query("select * from public.terenuri where nume='Court A'")).rows[0];
       const bookings=[];
       for(const [court,client,hour]of [['Court A','alice@example.test','12:00'],['Court B','bob@example.test','13:00'],['Court Excluded','Unrelated guest','14:00']])bookings.push((await pg.query("insert into public.rezervari(email_client,teren,data_str,ora,stare,pret_total) values($1,$2,$3,$4,'activa','100 RON') returning *",[client,court,tomorrow,hour])).rows[0]);
-      const past=(await pg.query("insert into public.rezervari(email_client,teren,data_str,ora,stare,pret_total) values('Completed guest','Court A','2020-01-01','12:00','activa','100 RON') returning *")).rows[0];
+      const past=(await pg.query("insert into public.rezervari(email_client,teren,data_str,ora,stare,pret_total) values('Archived guest','Court A','2020-01-01','12:00','activa','100 RON') returning *")).rows[0];
+      const recentDay=(await pg.query("select ((now() at time zone 'Europe/Bucharest')::date-2)::text d")).rows[0].d;
+      await pg.query("insert into public.rezervari(email_client,teren,data_str,ora,stare,pret_total) values('Completed guest','Court A',$1,'12:00','activa','100 RON')",[recentDay]);
+      const guestName='<img src=x onerror=alert(1)> Visitor';
+      await pg.query("select public.create_guest_booking_group($1,$2,$3::date,ARRAY['20:00']::text[],false,$4,'bob@example.test','+40733123456')",[uid(9701),String(courtA.id),tomorrow,guestName]);
       for(const [court,email,text]of [['Court A','alice@example.test','Mesaj Nord'],['Court B','bob@example.test','Mesaj Sud'],['Court Excluded','Unrelated guest','Mesaj privat străin']])await pg.query("insert into public.mesaje_chat(email_client,teren,expeditor,mesaj,citit) values($1,$2,'client',$3,false)",[email,court,text]);
-      return {tomorrow,courtA,bookings,past};
+      return {tomorrow,courtA,bookings,past,guestName};
     });
     const launch={executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true};
     const proxy=process.env.HTTPS_PROXY||process.env.https_proxy;if(proxy){const u=new URL(proxy);launch.proxy={server:u.origin,bypass:'127.0.0.1,localhost'};}
@@ -158,7 +162,7 @@ async function fits(page,selector,label){
     assert.ok(saved.poza.includes('/poze_terenuri/'+uid(3)+'/'));assert.ok([...fixture.objects.keys()].some(path=>path.startsWith('poze_terenuri/'+uid(3)+'/')));
     pass('existing court settings save tariffs and reservable hours inside the integrated workspace');
 
-    await admin.locator('#btn-baze-admin').click();await admin.locator(`[data-edit-base="${ids.first}"]`).click();
+    await admin.locator('#base-admin-edit-base').click();await admin.locator('#admin-baza-form').waitFor({state:'visible'});
     await admin.locator('#baza-descriere').fill('Descriere actualizată în site');await admin.locator('#btn-salveaza-baza').click();await admin.waitForLoadState('networkidle');
     assert.equal((await root(()=>pg.query('select descriere from public.baze_sportive where id=$1',[ids.first]))).rows[0].descriere,'Descriere actualizată în site');
     await admin.locator('#admin-baza-form').waitFor({state:'hidden'});await admin.locator(`[data-edit-base="${ids.first}"]`).click();
@@ -168,25 +172,56 @@ async function fits(page,selector,label){
     assert.match(photo,new RegExp(`^${ids.first}/`));assert.ok(fixture.objects.get('poze_baze_sportive/'+photo).body.equals(png));assert.equal(passwords(),beforePhotoLogins);
     await fits(admin,'#modal-baze-admin .modal-continut','base-settings');await admin.locator('#btn-inchide-baze-admin').click();
     pass('base descriptions and photographs use the existing editors and the current session without another password');
+    assert.equal(await admin.locator('#base-admin-base-name').innerText(),'Baza Nord');
+    assert.equal(await admin.locator('#base-admin-base-description').innerText(),'Descriere actualizată în site');
+    assert.match(await admin.locator('#base-admin-base-photo img').getAttribute('src'),new RegExp(photo.replaceAll('/','\\/')));
+    await root(async()=>{
+      await pg.query("insert into public.terenuri(nume,sport,pret,oras,baza_sportiva_id,poza) values('Court A2','Fotbal',110,'Cluj-Napoca',$1,'assets/imagini/avatar2.png'),('Court Tennis','Tenis',120,'Cluj-Napoca',$1,'assets/imagini/avatar2.png')",[ids.first]);
+      await pg.query("update public.users_admin set terenuri='Court A,Court A2,Court Tennis,Court B' where user_id=$1",[uid(3)]);
+    });
+    await admin.evaluate(()=>window.refreshSpotivityAdminAccess({force:true}));await admin.waitForLoadState('networkidle');
+    assert.deepEqual(await admin.locator('[data-admin-sport] h3').allTextContents(),['Fotbal','Tenis']);
+    assert.deepEqual(await admin.locator('[data-admin-sport="Fotbal"] .base-admin-court-copy h4').allTextContents(),['Court A','Court A2']);
+    assert.deepEqual(await admin.locator('[data-admin-sport="Tenis"] .base-admin-court-copy h4').allTextContents(),['Court Tennis']);
+    await admin.locator('[data-admin-program="Fotbal"]').click();await admin.waitForLoadState('networkidle');
+    assert.deepEqual(await admin.locator('#tabel-teren option').allTextContents(),['Court A','Court A2']);
+    assert.equal(await admin.locator('#modal-tabel-program .program-titlu').innerText(),'Program Fotbal');
+    for(const date of ['0001-01-01','1900-01-01','2020-01-01','9999-12-31']){
+      await admin.locator('#tabel-data').fill(date);await admin.evaluate(()=>window.incarcaTabelProgram());await admin.waitForLoadState('networkidle');
+      assert.equal(await admin.locator('#tabel-data').inputValue(),date);
+      const text=await admin.locator('#tabel-corp-program').innerText();assert.ok(!text.includes('Se Încarcă'),date+': '+JSON.stringify({text,errors}));
+      if(date==='2020-01-01'){assert.ok(text.includes('Archived guest'));assert.equal(await admin.locator('#tabel-corp-program .program-anulare').count(),0);}
+    }
+    await admin.keyboard.press('Escape');await admin.locator('[data-admin-program="Tenis"]').click();await admin.waitForLoadState('networkidle');
+    assert.deepEqual(await admin.locator('#tabel-teren option').allTextContents(),['Court Tennis']);
+    await admin.keyboard.press('Escape');await fits(admin,'#base-admin-workspace','sport-groups');
+    pass('the selected base has direct editing and a live photo, sports list their courts immediately, and each sport opens its scoped schedule for any supported year');
+
 
     await admin.locator('#sectiune-dashboard .admin-menu-card').filter({hasText:'Rezervare Manuală'}).click();
     assert.equal(await admin.locator('#modal-terenuri').isVisible(),false,'Admin menu cards must not trigger the public sport picker');
     await admin.locator('#manual-client').fill('Invitat integrat');await admin.locator('#manual-data').fill(seeded.tomorrow);await admin.locator('#manual-ora').selectOption('15:00');await admin.locator('#manual-pret').fill('135 RON');
     await fits(admin,'#modal-rezervare-manuala .modal-continut','manual-booking');await admin.locator('#btn-rezervare-manuala').click();await admin.waitForFunction(()=>!document.getElementById('btn-rezervare-manuala').disabled);
     const manual=(await root(()=>pg.query("select * from public.rezervari where email_client='Invitat integrat'"))).rows;assert.equal(manual.length,1);assert.equal(manual[0].teren,'Court A');assert.equal(manual[0].client_user_id,null);
-    await admin.keyboard.press('Escape');await admin.locator('#sectiune-dashboard .admin-menu-card').filter({hasText:'Program & Active'}).click();await admin.locator('#tabel-data').fill(seeded.tomorrow);await admin.evaluate(()=>window.incarcaTabelProgram());
-    assert.ok((await admin.locator('#tabel-corp-program').innerText()).includes('Invitat integrat'));await fits(admin,'#modal-tabel-program .modal-continut','schedule');await admin.keyboard.press('Escape');
-    pass('manual bookings retain null ownership and appear in the existing program for the selected court');
+    await admin.keyboard.press('Escape');await admin.locator('#sectiune-dashboard .admin-menu-card').filter({hasText:'Program & Active'}).click();await admin.locator('#tabel-data').fill(seeded.tomorrow);await admin.evaluate(()=>window.incarcaTabelProgram());await admin.waitForLoadState('networkidle');
+    assert.ok((await admin.locator('#tabel-corp-program').innerText()).includes('Invitat integrat'));
+    const guestSlot=admin.locator('#tabel-corp-program tr').filter({hasText:'20:00'});
+    assert.ok((await guestSlot.innerText()).includes(seeded.guestName));assert.ok((await guestSlot.innerText()).includes('+40733123456'));
+    assert.ok(!(await guestSlot.innerText()).includes('Nume: Bob'));assert.equal(await guestSlot.locator('.btn-tabel-chat,img').count(),0);
+    await fits(admin,'#modal-tabel-program .modal-continut','schedule');await admin.keyboard.press('Escape');
+    pass('manual and guest bookings retain null ownership, guest name/phone are escaped and shown without borrowing an equal-email Auth profile or chat identity');
 
-    await admin.locator('#sectiune-dashboard .admin-menu-card').filter({hasText:'Toate Rezervările'}).click();await admin.locator('#btn-istoric').click();await admin.waitForFunction(()=>document.getElementById('container-istoric').textContent.includes('Completed guest'));
-    const history=admin.locator('#container-istoric');assert.ok(!(await history.innerText()).includes('Court B'));assert.ok(!(await history.innerText()).includes('Court Excluded'));
+    await admin.locator('#sectiune-dashboard .admin-menu-card').filter({hasText:'Rezervări'}).click();await admin.locator('#btn-istoric').click();await admin.waitForFunction(()=>document.getElementById('container-istoric').textContent.includes('Completed guest'));
+    const history=admin.locator('#container-istoric');assert.ok(!(await history.innerText()).includes('Archived guest'));assert.ok(!(await history.innerText()).includes('Court B'));assert.ok(!(await history.innerText()).includes('Court Excluded'));
     const completed=history.locator('.admin-history-card').filter({hasText:'Completed guest'});assert.ok((await completed.innerText()).includes('FINALIZATĂ'));assert.equal(await completed.locator('button').count(),0);
+    const guestCard=history.locator('.admin-history-card').filter({hasText:seeded.guestName});
+    assert.ok((await guestCard.innerText()).includes('+40733123456'));assert.ok(!(await guestCard.innerText()).includes('Nume: Bob'));assert.equal(await guestCard.locator('img').count(),0);
     const deniedCancel=await raw(admin,async id=>db.from('rezervari').update({stare:'anulata'}).eq('id',id).select('id'),seeded.past.id);assert.match(deniedCancel.error?.message||'',/Completed bookings cannot be cancelled/);
     assert.equal((await root(()=>pg.query('select stare from public.rezervari where id=$1',[seeded.past.id]))).rows[0].stare,'activa');
     const future=history.locator('.admin-history-card').filter({hasText:'Invitat integrat'});await future.locator('button').click();await admin.waitForFunction(()=>[...document.querySelectorAll('#container-istoric .admin-history-card')].some(card=>card.textContent.includes('Invitat integrat')&&card.textContent.includes('ANULATĂ')));
     assert.equal((await root(()=>pg.query('select stare from public.rezervari where id=$1',[manual[0].id]))).rows[0].stare,'anulata');
     await fits(admin,'#modal-istoric .modal-continut','history');await admin.keyboard.press('Escape');
-    pass('history respects the selected base, future bookings can be cancelled, and completed bookings remain blocked in both UI and API');
+    pass('history hides completed bookings older than 30 days without deleting them, respects the selected base, and keeps completed cancellations blocked in both UI and API');
 
     await admin.locator('#btn-vezi-chat-admin').click();await admin.locator('#chat-admin-lista-conversații .card-conversatie').waitFor({state:'visible'});
     assert.ok((await admin.locator('#chat-admin-lista-conversații').innerText()).includes('Mesaj Nord'));assert.ok(!(await admin.locator('#chat-admin-lista-conversații').innerText()).includes('Mesaj Sud'));
@@ -215,13 +250,78 @@ async function fits(page,selector,label){
 
     const restricted=await pageFor();await restricted.goto(new URL('admin.html',base).href,{waitUntil:'networkidle'});await restricted.locator('#login-email-admin').fill('admin@example.test');await restricted.locator('#login-parola').fill('fixture-password');await restricted.locator('#login-admin-btn').click();await restricted.waitForLoadState('networkidle');
     assert.equal(await restricted.locator('#sectiune-dashboard').isVisible(),false);assert.equal(await restricted.locator('#sectiune-login').isVisible(),true);
-    const superPage=await pageFor();await superPage.goto(new URL('admin.html',base).href,{waitUntil:'networkidle'});await superPage.locator('#login-email-admin').fill('super@example.test');await superPage.locator('#login-parola').fill('fixture-password');await superPage.locator('#login-admin-btn').click();await superPage.locator('#sectiune-dashboard').waitFor({state:'visible'});await superPage.locator('#btn-cereri-baze-admin').waitFor({state:'visible'});
-    pass('ordinary administrators cannot enter admin.html while superadmin retains the global dashboard and request review');
+    const superPage=await pageFor();await superPage.goto(base,{waitUntil:'networkidle'});await login(superPage,'super@example.test');
+    await superPage.locator('#btn-administreaza-baza').waitFor({state:'visible'});
+    assert.equal(await superPage.locator('#btn-administreaza-baza').innerText(),'Deschide panoul de admin');
+    const superLogins=passwords(),superURL=superPage.url(),superToken=await superPage.evaluate(async()=>(await db.auth.getSession()).data.session.access_token),superPages=superPage.context().pages().length;
+    await superPage.locator('#btn-administreaza-baza').click();await superPage.locator('#base-admin-workspace.base-admin-super').waitFor({state:'visible'});await superPage.waitForLoadState('networkidle');
+    await superPage.locator('#btn-cereri-baze-admin').waitFor({state:'visible'});
+    assert.equal(await superPage.locator('#base-admin-select').isVisible(),false);
+    assert.equal(await superPage.locator('#base-admin-base-card').isVisible(),false);
+    assert.equal(await superPage.locator('#btn-baze-admin').isVisible(),true);
+    assert.equal(await superPage.locator('iframe').count(),0);assert.equal(superPage.context().pages().length,superPages);assert.equal(superPage.url(),superURL);
+    assert.equal(passwords(),superLogins);assert.equal(await superPage.evaluate(async()=>(await db.auth.getSession()).data.session.access_token),superToken);
+    const globalAccess=await raw(superPage,async()=>(await db.rpc('get_admin_access')).data);assert.equal(globalAccess.is_super,true);assert.ok(globalAccess.courts.some(c=>c.nume==='Court Excluded'));
+    await fits(superPage,'#base-admin-workspace','superadmin-dashboard');
+    pass('superadmin opens the complete global dashboard from the primary site session with no navigation, new window, iframe or second password');
+
+    await superPage.locator('#container-meniu-terenuri .admin-city-card').filter({hasText:'Cluj-Napoca'}).click();
+    await superPage.locator('.sub-pagina-oras').filter({hasText:'Setări Cluj-Napoca'}).waitFor({state:'visible'});
+    const excludedCourt=(await root(()=>pg.query("select * from public.terenuri where nume='Court Excluded'"))).rows[0];
+    await superPage.locator('.sub-pagina-oras:visible .admin-court-card').filter({hasText:'Court Excluded'}).click();
+    await superPage.locator(`#pret-${excludedCourt.id}`).fill('95');await superPage.locator(`#btn-save-${excludedCourt.id}`).click();await superPage.waitForLoadState('networkidle');
+    assert.equal(Number((await root(()=>pg.query('select pret from public.terenuri where id=$1',[excludedCourt.id]))).rows[0].pret),95);
+    assert.ok(await superPage.locator('#container-meniu-terenuri .admin-city-card').count());
+    await superPage.locator('#sectiune-dashboard .admin-menu-card').filter({hasText:'Program & Active'}).click();await superPage.waitForLoadState('networkidle');
+    assert.ok((await superPage.locator('#tabel-teren option').allTextContents()).includes('Court Excluded'));assert.ok((await superPage.locator('#tabel-teren option').allTextContents()).includes('Court B'));
+    await superPage.keyboard.press('Escape');
+    await superPage.locator('#sectiune-dashboard .admin-menu-card').filter({hasText:'Rezervări'}).click();await superPage.locator('#btn-istoric').click();await superPage.waitForFunction(()=>document.getElementById('container-istoric').textContent.includes('Court Excluded'));
+    assert.ok((await superPage.locator('#container-istoric').innerText()).includes('Court Excluded'));assert.ok((await superPage.locator('#container-istoric').innerText()).includes('Court B'));
+    await superPage.keyboard.press('Escape');await superPage.locator('#btn-vezi-chat-admin').click();await superPage.waitForFunction(()=>document.getElementById('chat-admin-lista-conversații').textContent.includes('Mesaj privat străin'));
+    assert.ok((await superPage.locator('#chat-admin-lista-conversații').innerText()).includes('Mesaj privat străin'));assert.ok((await superPage.locator('#chat-admin-lista-conversații').innerText()).includes('Mesaj Sud'));
+    await superPage.keyboard.press('Escape');
+    pass('same-page superadmin preserves global city/court editing, the full schedule, all booking contact details and global chat');
+
+    await root(()=>pg.query("insert into auth.users(id,email,email_confirmed_at) values($1,'employee@example.test',now())",[uid(77)]));
+    await superPage.locator('#sectiune-dashboard .super-admin-only').filter({hasText:'Creare Angajat'}).click();
+    await superPage.locator('#super-nume').fill('Angajat nou');await superPage.locator('#super-email').fill('employee@example.test');
+    await superPage.locator('.check-teren-alocat[value="Court A2"]').check();
+    await fits(superPage,'#modal-creeaza-cont .modal-continut','superadmin-allocation');
+    await superPage.locator('#creeaza-supervisor-btn').click();await superPage.locator('#modal-creeaza-cont').waitFor({state:'hidden'});
+    const employee=(await root(()=>pg.query('select is_super,terenuri from public.users_admin where user_id=$1',[uid(77)]))).rows[0];assert.equal(employee.is_super,false);assert.equal(employee.terenuri,'Court A2');
+    pass('the integrated global allocation form assigns an existing Auth account only the explicitly selected courts');
+
+    await superPage.locator('#btn-baze-admin').click();await superPage.locator('#btn-baza-noua').click();
+    await superPage.locator('#baza-nume').fill('Baza nouă superadmin');await superPage.locator('#baza-oras').fill('Oradea');await superPage.locator('#baza-descriere').fill('Creată în site, cu panoul complet');await superPage.locator('#baza-activa').check();
+    await fits(superPage,'#modal-baze-admin .modal-continut','superadmin-base');
+    await superPage.locator('#btn-salveaza-baza').click();await superPage.locator('#admin-baza-form').waitFor({state:'hidden'});await superPage.waitForLoadState('networkidle');
+    const createdBase=(await root(()=>pg.query("select * from public.baze_sportive where nume='Baza nouă superadmin'"))).rows[0];assert.ok(createdBase);
+    await superPage.locator(`[data-edit-base="${createdBase.id}"]`).click();
+    assert.equal(await superPage.locator('#admin-baza-structura').isVisible(),true);assert.equal(await superPage.locator('#admin-baza-terenuri-section').isVisible(),true);assert.equal(await superPage.locator('#admin-baza-admini-section').isVisible(),true);
+    await superPage.locator('#baza-poza-file').setInputFiles({name:'super-base.png',mimeType:'image/png',buffer:png});await superPage.waitForFunction(()=>!document.getElementById('btn-baza-poza-save').disabled);
+    await superPage.locator('#btn-baza-poza-save').click();await superPage.waitForFunction(()=>document.getElementById('admin-baza-photo-status').textContent.includes('salvată'));
+    const superBasePhoto=(await root(()=>pg.query('select poza from public.baze_sportive where id=$1',[createdBase.id]))).rows[0].poza;assert.match(superBasePhoto,new RegExp('^'+createdBase.id+'/'));assert.ok(fixture.objects.get('poze_baze_sportive/'+superBasePhoto).body.equals(png));
+    await superPage.locator(`[data-base-admin-id="${uid(77)}"]`).check();await superPage.locator('#btn-salveaza-baza').click();await superPage.locator('#admin-baza-form').waitFor({state:'hidden'});
+    assert.equal((await root(()=>pg.query('select count(*)::int n from public.baze_sportive_admini where baza_id=$1 and user_id=$2',[createdBase.id,uid(77)]))).rows[0].n,1);
+    await superPage.locator('#btn-inchide-baze-admin').click();
+    pass('global base creation and permission management retain the complete existing forms and include freshly created bases');
+
+    await superPage.locator('#sectiune-dashboard .super-admin-only').filter({hasText:'Adaugă Teren'}).click();
+    await superPage.locator('#teren-nume').fill('Teren temporar complet');await superPage.locator('#teren-sport').selectOption('Baschet');await superPage.locator('#teren-oras').fill('Oradea');await superPage.locator('#teren-baza').selectOption(createdBase.id);await superPage.locator('#teren-pret').fill('180');await superPage.locator('#teren-locatie').fill('https://maps.app.goo.gl/TemporaryCourt');
+    await superPage.locator('#teren-poza').setInputFiles({name:'global-court.png',mimeType:'image/png',buffer:png});
+    await fits(superPage,'#modal-adauga-teren .modal-continut','superadmin-create-court');
+    await superPage.locator('#btn-adauga-teren').click();await superPage.locator('#modal-adauga-teren').waitFor({state:'hidden'});await superPage.waitForLoadState('networkidle');
+    const temporary=(await root(()=>pg.query("select * from public.terenuri where nume='Teren temporar complet'"))).rows[0];assert.equal(temporary.baza_sportiva_id,createdBase.id);assert.equal(Number(temporary.pret),180);assert.match(temporary.poza,new RegExp('/poze_terenuri/'+uid(4)+'/'));
+    await superPage.locator('#container-meniu-terenuri .admin-city-card').filter({hasText:'Oradea'}).click();await superPage.locator('.sub-pagina-oras:visible .admin-court-card').filter({hasText:'Teren temporar complet'}).click();
+    await superPage.locator(`#modal-setari-${temporary.id} button`).filter({hasText:'Șterge Terenul'}).click();await superPage.locator(`#modal-setari-${temporary.id}`).waitFor({state:'hidden'});await superPage.waitForFunction(id=>!document.getElementById('modal-setari-'+id),temporary.id);
+    assert.equal((await root(()=>pg.query('select count(*)::int n from public.terenuri where id=$1',[temporary.id]))).rows[0].n,0);assert.equal(await superPage.locator(`#modal-setari-${temporary.id}`).count(),0);
+    assert.equal(await superPage.locator('#container-meniu-terenuri .admin-city-card').filter({hasText:'Oradea'}).count(),0);
+    pass('same-page superadmin creates a court with its base, tariff and photograph, then deletes it with both confirmations and an immediately refreshed dashboard');
 
     const appId='10000000-0000-4000-8000-000000000001',form=new FormData();form.set('payload',JSON.stringify({action:'submit',request_id:appId,nume_baza:'Baza aprobată automat',nume_contact:'Alice Contact',email:'alice@example.test',telefon:'+40722123456',oras:'Cluj-Napoca',adresa:'Strada Sportului 12',link_maps:'https://maps.app.goo.gl/FixtureClub',terenuri:[{nume:'Teren nou',sport:'Fotbal'}],prices:[150],descriere:'Cerere reală în baza izolată',password:'fixture-password'}));
     const response=await fixture.serial(()=>edge(new Request(`https://${host}/functions/v1/club-applications`,{method:'POST',body:form})));assert.equal(response.status,201,await response.text());
     const normalToken=await normal.evaluate(async()=>(await db.auth.getSession()).data.session.access_token),beforeApprovalLogins=passwords();
-    await superPage.locator('#btn-cereri-baze-admin').click();await superPage.locator(`[data-club-request-id="${appId}"]`).click();await superPage.locator('#admin-cerere-approve').click();await superPage.locator('#admin-cerere-confirm-submit').click();await superPage.waitForFunction(()=>document.getElementById('admin-cerere-decision-status').textContent.includes('Bază publicată'));
+    await superPage.locator('#btn-cereri-baze-admin').click();await superPage.locator(`[data-club-request-id="${appId}"]`).click();await superPage.locator('#admin-cerere-detail').waitFor({state:'visible'});await fits(superPage,'#modal-cereri-baze-admin .modal-continut','superadmin-request');await superPage.locator('#admin-cerere-approve').click();await superPage.locator('#admin-cerere-confirm-submit').click();await superPage.waitForFunction(()=>document.getElementById('admin-cerere-decision-status').textContent.includes('Bază publicată'));
     // Normal focus/profile lifecycle refreshes the already signed-in applicant.
     await normal.evaluate(()=>window.dispatchEvent(new Event('focus')));await normal.locator('#btn-administreaza-baza').waitFor({state:'visible'});
     await normal.locator('#btn-administreaza-baza').click();await normal.waitForLoadState('networkidle');
@@ -231,7 +331,7 @@ async function fits(page,selector,label){
     const approvalAttack=await raw(normal,async()=>db.from('terenuri').update({pret:1}).eq('nume','Court A').select('id'));assert.equal(approvalAttack.data?.length||0,0);
     pass('real superadmin approval automatically unlocks the signed-in applicant with the existing session and exactly the approved base/courts');
 
-    await admin.locator('#container-meniu-terenuri .admin-court-card').click();await admin.locator(`#poza-${seeded.courtA.id}`).setInputFiles({name:'must-not-upload.png',mimeType:'image/png',buffer:png});
+    await admin.locator(`[data-admin-court="${seeded.courtA.id}"]`).click();await admin.locator(`#poza-${seeded.courtA.id}`).setInputFiles({name:'must-not-upload.png',mimeType:'image/png',buffer:png});
     const uploadGate=fixture.pauseNext('/auth/v1/user','GET');await admin.locator(`#btn-save-${seeded.courtA.id}`).click();await uploadGate.entered;
     const beforeStaleWrites=requests.filter(r=>r.source==='browser'&&(r.path.startsWith('/storage/v1/object/')&&r.method==='POST'||r.path==='/rest/v1/terenuri'&&r.method==='PATCH')).length;
     await root(()=>pg.query('delete from public.users_admin where user_id=$1',[uid(3)]));
@@ -243,6 +343,18 @@ async function fits(page,selector,label){
     assert.equal(revoked.access.data.can_manage,false);assert.equal(revoked.court.data?.length||0,0);assert.equal(revoked.bookings.data?.length||0,0);assert.equal(revoked.chat.data?.length||0,0);
     assert.equal(await admin.locator('#container-istoric').innerText(),'');assert.equal(await admin.locator('#chat-admin-lista-conversații').innerText(),'');assert.equal(await admin.evaluate(async()=>(await db.auth.getSession()).data.session.access_token),token);
     pass('revoking grants closes and clears the workspace, and the same still-valid JWT immediately loses server-side access');
+    if(await superPage.locator('#modal-cereri-baze-admin').isVisible())await superPage.locator('#admin-cereri-close').click();
+    await superPage.locator('#btn-cereri-baze-admin').click();await superPage.locator(`[data-club-request-id="${appId}"]`).click();await superPage.locator('#admin-cerere-detail').waitFor({state:'visible'});
+    await root(()=>pg.query("update public.users_admin set is_super=false,terenuri='Court B' where user_id=$1",[uid(4)]));
+    await superPage.evaluate(()=>window.dispatchEvent(new Event('focus')));await superPage.waitForFunction(()=>!document.getElementById('base-admin-workspace').classList.contains('base-admin-super'));
+    await superPage.waitForLoadState('networkidle');assert.equal(await superPage.locator('#btn-administreaza-baza').innerText(),'Administrează baza sportivă');
+    assert.equal(await superPage.locator('#btn-cereri-baze-admin').isVisible(),false);assert.equal(await superPage.locator('#admin-cerere-data').innerText(),'');assert.equal(await superPage.locator('#admin-cerere-photo').getAttribute('src'),null);
+    assert.equal(await superPage.locator('#modal-cereri-baze-admin').isVisible(),false);assert.equal(await superPage.locator('#btn-baze-admin').isVisible(),false);
+    assert.equal(await superPage.locator('#sectiune-dashboard .super-admin-only:visible').count(),0);
+    const afterDemotion=await raw(superPage,async()=>({access:await db.rpc('get_admin_access'),private:await db.from('cereri_baze_sportive').select('*'),court:await db.from('terenuri').update({pret:1}).eq('nume','Court Excluded').select('id')}));
+    assert.equal(afterDemotion.access.data.is_super,false);assert.equal(afterDemotion.private.data?.length||0,0);assert.equal(afterDemotion.court.data?.length||0,0);
+    assert.equal(await superPage.evaluate(async()=>(await db.auth.getSession()).data.session.access_token),superToken);
+    pass('demoting superadmin in the same active session removes every global tool and clears private application data while server RLS immediately limits the account to its remaining court');
     assert.deepEqual(errors,[]);assert.ok(!requests.some(r=>r.source==='browser'&&r.service));
     assert.equal((await root(()=>pg.query("select count(*)::int n from public.terenuri where nume in ('Court A','Court B','Hidden Court','Court Excluded')"))).rows[0].n,4);
     console.log(`${checks} integrated admin browser checks passed`);

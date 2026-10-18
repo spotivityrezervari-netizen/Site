@@ -1,6 +1,6 @@
 # Dezvoltare locală
 
-Actualizarea pentru administrarea integrată necesită `supabase/013_admin_integration.sql` după 012. Verificarea și aplicarea în proiectul live sunt încă în așteptarea restabilirii accesului administrativ Supabase al mediului; fișierele SQL nu se execută prin publicarea pe GitHub.
+Migrările 013–016 sunt aplicate și verificate în proiectul live, iar funcțiile Edge pentru rezervări și notificări sunt active. Publicarea fișierelor statice nu execută SQL. Notificările și rezervările fără cont se activează numai după configurarea și verificarea scenariilor Make.
 
 Site-ul din `Idee Site/` folosește HTML, CSS și JavaScript, cu un backend găzduit în Supabase. Nu are o etapă de build sau dependențe de instalat pentru a porni serverul local.
 
@@ -140,3 +140,16 @@ node supabase/tests/admin-integration.test.cjs
 SPOTIVITY_TEST_INTEGER_IDS=1 node supabase/tests/admin-integration.test.cjs
 SITE_BASE_URL=http://127.0.0.1:8010/ node supabase/tests/integrated-admin-browser.test.cjs
 ```
+
+
+## Rezervări consecutive, oaspeți și administrare în aceeași pagină
+
+O persoană poate crea o singură rezervare activă la același sport și în aceeași zi, indiferent de teren sau oraș. O rezervare poate conține mai multe ore consecutive pe același teren. Serverul aplică regula după UUID-ul contului, emailul normalizat și telefonul normalizat (07…, +407… și 00407… sunt echivalente). Rezervările istorice și operațiunile manuale autorizate ale personalului sunt păstrate. Anularea eliberează orele nefinalizate; nu șterge istoricul și nu poate anula ore finalizate.
+
+Fără conectare, formularul cere numele, emailul și telefonul. Nu cere parolă și nu creează un cont Auth. Confirmarea prin Make include un link privat de anulare. Deschiderea linkului arată o verificare; numai apăsarea explicită a butonului anulează orele nefinalizate. Tokenul este păstrat în URL numai ca fragment, eliminat imediat din adresă, și în baza de date numai sub formă de SHA-256. Retrimiterea unei cereri cu răspuns incert păstrează același UUID, fără dublare. Până când Make este configurat și verificat, rezervările fără cont sunt refuzate înainte de creare, pentru a nu lăsa un client fără confirmare și link de anulare.
+
+Administratorii bazelor au terenurile direct sub fiecare sport, cu **Editează** și **Program [sport]**, și editarea descrierii/fotografiei bazei. Superadminul deschide panoul complet din profil în aceeași pagină, cu sesiunea existentă. Calendarul de administrare acceptă date valide din anii 0001–9999; această consultare nu schimbă fereastra de rezervare a clienților. Listele implicite ascund rezervările după 30 de zile de la încheiere; datele rămân în Supabase și sunt accesibile prin calendarul explicit.
+
+Telefonul salvat în profil are prioritate. Migrarea 015 recuperează numai telefoanele lipsă din propriile metadate Auth sau cereri de bază cu UUID și email identice; nu inventează numere și nu înlocuiește datele deja editate.
+
+Emailurile sunt gestionate de un outbox privat: confirmare/anulare către client și proprietarul autorizat, plus notificarea proprietarului pentru mesaje noi ale clientului. Joburile revalidează permisiunile înainte de trimitere și folosesc identificatori stabili pentru deduplicare în Make. `submitted` indică acceptarea webhookului de către Make, nu dovada livrării în inbox. Detaliile configurării sunt în `supabase/MAKE_NOTIFICATIONS.md`.

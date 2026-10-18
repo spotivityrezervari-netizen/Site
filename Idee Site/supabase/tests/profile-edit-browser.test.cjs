@@ -7,6 +7,7 @@ const {execFileSync} = require('node:child_process');
 const {createHash} = require('node:crypto');
 const {join} = require('node:path');
 const assert = require('node:assert/strict');
+const {createBookingWorkflowFixture} = require('./booking-workflow-fixture.cjs');
 const uid = n => `00000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
 const host = 'ndubcdwohqzgxpuiowye.supabase.co';
 const base = process.env.SITE_BASE_URL || 'http://127.0.0.1:8002/';
@@ -39,7 +40,7 @@ async function openProfile(page) {
   try {
     await pg.exec(readFileSync(join(__dirname, 'schema.sql'), 'utf8'));
     for (const file of ['001_security.sql', '003_court_hours.sql', '004_admin_scope_hardening.sql',
-      '005_sport_appearance.sql', '006_sports_bases.sql', '007_completed_booking_cancellation.sql', '008_profile_edit.sql', '009_base_photos.sql', '010_foot_tennis.sql', '011_club_requests.sql', '012_club_approval.sql', '013_admin_integration.sql']) {
+      '005_sport_appearance.sql', '006_sports_bases.sql', '007_completed_booking_cancellation.sql', '008_profile_edit.sql', '009_base_photos.sql', '010_foot_tennis.sql', '011_club_requests.sql', '012_club_approval.sql', '013_admin_integration.sql', '014_booking_groups.sql', '015_profile_contact.sql', '016_notification_outbox.sql']) {
       await pg.exec(readFileSync(join(__dirname, '..', file), 'utf8'));
     }
     await pg.exec("alter table auth.users add column new_email text; update public.terenuri set poza='assets/imagini/avatar2.png'");
@@ -50,6 +51,8 @@ async function openProfile(page) {
       return fn();
     });
     const requests = [], errors = [];
+    const bookingWorkflow = await createBookingWorkflowFixture({pg, host,
+      resolveUser: bearer => {const person = tokens.get(bearer); return person ? uid(person) : null;}, records: requests});
     let rejectProfile = false, rejectProfileRead = false, rejectEmail = false, gate = null;
     const pauseNext = (path, method) => {
       let enter, release, timeout;
@@ -80,6 +83,7 @@ async function openProfile(page) {
               'access-control-expose-headers': 'X-Supabase-Api-Version'}, body: data === undefined ? '' : JSON.stringify(data)});
         };
         try {
+          if (url.pathname === '/functions/v1/booking-workflow') return bookingWorkflow.browserRoute(route);
           await pg.exec('reset role');
           await pg.query("select set_config('request.jwt.claim.sub',$1,false)", [person ? uid(person) : '']);
           if (url.pathname.startsWith('/auth/v1/')) {
@@ -129,10 +133,10 @@ async function openProfile(page) {
               const values = value.slice(4, -1).split(',').map(v => v.replace(/^"|"$/g, ''));
               conditions.push(`${ident(field)} in (${values.map(v => { params.push(v); return `$${params.length}`; }).join(',')})`);
             } else {
-              const match = value.match(/^(eq|neq|ilike)\.(.*)$/s); assert.ok(match, value);
+              const match = value.match(/^(eq|neq|ilike|gt|gte|lt|lte)\.(.*)$/s); assert.ok(match, value);
               const booleanField = ['is_super', 'este_activ', 'este_activa', 'are_chat', 'optiune_minge', 'citit'].includes(field);
               params.push(booleanField && ['true', 'false'].includes(match[2]) ? match[2] === 'true' : match[2]);
-              conditions.push(`${ident(field)} ${{eq: '=', neq: '<>', ilike: 'ilike'}[match[1]]} $${params.length}`);
+              conditions.push(`${ident(field)} ${{eq: '=', neq: '<>', ilike: 'ilike', gt: '>', gte: '>=', lt: '<', lte: '<='}[match[1]]} $${params.length}`);
             }
           }
           const where = conditions.length ? ' where ' + conditions.join(' and ') : '';
@@ -222,6 +226,33 @@ async function openProfile(page) {
     };
 
     await login('alice@example.test');
+    const beforePhoneFallback = writes().length;
+    const fixtureContact = async (phone, metadata) => asOwner(async () => {
+      await pg.exec('alter table public.clienti disable trigger spotivity_profile_guard');
+      try {
+        await pg.query('update public.clienti set telefon=$1 where user_id=$2', [phone, uid(1)]);
+        await pg.query('update auth.users set raw_user_meta_data=$1 where id=$2', [metadata, uid(1)]);
+      } finally { await pg.exec('alter table public.clienti enable trigger spotivity_profile_guard'); }
+    });
+    await fixtureContact('', {telefon: '+40 721 555 666'});
+    await page.evaluate(() => window.refreshSpotivityProfile());
+    await openProfile(page);
+    assert.equal(await page.locator('#profil-telefon').innerText(), '+40 721 555 666');
+    assert.equal((await ownProfile(1)).telefon, '');
+    assert.equal(writes().length, beforePhoneFallback);
+    pass('My Account shows a validated phone from its own Auth metadata when the contact row is blank without writing on read');
+
+    await fixtureContact('+40 722 111 222', {telefon: '+40 721 555 666'});
+    await page.evaluate(() => window.refreshSpotivityProfile());
+    assert.equal(await page.locator('#profil-telefon').innerText(), '+40 722 111 222');
+    await fixtureContact('-', {telefon: '<script>0712345678</script>'});
+    await page.evaluate(() => window.refreshSpotivityProfile());
+    assert.equal(await page.locator('#profil-telefon').innerText(), '-');
+    assert.equal(writes().length, beforePhoneFallback);
+    await fixtureContact('111', {});
+    await page.evaluate(() => window.refreshSpotivityProfile());
+    pass('saved phone edits take precedence over stale metadata and invalid metadata never appears in the account');
+
     await review({email: 'legacy-pending@example.test'});
     const beforeLegacy = writes().length;
     await page.locator('#btn-profil-confirma').click(); await waitSettled();

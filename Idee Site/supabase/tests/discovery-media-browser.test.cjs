@@ -7,6 +7,7 @@ const {execFileSync} = require('node:child_process');
 const {createHash} = require('node:crypto');
 const {join} = require('node:path');
 const assert = require('node:assert/strict');
+const {createBookingWorkflowFixture} = require('./booking-workflow-fixture.cjs');
 const uid = n => `00000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
 const host = 'ndubcdwohqzgxpuiowye.supabase.co';
 const base = process.env.SITE_BASE_URL || 'http://127.0.0.1:8002/';
@@ -29,7 +30,7 @@ let checks = 0;
   try {
     await pg.exec(readFileSync(join(__dirname, 'schema.sql'), 'utf8'));
     for (const file of ['001_security.sql', '003_court_hours.sql', '004_admin_scope_hardening.sql',
-      '005_sport_appearance.sql', '006_sports_bases.sql', '007_completed_booking_cancellation.sql', '008_profile_edit.sql', '009_base_photos.sql', '010_foot_tennis.sql', '011_club_requests.sql', '012_club_approval.sql', '013_admin_integration.sql']) {
+      '005_sport_appearance.sql', '006_sports_bases.sql', '007_completed_booking_cancellation.sql', '008_profile_edit.sql', '009_base_photos.sql', '010_foot_tennis.sql', '011_club_requests.sql', '012_club_approval.sql', '013_admin_integration.sql', '014_booking_groups.sql', '015_profile_contact.sql', '016_notification_outbox.sql']) {
       await pg.exec(readFileSync(join(__dirname, '..', file), 'utf8'));
     }
     let queue = Promise.resolve();
@@ -55,6 +56,8 @@ let checks = 0;
     });
     const beforeBusiness = await immutableState();
     const requests = [], errors = [], objects = new Map();
+    const bookingWorkflow = await createBookingWorkflowFixture({pg, host,
+      resolveUser: bearer => {const person = tokens.get(bearer); return person ? uid(person) : null;}, records: requests});
     let objectSequence = 200, rejectNextPhotoMetadata = false;
     const user = row => ({...row, aud: 'authenticated', role: 'authenticated', app_metadata: {provider: 'email'}, user_metadata: row.raw_user_meta_data, identities: []});
     const api = async route => serial(async () => {
@@ -69,6 +72,7 @@ let checks = 0;
         body: data === undefined ? '' : JSON.stringify(data)});
       };
       try {
+        if (url.pathname === '/functions/v1/booking-workflow') return bookingWorkflow.browserRoute(route);
         await pg.exec('reset role');
         await pg.query("select set_config('request.jwt.claim.sub',$1,false)", [person ? uid(person) : '']);
         if (url.pathname.startsWith('/auth/v1/')) {
@@ -157,10 +161,10 @@ let checks = 0;
           else if (value.startsWith('in.(')) {
             conditions.push(`${ident(field)} in (${value.slice(4, -1).split(',').map(v => {params.push(v.replace(/^"|"$/g, '')); return `$${params.length}`;}).join(',')})`);
           } else {
-            const match = value.match(/^(eq|neq|ilike)\.(.*)$/s); assert.ok(match, value);
+            const match = value.match(/^(eq|neq|ilike|gt|gte|lt|lte)\.(.*)$/s); assert.ok(match, value);
             const booleanField = ['is_super', 'este_activ', 'este_activa', 'are_chat', 'optiune_minge', 'citit'].includes(field);
             params.push(booleanField && ['true', 'false'].includes(match[2]) ? match[2] === 'true' : match[2]);
-            conditions.push(`${ident(field)} ${{eq: '=', neq: '<>', ilike: 'ilike'}[match[1]]} $${params.length}`);
+            conditions.push(`${ident(field)} ${{eq: '=', neq: '<>', ilike: 'ilike', gt: '>', gte: '>=', lt: '<', lte: '<='}[match[1]]} $${params.length}`);
           }
         }
         const where = conditions.length ? ' where ' + conditions.join(' and ') : '';
@@ -234,12 +238,10 @@ let checks = 0;
     await admin.locator('#base-admin-workspace').waitFor({state: 'visible'});
     assert.equal(new URL(admin.url()).pathname, new URL(base).pathname);
     assert.equal(await admin.locator('#login-admin-btn').count(), 0);
-    await admin.locator('#btn-baze-admin').waitFor({state: 'visible'});
-    await admin.locator('#btn-baze-admin').click();
-    await admin.locator('[data-edit-base]').first().waitFor({state: 'visible'});
+    await admin.locator('#base-admin-edit-base').waitFor({state: 'visible'});
+    await admin.locator('#base-admin-edit-base').click();
     assert.equal(await admin.locator('[data-edit-base]').count(), 1);
     assert.equal(await admin.locator('[data-edit-base]').getAttribute('data-edit-base'), baseA);
-    await admin.locator(`[data-edit-base="${baseA}"]`).click();
     await admin.locator('#admin-baza-photo-section').waitFor({state: 'visible'});
     assert.equal(await admin.locator('#baza-nume').isDisabled(), true);
     assert.equal(await admin.locator('#admin-baza-admini-section').isVisible(), false);

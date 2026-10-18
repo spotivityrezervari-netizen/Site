@@ -122,7 +122,7 @@ window.dict = {
         'istoric': 'Istoric Rezervări', 'deconectare': 'Deconectare', 'inapoi_profil': 'Înapoi la Profil', 'alege_terenul': 'Alege Terenul',
         'data_dorita': 'Data Dorită', 'ora_dorita': 'Ora Dorită', 'toate_orele': 'Toate Orele', 'inapoi': 'Înapoi',
         'finalizare_rezervare': 'Finalizare Rezervare', 'nevoie_minge': 'Ai nevoie de minge?', 'alege_ziua': 'Alege Ziua', 
-        'alege_ora': 'Alege Ora (Poți selecta mai multe)', 'disclaimer': 'Rezervarea poate fi anulată gratuit până la încheierea orei rezervate.',
+        'alege_ora': 'Alege ore consecutive', 'disclaimer': 'Rezervarea poate fi anulată gratuit până la încheierea orei rezervate.',
         'vezi_locatia': 'Vezi Locația (Hartă)', 'alegeti_o_ora': 'Alegeți o oră', 'zile': ["Dum", "Lun", "Mar", "Mie", "Joi", "Vin", "Sâm"], 'azi': 'Azi', 'maine': 'Mâine',
         'lei_ora': 'Lei/oră', 'ocupat': 'Ocupat', 'trecut': 'Trecut', 'rezerva': 'Rezervă', 'se_cauta': 'Se caută terenuri disponibile...',
         'fara_rezervari': 'Nu ai rezervări momentan.', 'anuleaza': '❌ Anulează (Gratuit)',
@@ -168,7 +168,7 @@ window.dict = {
         'istoric': 'Booking History', 'deconectare': 'Logout', 'inapoi_profil': 'Back to Profile', 'alege_terenul': 'Choose Court',
         'data_dorita': 'Desired Date', 'ora_dorita': 'Desired Time', 'toate_orele': 'All Hours', 'inapoi': 'Back',
         'finalizare_rezervare': 'Finalize Booking', 'nevoie_minge': 'Need a ball?', 'alege_ziua': 'Choose Day', 
-        'alege_ora': 'Choose Time (Select multiple)', 'disclaimer': 'You can cancel your booking for free until the booked hour ends.',
+        'alege_ora': 'Choose consecutive hours', 'disclaimer': 'You can cancel your booking for free until the booked hour ends.',
         'vezi_locatia': 'View Location (Map)', 'alegeti_o_ora': 'Choose a time', 'zile': ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], 'azi': 'Today', 'maine': 'Tomorrow',
         'lei_ora': 'RON/hour', 'ocupat': 'Booked', 'trecut': 'Passed', 'rezerva': 'Book', 'se_cauta': 'Searching for available courts...',
         'fara_rezervari': 'You have no bookings at the moment.', 'anuleaza': '❌ Cancel (Free)',
@@ -320,7 +320,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             : { data: null, error: null };
         if (generation !== authGeneration) return false;
         if (requireProfile && (profileError || !profile)) throw new Error('Profilul nu a putut fi reîncărcat. Încearcă din nou.');
-        loggedInUser = user ? { id: user.id, email: user.email, newEmail: user.new_email || '', nume: profile?.nume || user.email.split('@')[0], telefon: profile?.telefon || '-' } : null;
+        const storedPhone = typeof profile?.telefon === 'string' ? profile.telefon.trim() : '';
+        const metadataPhone = typeof user?.user_metadata?.telefon === 'string' ? user.user_metadata.telefon.trim() : '';
+        const metadataDigits = metadataPhone.replace(/\D/g, '');
+        const ownMetadataPhone = metadataPhone.length <= 50 && /^\+?[0-9 ().-]+$/.test(metadataPhone)
+            && metadataDigits.length >= 7 && metadataDigits.length <= 15 ? metadataPhone : '';
+        // Saved profile edits take precedence. Auth metadata only fills a
+        // missing display value; reading a profile never writes contact data.
+        const phone = storedPhone && storedPhone !== '-' ? storedPhone : ownMetadataPhone;
+        loggedInUser = user ? { id: user.id, email: user.email, newEmail: user.new_email || '', nume: profile?.nume || user.email?.split('@')[0] || '', telefon: phone || '-' } : null;
         renderProfileUser();
         window.dispatchEvent(new CustomEvent('spotivity:profile-user', { detail: { user: window.getSpotivityProfileUser() } }));
         if (typeof window.actualizeazaButonCont === 'function') window.actualizeazaButonCont();
@@ -331,7 +339,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let historyRequest = 0;
     let bookingInFlight = false, hoursLoading = false;
     let baseCourtRequest = 0;
-    let sportCurent = "", terenCurent = "", pretTerenCurent = 0, pretMingeCurent = 15;
+    let sportCurent = "", terenCurent = "", terenCurentId = "", pretTerenCurent = 0, pretMingeCurent = 15;
     let mingeBifata = false, oraSelectata = [], dataSelectataStr = "";
 
     window.schimbaLimba(window.lang);
@@ -399,15 +407,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 const nrActiveSpan = document.getElementById('nr-active');
                 if (nrActiveSpan) {
-                    const { data } = await db.from('rezervari').select('data_str, ora, stare, timestamp_start').eq('client_user_id', owner).neq('stare', 'anulata');
+                    const { data } = await db.from('rezervari').select('id, booking_group_id, data_str, ora, stare, timestamp_start').eq('client_user_id', owner).neq('stare', 'anulata');
                     if (loggedInUser?.id !== owner) return;
-                    let nrReale = 0;
+                    const activeGroups = new Set();
                     if (data) {
                         data.forEach(r => {
-                            if (!window.esteRezervareTrecuta(r.data_str, r.ora, r.timestamp_start)) nrReale++;
+                            if (!window.esteRezervareTrecuta(r.data_str, r.ora, r.timestamp_start)) activeGroups.add(r.booking_group_id || r.id);
                         });
                     }
-                    nrActiveSpan.innerText = nrReale;
+                    nrActiveSpan.innerText = activeGroups.size;
                 }
                 if (loggedInUser?.id !== owner) return;
                 document.getElementById('modal-profil').style.display = 'flex';
@@ -574,10 +582,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             container.innerHTML = `<p style='color:white; text-align:center;'>${window.dict[window.lang]['fara_rezervari']}</p>`; return;
         }
 
-        let afisate = 0; const acum = new Date();
-
-        data.sort((a, b) => b.id - a.id).forEach((r) => {
-            const esteTrecuta = window.esteRezervareTrecuta(r.data_str, r.ora, r.timestamp_start);
+        let afisate = 0;
+        const grouped = new Map();
+        data.forEach(row => {
+            const key = row.booking_group_id ? `group:${row.booking_group_id}` : `legacy:${row.id}`;
+            if (!grouped.has(key)) grouped.set(key, []);
+            grouped.get(key).push(row);
+        });
+        [...grouped.values()].filter(rows => typeof window.bookingInRecentHistory !== 'function' || rows.some(row => window.bookingInRecentHistory(row))).sort((a, b) => `${b[0].data_str} ${b[0].ora}`.localeCompare(`${a[0].data_str} ${a[0].ora}`)).forEach(rows => {
+            rows.sort((a, b) => a.ora.localeCompare(b.ora));
+            const r = { ...rows[0] };
+            const remaining = rows.filter(row => row.stare !== 'anulata');
+            r.stare = remaining.length ? 'activa' : 'anulata';
+            r.pret_total = rows.length === 1 ? rows[0].pret_total
+                : `${rows.reduce((sum, row) => sum + (parseFloat(String(row.pret_total).replace(',', '.')) || 0), 0)} RON`;
+            const last = (remaining.length ? remaining : rows).at(-1);
+            const esteTrecuta = window.esteRezervareTrecuta(last.data_str, last.ora, last.timestamp_start);
+            const displayHours = rows.length > 1
+                ? `${r.ora}–${String(Number(rows.at(-1).ora.slice(0, 2)) + 1).padStart(2, '0')}:00`
+                : r.ora;
 
             if (tip === 'active' && (r.stare === 'anulata' || esteTrecuta)) return;
             afisate++;
@@ -594,7 +617,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 textExtra = '<span style="color: #9ca3af; font-weight: bold;">[FINALIZED]</span>';
             }
             if (r.stare !== 'anulata' && !esteTrecuta) {
-                butonAnulare = `<button class="btn-anulare anulare-client" data-id="${window.escapeHtml(r.id)}" style="margin-top: 10px; background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer;">${window.dict[window.lang]['anuleaza']}</button>`;
+                butonAnulare = `<button class="btn-anulare anulare-client" data-id="${window.escapeHtml(r.id)}" data-booking-id="${window.escapeHtml(r.booking_group_id || '')}" style="margin-top: 10px; background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer;">${window.dict[window.lang]['anuleaza']}</button>`;
             }
 
             const terenAsociat = terenuriDinDB.find(t => t.nume === r.teren);
@@ -617,7 +640,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             container.innerHTML += `
                 <div style="background: rgba(255,255,255,0.05); border: 1px solid ${culoareBorder}; padding: 15px; border-radius: 8px; color: white; margin-bottom: 10px; opacity: ${opacitate};">
                     <h4 style="margin: 0 0 10px 0; color: ${culoareTitlu};">⚽ ${window.escapeHtml(r.sport)} - ${window.escapeHtml(r.teren)} ${window.escapeHtml(numeOras)}${textExtra}</h4>
-                    <p style="margin: 5px 0;">📅 ${window.escapeHtml(dataTradusa)} | ⏰ ${r.ora}</p>
+                    <p style="margin: 5px 0;">📅 ${window.escapeHtml(dataTradusa)} | ⏰ ${window.escapeHtml(displayHours)}</p>
                     <p style="margin: 5px 0;">Total: <strong>${window.escapeHtml(r.pret_total)}</strong></p>
                     <div style="display: flex; flex-wrap: wrap;">${butonLocatie}${butonChat}${butonAnulare}</div>
                 </div>
@@ -636,12 +659,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('container-rezervari')?.addEventListener('click', async (e) => {
         if (e.target.classList.contains('anulare-client')) {
-            const idRez = e.target.getAttribute('data-id');
-            if (confirm("Confirm?")) {
-                const { error } = await db.from('rezervari').update({ stare: 'anulata' }).eq('id', idRez);
-                if (error) return alert('Anularea a fost respinsă: ' + error.message);
-                deschideIstoric(window.tipIstoricDeschis || "active");
-            }
+            const button = e.target;
+            const idRez = button.getAttribute('data-id');
+            const bookingId = button.getAttribute('data-booking-id');
+            const owner = loggedInUser?.id;
+            if (!owner || button.disabled || !confirm('Anulezi orele nefinalizate ale rezervării?')) return;
+            button.disabled = true;
+            try {
+                if (bookingId) {
+                    if (!window.SpotivityBooking) throw new Error('Serviciul de rezervări nu s-a încărcat. Reîncarcă pagina.');
+                    await window.SpotivityBooking.cancelOwned(bookingId, owner);
+                } else {
+                    // Historical bookings remain cancellable under their existing RLS guard.
+                    const { error } = await db.from('rezervari').update({ stare: 'anulata' }).eq('id', idRez);
+                    if (error) throw error;
+                }
+                if (loggedInUser?.id === owner) deschideIstoric(window.tipIstoricDeschis || "active");
+            } catch (error) { if (loggedInUser?.id === owner) alert('Anularea a fost respinsă: ' + error.message); }
+            finally { button.disabled = false; }
         }
         
         if (e.target.classList.contains('chat-teren-client')) {
@@ -698,16 +733,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     let temporizatorNotificareRezervare;
-    function afiseazaSuccesRezervare() {
+    function afiseazaSuccesRezervare(message) {
         const notificare = document.getElementById('notificare-rezervare');
         const mesaj = document.getElementById('notificare-rezervare-text');
         if (!notificare || !mesaj) return;
         clearTimeout(temporizatorNotificareRezervare);
-        mesaj.textContent = window.dict[window.lang]['rezervare_succes'];
+        mesaj.textContent = message || window.dict[window.lang]['rezervare_succes'];
         notificare.hidden = false;
         temporizatorNotificareRezervare = setTimeout(() => {
             notificare.hidden = true;
-        }, 2000);
+        }, message ? 10000 : 2000);
     }
 
     // --- LOGICA TERENURI ---
@@ -836,7 +871,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function incarcaInterfataRezervare(terenDinDB) {
         bookingContextGeneration++;
         document.getElementById('rezervare-teren-selectat').textContent = terenDinDB.nume;
-        terenCurent = terenDinDB.nume; pretTerenCurent = terenDinDB.pret; pretMingeCurent = terenDinDB.pret_minge !== null ? terenDinDB.pret_minge : 15;
+        terenCurent = terenDinDB.nume; terenCurentId = String(terenDinDB.id); pretTerenCurent = terenDinDB.pret; pretMingeCurent = terenDinDB.pret_minge !== null ? terenDinDB.pret_minge : 15;
         document.getElementById('buton-vezi-locatia').onclick = () => window.open(window.safeUrl(terenDinDB.locatie), '_blank', 'noopener,noreferrer');
         
         mingeBifata = false; document.getElementById('checkbox-minge').checked = false;
@@ -960,7 +995,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     async function incarcaOreDinSupabase() {
-        if (bookingInFlight) return;
+        if (bookingInFlight || pendingBooking()) { actualizeazaButonFinal(); return; }
         const selection = [...oraSelectata];
         hoursLoading = true; actualizeazaButonFinal();
         const containerOre = document.getElementById('container-ore');
@@ -1043,73 +1078,97 @@ document.addEventListener('DOMContentLoaded', async () => {
         actualizeazaButonFinal(); // Reactualizăm butonul de rezervare ca să fie verde și gata de plată
     }
 
+    function pendingBooking() {
+        return window.SpotivityBooking?.pendingSelection(loggedInUser?.id);
+    }
+
+    function consecutiveHours(hours) {
+        const ordered = [...hours].sort();
+        return ordered.every((hour, index) => !index || Number(hour.slice(0, 2)) === Number(ordered[index - 1].slice(0, 2)) + 1);
+    }
+
+    function bookingNote() {
+        let note = document.getElementById('booking-consecutive-note');
+        if (!note) {
+            note = document.createElement('p'); note.id = 'booking-consecutive-note'; note.className = 'booking-consecutive-note';
+            note.setAttribute('role', 'status'); note.setAttribute('aria-live', 'polite');
+            document.getElementById('container-ore')?.after(note);
+        }
+        return note;
+    }
+
     function toggleOra(btn, ora) {
-        if (bookingInFlight || hoursLoading) return;
-        if (btn.classList.contains('selectat')) { btn.classList.remove('selectat'); oraSelectata = oraSelectata.filter(o => o !== ora); } 
-        else { btn.classList.add('selectat'); oraSelectata.push(ora); }
+        if (bookingInFlight || hoursLoading || pendingBooking()) return;
+        const proposed = btn.classList.contains('selectat') ? oraSelectata.filter(value => value !== ora) : [...oraSelectata, ora];
+        if (!consecutiveHours(proposed)) {
+            bookingNote().textContent = 'Selectează ore consecutive. Pentru a schimba intervalul, debifează orele de la capete.';
+            return;
+        }
+        oraSelectata = proposed;
+        btn.classList.toggle('selectat', oraSelectata.includes(ora));
         actualizeazaButonFinal();
     }
 
     function actualizeazaButonFinal() {
         const butonConfirma = document.getElementById('buton-confirma');
+        if (!butonConfirma) return;
+        const pending = pendingBooking();
         if (bookingInFlight) { butonConfirma.disabled = true; return; }
-        if (hoursLoading || oraSelectata.length === 0) {
+        if (pending) {
+            const court = terenuriDinDB.find(row => String(row.id) === pending.court_id);
+            bookingNote().textContent = `Verifică rezervarea trimisă anterior: ${court?.nume || 'teren selectat'}, ${window.traduData(pending.day)}, ${pending.hours.join(', ')}. Se păstrează aceleași date pentru a evita o dublură.`;
+            butonConfirma.innerText = 'Verifică rezervarea anterioară'; butonConfirma.disabled = false; butonConfirma.style.opacity = '1';
+        } else if (hoursLoading || oraSelectata.length === 0) {
+            bookingNote().textContent = 'O singură rezervare pe zi la același sport, cu una sau mai multe ore consecutive, indiferent de oraș.';
             butonConfirma.innerText = window.dict[window.lang]['alegeti_o_ora']; butonConfirma.disabled = true; butonConfirma.style.opacity = '0.5';
+        } else if (!consecutiveHours(oraSelectata)) {
+            bookingNote().textContent = 'Selectează numai ore consecutive, pe același teren.';
+            butonConfirma.disabled = true;
         } else {
+            bookingNote().textContent = 'O singură rezervare pe zi la același sport, cu una sau mai multe ore consecutive, indiferent de oraș.';
             let pretTotal = (pretTerenCurent * oraSelectata.length);
             if (mingeBifata) pretTotal += pretMingeCurent;
             butonConfirma.innerText = `${window.dict[window.lang]['rezerva']} (${pretTotal})`; butonConfirma.disabled = false; butonConfirma.style.opacity = '1';
         }
     }
 
+    window.addEventListener('spotivity:booking-signin', () => {
+        if (loggedInUser || pendingBooking()) return;
+        document.getElementById('modal-rezervare').style.display = 'none';
+        document.getElementById('modal-terenuri').style.display = 'none';
+        reseteazaFundalSport();
+        document.getElementById('tab-login')?.click();
+        document.getElementById('modal-auth').style.display = 'flex';
+        document.getElementById('login-email')?.focus({ preventScroll: true });
+    });
+
     document.getElementById('buton-confirma')?.addEventListener('click', async () => {
-        if (!loggedInUser) {
-            document.getElementById('modal-rezervare').style.display = 'none'; reseteazaFundalSport(); document.getElementById('modal-auth').style.display = 'flex'; return;
-        }
-
-        if (bookingInFlight || hoursLoading || !oraSelectata.length) return;
+        if (bookingInFlight || hoursLoading || (!oraSelectata.length && !pendingBooking())) return;
+        const ownerId = loggedInUser?.id || null;
+        const identity = loggedInUser ? { ...loggedInUser } : null;
+        const selected = pendingBooking() || {
+            court_id: terenCurentId, day: dataSelectataStr, hours: [...oraSelectata].sort(), with_ball: mingeBifata
+        };
+        if (!consecutiveHours(selected.hours)) { bookingNote().textContent = 'Selectează numai ore consecutive.'; return; }
+        if (!window.SpotivityBooking) { alert('Serviciul de rezervări nu s-a încărcat. Reîncarcă pagina.'); return; }
         const butonConfirma = document.getElementById('buton-confirma');
-        const context = bookingContextGeneration, ownerId = loggedInUser.id;
-        const rowsToInsert = oraSelectata.map((ora, index) => ({
-            sport: sportCurent, teren: terenCurent, data_str: dataSelectataStr, ora,
-            cu_minge: index === 0 && mingeBifata, email_client: loggedInUser.email,
-            stare: 'activa', timestamp_start: Date.now()
-        }));
-        const textButonInitial = butonConfirma.innerText;
         bookingInFlight = true;
-        butonConfirma.innerText = 'Se procesează...';
-        butonConfirma.disabled = true;
+        butonConfirma.innerText = 'Se procesează…'; butonConfirma.disabled = true;
         try {
-            const {data: dublura, error: availabilityError} = await db.from('rezervari_disponibilitate')
-                .select('ora').eq('teren', rowsToInsert[0].teren).eq('data_str', rowsToInsert[0].data_str)
-                .in('ora', rowsToInsert.map(row => row.ora));
-            if (context !== bookingContextGeneration || loggedInUser?.id !== ownerId ||
-                document.getElementById('modal-rezervare').style.display !== 'flex' ||
-                availabilityError || !dublura || dublura.length > 0) return;
-
-            const { error } = await db.from('rezervari').insert(rowsToInsert);
-        
-            let erori = error ? 1 : 0;
-            if (error && error.code === '23505') {
-                console.error("Eroare rezervare - dublura:", error);
-                alert("Atenție: Una sau mai multe ore selectate tocmai au fost rezervate de altcineva. Vă rugăm să reîncărcați și să alegeți altă oră.");
-            } else if (error) {
-                console.error("Eroare salvare rezervare:", error);
-                alert("Eroare la salvarea rezervării: " + error.message);
-            }
-
-            if (erori === 0) {
-                document.getElementById('modal-rezervare').style.display = 'none';
-                document.getElementById('modal-terenuri').style.display = 'none';
-                reseteazaFundalSport();
-                afiseazaSuccesRezervare();
-            }
-
+            const court = terenuriDinDB.find(row => String(row.id) === selected.court_id);
+            const result = await window.SpotivityBooking.create(selected, { user: identity, court_name: court?.nume || terenCurent });
+            if (!result || (loggedInUser?.id || null) !== ownerId) return;
+            document.getElementById('modal-rezervare').style.display = 'none';
+            document.getElementById('modal-terenuri').style.display = 'none';
+            reseteazaFundalSport();
+            afiseazaSuccesRezervare(window.SpotivityBooking.notificationText(result));
+            window.dispatchEvent(new CustomEvent('spotivity:booking-created', { detail: { booking_id: result.booking_id } }));
+        } catch (error) {
+            if ((loggedInUser?.id || null) === ownerId) alert(error.message || 'Rezervarea nu a putut fi confirmată. Încearcă din nou.');
         } finally {
             bookingInFlight = false;
-            butonConfirma.innerText = textButonInitial;
             actualizeazaButonFinal();
-            if (document.getElementById('modal-rezervare').style.display === 'flex') incarcaOreDinSupabase();
+            if (!pendingBooking() && document.getElementById('modal-rezervare').style.display === 'flex') incarcaOreDinSupabase();
         }
     });
 

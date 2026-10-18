@@ -220,6 +220,7 @@
             }
             metadataSaved = true;
             bases = bases.map(item => item.id === context.baseId ? { ...item, poza: nextPath } : item);
+            window.dispatchEvent(new CustomEvent('spotivity:base-updated', { detail: { id: context.baseId, poza: nextPath } }));
             discardPhotoDraft();
             renderPhoto();
             let cleaned = true;
@@ -442,6 +443,7 @@
             if (!sameEditor()) return;
             if (result.error) throw new Error('Salvarea a eșuat. Verifică permisiunile și reîncarcă baza înainte de a încerca din nou.');
             if (!result.data || (!role.isSuper && result.data.length !== 1)) throw new Error('Baza nu mai poate fi modificată. Permisiunea poate fi retrasă; reîncarcă lista.');
+            window.dispatchEvent(new CustomEvent('spotivity:base-updated', { detail: { id: editingId || result.data, descriere: description } }));
             const success = role.isSuper ? 'Baza sportivă a fost salvată.' : 'Descrierea a fost salvată.';
             showDirectory();
             status(success);
@@ -452,6 +454,25 @@
             if (sameRole(captured) && (editor === editorGeneration || byId('admin-baza-form').hidden)) setSaving(false);
         }
     }
+
+    // Opens the existing editor directly, after re-reading the current grants.
+    window.openSpotivityBaseEditor = async function(id) {
+        if (!role || !id || saving || photoSaving) return false;
+        const captured = generation;
+        lastFocus = document.activeElement;
+        showDirectory();
+        const editor = editorGeneration;
+        byId('modal-baze-admin').style.display = 'flex';
+        status('Se încarcă baza sportivă…');
+        const ok = await refresh();
+        if (!sameRole(captured) || editor !== editorGeneration || byId('modal-baze-admin').style.display !== 'flex') return false;
+        if (!ok || !bases.some(base => base.id === id)) {
+            status('Nu ai permisiune să editezi această bază sportivă.', true);
+            return false;
+        }
+        showEditor(id);
+        return true;
+    };
 
     window.refreshAdminBases = refresh;
     window.refreshAdminBaseOptions = refresh;

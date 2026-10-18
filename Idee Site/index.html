@@ -12,12 +12,15 @@
     <link rel="stylesheet" href="css/style.css?v=44">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3" integrity="sha384-dl/4LkSyQ4uEucc48NM6VDZLAjLLq9yMzZ5JLXumBq7Ld33XBof73hseOqPhO89+" crossorigin="anonymous"></script>
     <script src="js/db.js?v=2"></script>
-    <script src="js/security.js?v=2"></script>
+    <script src="js/security.js?v=3"></script>
     <script src="js/sport-appearance.js?v=2"></script>
-    <script src="js/app.js?v=29" defer></script>
-    <script src="js/admin.js?v=23" defer></script>
-    <script src="js/admin-baze.js?v=4" defer></script>
-    <script src="js/base-admin.js?v=1" defer></script>
+    <link rel="stylesheet" href="css/guest-booking.css?v=1">
+    <script src="js/guest-booking.js?v=2" defer></script>
+    <script src="js/app.js?v=31" defer></script>
+    <script src="js/admin.js?v=25" defer></script>
+    <script src="js/admin-baze.js?v=5" defer></script>
+    <script src="js/base-admin.js?v=3" defer></script>
+    <script src="js/admin-club-requests.js?v=2" defer></script>
     <link rel="stylesheet" href="css/home.css?v=3">
     <link rel="stylesheet" href="css/theme.css?v=2">
     <script src="js/home.js?v=6" defer></script>
@@ -35,7 +38,8 @@
 
     <link rel="stylesheet" href="css/admin.css?v=3">
     <link rel="stylesheet" href="css/admin-theme.css?v=1">
-    <link rel="stylesheet" href="css/base-admin.css?v=1">
+    <link rel="stylesheet" href="css/base-admin.css?v=3">
+    <link rel="stylesheet" href="css/admin-club-requests.css?v=2">
 </head>
 <body class="pagina-publica">
 
@@ -561,6 +565,11 @@
                 <select id="base-admin-select"></select>
                 <p id="base-admin-access-hint" role="status"></p>
             </div>
+            <article id="base-admin-base-card" class="base-admin-base-card" hidden>
+                <div id="base-admin-base-photo" class="base-admin-base-photo" aria-hidden="true"></div>
+                <div class="base-admin-base-copy"><h3 id="base-admin-base-name"></h3><p id="base-admin-base-description"></p></div>
+                <button type="button" class="btn-cont" id="base-admin-edit-base" hidden>Editează baza sportivă</button>
+            </article>
         <div id="sectiune-dashboard" class="admin-dashboard" style="display: none; flex-direction: column; gap: 30px; width: 100%; max-width: 1200px; margin: 0 auto; padding: 20px;">
 
             <!-- Bara de Sus -->
@@ -578,16 +587,29 @@
             </div>
 
             <!-- Meniul de Carduri (Generează Pop-up-uri la Click) -->
-            <div class="grila-sporturi" style="max-width: 100%; padding: 0;">
+            <div class="grila-sporturi base-admin-tools" style="max-width: 100%; padding: 0;">
+                <!-- PANOURI SUPER ADMIN -->
+                <button type="button" class="card-sport admin-menu-card super-admin-only" style="display: none; padding: 20px;" onclick="window.deschideModalAdaugaTeren()">
+                    <h2 style="font-size: 18px;">Adaugă Teren</h2>
+                </button>
+                <button type="button" class="card-sport admin-menu-card super-admin-only" style="display: none; padding: 20px;" onclick="document.getElementById('modal-creeaza-cont').style.display='flex'">
+                    <h2 style="font-size: 18px;">Creare Angajat</h2>
+                </button>
+
+                <button type="button" id="btn-cereri-baze-admin" class="card-sport admin-menu-card" hidden>
+                    <h2>Cereri înscriere baze <span id="admin-cereri-badge" class="admin-club-count" hidden>0</span></h2>
+                    <span class="admin-card-detail">Analizează cererile primite</span>
+                </button>
+
                 <!-- Administrarea terenurilor permise -->
                 <button type="button" class="card-sport admin-menu-card admin-comun" style="display: none; padding: 20px;" onclick="document.getElementById('modal-rezervare-manuala').style.display='flex'">
                     <h2 style="font-size: 18px;"><span data-trad="t-rez-man-scurt">Rezervare Manuală</span></h2>
                 </button>
-                <button type="button" class="card-sport admin-menu-card admin-comun" style="display: none; padding: 20px;" onclick="document.getElementById('modal-tabel-program').style.display='flex'">
+                <button type="button" class="card-sport admin-menu-card admin-comun" style="display: none; padding: 20px;" onclick="window.deschideProgramAdmin()">
                     <h2 style="font-size: 18px;"><span data-trad="t-prog-scurt">Program & Active</span></h2>
                 </button>
                 <button type="button" class="card-sport admin-menu-card admin-comun" style="display: none; padding: 20px;" onclick="document.getElementById('modal-istoric').style.display='flex'">
-                    <h2 style="font-size: 18px;"><span data-trad="t-istoric-titlu-scurt">Toate Rezervările</span></h2>
+                    <h2 style="font-size: 18px;"><span data-trad="t-istoric-titlu-scurt">Rezervări</span></h2>
                 </button>
 
                 <button type="button" id="btn-baze-admin" class="card-sport admin-menu-card" hidden>
@@ -596,11 +618,131 @@
                 </button>
 
                 <!-- Aici JS-ul va injecta cardurile pentru setările terenurilor alocate -->
-                <div id="container-meniu-terenuri" style="display: contents;"></div>
             </div>
+            <div id="container-meniu-terenuri" class="base-admin-sports"></div>
 
         </div> <!-- End Dashboard -->
         </section>
+    <div class="modal" id="modal-cereri-baze-admin" style="display: none;">
+        <section class="modal-continut admin-club-dialog" role="dialog" aria-modal="true" aria-labelledby="admin-cereri-title" tabindex="-1">
+            <button type="button" class="buton-inchidere" id="admin-cereri-close" aria-label="Închide cererile de înscriere">X</button>
+            <h2 class="titlu-modal" id="admin-cereri-title">Cereri înscriere baze</h2>
+            <p class="admin-club-help">Cererile și datele de contact sunt private. Acceptarea publică baza, terenurile și fotografia și activează accesul administratorului bazei.</p>
+            <div class="admin-club-toolbar">
+                <div class="grup-input">
+                    <label for="admin-cereri-filter">Starea cererii</label>
+                    <select id="admin-cereri-filter">
+                        <option value="">Toate cererile</option>
+                        <option value="noua">Nouă</option>
+                        <option value="in_analiza">În analiză</option>
+                        <option value="contactata">Contactată</option>
+                        <option value="acceptata">Acceptată</option>
+                        <option value="respinsa">Respinsă</option>
+                        <option value="arhivata">Arhivată</option>
+                    </select>
+                </div>
+                <button type="button" class="btn-cont" id="admin-cereri-refresh">Reîncarcă lista</button>
+            </div>
+            <p id="admin-cereri-status" role="status" aria-live="polite"></p>
+            <div class="admin-club-workspace">
+                <div id="admin-cereri-directory" class="admin-club-directory">
+                    <div id="admin-cereri-list" class="admin-club-list" aria-label="Cereri de înscriere"></div>
+                    <button type="button" class="btn-cont" id="admin-cereri-more" hidden>Încarcă mai multe</button>
+                </div>
+                <section id="admin-cerere-detail" class="admin-club-detail" aria-labelledby="admin-cerere-title" hidden>
+                    <button type="button" class="btn-cont" id="admin-cerere-back">Înapoi la cereri</button>
+                    <h3 id="admin-cerere-title" tabindex="-1"></h3>
+                    <div id="admin-cerere-data"></div>
+                    <img id="admin-cerere-photo" class="admin-club-photo" alt="Fotografia trimisă a bazei sportive" referrerpolicy="no-referrer" decoding="async" hidden>
+                    <p id="admin-cerere-photo-status" class="admin-club-help" role="status"></p>
+                    <form id="admin-cerere-form">
+                        <div class="grup-input" id="admin-cerere-state-field">
+                            <label for="admin-cerere-state">Starea cererii</label>
+                            <select id="admin-cerere-state" required>
+                                <option value="noua">Nouă</option>
+                                <option value="in_analiza">În analiză</option>
+                                <option value="contactata">Contactată</option>
+                                <option value="arhivata">Arhivată</option>
+                            </select>
+                        </div>
+                        <div class="grup-input">
+                            <label for="admin-cerere-note">Notă internă</label>
+                            <textarea id="admin-cerere-note" rows="4" maxlength="2000" placeholder="Discuții, verificări și următorii pași"></textarea>
+                        </div>
+                        <button type="submit" class="buton-rezervare" id="admin-cerere-save">Salvează modificările</button>
+                        <p id="admin-cerere-save-status" role="status" aria-live="polite"></p>
+                    </form>
+                    <section id="admin-cerere-decision" class="admin-club-decision" aria-labelledby="admin-cerere-decision-title" hidden>
+                        <h4 id="admin-cerere-decision-title">Decizia de publicare</h4>
+                        <p class="admin-club-help">Verifică tariful fiecărui teren. Acceptarea creează baza și terenurile active, le publică pe site și acordă solicitantului acces de admin numai la baza sa.</p>
+                        <fieldset id="admin-cerere-prices" class="admin-club-prices">
+                            <legend>Tarife de publicat · lei/oră</legend>
+                            <div id="admin-cerere-price-fields"></div>
+                        </fieldset>
+                        <div class="admin-club-decision-buttons">
+                            <button type="button" class="buton-rezervare" id="admin-cerere-approve">Acceptă și publică</button>
+                            <button type="button" class="btn-cont admin-club-reject" id="admin-cerere-reject">Respinge cererea</button>
+                        </div>
+                        <section id="admin-cerere-confirm" class="admin-club-confirm" aria-labelledby="admin-cerere-confirm-title" hidden>
+                            <h4 id="admin-cerere-confirm-title" tabindex="-1">Confirmă decizia</h4>
+                            <p id="admin-cerere-confirm-description"></p>
+                            <ul id="admin-cerere-confirm-prices" class="admin-club-courts"></ul>
+                            <div class="admin-club-decision-buttons">
+                                <button type="button" class="buton-rezervare" id="admin-cerere-confirm-submit">Confirmă</button>
+                                <button type="button" class="btn-cont" id="admin-cerere-confirm-cancel">Înapoi la verificare</button>
+                            </div>
+                        </section>
+                    </section>
+                    <p id="admin-cerere-decision-status" role="status" aria-live="polite"></p>
+                </section>
+            </div>
+        </section>
+    </div>
+
+    <div class="modal" id="modal-adauga-teren">
+        <div class="modal-continut modal-mare" style="border-color: #f59e0b; width: 100%; max-width: 550px;">
+            <button class="buton-inchidere" aria-label="Închide" onclick="this.parentElement.parentElement.style.display='none'">X</button>
+            <div>
+                <h2 class="titlu-modal" style="font-size: 20px; text-align: left; color: #f59e0b;">Adaugă Teren Nou</h2>
+            </div>
+            <div class="formular-auth" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; display: flex; flex-direction: column; flex: 1;">
+                <div class="grup-input"><label>Nume Teren</label><input type="text" id="teren-nume"></div>
+                <div class="grup-input"><label>Sport</label><select id="teren-sport"><option value="Fotbal">Fotbal</option><option value="Baschet">Baschet</option><option value="Tenis">Tenis</option><option value="Volei">Volei</option><option value="Tenis Picior">Tenis de picior</option></select></div>
+                <div class="grup-input"><label>Oraș</label><input type="text" id="teren-oras" placeholder="Ex: Târgu Mureș"></div>
+                <div class="grup-input"><label for="teren-baza">Baza sportivă</label><select id="teren-baza"><option value="">Fără bază sportivă</option></select></div>
+                <div class="grup-input"><label>Preț/oră (Lei)</label><input type="number" id="teren-pret"></div>
+                <div class="grup-input admin-toggle-row" style="display:flex; justify-content:space-between; margin-top:10px;"><label>Ofertă Minge?</label><input type="checkbox" id="teren-minge" checked style="width:20px;height:20px;"></div>
+                <div class="grup-input" style="margin-top:10px;"><label>Preț Minge (Lei)</label><input type="number" id="teren-pret-minge" value="15"></div>
+                <div class="grup-input" style="margin-top:10px;"><label>Link Google Maps</label><input type="text" id="teren-locatie" placeholder="https://maps..."></div>
+                <div class="grup-input" style="margin-top:10px; overflow: hidden; width: 100%;">
+                    <label style="color: #a1eafb;">Încarcă Poza</label>
+                    <input type="file" id="teren-poza" accept="image/*" style="background: rgba(0,0,0,0.5); color: white; padding: 10px; border-radius: 5px; cursor: pointer; border: 1px dashed rgba(255,255,255,0.2); width: 100%; box-sizing: border-box; min-width: 0;">
+                </div>
+                <button type="button" id="btn-adauga-teren" class="buton-rezervare" style="background: #f59e0b; color: black; margin-top:20px;">Adaugă Teren</button>
+            </div>
+            <h3 style="color: white; font-size: 16px; margin-top: 20px;">Terenuri Existente:</h3>
+            <div id="container-lista-terenuri" style="display: flex; flex-direction: column; gap: 10px; overflow-y: auto; max-height: 200px;"></div>
+        </div>
+    </div>
+
+    <div class="modal" id="modal-creeaza-cont">
+        <div class="modal-continut modal-mare" style="border-color: #34c759; width: 100%; max-width: 550px;">
+            <button class="buton-inchidere" aria-label="Închide" onclick="this.parentElement.parentElement.style.display='none'">X</button>
+            <div>
+                <h2 class="titlu-modal" style="font-size: 20px; text-align: left; color: #34c759;">Alocare Terenuri Angajat</h2>
+                <p style="color: #ccc; font-size: 13px; margin-top: -10px; margin-bottom: 10px;">(ATENȚIE: Contul cu parola trebuie creat întâi în Supabase Auth)</p>
+            </div>
+            <div class="formular-auth" style="display: flex; flex-direction: column; flex: 1;">
+                <div class="grup-input"><label>Nume Angajat / Admin</label><input type="text" id="super-nume"></div>
+                <div class="grup-input"><label>Adresă E-mail (Creată în Supabase)</label><input type="email" id="super-email"></div>
+                <div class="grup-input"><label>Bifează terenurile la care are acces:</label>
+                    <div id="container-checkbox-terenuri" style="display:flex; flex-direction:column; gap:5px; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px;"></div>
+                </div>
+                <button type="button" id="creeaza-supervisor-btn" class="buton-rezervare" style="margin-top: 20px; background: #34c759; color: black;">Alocă Terenuri</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal" id="modal-baze-admin">
         <section class="modal-continut modal-mare admin-baze-dialog" role="dialog" aria-modal="true" aria-labelledby="admin-baze-title">
             <button type="button" class="buton-inchidere" id="btn-inchide-baze-admin" aria-label="Închide">X</button>
@@ -675,7 +817,8 @@
                     </div>
                     <div class="grup-input">
                         <label for="tabel-data" data-trad="t-data">Data Dorită</label>
-                        <input type="date" id="tabel-data">
+                        <input type="date" id="tabel-data" aria-describedby="admin-program-date-hint">
+                        <small id="admin-program-date-hint">Consultă orice dată și orice an.</small>
                     </div>
                 </div>
                 <div class="tabel-scrolabil program-scroll">
@@ -701,7 +844,8 @@
         <div class="modal-continut modal-mare" style="border-color: #3b82f6; width: 100%; max-width: 600px;">
             <button class="buton-inchidere" aria-label="Închide" onclick="this.parentElement.parentElement.style.display='none'">X</button>
             <div style="flex-shrink: 0;">
-                <h2 class="titlu-modal" style="font-size: 20px; text-align: left; margin-bottom: 15px; color: #3b82f6;" data-trad="t-istoric-titlu">Toate Rezervările (Descărcare)</h2>
+                <h2 class="titlu-modal" style="font-size: 20px; text-align: left; margin-bottom: 15px; color: #3b82f6;" data-trad="t-istoric-titlu">Rezervări viitoare și recente</h2>
+                <p class="admin-baze-help">Rezervările finalizate de peste 30 de zile sunt ascunse din această listă. Le poți consulta în „Program &amp; Active”, alegând data.</p>
                 <button type="button" id="btn-istoric" class="buton-rezervare" style="background: #3b82f6; width: 100%; margin-bottom: 15px;" data-trad="t-istoric-btn">Descarcă Rezervările</button>
             </div>
             <div id="container-istoric" style="display: flex; flex-direction: column; gap: 15px; overflow-y: auto; flex: 1; padding-right: 5px;">

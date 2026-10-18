@@ -7,6 +7,7 @@ const {execFileSync} = require('node:child_process');
 const {createHash} = require('node:crypto');
 const {join} = require('node:path');
 const assert = require('node:assert/strict');
+const {createBookingWorkflowFixture} = require('./booking-workflow-fixture.cjs');
 const uid = n => `00000000-0000-0000-0000-${String(n).padStart(12,'0')}`;
 const host = 'ndubcdwohqzgxpuiowye.supabase.co';
 const sports = ['Fotbal','Baschet','Tenis','Volei','Tenis Picior'];
@@ -50,13 +51,17 @@ async function openProfile(page) {
     await pg.exec(readFileSync(join(__dirname,'../011_club_requests.sql'),'utf8'));
     await pg.exec(readFileSync(join(__dirname,'../012_club_approval.sql'),'utf8'));
     await pg.exec(readFileSync(join(__dirname,'../013_admin_integration.sql'),'utf8'));
+    for (const file of ['014_booking_groups.sql', '015_profile_contact.sql', '016_notification_outbox.sql']) {
+      await pg.exec(readFileSync(join(__dirname, '..', file), 'utf8'));
+    }
     await pg.exec("update public.terenuri set poza='assets/imagini/avatar2.png'");
     const tomorrow=(await pg.query("select ((now() at time zone 'Europe/Bucharest')::date+1)::text as d")).rows[0].d;
     let queue=Promise.resolve();
     const serial = fn => { const run=queue.then(fn); queue=run.catch(()=>{}); return run; };
     const requests=[];
+    const bookingWorkflow = await createBookingWorkflowFixture({pg, host,
+      resolveUser: bearer => {const person = tokens.get(bearer); return person ? uid(person) : null;}, records: requests});
     let logoutCount=0;
-    let availabilityGate=null;
     let chatGate=null;
     const pauseChatPreflight=target=>{
       let enter,release,timeout;
@@ -67,23 +72,8 @@ async function openProfile(page) {
       const wait=new Promise(resolve=>release=resolve);
       chatGate={enter,wait,target};return{entered,release};
     };
-    const pauseNextAvailability = () => {
-      let enter,release;
-      const entered=new Promise(resolve=>{enter=resolve});
-      const wait=new Promise(resolve=>{release=resolve});
-      availabilityGate={enter,wait};
-      return {entered,release};
-    };
     const api = async route => {
       const pendingRequest=route.request(), pendingUrl=new URL(pendingRequest.url());
-      if (availabilityGate && pendingRequest.method()==='GET'
-        && pendingUrl.pathname.endsWith('/rezervari_disponibilitate')
-        && pendingUrl.searchParams.get('ora')?.startsWith('in.(')) {
-        const gate=availabilityGate;
-        availabilityGate=null;
-        gate.enter();
-        await gate.wait;
-      }
       if (chatGate && pendingRequest.method()==='GET' && pendingUrl.pathname.endsWith('/rezervari')
         && pendingRequest.frame().page()===chatGate.target
         && pendingRequest.headers()['x-spotivity-fixture-chat-send']==='1'
@@ -98,6 +88,7 @@ async function openProfile(page) {
       const recorded={path:url.pathname,method:request.method(),person,search:url.search};
       requests.push(recorded);
       try {
+        if (url.pathname === '/functions/v1/booking-workflow') return bookingWorkflow.browserRoute(route);
         await pg.exec('reset role');
         await pg.query("select set_config('request.jwt.claim.sub',$1,false)",[person ? uid(person) : '']);
         if (url.pathname.startsWith('/auth/v1/')) {
@@ -116,7 +107,7 @@ async function openProfile(page) {
           if (url.pathname.endsWith('/token')) {
             const body=request.postDataJSON();
             assert.equal(body.password,' test-password. ');
-            const n=body.email==='admin@example.test' ? 3 : body.email==='super@example.test' ? 4 : 1;
+            const n=body.email==='admin@example.test' ? 3 : body.email==='super@example.test' ? 4 : body.email==='bob@example.test' ? 2 : 1;
             const user=(await pg.query('select * from auth.users where id=$1',[uid(n)])).rows[0];
             return reply(200,{access_token:token(n),token_type:'bearer',refresh_token:`fixture-refresh-${n}`,expires_in:3600,user:{...user,app_metadata:{provider:'email'},user_metadata:user.raw_user_meta_data}});
           }
@@ -152,10 +143,10 @@ async function openProfile(page) {
             const placeholders=values.map(v=>{params.push(v);return `$${params.length}`});
             conditions.push(`${ident(field)} in (${placeholders.join(',')})`);
           } else {
-            const match=value.match(/^(eq|neq|ilike)\.(.*)$/s); assert.ok(match,value);
+            const match=value.match(/^(eq|neq|ilike|gt|gte|lt|lte)\.(.*)$/s); assert.ok(match,value);
             const booleanField=['is_super','este_activ','este_activa','are_chat','optiune_minge','citit'].includes(field);
             params.push(booleanField && ['true','false'].includes(match[2]) ? match[2]==='true' : match[2]);
-            conditions.push(`${ident(field)} ${{eq:'=',neq:'<>',ilike:'ilike'}[match[1]]} $${params.length}`);
+            conditions.push(`${ident(field)} ${{eq:'=',neq:'<>',ilike:'ilike',gt:'>',gte:'>=',lt:'<',lte:'<='}[match[1]]} $${params.length}`);
           }
         }
         const where=conditions.length ? ' where '+conditions.join(' and ') : '';
@@ -384,40 +375,58 @@ async function openProfile(page) {
     assert.ok(!requests.some(r=>r.path.endsWith('/rezervari') && !r.person));
     pass('public booking screen uses only the safe availability table');
     await page.locator('#buton-confirma').click();
+    await page.locator('#modal-rezervare-vizitator').waitFor({state:'visible'});
+    assert.equal(await page.locator('#modal-auth').isVisible(),false);
+    assert.equal(await page.locator('#modal-rezervare-vizitator input[type="password"]').count(),0);
+    assert.equal(await page.locator('#modal-rezervare').isVisible(),true);
+    await page.locator('#guest-contact_name').fill('Guest browser');
+    await page.locator('#guest-email').fill('browser-guest@example.test');
+    await page.locator('#guest-phone').fill('+40 733 222 111');
+    await page.locator('#guest-booking-submit').click();
+    await page.locator('#modal-rezervare-vizitator').waitFor({state:'hidden'});
+    await page.locator('#modal-rezervare').waitFor({state:'hidden'});
+    await serial(async () => {
+      await pg.exec("reset role; select set_config('request.jwt.claim.sub','',false)");
+      assert.equal((await pg.query('select count(*)::int n from auth.users')).rows[0].n,4);
+      assert.equal((await pg.query("select count(*)::int n from public.clienti where email='browser-guest@example.test'")).rows[0].n,0);
+      const row=(await pg.query("select * from public.rezervari where email_client='browser-guest@example.test'")).rows[0];
+      assert.equal(row.client_user_id,null);assert.equal(row.guest_name,'Guest browser');
+      assert.equal(row.guest_phone,'+40 733 222 111');assert.equal(row.stare,'activa');
+    });
+    const guestMail=bookingWorkflow.mail.find(mail=>mail.kind==='booking_created_client' && mail.to.email==='browser-guest@example.test');
+    assert.ok(guestMail,'Actual Edge worker must submit the guest confirmation to the local Make adapter');
+    assert.match(guestMail.html,/Anulează rezervarea/);
+    const cancellationURL=new URL(guestMail.text.match(/https:\/\/[^\s]+#anulare-rezervare=[^\s]+/)[0]);
+    const guestCancellation=await pageFor();
+    await guestCancellation.goto(new URL(cancellationURL.hash,base).href,{waitUntil:'networkidle'});
+    await guestCancellation.locator('#email-booking-cancel-confirm').waitFor({state:'visible'});
+    await serial(async () => {
+      await pg.exec('reset role');
+      assert.equal((await pg.query("select stare from public.rezervari where email_client='browser-guest@example.test'")).rows[0].stare,'activa');
+    });
+    await guestCancellation.locator('#email-booking-cancel-confirm').click();
+    await guestCancellation.locator('#modal-anulare-rezervare-email .workflow-status').getByText('Istoricul este păstrat.',{exact:false}).waitFor();
+    await serial(async () => {
+      await pg.exec('reset role');
+      assert.equal((await pg.query("select stare from public.rezervari where email_client='browser-guest@example.test'")).rows[0].stare,'anulata');
+    });
+    assert.ok(bookingWorkflow.mail.some(mail=>mail.kind==='booking_cancelled_client' && mail.to.email==='browser-guest@example.test'));
+    await guestCancellation.close();
+    pass('guest reserves through the real Edge/SQL without an account and cancels only after confirming the email link, preserving history');
+    await openProfile(page);
     await page.locator('#modal-auth').waitFor({state:'visible'});
-    assert.equal(await page.locator('#modal-rezervare').isVisible(),false);
-    assert.equal(await page.locator('#modal-terenuri').isVisible(),false);
-    assert.equal(await page.locator('#fundal-imagine-sport').evaluate(node=>node.style.opacity),'0');
-    pass('guest booking transfers to login with both sport dialogs closed and homepage background reset');
     await page.locator('#login-email').fill('alice@example.test');
     await page.locator('#login-parola').fill(' test-password. ');
     await page.locator('#btn-executa-login').click();
     await page.locator('#modal-auth').waitFor({state:'hidden'});
     await chooseSlot();
-    const raceRequests=requests.length;
-    const pendingAvailability=pauseNextAvailability();
-    const gatedRequest=page.waitForRequest(request=>{
-      const url=new URL(request.url());
-      return url.pathname.endsWith('/rezervari_disponibilitate') && url.searchParams.get('ora')?.startsWith('in.(');
-    });
-    await page.locator('#buton-confirma').click();
-    await gatedRequest;
-    await pendingAvailability.entered;
-    assert.equal(await page.locator('#buton-confirma').isDisabled(),true);
-    await page.locator('#container-zile .btn-zi').nth(2).click();
-    pendingAvailability.release();
-    await page.locator('.btn-ora').filter({hasText:/^12:00$/}).click();
-    await page.waitForFunction(()=>document.getElementById('buton-confirma').disabled===false);
-    assert.match(await page.locator('#container-zile .btn-zi').nth(2).getAttribute('class'),/selectat/);
+    await page.locator('.btn-ora').filter({hasText:/^14:00$/}).click();
     assert.match(await page.locator('.btn-ora').filter({hasText:/^12:00$/}).getAttribute('class'),/selectat/);
+    assert.doesNotMatch(await page.locator('.btn-ora').filter({hasText:/^14:00$/}).getAttribute('class'),/selectat/);
+    assert.match(await page.locator('#booking-consecutive-note').innerText(),/consecutive/);
     assert.equal(await page.locator('#modal-rezervare').isVisible(),true);
-    assert.ok(!requests.slice(raceRequests).some(request=>request.path==='/rest/v1/rezervari' && request.method==='POST'));
-    await serial(async () => {
-      await pg.exec('reset role');
-      assert.equal((await pg.query("select count(*)::integer as n from public.rezervari where stare='activa'")).rows[0].n,0);
-    });
     await page.locator('#inchide-rezervare').click();
-    pass('changing the selected day during a delayed booking preflight aborts insertion without changing the new selection');
+    pass('the picker prevents nonconsecutive hours and preserves the existing selection');
     await chooseSlot();
     await page.locator('.btn-ora').filter({hasText:/^13:00$/}).click();
     await page.locator('#container-minge label').click();
@@ -433,7 +442,7 @@ async function openProfile(page) {
     const notice=page.locator('#notificare-rezervare');
     await notice.waitFor({state:'visible'});
     assert.equal(await notice.getAttribute('role'),'status');
-    assert.equal(await page.locator('#notificare-rezervare-text').innerText(),'Rezervarea a fost realizată cu succes.');
+    assert.match(await page.locator('#notificare-rezervare-text').innerText(),/^Rezervarea este confirmată\./);
     await serial(async () => {
       await pg.exec('reset role');
       const rows=(await pg.query("select * from public.rezervari where stare='activa' order by ora")).rows;
@@ -441,23 +450,26 @@ async function openProfile(page) {
       assert.equal(rows[0].pret_total,'115 RON (+Minge)');assert.equal(rows[1].pret_total,'100 RON');
       assert.ok(rows.every(r=>r.client_user_id===uid(1)));
     });
+    assert.ok(bookingWorkflow.mail.some(mail=>mail.kind==='booking_created_client' && mail.to.email==='alice@example.test'));
+    assert.ok(bookingWorkflow.mail.some(mail=>mail.kind==='booking_created_owner' && mail.record.customerEmail==='alice@example.test'));
+    assert.match(await page.locator('#notificare-rezervare-text').innerText(),/trimise serviciului de email/);
     pass('real SDK login and two-hour booking work with RLS and server pricing');
-    await page.clock.runFor(1999);
+    await page.clock.runFor(9999);
     assert.equal(await notice.isVisible(),true);
     await page.clock.runFor(1);
     await notice.waitFor({state:'hidden'});
     await page.clock.resume();
-    pass('successful booking restores the homepage and shows an accessible notice for two seconds');
+    pass('successful booking restores the homepage and keeps its email status notice readable for ten seconds');
     await chooseSlot('15:00');
     await serial(async () => {
       await pg.exec("reset role; select set_config('request.jwt.claim.sub','',false); update public.terenuri set este_activ=false where nume='Court A'");
     });
     const failedBookingResponse=page.waitForResponse(response=>{
       const url=new URL(response.url());
-      return url.hostname===host && url.pathname==='/rest/v1/rezervari' && response.request().method()==='POST';
+      return url.hostname===host && url.pathname==='/functions/v1/booking-workflow' && response.request().method()==='POST';
     });
     await page.locator('#buton-confirma').click();
-    assert.equal((await failedBookingResponse).status(),403);
+    assert.equal((await failedBookingResponse).status(),409);
     await page.waitForFunction(()=>!document.getElementById('buton-confirma').innerText.includes('Se procesează')
       && !document.getElementById('container-ore').innerText.includes('⏳'));
     assert.equal(await page.locator('#buton-confirma').isDisabled(),true);
@@ -472,7 +484,7 @@ async function openProfile(page) {
     pass('a booking rejected by PostgreSQL keeps the dialog open without displaying a success notice');
     const futureId=await serial(async () => {
       await pg.exec('reset role');
-      return (await pg.query("select id from public.rezervari where stare='activa' and ora='13:00'")).rows[0].id;
+      return (await pg.query("select id from public.rezervari where stare='activa' and ora='12:00'")).rows[0].id;
     });
     await openProfile(page);
     await page.locator('#btn-vezi-active').click();
@@ -481,13 +493,19 @@ async function openProfile(page) {
     await serial(async () => {
       await pg.exec('reset role');
       assert.equal((await pg.query('select stare from public.rezervari where id=$1',[futureId])).rows[0].stare,'anulata');
+      assert.equal((await pg.query("select count(*)::int n from public.rezervari where booking_group_id=(select booking_group_id from public.rezervari where id=$1) and stare='activa'",[futureId])).rows[0].n,0);
       assert.equal((await pg.query('select * from public.rezervari_disponibilitate where id=$1',[String(futureId)])).rows.length,0);
     });
-    pass('client can cancel an upcoming booking and the public slot is released');
+    pass('client cancels all consecutive hours as one booking and releases every public slot');
+    await serial(async () => {
+      await pg.exec("reset role; select set_config('request.jwt.claim.sub','',false)");
+      // A historical ungrouped row predates the subsequent hours configuration.
+      await pg.query("insert into public.rezervari(email_client,client_user_id,teren,data_str,ora,stare) values('alice@example.test',$1,'Court A',$2,'12:00','activa')",[uid(1),tomorrow]);
+    });
     const pastId=await serial(async () => {
       await pg.exec('reset role');
       await pg.query("select set_config('request.jwt.claim.sub','',false)");
-      return (await pg.query("insert into public.rezervari(email_client,client_user_id,teren,data_str,ora,stare) values('alice@example.test',$1,'Court A','2000-01-01','16:00','activa') returning id",[uid(1)])).rows[0].id;
+      return (await pg.query("insert into public.rezervari(email_client,client_user_id,teren,data_str,ora,stare) values('alice@example.test',$1,'Court A',((now() at time zone 'Europe/Bucharest')::date-1)::text,'16:00','activa') returning id",[uid(1)])).rows[0].id;
     });
     await page.locator('#inapoi-la-profil').click();
     await page.locator('#btn-vezi-istoric').click();
@@ -556,7 +574,7 @@ async function openProfile(page) {
     assert.equal(await admin.locator('[id^="modal-setari-"]').count(),1);
     assert.ok(requests.some(r=>r.path.endsWith('/rpc/get_admin_access') && r.person===3));
     pass('the integrated workspace reuses the Auth session and exposes settings only for its allocated court');
-    await admin.locator('[onclick*="modal-tabel-program"]').click();
+    await admin.locator('[data-admin-program="Fotbal"]').click();
     await admin.locator('#tabel-data').fill(tomorrow);
     await admin.locator('#tabel-data').dispatchEvent('change');
     await admin.locator('#select-stare-1400').selectOption('blocat');
@@ -577,10 +595,10 @@ async function openProfile(page) {
     pass('client names and chat messages render as text, without stored HTML execution');
     await admin.keyboard.press('Escape');
     assert.equal(await admin.locator('.sub-pagina-oras').count(),0);
-    assert.equal(await admin.locator('#container-meniu-terenuri .card-sport').count(),1);
-    const allocatedCard=admin.locator('#container-meniu-terenuri .card-sport[onclick*="modal-setari-"]');
-    assert.match(await allocatedCard.innerText(),/Court A/);
-    const allocatedIcon=allocatedCard.locator('img');
+    assert.equal(await admin.locator('#container-meniu-terenuri .admin-court-card').count(),1);
+    const allocatedCard=admin.locator('#container-meniu-terenuri .admin-court-card');
+    assert.match(await allocatedCard.getAttribute('aria-label'),/Court A/);
+    const allocatedIcon=admin.locator('[data-admin-sport="Fotbal"] .base-admin-sport-heading img');
     assert.equal(await allocatedIcon.count(),1);
     assert.match(await allocatedIcon.getAttribute('src'),/fotbalrealist\.png(?:\?|$)/);
     await assertPngLoaded(allocatedIcon);
@@ -644,12 +662,11 @@ async function openProfile(page) {
     await admin.waitForFunction(()=>!document.getElementById('btn-rezervare-manuala').innerText.includes('verifică'));
     await admin.locator('#modal-rezervare-manuala .buton-inchidere').click();
     await admin.locator('#modal-rezervare-manuala').waitFor({state:'hidden'});
-    await admin.locator('[onclick*="modal-tabel-program"]').click();
+    await admin.locator('[data-admin-program="Fotbal"]').click();
     await admin.locator('#tabel-data').fill(tomorrow);
     await admin.locator('#tabel-data').dispatchEvent('change');
     await admin.locator('#tabel-corp-program tr[data-ora="09:00"]').getByText(longManualName,{exact:false}).waitFor();
     assert.deepEqual(await admin.locator('#tabel-corp-program tr[data-ora]').evaluateAll(nodes=>nodes.map(node=>node.dataset.ora)),['09:00','10:00','11:00','12:00','14:00']);
-    assert.equal(await admin.locator('#tabel-corp-program tr[data-ora="12:00"] select').count(),0);
     assert.equal(await admin.locator('#tabel-corp-program tr[data-ora="14:00"] select').count(),0);
     await serial(async () => {
       await pg.exec('reset role');
@@ -661,7 +678,7 @@ async function openProfile(page) {
     const configuredClient=await pageFor();
     await configuredClient.goto(base,{waitUntil:'networkidle'});
     await openProfile(configuredClient);
-    await configuredClient.locator('#login-email').fill('alice@example.test');
+    await configuredClient.locator('#login-email').fill('bob@example.test');
     await configuredClient.locator('#login-parola').fill(' test-password. ');
     await configuredClient.locator('#btn-executa-login').click();
     await configuredClient.locator('#modal-auth').waitFor({state:'hidden'});
@@ -678,7 +695,7 @@ async function openProfile(page) {
     await serial(async () => {
       await pg.exec('reset role');
       const reserved=(await pg.query("select * from public.rezervari where teren='Court A' and data_str=$1 and ora='10:00'",[tomorrow])).rows[0];
-      assert.equal(reserved.client_user_id,uid(1));
+      assert.equal(reserved.client_user_id,uid(2));
       assert.equal(reserved.pret_total,'100 RON');
     });
     pass('public booking offers only configured hours and a real SDK booking at 10:00 passes server validation');
@@ -686,6 +703,8 @@ async function openProfile(page) {
       await pg.exec('reset role');
       return (await pg.query("select * from public.rezervari where teren='Court A' and data_str=$1 and ora='12:00' and stare='activa'",[tomorrow])).rows[0];
     });
+    await configuredClient.evaluate(()=>db.auth.signInWithPassword({email:'alice@example.test',password:' test-password. '}));
+    await configuredClient.waitForFunction(()=>window.getSpotivityProfileUser()?.email==='alice@example.test');
     await openProfile(configuredClient);
     await configuredClient.locator('#btn-vezi-active').click();
     await configuredClient.locator(`.anulare-client[data-id="${outsideHour.id}"]`).click();
@@ -755,6 +774,7 @@ async function openProfile(page) {
       await pg.exec("reset role;select set_config('request.jwt.claim.sub','',false)");
       await pg.exec("update public.terenuri set are_chat=true where nume in ('Court A','Court B')");
       await pg.query("insert into public.rezervari(email_client,client_user_id,teren,data_str,ora,stare) values('alice@example.test',$2,'Court B',$1,'14:00','activa')",[tomorrow,uid(1)]);
+      await pg.query("insert into public.rezervari(email_client,client_user_id,teren,data_str,ora,stare) values('alice@example.test',$2,'Court A',$1,'11:00','activa')",[tomorrow,uid(1)]);
     });
     const chatPage=await pageFor();await chatPage.goto(base,{waitUntil:'networkidle'});
     // Identify the sender's actual preflight without pausing concurrent permission refreshes.
@@ -828,6 +848,8 @@ async function openProfile(page) {
       if (screenshotDir) await admin.screenshot({path:join(screenshotDir,`spotivity-admin-dashboard-${width}.png`)});
       for (const id of ordinaryScreens) {
         if (id==='modal-chat-admin') await admin.locator('#btn-vezi-chat-admin').click();
+        else if (id==='modal-tabel-program') await admin.locator('[data-admin-program="Fotbal"]').click();
+        else if (id.startsWith('modal-setari-')) await admin.locator(`[data-admin-court="${settingsId}"]`).click();
         else await admin.locator(`.card-sport[onclick*="${id}"]`).click();
         await admin.locator(`#${id}`).waitFor({state:'visible'});
         if (id==='modal-istoric') {
@@ -1026,7 +1048,7 @@ async function openProfile(page) {
     await assertCourtNames(mobile,['Picior Court']);
     await mobile.locator('.btn-teren').click();
     await mobile.locator('.btn-ora').filter({hasText:/^12:00$/}).click();
-    const footBookingResponse=mobile.waitForResponse(response=>new URL(response.url()).pathname==='/rest/v1/rezervari' && response.request().method()==='POST');
+    const footBookingResponse=mobile.waitForResponse(response=>new URL(response.url()).pathname==='/functions/v1/booking-workflow' && response.request().method()==='POST');
     await mobile.locator('#buton-confirma').click();
     assert.equal((await footBookingResponse).status(),201);
     await mobile.locator('#modal-rezervare').waitFor({state:'hidden'});
@@ -1345,10 +1367,11 @@ async function openProfile(page) {
     assert.ok(requests.some(item=>item.path==='/rest/v1/terenuri' && new URLSearchParams(item.search).get('id')===`eq.${baseCourts.a2}`));
     await basesPage.locator('.btn-ora').filter({hasText:/^09:00$/}).click();
     await basesPage.locator('#buton-confirma').click();
-    await basesPage.locator('#modal-auth').waitFor({state:'visible'});
-    assert.equal(await basesPage.locator('#modal-rezervare').isVisible(),false);
+    await basesPage.locator('#modal-rezervare-vizitator').waitFor({state:'visible'});
+    assert.equal(await basesPage.locator('#modal-auth').isVisible(),false);
+    assert.equal(await basesPage.locator('#modal-rezervare').isVisible(),true);
     await basesPage.keyboard.press('Escape');
-    pass('a base court is rechecked through RLS and opens the original booking form with its real sport, hours and guest authentication flow');
+    pass('a base court is rechecked through RLS and opens the original booking form with its real sport, hours and guest contact form');
     const deepLink=await pageFor();
     await deepLink.goto(new URL(`?baza=${baseIds.b}`,base).href,{waitUntil:'networkidle'});
     await deepLink.locator(`[data-base-court="${baseCourts.b1}"]`).waitFor();
@@ -1451,11 +1474,10 @@ async function openProfile(page) {
     await openBaseAdmin(baseAdmin);
     assert.deepEqual((await baseAdmin.locator('#base-admin-select option').evaluateAll(nodes=>nodes.map(node=>node.value))).sort(),[baseIds.a,createdBase.id].sort());
     await baseAdmin.locator('#base-admin-select').selectOption(createdBase.id);
-    await baseAdmin.locator('#btn-baze-admin').click();
-    await baseAdmin.locator(`[data-edit-base="${createdBase.id}"]`).waitFor();
+    await baseAdmin.locator('#base-admin-edit-base').click();
+    await baseAdmin.locator('#admin-baza-form').waitFor({state:'visible'});
     assert.deepEqual(await baseAdmin.locator('[data-edit-base]').evaluateAll(nodes=>nodes.map(node=>node.dataset.editBase)),[createdBase.id]);
     assert.equal(await baseAdmin.locator('#btn-baza-noua').isVisible(),false);
-    await baseAdmin.locator(`[data-edit-base="${createdBase.id}"]`).click();
     assert.ok(!(await baseAdmin.locator('#baza-nume').isEditable()));
     assert.ok(!(await baseAdmin.locator('#baza-oras').isEditable()));
     assert.equal(await baseAdmin.locator('[data-base-court-id]:enabled').count(),0);
