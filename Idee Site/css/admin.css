@@ -143,15 +143,6 @@
     padding: 24px 16px;
     overflow: visible;
 }
-.admin-page #sectiune-login {
-    width: 100%;
-    height: auto;
-    min-height: 0;
-    margin: 24px auto;
-    padding: 24px;
-    border-radius: 18px;
-}
-.admin-page #sectiune-login .titlu-modal { font-size: 21px; margin-bottom: 20px; }
 .admin-page #sectiune-dashboard { padding: 0 !important; gap: 16px !important; }
 .admin-header { flex-wrap: wrap; gap: 12px; padding: 14px !important; }
 #text-rol-activ { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; line-height: 1.5; margin-top: 0 !important; }
@@ -296,13 +287,11 @@
 @media (max-width: 768px) {
     .admin-page .grila-sporturi { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .admin-page .admin-shell { padding: 16px 12px; }
-    .admin-page #sectiune-login { margin-top: 16px; }
     .admin-page #modal-chat-admin .modal-chat-box { max-width: 540px !important; }
     .admin-page .container-dual-chat { flex-direction: column; }
 }
 @media (max-width: 480px) {
     .admin-page .admin-shell { padding: 12px; }
-    .admin-page #sectiune-login { padding: 20px; }
     .admin-header { gap: 10px; }
     .admin-header-actions { width: 100%; align-items: stretch !important; }
     .admin-header-buttons button { flex: 1; }

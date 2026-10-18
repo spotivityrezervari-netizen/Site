@@ -1,5 +1,7 @@
 # Instalarea protecțiilor Supabase și a rolurilor Spotivity
 
+**Administrare curentă:** toate operațiunile se deschid în `index.html`, prin **Profilul meu → Deschide panoul de admin** pentru superadmin sau **Profilul meu → Administrează baza sportivă** pentru administratorii bazelor. Pagina separată `admin.html` a fost eliminată; rolurile și limitele RLS rămân aceleași.
+
 **18 octombrie 2026:** migrarea 013 a fost verificată în proiectul live. Migrările 014–016 sunt aplicate și verificate pentru rezervări grupate, recuperarea contactelor și outboxul privat Make; funcțiile Edge aferente sunt active. Nu reinstala migrările vechi; SQL-ul și funcțiile Edge trebuie publicate separat de site.
 
 **Actualizare 15 octombrie 2026:** în Rendez-Vous sunt deja aplicate migrările **1, 3, 4, 5, 6, 7, 8, 9**, inclusiv profilul editabil, fotografiile bazelor sportive și refuzarea anulării rezervărilor finalizate. Nu trebuie să copiezi sau să rulezi din nou SQL pentru actualizarea curentă. Pașii de instalare de mai jos sunt pentru proiecte noi; istoricul datat descrie aplicările anterioare. Gestionează bazele din **Admin → Baze sportive**.
@@ -10,7 +12,7 @@ Pe **10 octombrie 2026**, migrarea completă a fost aplicată în proiectul auto
 
 Verificările după aplicare au confirmat RLS pe cele șase tabele gestionate, refuzarea citirii anonime a datelor private, accesul propriu pentru cele patru conturi de client, accesul superadminului și accesul limitat al unui admin alocat. Proba pentru adminul alocat s-a închis cu rollback și nu a schimbat rolul existent. Au rămas **4 profile, 1 superadmin, 5 terenuri, 43 rezervări, 12 mesaje și 8 obiecte Storage**; conturile Auth și definițiile/stările webhook-urilor originale au rămas neschimbate. Citirile publice ale terenurilor/disponibilității și încărcarea imaginilor din Supabase au trecut și în browserul local.
 
-Site-ul confirmat pe 12 octombrie 2026 este [GitHub Pages](https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/); panoul este [admin.html](https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/admin.html). Frontend-ul compatibil și SQL-ul se află în `main`. `netlify.toml` păstrează configurația găzduirii Netlify folosite anterior; nu este necesar pentru GitHub Pages.
+Site-ul este [GitHub Pages](https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/); administrarea se deschide din profil în aceeași pagină. Frontend-ul compatibil și SQL-ul se află în `main`. `netlify.toml` păstrează configurația găzduirii Netlify folosite anterior; nu este necesar pentru GitHub Pages.
 
 **Site URL** și redirectul exact către folderul GitHub Pages au fost configurate în Supabase pe 12 octombrie; adresele Netlify și spotivity.ro permise anterior au fost păstrate. Înregistrarea și recuperarea parolei trimit adresa folderului paginii, inclusiv `/Site/Idee%20Site/`. Înregistrarea este activă, emailurile sunt confirmate automat, iar SMTP personalizat nu este configurat. Aceste opțiuni au fost păstrate.
 
@@ -37,7 +39,7 @@ Verificarea înainte/după aplicarea 005 a confirmat aceleași **8 conturi Auth,
 
 Pentru a modifica programul:
 
-1. Ca superadmin, deschide [panoul admin](https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/admin.html). Ca administrator al unei baze, conectează-te în site-ul principal și deschide **Profilul meu → Administrează baza sportivă**.
+1. Ca superadmin, conectează-te în [site-ul principal](https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/) și deschide **Profilul meu → Deschide panoul de admin**. Ca administrator al unei baze, conectează-te în site-ul principal și deschide **Profilul meu → Administrează baza sportivă**.
 2. Dacă ești superadmin, deschide **Setări [oraș]**, apoi terenul. În administrarea integrată, alege baza și deschide direct **Setări [teren]**; sunt afișate doar terenurile alocate.
 3. În **Ore rezervabile**, bifează orele de început dorite și apasă **Salvează**. De exemplu, bifează 09:00–21:00 dacă terenul trebuie să închidă la 22:00.
 4. Deschide terenul din pagina publică: apar numai orele bifate. Filtrul de oră folosește programele terenurilor afișate; rezervarea manuală și blocarea unei zile respectă același program.
@@ -209,7 +211,7 @@ Dacă `insert ... select` nu găsește un cont Auth confirmat cu emailul indicat
 3. Înlocuiește emailul `.invalid`, numele `Admin terenuri` și `Numele exact al terenului`. Pentru două terenuri, valoarea poate fi `'Bernabeu,Wimbledon'`, dacă acestea sunt numele exacte din `terenuri.nume`. Păstrează `is_super = false`.
 4. Rulează blocul și interogarea de verificare. Adminul trebuie să aibă `is_super = false`, email confirmat și lista terenurilor corectă.
 
-După publicarea site-ului, superadminul se poate autentifica în `admin.html` și poate acorda roluri unor conturi Auth existente din panou. Interfața actuală adaugă roluri noi; pentru modificarea alocărilor unui rol existent folosește blocul SQL pentru admin, care actualizează alocarea prin `on conflict (user_id)`. Rulează doar blocul corespunzător: blocul pentru admin obișnuit poate transforma un superadmin existent în admin dacă folosești același email.
+După publicarea site-ului, superadminul se autentifică în site și deschide **Profilul meu → Deschide panoul de admin**, de unde poate acorda roluri unor conturi Auth existente. Interfața actuală adaugă roluri noi; pentru modificarea alocărilor unui rol existent folosește blocul SQL pentru admin, care actualizează alocarea prin `on conflict (user_id)`. Rulează doar blocul corespunzător: blocul pentru admin obișnuit poate transforma un superadmin existent în admin dacă folosești același email.
 
 Pentru retragerea unui rol, ultimul exemplu comentat din `002_admin_examples.sql` șterge numai rândul din `users_admin`, folosind UUID-ul Auth. Nu șterge contul Auth pentru o simplă retragere de acces. Dacă ultimul superadmin își pierde rolul, poți folosi din nou primul bloc SQL ca proprietar al proiectului.
 
@@ -228,16 +230,16 @@ Verifică disponibilitatea în două ferestre și chat-ul între client și admi
 1. Validează mai întâi proiectul Supabase de test și copia frontend-ului de test.
 2. Pentru producție, repetă preflight-ul, backup-ul, migrarea și verificarea rolurilor în proiectul real.
 3. Frontend-ul compatibil este deja în `main`. Pentru actualizări viitoare, compară ramura de lucru cu `main` și integrează modificările după ce baza reală este pregătită. Publicarea poate porni automat când actualizezi `main`, dacă hostingul urmărește acea ramură; verifică setarea hostingului înainte de integrare.
-4. Aplică întâi migrarea necesară și publică împreună fișierele frontend compatibile din commitul verificat. Pentru administrarea integrată, include și `js/base-admin.js`, `js/admin-baze.js` și `css/base-admin.css`, pe lângă `index.html`, `admin.html` și fișierele lor existente. Dacă hostingul servește `Idee Site/`, păstrează acea rădăcină de publicare. Documentația și SQL-ul nu înlocuiesc fișierele frontend.
+4. Aplică întâi migrarea necesară și publică împreună fișierele frontend compatibile din commitul verificat. Pentru administrarea integrată, include și `js/base-admin.js`, `js/admin-baze.js` și `css/base-admin.css`, pe lângă `index.html` și celelalte fișiere CSS/JavaScript folosite de pagina principală. Elimină vechiul `admin.html` și din directorul publicat, dacă hostingul păstrează fișierele șterse din sursă. Dacă hostingul servește `Idee Site/`, păstrează acea rădăcină de publicare. Documentația și SQL-ul nu înlocuiesc fișierele frontend.
 5. Verifică în `js/db.js` publicat URL-ul și cheia publică ale proiectului real. Invalidează cache-ul/CDN dacă există și reîncarcă pagina; paginile actualizate folosesc versiuni noi pentru fișierele JS.
 
 Nu publica frontend-ul nou înainte de migrare: folosește coloane și tabelul de disponibilitate care lipsesc din vechea schemă. Revenirea la frontend-ul vechi nu anulează migrarea bazei; pentru o restaurare folosește un plan verificat și backup-ul corespunzător.
 
 ### Verificarea publicării în GitHub Pages
 
-În repository-ul `spotivityrezervari-netizen/Site`, verifică **Settings → Pages** și ultimul deployment **github-pages** din **Actions** / **Deployments**. Publicarea trebuie să corespundă ultimului commit din `main`. Adresa paginii principale este `https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/`, iar adminul este în același folder, la `admin.html`.
+În repository-ul `spotivityrezervari-netizen/Site`, verifică **Settings → Pages** și ultimul deployment **github-pages** din **Actions** / **Deployments**. Publicarea trebuie să corespundă ultimului commit din `main`. Adresa unică a site-ului și a administrării integrate este `https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/`. Deschide panoul din profil cu rolul potrivit.
 
-Versiunea actuală încarcă `css/style.css?v=43`, `js/security.js?v=2`, `js/app.js?v=25`, `css/admin.css?v=3`, `js/admin.js?v=22`, `css/home.css?v=2`, `js/home.js?v=2`, `js/baze.js?v=1` și `js/admin-baze.js?v=1`. Reîncarcă pagina după terminarea deployment-ului. Actualizarea ramurii GitHub nu demonstrează singură terminarea publicării; testele izolate nu înlocuiesc verificarea site-ului publicat.
+Versiunile fișierelor CSS/JavaScript sunt stabilite de referințele din `index.html`. Reîncarcă pagina după terminarea deployment-ului. Actualizarea ramurii GitHub nu demonstrează singură terminarea publicării; testele izolate nu înlocuiesc verificarea site-ului publicat.
 
 ## 10. Verificări înainte de lansare
 
@@ -329,7 +331,7 @@ RLS permite în continuare citirea publică a imaginilor și modificarea configu
 
 Numai superadminii verificați din `users_admin.user_id` pot citi cererile și fotografiile atașate. Granturile permit modificarea doar a stării și notei interne; triggerul înregistrează persoana și ora verificării. Datele depuse sunt păstrate. Utilizatorii și administratorii obișnuiți nu pot lista cererile. Un utilizator își poate citi/curăța numai fotografiile proprii încă neatașate; după trimitere acestea sunt private superadminilor și nu mai pot fi înlocuite de solicitant. Politicile restrictive împiedică politicile Storage permisive vechi să deschidă bucketul nou.
 
-RPC-ul folosește un UUID stabil pentru confirmarea/reîncercarea aceleiași cereri și o limită de cinci cereri pe cont în 24 de ore. Blocarea se face pe solicitant, fără blocarea globală a rezervărilor. În versiunea istorică 011, acceptarea era doar o etichetă; migrarea 012 introduce publicarea și accesul admin la acceptare. Meniul **Cereri înscriere baze** este disponibil numai superadminului în `admin.html`.
+RPC-ul folosește un UUID stabil pentru confirmarea/reîncercarea aceleiași cereri și o limită de cinci cereri pe cont în 24 de ore. Blocarea se face pe solicitant, fără blocarea globală a rezervărilor. În versiunea istorică 011, acceptarea era doar o etichetă; migrarea 012 introduce publicarea și accesul admin la acceptare. Meniul **Cereri înscriere baze** este disponibil numai superadminului în panoul integrat, deschis din **Profilul meu → Deschide panoul de admin**.
 
 `club-requests.test.cjs` verifică în PostgreSQL izolat validarea, granturile/RLS, confidențialitatea fotografiilor, reîncercarea, limitele și păstrarea funcționalității existente, atât cu UUID cât și cu ID numeric pentru terenuri. `club-requests-browser.test.cjs` folosește SDK-ul real și Storage izolat pentru formular, fotografii, autentificare, gestionare, revocarea accesului și afișarea pe telefon/desktop. Nu executa testele în proiectul real.
 
@@ -374,7 +376,7 @@ Aplică [013_admin_integration.sql](013_admin_integration.sql) **după 012**, î
 
 Politicile restrictive suplimentare protejează operațiunile globale și limitele existente chiar dacă se adaugă ulterior o politică permisivă generală. Trigger-ele și politicile Storage anterioare rămân active. Un trigger separat păstrează rezervările finalizate: refuză ștergerea și schimbarea stării/datei/orei de către un utilizator autentificat, inclusiv o mutare în viitor urmată de anulare. Mentenanța privilegiată a serverului rămâne disponibilă fără o identitate Auth.
 
-`admin.html` verifică rolul curent de superadmin; administratorii obișnuiți folosesc **Profilul meu → Administrează baza sportivă** în `index.html`, cu sesiunea existentă. Pentru adminii obișnuiți, gestionarea cererilor și administrarea globală rămân indisponibile. Superadminul are acum panoul complet integrat în pagina principală, deschis din profil. RLS și funcțiile existente verifică aceleași limite la cereri directe REST/RPC, indiferent de interfața folosită.
+Administrarea este inclusă exclusiv în `index.html`: superadminul folosește **Profilul meu → Deschide panoul de admin**, iar administratorii obișnuiți folosesc **Profilul meu → Administrează baza sportivă**, cu sesiunea existentă. Pentru adminii obișnuiți, gestionarea cererilor și administrarea globală rămân indisponibile. RLS și funcțiile existente verifică aceleași limite la cereri directe REST/RPC, indiferent de interfața folosită.
 
 Testele noi sunt `tests/admin-integration.test.cjs` (UUID și ID numeric) și `tests/integrated-admin-browser.test.cjs`. Fixture-urile nu se execută în proiectul real. Accesul de rețea către `ndubcdwohqzgxpuiowye.supabase.co` și `spotivityrezervari-netizen.github.io` este necesar pentru verificările live și ale publicării. Credențialele administrative se păstrează exclusiv în mediul securizat.
 

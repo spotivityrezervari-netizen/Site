@@ -4,7 +4,7 @@ Revizuire a codului, migrărilor SQL, configurației Supabase reale și publică
 
 Site: https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/
 
-Admin: https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/admin.html
+Administrare curentă: în site, **Profilul meu → Deschide panoul de admin** pentru superadmin și **Profilul meu → Administrează baza sportivă** pentru administratorii bazelor. Pagina separată `admin.html` a fost eliminată. Mențiunile de mai jos despre ea descriu versiunile istorice ale site-ului.
 
 ## Baze sportive și anulări — 14 octombrie 2026
 
@@ -185,3 +185,10 @@ Make este singurul punct de activare externă: secretul și domeniile EU1 apar s
 Smoke testul final pe serverul local, cu citiri reale Supabase și scrierile blocate, a trecut: cele cinci sporturi, căutare, baze, înscriere, profil și admin, fără erori JavaScript sau fișiere lipsă. Toate citirile backendului și imaginile au răspuns HTTP 200, prin transport cu TLS verificat. Verificarea sintaxei și căutarea cheii privilegiate în toate fișierele modificate au trecut.
 
 Aplicare live finalizată: 014–016 au fost executate într-o singură tranzacție, cu verificări de păstrare a rândurilor, funcțiilor existente și triggerelor/webhookurilor. Au rămas 10 conturi Auth, 10 profiluri, 3 admini, 6 terenuri, 3 baze, 64 rezervări, 28 mesaje și 2 cereri. Un singur telefon lipsă a fost recuperat din sursa proprie verificată; telefoanele deja salvate au fost păstrate. Funcțiile booking-workflow, booking-notifications și club-applications sunt ACTIVE. Notificările noi rămân oprite până la verificarea Make.
+
+
+## 18 octombrie 2026 — administrare exclusiv în index
+
+Pagina separată `admin.html` a fost eliminată din sursă. Superadminul deschide întregul panou din **Profilul meu → Deschide panoul de admin**, în `index.html`, cu sesiunea curentă. Cererile de înscriere, aprobarea/respingerea, bazele, terenurile, orașele, alocările, programul, istoricul și chatul rămân în panoul integrat. Administratorii obișnuiți păstrează **Profilul meu → Administrează baza sportivă** și accesul limitat prin Supabase la alocările lor. Această schimbare nu necesită o migrare SQL sau modificarea rolurilor existente.
+
+Verificarea acestei eliminări: 84 teste browser generale, 23 pentru panoul integrat și 18 pentru cereri/aprobări au trecut, în total 125. Sunt exercitate sesiunea comună, absența navigării/filor noi/iframe-urilor, operațiunile globale ale superadminului, limitele adminilor obișnuiți, revocarea accesului, rezervările și refuzul anulării orelor finalizate. La 320, 390, 768 și 1440 px, autentificarea și administrarea se încadrează; animația taburilor de autentificare afectează numai culorile, astfel încât redimensionarea nu mai produce o depășire temporară a textului. Smoke testul cu citiri Supabase reale și scrierile blocate a trecut, inclusiv HTTP 404 pentru pagina admin eliminată pe serverul local; sintaxa și verificarea diff-ului au trecut.

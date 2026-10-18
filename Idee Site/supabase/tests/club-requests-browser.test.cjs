@@ -45,8 +45,20 @@ let checks=0;
       const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));page.on('dialog',dialog=>{dialogs.push(dialog.message());return dialog.accept();});return page;
     };
     const pass=label=>{checks++;console.log('PASS',label);};
+    const profile=async page=>{
+      if(await page.locator('#modal-profil').isVisible())return;
+      if(await page.locator('#btn-top-cont').isVisible())await page.locator('#btn-top-cont').click();
+      else{if(!await page.locator('#home-mobile-menu').isVisible())await page.locator('#btn-mobile-menu').click();await page.locator('#home-mobile-menu [data-profile-target]').click();}
+    };
     const login=async(page,email,secret='fixture-password')=>{
-      await page.locator('#login-email-admin').fill(email);await page.locator('#login-parola').fill(secret);await page.locator('#login-admin-btn').click();await page.waitForLoadState('networkidle');
+      await page.goto(base,{waitUntil:'networkidle'});await profile(page);await page.locator('#modal-auth').waitFor({state:'visible'});
+      await page.locator('#login-email').fill(email);await page.locator('#login-parola').fill(secret);await page.locator('#btn-executa-login').click();
+      await page.locator('#modal-auth').waitFor({state:'hidden'});await profile(page);await page.locator('#modal-profil').waitFor({state:'visible'});await page.waitForLoadState('networkidle');
+    };
+    const openManagement=async page=>{
+      const currentURL=page.url(),pages=page.context().pages().length;
+      await page.locator('#btn-administreaza-baza').click();await page.locator('#base-admin-workspace').waitFor({state:'visible'});await page.waitForLoadState('networkidle');
+      assert.equal(page.url(),currentURL);assert.equal(page.context().pages().length,pages);assert.equal(await page.locator('iframe').count(),0);
     };
     const fill=async(page,{name='Club nou',email='owner@example.test',secret=password}={})=>{
       for(const [field,value] of Object.entries({name,contact:'Persoană Contact',city:'Reghin',email,phone:'+40 712 345 678',address:'Strada Sportului 10',maps:'https://maps.app.goo.gl/FixtureClub',password:secret,'password-confirm':secret}))await page.locator('#club-request-'+field).fill(value);
@@ -140,15 +152,18 @@ let checks=0;
     assert.equal(unconfirmedResult.status,409);assert.equal((await unconfirmedResult.json()).code,'email_confirmation_required');assert.deepEqual(await protectedState(),pendingBusiness);assert.ok(![...fixture.objects.keys()].some(key=>key.startsWith('poze_baze_sportive/')),'Failed acceptance cleans only its unreferenced public copy');
     pass('Supabase email confirmation remains required before approval; a failed acceptance leaves no published base, permissions or photo copy');
     await fixture.confirm('owner@example.test');
-    const applicant=await pageFor();await applicant.goto(new URL('admin.html',base).href,{waitUntil:'networkidle'});await login(applicant,'owner@example.test',password);
-    assert.equal(await applicant.locator('#sectiune-dashboard').isVisible(),false);assert.equal(await applicant.locator('#sectiune-login').isVisible(),true);
+    const applicant=await pageFor();await login(applicant,'owner@example.test',password);
+    assert.equal(await applicant.locator('#sectiune-dashboard').isVisible(),false);assert.equal(await applicant.locator('#btn-administreaza-baza').isVisible(),false);
+    const pendingAccess=await applicant.evaluate(async()=>({access:await db.rpc('get_admin_access'),courts:await db.from('terenuri').update({pret:1}).eq('nume','Court A').select('id')}));
+    assert.equal(pendingAccess.access.data.can_manage,false);assert.equal(pendingAccess.courts.data?.length||0,0);
     pass('even a confirmed applicant with the chosen password cannot enter admin before superadmin acceptance');
-    const ordinary=await pageFor();await ordinary.goto(new URL('admin.html',base).href,{waitUntil:'networkidle'});await login(ordinary,'admin@example.test');
-    assert.equal(await ordinary.locator('#sectiune-dashboard').isVisible(),false);assert.equal(await ordinary.locator('#sectiune-login').isVisible(),true);
+    const ordinary=await pageFor();await login(ordinary,'admin@example.test');await openManagement(ordinary);
+    assert.equal(await ordinary.locator('#sectiune-dashboard').isVisible(),true);assert.equal(await ordinary.locator('#base-admin-workspace').evaluate(node=>node.classList.contains('base-admin-super')),false);
+    assert.equal(await ordinary.locator('#sectiune-dashboard .super-admin-only:visible').count(),0);
     assert.equal(await ordinary.locator('#btn-cereri-baze-admin').isVisible(),false);const denied=await ordinary.evaluate(async path=>({rows:(await db.from('cereri_baze_sportive').select('*')).data,photo:(await db.storage.from('cereri_baze_sportive').createSignedUrl(path,60)).data}),first.poza_path);assert.equal(denied.rows?.length||0,0);assert.equal(denied.photo,null);
     pass('ordinary administrators cannot enter the superadmin dashboard or read applications or their private photos');
 
-    const superPage=await pageFor();await superPage.goto(new URL('admin.html',base).href,{waitUntil:'networkidle'});await login(superPage,'super@example.test');await superPage.locator('#btn-cereri-baze-admin').click();
+    const superPage=await pageFor();await login(superPage,'super@example.test');await openManagement(superPage);await superPage.locator('#btn-cereri-baze-admin').click();
     await superPage.locator(`[data-club-request-id="${first.id}"]`).click();await superPage.waitForFunction(()=>document.getElementById('admin-cerere-photo').naturalWidth>0);
     assert.ok((await superPage.locator('#admin-cerere-data').innerText()).includes('owner@example.test'));assert.equal(await superPage.locator('#admin-cerere-data img').count(),0);assert.equal(await superPage.evaluate(()=>window.clubXss),undefined);assert.ok(!(await superPage.locator('#modal-cereri-baze-admin').innerText()).includes(password));
     assert.deepEqual(await superPage.locator('[data-court-price-index]').evaluateAll(inputs=>inputs.map(i=>i.value)),['120','80','90','100','110']);
@@ -166,12 +181,17 @@ let checks=0;
     assert.equal(duplicate.status,200);assert.equal(duplicate.body.base_id,created.base.id);assert.equal((await root(()=>pg.query('select id from public.terenuri where baza_sportiva_id=$1',[created.base.id]))).rows.length,5);
     pass('a retried acceptance returns the existing published base without duplicating courts or expanding scope');
 
-    await applicant.goto(base,{waitUntil:'networkidle'});
-    // The earlier rejected admin.html attempt retains normal Auth, so the
-    // already signed-in owner opens the public profile without authenticating again.
-    await applicant.locator('#btn-top-cont').click();await applicant.locator('#modal-profil').waitFor({state:'visible'});
-    await applicant.locator('#btn-administreaza-baza').waitFor({state:'visible'});await applicant.locator('#btn-administreaza-baza').click();
-    await applicant.locator('#base-admin-workspace').waitFor({state:'visible'});assert.equal(await applicant.locator('#btn-cereri-baze-admin').isVisible(),false);await applicant.locator('#btn-baze-admin').waitFor({state:'visible'});
+    // Approval refreshes the existing index session and unlocks only its new scope.
+    const applicantToken=await applicant.evaluate(async()=>(await db.auth.getSession()).data.session.access_token);
+    const previousLogins=requests.filter(r=>r.source==='browser'&&r.path==='/auth/v1/token').length;
+    await applicant.evaluate(()=>window.dispatchEvent(new Event('focus')));await profile(applicant);
+    await applicant.locator('#btn-administreaza-baza').waitFor({state:'visible'});await openManagement(applicant);
+    assert.equal(await applicant.evaluate(async()=>(await db.auth.getSession()).data.session.access_token),applicantToken);
+    assert.equal(requests.filter(r=>r.source==='browser'&&r.path==='/auth/v1/token').length,previousLogins);
+    await applicant.locator('#base-admin-workspace').waitFor({state:'visible'});assert.equal(await applicant.locator('#btn-cereri-baze-admin').isVisible(),false);
+    await applicant.locator('#base-admin-edit-base').waitFor({state:'visible'});await applicant.locator('#base-admin-edit-base').click();await applicant.locator('#admin-baza-form').waitFor({state:'visible'});
+    assert.equal(await applicant.locator('#baza-nume').inputValue(),'Club nou');assert.equal(await applicant.locator('#baza-nume').isDisabled(),true);
+    await applicant.locator('#btn-inchide-baze-admin').click();
     const scoped=await applicant.evaluate(async({baseId,priorBase})=>({own:await db.from('baze_sportive').update({descriere:'Actualizat de proprietar'}).eq('id',baseId).select('id'),other:await db.from('baze_sportive').update({descriere:'Intrus'}).eq('id',priorBase).select('id'),court:await db.from('terenuri').update({pret:1}).eq('nume','Court A').select('id'),requests:await db.from('cereri_baze_sportive').select('*')}),{baseId:created.base.id,priorBase});
     assert.equal(scoped.own.data?.length,1);assert.equal(scoped.other.data?.length||0,0);assert.equal(scoped.court.data?.length||0,0);assert.equal(scoped.requests.data?.length||0,0);
     pass('the accepted applicant signs in with the chosen password and can edit only their base, with no superadmin or unrelated court access');

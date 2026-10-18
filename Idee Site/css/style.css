@@ -173,7 +173,7 @@ html, body {
 
 .taburi-auth { display: flex; gap: 10px; margin-bottom: 25px; background: rgba(255, 255, 255, 0.05); padding: 5px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); }
 
-.tab-auth { flex: 1; background: none; border: none; color: white; padding: 12px; border-radius: 12px; font-size: 15px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+.tab-auth { flex: 1; background: none; border: none; color: white; padding: 12px; border-radius: 12px; font-size: 15px; font-weight: bold; cursor: pointer; transition: background-color 0.3s, color 0.3s; }
 
 .tab-auth.activ { background: white; color: #000; }
 
@@ -1294,7 +1294,7 @@ body.fara-scroll > #btn-legal {
     #modal-terenuri .titlu-modal { font-size: 20px; }
     .modal-antet { margin-bottom: 16px; }
     .filtre-terenuri { padding: 12px; gap: 12px; margin-bottom: 20px; }
-    #modal-auth .tab-auth { font-size: 13px; }
+    #modal-auth .tab-auth { font-size: 13px; padding-inline: 4px; }
 }
 
 .card-teren-poza, .info-teren-poza { min-width: 0; }

@@ -71,17 +71,17 @@ body.admin-page { background: #101a14; color: var(--spotivity-cream); }
 .admin-page :is(button, a, input, select, textarea):focus-visible { outline-color: var(--spotivity-gold-light) !important; }
 
 /* Named primary actions exclude delete, cancellation and block/unblock buttons. */
-.admin-page :is(#login-admin-btn, #btn-adauga-teren, #creeaza-supervisor-btn,
+.admin-page :is(#btn-adauga-teren, #creeaza-supervisor-btn,
     #btn-rezervare-manuala, #btn-istoric, #btn-salveaza-baza, #btn-baza-poza-save,
     [id^="btn-save-"], .program-reincarca):not(:disabled) {
     background: #d8b66a linear-gradient(135deg, #edca82, #cfaa58) !important;
     color: #20190f !important;
     box-shadow: 0 4px 18px rgba(216, 182, 106, .12);
 }
-.admin-page :is(#login-admin-btn, #btn-adauga-teren, #creeaza-supervisor-btn,
+.admin-page :is(#btn-adauga-teren, #creeaza-supervisor-btn,
     #btn-rezervare-manuala, #btn-istoric, #btn-salveaza-baza, #btn-baza-poza-save,
     [id^="btn-save-"], .program-reincarca):not(:disabled):hover { background: var(--spotivity-gold-light) !important; }
-.admin-page :is(#login-admin-btn, #btn-adauga-teren, #creeaza-supervisor-btn,
+.admin-page :is(#btn-adauga-teren, #creeaza-supervisor-btn,
     #btn-rezervare-manuala, #btn-istoric, #btn-salveaza-baza, #btn-baza-poza-save,
     [id^="btn-save-"], .program-reincarca):disabled {
     background: #293b2b !important;

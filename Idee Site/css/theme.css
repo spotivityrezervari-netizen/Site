@@ -135,7 +135,6 @@ body.admin-page { background-color: #100f0c; color: var(--spotivity-cream); }
     background-image: radial-gradient(ellipse at 80% 0%, rgba(177, 126, 40, .18), transparent 60%);
     animation: none;
 }
-.admin-page #sectiune-login { border-color: var(--spotivity-gold-border) !important; }
 .admin-page .admin-menu-card,
 .admin-page .admin-base-card { background: var(--spotivity-panel); border-color: var(--spotivity-gold-border); }
 .admin-page .admin-menu-card:hover,

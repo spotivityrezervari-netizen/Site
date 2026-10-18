@@ -897,16 +897,23 @@ async function openProfile(page) {
       return (await pg.query('select id,nume,sport,oras,pret_minge from public.terenuri order by id')).rows;
     });
     const superAdmin=await pageFor();
-    await superAdmin.goto(new URL('admin.html',base).href,{waitUntil:'networkidle'});
+    await superAdmin.goto(base,{waitUntil:'networkidle'});await openProfile(superAdmin);
+    await superAdmin.locator('#modal-auth').waitFor({state:'visible'});
     for (const width of viewportWidths) {
       await superAdmin.setViewportSize({width,height:844});
-      await assertFits(superAdmin,'#sectiune-login',`admin login ${width}px`);
-      assert.doesNotMatch(await superAdmin.locator('#sectiune-login').innerText(),/\p{Extended_Pictographic}/u);
+      await assertFits(superAdmin,'#modal-auth .modal-continut',`site login for superadmin ${width}px`);
+      assert.doesNotMatch(await superAdmin.locator('#modal-auth').innerText(),/\p{Extended_Pictographic}/u);
     }
-    await superAdmin.locator('#login-email-admin').fill('super@example.test');
+    await superAdmin.locator('#login-email').fill('super@example.test');
     await superAdmin.locator('#login-parola').fill(' test-password. ');
-    await superAdmin.locator('#login-admin-btn').click();
+    await superAdmin.locator('#btn-executa-login').click();await superAdmin.locator('#modal-auth').waitFor({state:'hidden'});
+    await openProfile(superAdmin);await superAdmin.locator('#btn-administreaza-baza').waitFor({state:'visible'});
+    assert.equal(await superAdmin.locator('#btn-administreaza-baza').innerText(),'Deschide panoul de admin');
+    const superURL=superAdmin.url(),superPages=superAdmin.context().pages().length;
+    await superAdmin.locator('#btn-administreaza-baza').click();
+    await superAdmin.locator('#base-admin-workspace.base-admin-super').waitFor({state:'visible'});
     await superAdmin.locator('#sectiune-dashboard').waitFor({state:'visible'});
+    assert.equal(superAdmin.url(),superURL);assert.equal(superAdmin.context().pages().length,superPages);assert.equal(await superAdmin.locator('iframe').count(),0);
     await superAdmin.waitForFunction(count=>document.querySelectorAll('[id^="modal-setari-"]').length===count,superCourts.length);
     assert.equal(await superAdmin.locator('#container-meniu-terenuri .admin-court-card').count(),0);
     const cities=superAdmin.locator('#container-meniu-terenuri .admin-city-card');

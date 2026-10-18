@@ -2,6 +2,8 @@
 
 Migrările 013–016 sunt aplicate și verificate în proiectul live, iar funcțiile Edge pentru rezervări și notificări sunt active. Publicarea fișierelor statice nu execută SQL. Notificările și rezervările fără cont se activează numai după configurarea și verificarea scenariilor Make.
 
+Administrarea se face exclusiv în `index.html`, cu sesiunea site-ului: **Profilul meu → Deschide panoul de admin** pentru superadmin și **Profilul meu → Administrează baza sportivă** pentru administratorii bazelor. Pagina separată `admin.html` a fost eliminată.
+
 Site-ul din `Idee Site/` folosește HTML, CSS și JavaScript, cu un backend găzduit în Supabase. Nu are o etapă de build sau dependențe de instalat pentru a porni serverul local.
 
 ## Pornire
@@ -12,7 +14,7 @@ Din folderul `Idee Site`, cu Python 3 disponibil:
 bash scripts/start-site.sh
 ```
 
-Serverul servește `index.html` și `admin.html` pe portul 8000, doar pe interfața locală. Oprește-l cu Ctrl+C. Pentru alt port:
+Serverul servește `index.html`, inclusiv administrarea integrată, pe portul 8000, doar pe interfața locală. Oprește-l cu Ctrl+C. Pentru alt port:
 
 ```bash
 PORT=8001 bash scripts/start-site.sh
@@ -40,7 +42,7 @@ Acest script necesită Node.js, Playwright și Chromium. Acestea sunt deja dispo
 SITE_BASE_URL=http://127.0.0.1:8001/ node scripts/smoke-site.cjs
 ```
 
-Verificările acoperă paginile publică și admin, imaginile, cele cinci dialoguri pentru sporturi, dialogul de autentificare pe desktop și mobil, erorile JavaScript și o citire din Supabase. Scriptul blochează cererile de scriere; nu creează conturi sau rezervări și nu verifică operațiunile autentificate. Orice verificare obligatorie nereușită, inclusiv citirea din Supabase, produce un cod de ieșire diferit de zero.
+Verificările acoperă pagina principală cu administrarea integrată, imaginile, cele cinci dialoguri pentru sporturi, dialogul de autentificare pe desktop și mobil, erorile JavaScript și o citire din Supabase. Scriptul blochează cererile de scriere; nu creează conturi sau rezervări și nu verifică operațiunile autentificate. Orice verificare obligatorie nereușită, inclusiv citirea din Supabase, produce un cod de ieșire diferit de zero.
 
 ## Acces de rețea în mediul cloud
 
@@ -63,7 +65,7 @@ Configurația publică Supabase este deja în codul site-ului. Nu adăuga creden
 
 ## Publicare și programul terenurilor
 
-Site-ul folosit este [GitHub Pages](https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/), cu panoul exclusiv al superadminului [admin.html](https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/admin.html). Administratorii bazelor folosesc **Profilul meu → Administrează baza sportivă** în pagina principală, în aceeași sesiune. Publicarea servește fișierele statice din `main`. Verifică ultimul deployment `github-pages` după actualizare.
+Site-ul folosit este [GitHub Pages](https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/). Superadminul folosește **Profilul meu → Deschide panoul de admin**, iar administratorii bazelor folosesc **Profilul meu → Administrează baza sportivă**, în aceeași pagină și sesiune. Publicarea servește fișierele statice din `main`. Verifică ultimul deployment `github-pages` după actualizare.
 
 Programul rezervabil se schimbă în setările fiecărui teren din admin: ore de început 09:00–22:00. Terenurile existente păstrează 12:00–22:00 până le modifici. Migrarea `supabase/003_court_hours.sql` este aplicată în proiectul existent; [instrucțiunile Supabase](supabase/README.md) explică pașii, rolurile și verificările. Nu rula din nou migrarea 001 după 003.
 
@@ -72,7 +74,7 @@ Programul rezervabil se schimbă în setările fiecărui teren din admin: ore de
 
 Din pagina principală, butonul **Vezi bazele sportive** (sau **Baze sportive** pe telefon) deschide lista pentru orașul ales. Fiecare bază are descriere, terenuri și buton **Distribuie**. Rezervarea folosește formularul existent.
 
-În `admin.html`, superadminul deschide **Baze sportive** pentru a crea o bază sau a-i modifica numele, orașul, descrierea și terenurile. Bifează terenurile existente, apoi apasă **Salvează baza**. Pentru un teren nou, folosește **Adaugă Teren → Baza sportivă**. Pentru mutarea unui teren, scoate-l întâi din baza veche și salvează. O bază fără terenuri active nu apare public.
+Din **Profilul meu → Deschide panoul de admin**, superadminul deschide **Baze sportive** pentru a crea o bază sau a-i modifica numele, orașul, descrierea și terenurile. Bifează terenurile existente, apoi apasă **Salvează baza**. Pentru un teren nou, folosește **Adaugă Teren → Baza sportivă**. Pentru mutarea unui teren, scoate-l întâi din baza veche și salvează. O bază fără terenuri active nu apare public.
 
 În aceeași fereastră, **Cine poate edita descrierea și fotografia** acordă explicit acces unui administrator. Acest acces permite descrierea și fotografia bazei; nu extinde accesul la rezervări, clienți sau alte terenuri. Superadminul are acces la toate bazele.
 
@@ -86,7 +88,7 @@ Navigarea conține **Caută un teren**: caută după nume, sport sau oraș, făr
 
 Fiecare sport are un singur buton **Rezervă un teren** și o listă de carduri mici cu scroll lateral pentru orașul selectat. Tenisul de picior are secțiune proprie, cu aceleași filtre, carduri și flux de rezervare ca celelalte sporturi. **Baze sportive** are o secțiune separată cu baze active care au terenuri active, filtrată după oraș.
 
-În administrarea integrată, **Setări baze sportive** apare pentru adminii obișnuiți cu alocare explicită în `baze_sportive_admini`. Adminul obișnuit poate edita descrierea și fotografia bazelor alocate. Superadminul acordă acces din **Cine poate edita descrierea și fotografia** în `admin.html`; alocarea unui teren nu acordă automat acces la setările bazei. Nu se extind drepturile asupra rezervărilor sau altor terenuri.
+În administrarea integrată, **Setări baze sportive** apare pentru adminii obișnuiți cu alocare explicită în `baze_sportive_admini`. Adminul obișnuit poate edita descrierea și fotografia bazelor alocate. Superadminul acordă acces din **Cine poate edita descrierea și fotografia** în panoul integrat; alocarea unui teren nu acordă automat acces la setările bazei. Nu se extind drepturile asupra rezervărilor sau altor terenuri.
 
 Verificarea RLS în proiectul real a confirmat refuzul fără alocare, editarea numai a descrierii cu alocare și refuzul după retragerea dreptului. Proba s-a închis cu rollback, fără schimbări persistente în date sau permisiuni. Protecția migrării 007 pentru rezervările finalizate rămâne activă.
 
@@ -119,7 +121,7 @@ Testele noi sunt `supabase/tests/base-photos.test.cjs` (UUID și ID numeric) și
 
 Secțiunea **Înscrie-ți baza sportivă** este disponibilă și fără conectare. Solicitantul completează baza/clubul, persoana de contact, orașul, emailul, telefonul, adresa opțională, linkul Google Maps, 1–20 de terenuri cu sportul și tariful întreg în lei/oră, descrierea și o fotografie opțională. Alege o parolă și o confirmă; dacă emailul are deja cont, trebuie să folosească parola acelui cont. Parola ajunge numai în Supabase Auth, fără să fie salvată în cerere, afișată superadminului sau păstrată în stocarea browserului. Trimiterea nu conectează automat browserul și nu acordă acces admin.
 
-În `admin.html`, numai superadminul are meniul **Cereri înscriere baze**. **Acceptă și publică** cere confirmare și tarifele fiecărui teren, creează atomic baza și terenurile active și acordă solicitantului acces de admin obișnuit doar pentru acestea. Permisiunile anterioare se păstrează. **Respinge cererea** nu creează resurse sau roluri. Notele interne și stările de lucru rămân disponibile; o cerere publicată nu poate fi respinsă ulterior din acest meniu. Solicitantul se conectează în site-ul principal cu emailul și parola alese și deschide **Profilul meu → Administrează baza sportivă** după aprobare. Emailul contului trebuie confirmat în Auth înainte de aprobare, dacă proiectul cere confirmarea la înscriere.
+În panoul deschis din **Profilul meu → Deschide panoul de admin**, numai superadminul are meniul **Cereri înscriere baze**. **Acceptă și publică** cere confirmare și tarifele fiecărui teren, creează atomic baza și terenurile active și acordă solicitantului acces de admin obișnuit doar pentru acestea. Permisiunile anterioare se păstrează. **Respinge cererea** nu creează resurse sau roluri. Notele interne și stările de lucru rămân disponibile; o cerere publicată nu poate fi respinsă ulterior din acest meniu. Solicitantul se conectează în site-ul principal cu emailul și parola alese și deschide **Profilul meu → Administrează baza sportivă** după aprobare. Emailul contului trebuie confirmat în Auth înainte de aprobare, dacă proiectul cere confirmarea la înscriere.
 
 Fluxul folosește migrările `supabase/011_club_requests.sql`, `supabase/012_club_approval.sql` și Edge Function `supabase/functions/club-applications`. Funcția primește cererea anonimă, verifică sau creează contul prin Auth și folosește un RPC rezervat serverului. Acceptarea/respingerea verifică JWT-ul și rolul actual de superadmin și apelează RPC-urile cu identitatea acestuia. Cheia `service_role` există numai în mediul Edge; nu se pune în site sau în repository.
 
@@ -127,7 +129,7 @@ Cererile și fotografiile depuse sunt private prin RLS. La acceptare, fotografia
 
 ## Administrarea bazelor în site
 
-**Profilul meu → Administrează baza sportivă** deschide administrarea în pagina principală și folosește sesiunea curentă. Butonul apare numai după verificarea drepturilor reale în server prin `get_admin_access()`. Cererile de înscriere, acceptarea/respingerea lor, conturile de administrator și operațiunile globale rămân exclusiv în `admin.html`, pentru superadmin.
+**Profilul meu → Administrează baza sportivă** deschide administrarea în pagina principală și folosește sesiunea curentă. Butonul apare numai după verificarea drepturilor reale în server prin `get_admin_access()`. Superadminul folosește **Profilul meu → Deschide panoul de admin**, tot în pagina principală, pentru cererile de înscriere, acceptarea/respingerea lor, conturile de administrator și toate operațiunile globale.
 
 Alege baza din selector. Sunt afișate numai terenurile alocate explicit în `users_admin.terenuri`, inclusiv cele momentan ascunse. Terenurile alocate fără bază apar într-o opțiune separată. Rezervările manuale, programul/blocajele, tarifele, fotografiile terenurilor, istoricul și chatul folosesc aceleași formulare ca înainte. **Setări baze sportive** permite descrierea și fotografia numai cu alocarea explicită `baze_sportive_admini`; simpla alocare a unui teren nu acordă acel drept, iar alocarea bazei nu extinde accesul la celelalte terenuri.
 

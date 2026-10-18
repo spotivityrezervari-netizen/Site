@@ -1,10 +1,9 @@
-const integratedAdmin = !!document.getElementById('base-admin-workspace');
-const adminModalNodes = () => document.querySelectorAll(integratedAdmin ? '#base-admin-workspace .modal' : '.modal');
+// Administration is hosted only inside the main site's authenticated workspace.
+const adminModalNodes = () => document.querySelectorAll('#base-admin-workspace .modal');
 let contLogatGlobal = null; 
 let programRequestGeneration = 0;
 let manualHoursRequestGeneration = 0;
 let adminAuthGeneration = 0;
-let activeAdminAuthUserId = null;
 let adminManagedCourts = [];
 
 // Calendar dates are civil dates: do not convert them through the browser's timezone.
@@ -85,20 +84,12 @@ window.actualizeazaOreManualAdmin = async function() {
     hourSelect.disabled = !hours.length;
     if (saveButton) saveButton.disabled = !hours.length;
 };
-if (!integratedAdmin) {
-    window.lang = 'ro';
-    localStorage.setItem('lang', 'ro');
-}
-
 // --- TRADUCERI ADMIN ---
 window.setLangAdmin = function(limba) {
     limba = 'ro'; // Force Romanian
-    if (!integratedAdmin) { localStorage.setItem('lang', limba); window.lang = limba; }
 
     const dict = {
         'ro': {
-            't-logare': 'Logare Superadmin',
-            't-logout': 'Deconectare',
             't-rez-man-scurt': 'Rezervare Manuală',
             't-prog-scurt': 'Program & Active',
             't-istoric-titlu-scurt': 'Rezervări',
@@ -122,8 +113,6 @@ window.setLangAdmin = function(limba) {
             't-inchis-admin': 'Închis de Admin'
         },
         'hu': {
-            't-logare': 'Vezérlőpult Bejelentkezés',
-            't-logout': 'Kijelentkezés',
             't-rez-man-scurt': 'Kézi Foglalás',
             't-prog-scurt': 'Program és Aktív',
             't-istoric-titlu-scurt': 'Összes Foglalás',
@@ -161,7 +150,7 @@ window.setLangAdmin = function(limba) {
 document.addEventListener('DOMContentLoaded', () => {
     const manualCourtSelect = document.getElementById('manual-teren');
     if (manualCourtSelect) manualCourtSelect.onchange = window.actualizeazaOreManualAdmin;
-    if (integratedAdmin) document.getElementById('container-meniu-terenuri').addEventListener('click', event => {
+    document.getElementById('container-meniu-terenuri').addEventListener('click', event => {
         const program = event.target.closest('[data-admin-program]');
         if (program) return window.deschideProgramAdmin(program.dataset.adminProgram);
         const edit = event.target.closest('[data-admin-court]');
@@ -413,9 +402,7 @@ window.stergeTerenAdmin = async function(id) {
         const { error } = await db.from('terenuri').delete().eq('id', id);
         if (!sameContext()) return;
         if (error) return alert('Terenul nu a putut fi șters: ' + error.message);
-        if (integratedAdmin) return window.refreshSpotivityAdminAccess?.({ force: true });
-        if (integratedAdmin) await window.refreshSpotivityAdminAccess?.({ force: true });
-        else { window.incarcaTerenuriAdmin(); window.actualizeazaBifeTerenuri(); }
+        await window.refreshSpotivityAdminAccess?.({ force: true });
     }
 };
 
@@ -435,17 +422,9 @@ window.anuleazaRezervareAdmin = async function(id) {
 
 // --- LOGICA PRINCIPALĂ A PAGINII ---
 document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('btn-logout-admin')?.addEventListener('click', async () => {
-        const { error } = await db.auth.signOut();
-        if (error) return alert('Deconectarea a eșuat: ' + error.message);
-        contLogatGlobal = null;
-        localStorage.removeItem('admin_session');
-        window.location.reload();
-    });
-
     // NOU: Închide modalele cu tasta ESC în Admin
     document.addEventListener('keydown', function(event) {
-        if (event.key === "Escape" && (!integratedAdmin || !document.getElementById('base-admin-workspace').hidden)) {
+        if (event.key === "Escape" && !document.getElementById('base-admin-workspace').hidden) {
             window.inchideSubPaginaOras?.();
             adminModalNodes().forEach(m => {
                 m.style.display = 'none';
@@ -474,60 +453,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // NOU: Închide modalele când se dă click pe fundalul întunecat (în afara chenarului)
     document.addEventListener('click', function(event) {
-        if (event.target.classList.contains('modal') && (!integratedAdmin || event.target.closest('#base-admin-workspace'))) {
+        if (event.target.classList.contains('modal') && event.target.closest('#base-admin-workspace')) {
             event.target.style.display = 'none';
         }
     });
 
-    document.getElementById('sectiune-login')?.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            document.getElementById('login-admin-btn')?.click();
-        }
-    });
-
-    document.getElementById('login-admin-btn')?.addEventListener('click', async () => {
-        const email = document.getElementById('login-email-admin').value.trim().replace(/\.$/, '');
-        const parola = document.getElementById('login-parola').value;
-        if (!email || !parola) return alert("Introdu adresa de email și parola!");
-
-        const btn = document.getElementById('login-admin-btn');
-        const textVechi = btn.innerText;
-        btn.innerText = "Se verifică securitatea...";
-        btn.disabled = true;
-        
-        // 1. Verificare Auth Securizată
-        const { data: authData, error: authError } = await db.auth.signInWithPassword({
-            email: email,
-            password: parola,
-        });
-
-        if (authError) {
-            btn.innerText = textVechi; btn.disabled = false;
-            return alert("Acces respins! Email sau parolă greșită.");
-        }
-        const authRequest = adminAuthGeneration;
-        const { data, error } = await db.from('users_admin').select('*').eq('user_id', authData.user.id).single();
-        if (authRequest !== adminAuthGeneration || activeAdminAuthUserId !== authData.user.id) return;
-        if (!error && data?.is_super === true) {
-            await window.renderSpotivityAdmin(data);
-        } else {
-            document.getElementById('admin-access-status').hidden = false;
-            document.getElementById('admin-access-status').textContent = 'Acest panou este disponibil numai superadminului. Administratorii bazelor folosesc „Administrează baza sportivă” din profilul site-ului.';
-        }
-        btn.innerText = 'Intră în Sistem';
-        btn.disabled = false;
-    });
-
-    // The public workspace reuses these screens with the already authenticated session.
+    // Role and court scope come from get_admin_access using the main site session.
     window.renderSpotivityAdmin = async function(data) {
         clearAdminSessionView();
-        activeAdminAuthUserId = data.user_id;
-        if (!integratedAdmin && data.is_super !== true) return;
             contLogatGlobal = { ...data };
             const authRequest = adminAuthGeneration;
             window.dispatchEvent(new CustomEvent('spotivity:admin-role', { detail: { userId: data.user_id, isSuper: data.is_super === true, generation: adminAuthGeneration, selectedBaseId: data.selectedBaseId || null, baseAccess: data.baseAccess || null } }));
-            if (document.getElementById('sectiune-login')) document.getElementById('sectiune-login').style.display = 'none';
             document.getElementById('sectiune-dashboard').style.display = 'flex';
             document.getElementById('text-rol-activ').innerText = window.lang === 'hu' ? `Bejelentkezve mint: \n${contLogatGlobal.nume_admin}` : `Logat ca: ${contLogatGlobal.nume_admin}`;
             
@@ -562,7 +498,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const selectManualTeren = document.getElementById('manual-teren');
                 
                 containerMeniu.innerHTML = ''; 
-                containerMeniu.parentElement.style.display = integratedAdmin ? 'flex' : '';
+                containerMeniu.parentElement.style.display = 'flex';
                 containerModale.innerHTML = '';
                 selectManualTeren.innerHTML = '';
 
@@ -605,16 +541,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.getElementById('container-meniu-terenuri').style.display = '';
                     const tools = document.querySelector('#base-admin-workspace .base-admin-tools');
                     if (tools) tools.hidden = false;
-                    else document.getElementById('container-meniu-terenuri').parentElement.style.display = ''; // Show main grila
                 };
 
                 window.deschideSubPaginaOras = function(id) {
                     const page = document.getElementById(id);
                     if (!contLogatGlobal?.is_super || !page) return;
-                    if (integratedAdmin) {
-                        document.getElementById('container-meniu-terenuri').style.display = 'none';
-                        document.querySelector('#base-admin-workspace .base-admin-tools').hidden = true;
-                    } else document.getElementById('container-meniu-terenuri').parentElement.style.display = 'none';
+                    document.getElementById('container-meniu-terenuri').style.display = 'none';
+                    document.querySelector('#base-admin-workspace .base-admin-tools').hidden = true;
                     page.style.display = 'block';
                 };
 
@@ -727,7 +660,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 adminManagedCourts = allocatedCourts;
-                if (integratedAdmin && !contLogatGlobal.is_super) {
+                if (!contLogatGlobal.is_super) {
                     const sports = new Map();
                     for (const court of allocatedCourts) {
                         const sport = window.normalizeSportName?.(court.sport) || court.sport || 'Alte sporturi';
@@ -894,8 +827,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!sameContext()) return;
         if (!error) {
             alert('Setări salvate!');
-            if (integratedAdmin) await window.refreshSpotivityAdminAccess?.({ force: true });
-            else await window.renderSpotivityAdmin({ ...contLogatGlobal });
+            await window.refreshSpotivityAdminAccess?.({ force: true });
         }
         else alert("Eroare: " + error.message);
         
@@ -1022,8 +954,7 @@ document.addEventListener('DOMContentLoaded', () => {
         else {
             alert("Teren adăugat!");
             document.getElementById('modal-adauga-teren').style.display = 'none';
-            if (integratedAdmin) await window.refreshSpotivityAdminAccess?.({ force: true });
-            else { window.incarcaTerenuriAdmin(); window.actualizeazaBifeTerenuri(); window.refreshAdminBases?.(); }
+            await window.refreshSpotivityAdminAccess?.({ force: true });
         }
         btn.innerText = "Adaugă Teren"; btn.disabled = false;
     });
@@ -1468,7 +1399,7 @@ document.addEventListener('DOMContentLoaded', () => {
         chatAdminConversatieCurenta = null;
         localStorage.removeItem('admin_session');
         adminModalNodes().forEach(modal => { modal.style.display = 'none'; });
-        document.querySelectorAll(integratedAdmin ? '#base-admin-workspace .modal input, #base-admin-workspace .modal textarea' : '.modal input, .modal textarea').forEach(input => {
+        document.querySelectorAll('#base-admin-workspace .modal input, #base-admin-workspace .modal textarea').forEach(input => {
             if (input.type === 'checkbox' || input.type === 'radio') input.checked = false;
             else input.value = '';
         });
@@ -1478,11 +1409,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById(id)?.replaceChildren();
         }
         document.getElementById('sectiune-dashboard').style.display = 'none';
-        if (document.getElementById('sectiune-login')) document.getElementById('sectiune-login').style.display = 'flex';
         document.getElementById('text-rol-activ').textContent = '';
-        if (!integratedAdmin && document.getElementById('login-parola')) document.getElementById('login-parola').value = '';
-        const loginButton = document.getElementById('login-admin-btn');
-        if (loginButton) { loginButton.disabled = false; loginButton.textContent = 'Intră în Sistem'; }
         document.getElementById('manual-ora').disabled = true;
         document.getElementById('btn-rezervare-manuala').disabled = true;
         inputChatAdmin.disabled = true;
@@ -1506,21 +1433,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const nextUserId = session?.user?.id || null;
         if (event === 'SIGNED_OUT' || (contLogatGlobal && contLogatGlobal.user_id !== nextUserId)) {
             clearAdminSessionView();
-        }
-        activeAdminAuthUserId = nextUserId;
-        if (!integratedAdmin && nextUserId && ['INITIAL_SESSION', 'SIGNED_IN', 'TOKEN_REFRESHED', 'USER_UPDATED'].includes(event)) {
-            setTimeout(async () => {
-                const request = adminAuthGeneration;
-                const { data, error } = await db.from('users_admin').select('*').eq('user_id', nextUserId).maybeSingle();
-                if (request !== adminAuthGeneration || activeAdminAuthUserId !== nextUserId) return;
-                if (!error && data?.is_super === true) await window.renderSpotivityAdmin(data);
-                else {
-                    clearAdminSessionView();
-                    const status = document.getElementById('admin-access-status');
-                    status.hidden = false;
-                    status.textContent = 'Acces rezervat superadminului. Administrează baza sportivă din profilul site-ului principal.';
-                }
-            }, 0);
         }
     });
 
@@ -1697,7 +1609,6 @@ window.stergeTerenDublaConfirmare = async function(idDB, numeTeren) {
         alert("Terenul a fost șters cu succes!");
         const mod = document.getElementById("modal-setari-" + idDB);
         if (mod) mod.style.display = 'none';
-        if (integratedAdmin) await window.refreshSpotivityAdminAccess?.({ force: true });
-        else { window.incarcaTerenuriAdmin(); window.actualizeazaBifeTerenuri(); }
+        await window.refreshSpotivityAdminAccess?.({ force: true });
     }
 };

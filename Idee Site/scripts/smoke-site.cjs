@@ -248,15 +248,22 @@ async function openProfile(page) {
     console.log('PASS club registration: public multi-sport form, contact fields, photo picker, responsive layout and Escape; no submission writes');
 
 
-    assert.equal((await page.goto(new URL('admin.html', siteBaseUrl).href, {waitUntil:'networkidle'})).status(), 200);
-    assert.ok(await page.locator('#sectiune-login').isVisible());
-    assert.ok(await page.locator('#login-admin-btn').isVisible());
-    assert.ok(!(await page.locator('#sectiune-dashboard').isVisible()));
+    assert.equal((await page.goto(siteBaseUrl.href, {waitUntil:'networkidle'})).status(), 200);
+    assert.equal(await page.locator('#base-admin-workspace').isVisible(), false);
+    assert.equal(await page.locator('#btn-administreaza-baza').isVisible(), false);
+    assert.equal(await page.locator('#login-admin-btn, #sectiune-login').count(), 0);
+    assert.equal(await page.locator('a[href*="admin.html"]').count(), 0);
+    const removedAdminPage = await context.request.get(new URL('admin.html', siteBaseUrl).href);
+    assert.equal(removedAdminPage.status(), 404, 'The standalone admin page must be removed from hosting');
+    await openProfile(page);
+    await page.locator('#modal-auth').waitFor({state:'visible'});
+    assert.equal(await page.locator('#btn-executa-login').isVisible(), true);
+    assert.equal(await page.locator('#sectiune-dashboard').isVisible(), false);
     assert.deepEqual(failedSiteAssets, []);
     assert.deepEqual(jsErrors, []);
     assert.deepEqual(transportErrors, []);
     assert.equal(await page.locator('#btn-cereri-baze-admin').isVisible(), false);
-    console.log('PASS admin: login visible, dashboard hidden; no JavaScript exceptions or failed site assets');
+    console.log('PASS administration in index: shared login, private workspace hidden, no separate admin entry or JavaScript errors');
     console.log('Backend read results:', JSON.stringify(backend));
     const read = await page.evaluate(async () => {
       const result = await db.from('terenuri').select('id').limit(1);

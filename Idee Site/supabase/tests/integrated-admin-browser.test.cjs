@@ -118,7 +118,7 @@ async function fits(page,selector,label){
     const token=await admin.evaluate(async()=>(await db.auth.getSession()).data.session.access_token),logins=passwords(),navigationCount=navigations.length;
     await admin.locator('#btn-administreaza-baza').click();await admin.locator('#base-admin-workspace').waitFor({state:'visible'});await admin.waitForLoadState('networkidle');
     assert.equal(passwords(),logins);assert.equal(navigations.length,navigationCount);assert.equal(await admin.evaluate(async()=>(await db.auth.getSession()).data.session.access_token),token);
-    assert.ok(!admin.url().includes('admin.html'));assert.equal(await admin.locator('iframe').count(),0);
+    assert.equal(new URL(admin.url()).pathname,new URL(base).pathname);assert.equal(await admin.locator('iframe').count(),0);
     assert.equal(await admin.locator('#base-admin-workspace #btn-cereri-baze-admin').isVisible(),false);
     assert.equal(await admin.locator('#base-admin-workspace .super-admin-only:visible').count(),0);
     pass('the profile opens the integrated workspace with the same Auth session, page and theme, without global superadmin tools');
@@ -248,8 +248,11 @@ async function fits(page,selector,label){
     assert.equal(stale.role.data.length,1);assert.equal(stale.access.data.can_manage,false);assert.equal(await baseEditor.locator('#btn-administreaza-baza').isVisible(),false);
     pass('a leftover administrator row with no real court or base grant does not expose the management entry');
 
-    const restricted=await pageFor();await restricted.goto(new URL('admin.html',base).href,{waitUntil:'networkidle'});await restricted.locator('#login-email-admin').fill('admin@example.test');await restricted.locator('#login-parola').fill('fixture-password');await restricted.locator('#login-admin-btn').click();await restricted.waitForLoadState('networkidle');
-    assert.equal(await restricted.locator('#sectiune-dashboard').isVisible(),false);assert.equal(await restricted.locator('#sectiune-login').isVisible(),true);
+    const restricted=await pageFor();await restricted.goto(base,{waitUntil:'networkidle'});await login(restricted,'admin@example.test');await restricted.locator('#btn-administreaza-baza').click();await restricted.locator('#base-admin-workspace').waitFor({state:'visible'});await restricted.waitForLoadState('networkidle');
+    assert.equal(await restricted.locator('#base-admin-workspace.base-admin-super').count(),0);
+    assert.equal(await restricted.locator('#sectiune-dashboard .super-admin-only:visible').count(),0);assert.equal(await restricted.locator('#btn-cereri-baze-admin').isVisible(),false);
+    const restrictedAccess=await raw(restricted,async()=>({access:await db.rpc('get_admin_access'),applications:await db.from('cereri_baze_sportive').select('*'),court:await db.from('terenuri').update({pret:1}).eq('nume','Court Excluded').select('id')}));
+    assert.equal(restrictedAccess.access.data.is_super,false);assert.equal(restrictedAccess.applications.data?.length||0,0);assert.equal(restrictedAccess.court.data?.length||0,0);
     const superPage=await pageFor();await superPage.goto(base,{waitUntil:'networkidle'});await login(superPage,'super@example.test');
     await superPage.locator('#btn-administreaza-baza').waitFor({state:'visible'});
     assert.equal(await superPage.locator('#btn-administreaza-baza').innerText(),'Deschide panoul de admin');
