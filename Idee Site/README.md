@@ -22,12 +22,16 @@ PORT=8001 bash scripts/start-site.sh
 
 Procesele trebuie repornite în fiecare mediu nou. Folosește checkout-ul existent; creează un worktree doar dacă este cerut explicit.
 
+## Organizarea codului
+
+`js/app.js` și `js/admin.js` sunt puncte mici de inițializare. Logica pentru autentificare, profil, terenuri, rezervări, istoric și chat este separată în `js/modules/`, cu module distincte pentru administrare. Contextul comun și metodele serviciilor păstrează sincronizarea sesiunii; API-urile și evenimentele existente rămân compatibile. Toată interfața rămâne în `index.html`, fără o etapă nouă de build sau modificări Supabase. Harta fișierelor și contractele sunt în [js/README.md](js/README.md).
+
 ## Verificare
 
 Verifică sintaxa fișierelor JavaScript:
 
 ```bash
-for f in js/*.js; do node --check "$f" || exit; done
+for f in js/*.js js/modules/*.js; do node --check "$f" || exit; done
 ```
 
 Cu serverul pornit, rulează verificările în browser:

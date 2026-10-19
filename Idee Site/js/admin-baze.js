@@ -372,7 +372,7 @@
             const available = courts.filter(court => !court.baza_sportiva_id || court.baza_sportiva_id === id);
             byId('baza-terenuri').innerHTML = available.length ? available.map(court => `
                 <label class="admin-baza-check"><input type="checkbox" data-base-court-id="${esc(court.id)}" ${id && court.baza_sportiva_id === id ? 'checked' : ''}>
-                    ${adminSportIconMarkup(court.sport)}<span>${esc(court.nume)}<small>${esc(court.sport)} · ${esc(court.oras || '')}</small></span>
+                    ${window.adminSportIconMarkup(court.sport)}<span>${esc(court.nume)}<small>${esc(court.sport)} · ${esc(court.oras || '')}</small></span>
                 </label>`).join('') : '<p class="admin-baze-help">Nu sunt terenuri disponibile. Poți crea unul din „Adaugă Teren” și selecta această bază.</p>';
             const eligible = admins.filter(admin => admin.is_super !== true);
             byId('baza-admini').innerHTML = eligible.length ? eligible.map(admin => `

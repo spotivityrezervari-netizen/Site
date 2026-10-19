@@ -16,9 +16,28 @@
     <script src="js/sport-appearance.js?v=2"></script>
     <link rel="stylesheet" href="css/guest-booking.css?v=1">
     <script src="js/guest-booking.js?v=2" defer></script>
-    <script src="js/app.js?v=31" defer></script>
-    <script src="js/admin.js?v=26" defer></script>
-    <script src="js/admin-baze.js?v=5" defer></script>
+    <!-- Feature factories load before the public application bootstrap. -->
+    <script src="js/modules/public-i18n.js?v=1" defer></script>
+    <script src="js/modules/public-recovery.js?v=1" defer></script>
+    <script src="js/modules/public-profile.js?v=1" defer></script>
+    <script src="js/modules/public-auth.js?v=1" defer></script>
+    <script src="js/modules/public-ui.js?v=1" defer></script>
+    <script src="js/modules/public-courts.js?v=1" defer></script>
+    <script src="js/modules/public-bookings.js?v=1" defer></script>
+    <script src="js/modules/public-history.js?v=1" defer></script>
+    <script src="js/modules/public-chat.js?v=1" defer></script>
+    <script src="js/app.js?v=32" defer></script>
+    <!-- Administration uses its own live session context inside index. -->
+    <script src="js/modules/admin-core.js?v=1" defer></script>
+    <script src="js/modules/admin-schedule.js?v=1" defer></script>
+    <script src="js/modules/admin-bookings.js?v=1" defer></script>
+    <script src="js/modules/admin-courts.js?v=1" defer></script>
+    <script src="js/modules/admin-allocations.js?v=1" defer></script>
+    <script src="js/modules/admin-history.js?v=1" defer></script>
+    <script src="js/modules/admin-chat.js?v=1" defer></script>
+    <script src="js/modules/admin-court-view.js?v=1" defer></script>
+    <script src="js/admin.js?v=27" defer></script>
+    <script src="js/admin-baze.js?v=6" defer></script>
     <script src="js/base-admin.js?v=3" defer></script>
     <script src="js/admin-club-requests.js?v=2" defer></script>
     <link rel="stylesheet" href="css/home.css?v=3">
