@@ -124,7 +124,7 @@
                     if (error) {
                         alert("Eroare la trimitere: " + error.message);
                     } else {
-                        alert("Ți-am trimis un link de resetare a parolei pe email! Verifică și folderul Spam.");
+                        alert("Ți-am trimis un link de resetare a parolei pe email! Deschide-l în același browser în care l-ai solicitat. Verifică și folderul Spam.");
                     }
                 });
             }

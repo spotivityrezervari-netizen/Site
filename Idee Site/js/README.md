@@ -22,6 +22,8 @@ Contextul public conține conexiunea Supabase, `state` și `services`. Identitat
 
 `app.js` instalează traducerile și recuperarea parolei înainte de `DOMContentLoaded`. La încărcarea documentului creează serviciile, încarcă terenurile, restaurează profilul, apoi conectează comenzile interfeței și urmărirea sesiunii. Capturarea inițială a evenimentului SDK de recuperare rămâne în `db.js`.
 
+`google-auth.js` se încarcă sincron înainte de `db.js` pentru a reține erorile callbackului înainte de inițializarea SDK. La `DOMContentLoaded` folosește aceeași conexiune `db`, verifică providerul prin setările publice Auth și gestionează butonul, redirecționarea, traducerile și erorile Google. Nu salvează tokenuri sau roluri proprii. `db.js` folosește PKCE pentru linkurile noi și păstrează compatibilitatea cu vechile linkuri de recuperare care conțin tokenuri în hash. Pașii de activare sunt în [GOOGLE_AUTH.md](../GOOGLE_AUTH.md).
+
 ## Administrare
 
 | Fișier | Responsabilitate |

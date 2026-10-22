@@ -100,6 +100,8 @@ Verificarea RLS în proiectul real a confirmat refuzul fără alocare, editarea 
 
 ## Editarea profilului
 
+Autentificarea Google este integrată în același dialog și folosește conturile și permisiunile Supabase existente. Butonul apare numai după configurarea providerului real; la verificarea din 22 octombrie 2026 lipseau Client ID și Client Secret. Activarea gratuită în Google Cloud și Supabase este descrisă în [GOOGLE_AUTH.md](GOOGLE_AUTH.md). Emailul și parola rămân disponibile.
+
 Din **Profilul meu → Editează profilul**, poți modifica numele, telefonul și emailul. **Verifică modificările** afișează schimbările; abia **Confirmă și salvează** trimite cererile. Datele sunt validate și de Supabase: numele are 2–200 de caractere, iar telefonul 7–15 cifre și cel mult 50 de caractere de formatare.
 
 Emailul se modifică prin Supabase Auth, cu **Secure email change** activ. Linkurile de confirmare se trimit la adresa actuală și la cea nouă. Până la confirmare, autentificarea și profilul folosesc adresa actuală. După confirmare, triggerul Auth sincronizează contactele, rezervările și chatul după UUID. Frontend-ul citește rezervările și chatul după același UUID, astfel încât schimbarea emailului să nu le ascundă.

@@ -100,11 +100,11 @@
         document.addEventListener('DOMContentLoaded', async () => {
             const initialUrl = new URL(window.location.href);
             const hash = new URLSearchParams(initialUrl.hash.slice(1));
-            const recoveryLink = initialUrl.searchParams.get('type') === 'recovery' || hash.get('type') === 'recovery';
-            const linkError = initialUrl.searchParams.has('error') || hash.has('error');
+            const recoveryLink = initialUrl.searchParams.get('type') === 'recovery' || hash.get('type') === 'recovery'
+                || window.isSpotivityRecoveryCallback?.();
             await db.auth.getSession(); // Wait for SDK initialization and its verified event.
             showRecovery(window.takeSpotivityRecoverySession?.());
-            if ((recoveryLink || linkError) && !activeRecovery && !handledTokens.size) {
+            if (recoveryLink && !activeRecovery && !handledTokens.size) {
                 clearRecoveryUrl();
                 alert('Linkul de resetare este invalid sau a expirat. Cere un link nou de la „Ai uitat parola?”.');
             }

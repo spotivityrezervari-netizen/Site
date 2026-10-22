@@ -1,0 +1,102 @@
+/* One Google action is shared by login and registration. */
+#google-auth-options[hidden],
+#google-auth-status[hidden],
+#google-contact-note[hidden] {
+    display: none !important;
+}
+
+#google-auth-options {
+    width: 100%;
+    min-width: 0;
+}
+
+#btn-google-login {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+    padding: 12px 16px;
+    border: 1px solid #dadce0;
+    border-radius: 12px;
+    background: #fff;
+    color: #202124;
+    font: 500 15px/1.4 Arial, sans-serif;
+    text-align: center;
+    cursor: pointer;
+    transition: background-color .15s ease, border-color .15s ease;
+}
+
+#btn-google-login svg {
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
+}
+
+#google-auth-label {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+#btn-google-login:hover:not(:disabled) {
+    border-color: #b8bfc8;
+    background: #f6f8fc;
+}
+
+#btn-google-login:focus-visible {
+    outline: 3px solid #e5c574;
+    outline-offset: 3px;
+}
+
+#btn-google-login:disabled {
+    opacity: .65;
+    cursor: wait;
+}
+
+#google-auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 16px 0;
+    color: #c9c6b9;
+    font-size: 13px;
+    line-height: 1.4;
+    text-align: center;
+}
+
+#google-auth-divider::before,
+#google-auth-divider::after {
+    content: '';
+    flex: 1 1 0;
+    min-width: 8px;
+    height: 1px;
+    background: rgba(220, 199, 143, .23);
+}
+
+#google-auth-status,
+#google-contact-note {
+    box-sizing: border-box;
+    width: 100%;
+    margin: 0 0 16px;
+    padding: 12px 14px;
+    border: 1px solid rgba(242, 136, 130, .38);
+    border-radius: 12px;
+    background: rgba(136, 43, 38, .16);
+    color: #ffc2bc;
+    font-size: 14px;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+}
+
+#google-auth-status[data-kind="info"],
+#google-contact-note {
+    border-color: rgba(226, 195, 117, .35);
+    background: rgba(226, 195, 117, .08);
+    color: #f0dba9;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #btn-google-login { transition: none; }
+}

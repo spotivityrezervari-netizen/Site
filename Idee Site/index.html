@@ -11,7 +11,8 @@
 
     <link rel="stylesheet" href="css/style.css?v=45">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3" integrity="sha384-dl/4LkSyQ4uEucc48NM6VDZLAjLLq9yMzZ5JLXumBq7Ld33XBof73hseOqPhO89+" crossorigin="anonymous"></script>
-    <script src="js/db.js?v=2"></script>
+    <script src="js/google-auth.js?v=1"></script>
+    <script src="js/db.js?v=3"></script>
     <script src="js/security.js?v=3"></script>
     <script src="js/sport-appearance.js?v=2"></script>
     <script src="js/base-media.js?v=2" defer></script>
@@ -19,9 +20,9 @@
     <script src="js/guest-booking.js?v=2" defer></script>
     <!-- Feature factories load before the public application bootstrap. -->
     <script src="js/modules/public-i18n.js?v=1" defer></script>
-    <script src="js/modules/public-recovery.js?v=1" defer></script>
+    <script src="js/modules/public-recovery.js?v=2" defer></script>
     <script src="js/modules/public-profile.js?v=2" defer></script>
-    <script src="js/modules/public-auth.js?v=2" defer></script>
+    <script src="js/modules/public-auth.js?v=3" defer></script>
     <script src="js/modules/public-ui.js?v=1" defer></script>
     <script src="js/modules/public-courts.js?v=2" defer></script>
     <script src="js/modules/public-bookings.js?v=1" defer></script>
@@ -60,6 +61,7 @@
     <link rel="stylesheet" href="css/admin-theme.css?v=2">
     <link rel="stylesheet" href="css/base-admin.css?v=6">
     <link rel="stylesheet" href="css/admin-club-requests.css?v=2">
+    <link rel="stylesheet" href="css/google-auth.css?v=1">
 </head>
 <body class="pagina-publica">
 
@@ -318,6 +320,20 @@
                 <button type="button" class="buton-inchidere" id="inchide-auth" aria-label="Închide">X</button>
             </div>
 
+            <div id="google-auth-options" hidden>
+                <button type="button" id="btn-google-login">
+                    <svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true" focusable="false">
+                        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5Z"/>
+                        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6C44.4 38.04 46.98 31.9 46.98 24.55Z"/>
+                        <path fill="#FBBC05" d="M10.53 28.59A14.4 14.4 0 0 1 9.75 24c0-1.59.27-3.13.76-4.59l-7.98-6.19A23.87 23.87 0 0 0 0 24c0 3.87.93 7.53 2.56 10.78l7.97-6.19Z"/>
+                        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.91-5.8l-7.73-6c-2.15 1.45-4.92 2.3-8.18 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48Z"/>
+                    </svg>
+                    <span id="google-auth-label">Continuă cu Google</span>
+                </button>
+                <p id="google-auth-divider">sau folosește emailul</p>
+            </div>
+            <p id="google-auth-status" role="status" aria-live="polite" hidden></p>
+
             <div id="form-login" class="formular-auth">
                 <div class="grup-input"><label data-i18n="email">Adresă Email</label><input type="email" id="login-email" placeholder="nume@email.com" required></div>
                 <div class="grup-input"><label data-i18n="parola">Parolă</label><input type="password" id="login-parola" placeholder="••••••••" required></div>
@@ -356,6 +372,7 @@
             </div>
             <p id="profil-refresh-status" class="profile-refresh-status" role="status" hidden></p>
             <p id="profil-email-pending" class="profile-email-pending" role="status" hidden></p>
+            <p id="google-contact-note" role="status" hidden></p>
             <div class="actiuni-cont">
                 <button type="button" class="btn-cont" id="btn-editeaza-profil" data-i18n="profil_edit_button" aria-controls="modal-editare-profil">Editează profilul</button>
                 <button type="button" class="btn-cont" id="btn-administreaza-baza" aria-controls="base-admin-workspace" hidden>Administrează baza sportivă</button>

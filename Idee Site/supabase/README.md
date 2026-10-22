@@ -1,5 +1,13 @@
 # Instalarea protecțiilor Supabase și a rolurilor Spotivity
 
+## 018 — profiluri noi prin Google
+
+[018_google_profile_names.sql](018_google_profile_names.sql) a fost aplicată live pe 22 octombrie 2026, după proba cu rollback și verificarea definiției funcției existente. Schimbă numai corpul triggerului privat `create_profile()` pentru profilurile viitoare: păstrează prioritatea numelui introdus la înregistrare, apoi acceptă un `full_name`/`name` valid de la provider. Nu inventează un telefon și nu rescrie profilurile existente.
+
+Comparațiile din tranzacție au păstrat datele tuturor celor 48 de tabele, accesul celor 10 identități, 111 politici, 32 triggeruri și configurația de securitate a funcțiilor. Migrarea nu creează roluri, nu unește conturi și nu schimbă politica de anulare a rezervărilor. Asocierea identităților Google este responsabilitatea Supabase Auth, după verificarea providerului.
+
+Providerul Google nu este activ până la configurarea Client ID și Client Secret reale în Dashboard. Pașii sunt în [GOOGLE_AUTH.md](../GOOGLE_AUTH.md); aceste date nu se introduc în SQL sau în site. Testele izolate sunt `tests/google-profile-names.test.cjs` (UUID și numeric) și `tests/google-auth-browser.test.cjs`.
+
 **Administrare curentă:** toate operațiunile se deschid în `index.html`. Superadminul folosește **Profilul meu → Deschide panoul de admin**, iar administratorii obișnuiți intră direct la bazele și terenurile alocate după verificarea accesului. Pagina separată `admin.html` a fost eliminată; rolurile și limitele RLS rămân aceleași.
 
 **22 octombrie 2026 — 017 aplicată și verificată live:** fotografia de profil separată a bazei este activă prin [017_base_avatars.sql](017_base_avatars.sql). Aplicarea a urmat unei probe cu rollback; comparațiile au confirmat păstrarea datelor din 48 de tabele, a celor 111 politici și 32 de triggere și a scopurilor de acces pentru cele 10 conturi Auth. Cele două funcții înlocuite au fost confirmate înainte de aplicare ca identice cu definițiile din 009 și 013. Testele izolate anterioare pentru 017 au trecut **42 de verificări SQL**: 21 cu UUID și 21 cu ID numeric. Nu este necesară reinstalarea migrărilor.
