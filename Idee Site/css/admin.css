@@ -172,8 +172,6 @@
 .admin-page .admin-menu-card h2 { margin: 0; font-size: 17px !important; line-height: 1.35; font-weight: 600; }
 .admin-card-name { display: block; }
 .admin-card-detail { color: #b9c3d1; font-size: 13px; }
-.admin-sport-icon { display: block; width: 44px; height: 44px; object-fit: contain; flex-shrink: 0; }
-.admin-page .admin-court-card { min-height: 134px; }
 .admin-page .sub-pagina-oras { margin-top: 0 !important; }
 .admin-city-header { flex-wrap: wrap; gap: 12px; margin-bottom: 16px !important; }
 .admin-city-header h1 { flex: 1 1 180px; min-width: 0; margin-left: 0 !important; font-size: 21px !important; overflow-wrap: anywhere; line-height: 1.35; }
@@ -242,7 +240,6 @@
 .admin-page .buton-rezervare:hover { transform: none; }
 .admin-settings-header { display: flex; align-items: center; gap: 10px; padding-right: 42px; }
 .admin-page .admin-settings-header .titlu-modal { flex: 1; padding-right: 0; margin: 0 !important; }
-.admin-settings-header .admin-sport-icon { width: 36px; height: 36px; }
 .admin-page .admin-toggle-row { flex-direction: row; align-items: center; gap: 12px; }
 .admin-toggle-row label { flex: 1; min-width: 0; }
 .admin-day-actions { display: grid !important; grid-template-columns: minmax(120px, 1fr) auto auto; align-items: center; gap: 6px !important; }
@@ -297,18 +294,16 @@
     .admin-header-buttons button { flex: 1; }
     .admin-page .admin-menu-card { min-height: 92px; padding: 12px !important; }
     .admin-page .admin-menu-card h2 { font-size: 15px !important; }
-    .admin-page .admin-court-card { min-height: 124px; }
     .admin-page .modal .modal-continut { padding: 12px; }
     .admin-page .modal .titlu-modal { font-size: 17px !important; }
     .admin-page .modal .formular-auth { padding: 10px !important; }
     .admin-day-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .admin-day-actions input { grid-column: 1 / -1; }
     .admin-page .admin-settings-header { gap: 8px; }
-    .admin-page .admin-settings-header .admin-sport-icon { width: 30px; height: 30px; }
     .admin-page .chat-header h2 { font-size: 17px !important; }
 }
 
-/* Keep sport icons aligned across cards even when one court name wraps. */
+/* Align settings cards when a court name wraps. */
 .admin-page .admin-court-card { justify-content: flex-start; }
 .admin-page .admin-city-header { align-items: flex-start !important; }
 
@@ -396,7 +391,6 @@
 .admin-page .admin-baza-check input[type="checkbox"] { width: 20px; height: 20px; min-width: 20px; margin: 0; }
 .admin-page .admin-baza-check > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .admin-page .admin-baza-check small { display: block; margin-top: 3px; color: #b9c3d1; font-size: 12px; line-height: 1.4; }
-.admin-page .admin-baza-check .admin-sport-icon { width: 30px; height: 30px; }
 .admin-page .admin-baze-dialog button:disabled { opacity: .55; cursor: wait; }
 .admin-page #btn-salveaza-baza { font-size: 16px; }
 @media (max-width: 480px) {

@@ -606,15 +606,17 @@ async function openProfile(page) {
     assert.equal(await admin.locator('#container-meniu-terenuri .admin-court-card').count(),1);
     const allocatedCard=admin.locator('#container-meniu-terenuri .admin-court-card');
     assert.match(await allocatedCard.getAttribute('aria-label'),/Court A/);
-    const allocatedIcon=admin.locator('[data-admin-sport="Fotbal"] .base-admin-sport-heading img');
-    assert.equal(await allocatedIcon.count(),1);
-    assert.match(await allocatedIcon.getAttribute('src'),/fotbalrealist\.png(?:\?|$)/);
-    await assertPngLoaded(allocatedIcon);
+    const allocatedSportHeading=admin.locator('[data-admin-sport="Fotbal"] .base-admin-sport-heading');
+    assert.equal(await allocatedSportHeading.locator('h3').innerText(),'Fotbal');
+    assert.equal(await allocatedSportHeading.locator('img').count(),0);
+    assert.doesNotMatch(await allocatedSportHeading.innerText(),/\p{Extended_Pictographic}/u);
     await allocatedCard.click();
-    pass('ordinary admin opens its allocated court settings directly with the matching PNG sport icon');
+    pass('ordinary admin opens its allocated court settings directly with a plain sport label');
     const settingsId=(await admin.locator('[id^="modal-setari-"]').getAttribute('id')).slice('modal-setari-'.length);
-    assert.match(await admin.locator(`#modal-setari-${settingsId} .admin-settings-header img`).getAttribute('src'),/fotbalrealist\.png(?:\?|$)/);
-    await assertPngLoaded(admin.locator(`#modal-setari-${settingsId} .admin-settings-header img`));
+    const allocatedSettingsHeading=admin.locator(`#modal-setari-${settingsId} .admin-settings-header`);
+    assert.equal(await allocatedSettingsHeading.locator('h2').innerText(),'Setări Court A');
+    assert.equal(await allocatedSettingsHeading.locator('img').count(),0);
+    assert.doesNotMatch(await allocatedSettingsHeading.innerText(),/\p{Extended_Pictographic}/u);
     const hourInputs=admin.locator(`#ore-rezervabile-${settingsId} input.ora-rezervabila`);
     const allHours=Array.from({length:14},(_,i)=>`${String(i+9).padStart(2,'0')}:00`);
     const enabledHours=['09:00','10:00','11:00'];
@@ -936,19 +938,22 @@ async function openProfile(page) {
         const courtName=await courtCard.locator('.admin-card-name').innerText();
         const court=superCourts.find(court=>court.nume===courtName);
         assert.ok(court,courtName);
-        const asset={Fotbal:'fotbalrealist',Baschet:'baschetrealist',Tenis:'tenisrealist',Volei:'voleirealist','Tenis Picior':'fotbalrealist'}[court.sport];
-        assert.equal(await courtCard.locator('img').getAttribute('src'),`assets/imagini/${asset}.png`);
-        await assertPngLoaded(courtCard.locator('img'));
+        assert.equal((await courtCard.locator('h2').innerText()).replace(/\s+/g,' ').trim(),`Setări ${court.nume}`);
+        assert.equal(await courtCard.locator('.admin-card-detail').innerText(),court.sport==='Tenis Picior'?'Tenis de picior':court.sport);
+        assert.equal(await courtCard.locator('img').count(),0);
+        assert.doesNotMatch(await courtCard.innerText(),/\p{Extended_Pictographic}/u);
         await courtCard.click();
         await superAdmin.locator(`#modal-setari-${court.id}`).waitFor({state:'visible'});
-        assert.equal(await superAdmin.locator(`#modal-setari-${court.id} .admin-settings-header img`).getAttribute('src'),`assets/imagini/${asset}.png`);
-        await assertPngLoaded(superAdmin.locator(`#modal-setari-${court.id} .admin-settings-header img`));
+        const settingsHeading=superAdmin.locator(`#modal-setari-${court.id} .admin-settings-header`);
+        assert.equal(await settingsHeading.locator('h2').innerText(),`Setări ${court.nume}`);
+        assert.equal(await settingsHeading.locator('img').count(),0);
+        assert.doesNotMatch(await settingsHeading.innerText(),/\p{Extended_Pictographic}/u);
         assert.equal(await superAdmin.locator(`#pret-minge-${court.id}`).inputValue(),String(court.pret_minge ??15));
         await superAdmin.locator(`#modal-setari-${court.id} .buton-inchidere`).click();
       }
       await cityPage.locator('[onclick*="inchideSubPaginaOras"]').click();
     }
-    pass('only superadmin navigates Setări city → allocated court settings with PNG icons for each sport, including foot tennis');
+    pass('only superadmin navigates Setări city → allocated court settings with plain labels for each sport, including foot tennis');
     for (const width of viewportWidths) {
       await superAdmin.setViewportSize({width,height:844});
       await assertFits(superAdmin,'#sectiune-dashboard',`superadmin dashboard ${width}px`);

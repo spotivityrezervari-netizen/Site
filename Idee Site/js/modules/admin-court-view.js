@@ -4,13 +4,6 @@
     const modules = window.SpotivityModules = window.SpotivityModules || {};
     modules.adminCourtView = function(context) {
         const { db, state } = context;
-        function adminSportIconMarkup(sport) {
-            const appearance = window.getSportAppearance(sport);
-            return `<img class="admin-sport-icon" data-sport-icon="${window.escapeHtml(sport || 'Fotbal')}" src="${window.escapeHtml(appearance.icona_url)}" alt="${window.escapeHtml(sport || 'Sport')}" width="44" height="44">`;
-        }
-        // The shared base editor also uses this escaped sport icon renderer.
-        window.adminSportIconMarkup = adminSportIconMarkup;
-
         window.renderSpotivityAdmin = async function(data) {
             context.clearSessionView();
                 state.account = { ...data };
@@ -119,13 +112,13 @@
                         for (const terenDB of courts) {
                             const courtId = window.escapeHtml(terenDB.id);
                             const courtJsId = window.escapeJs(terenDB.id);
-                            const sportIcon = adminSportIconMarkup(terenDB.sport);
+                            const sportLabel = terenDB.sport === 'Tenis Picior' ? 'Tenis de picior' : terenDB.sport || 'Sport';
                             let culoareTeren = terenDB.este_activ !== false ? '#3b82f6' : '#ef4444';
 
                             carduriTerenuri += `
                                 <button type="button" class="card-sport admin-menu-card admin-court-card admin-comun" onclick="document.getElementById('modal-setari-${courtJsId}').style.display='flex'">
-                                    ${sportIcon}
                                     <h2>Setări <span class="admin-card-name">${window.escapeHtml(terenDB.nume)}</span></h2>
+                                    <span class="admin-card-detail">${window.escapeHtml(sportLabel)}</span>
                                 </button>
                             `;
 
@@ -134,7 +127,6 @@
                                     <div class="modal-continut modal-mare" style="border-color: ${culoareTeren}; width: 100%; max-width: 550px;">
                                         <button class="buton-inchidere" aria-label="Închide" onclick="this.parentElement.parentElement.style.display='none'">X</button>
                                         <div class="admin-settings-header">
-                                            ${sportIcon}
                                             <h2 class="titlu-modal" style="font-size: 20px; text-align: left; color: ${culoareTeren};">Setări ${window.escapeHtml(terenDB.nume)}</h2>
                                         </div>
 
@@ -224,7 +216,7 @@
                         htmlMeniu = ordered.map(([sport, courts]) => {
                             const label = sport === 'Tenis Picior' ? 'Tenis de picior' : sport;
                             return `<section class="base-admin-sport" data-admin-sport="${window.escapeHtml(sport)}">
-                                <header class="base-admin-sport-heading"><div>${adminSportIconMarkup(sport)}<h3>${window.escapeHtml(label)}</h3></div>
+                                <header class="base-admin-sport-heading"><div><h3>${window.escapeHtml(label)}</h3></div>
                                     <button type="button" class="btn-cont base-admin-program" data-admin-program="${window.escapeHtml(sport)}">Program ${window.escapeHtml(label)}</button>
                                 </header>
                                 <div class="base-admin-courts">${courts.map(court => `<article class="base-admin-court">
