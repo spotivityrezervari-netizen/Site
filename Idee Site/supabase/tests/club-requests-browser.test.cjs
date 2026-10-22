@@ -47,7 +47,11 @@ let checks=0;
     const pass=label=>{checks++;console.log('PASS',label);};
     const profile=async page=>{
       if(await page.locator('#modal-profil').isVisible())return;
-      if(await page.locator('body.base-admin-owner').count()){await page.locator('#btn-inchide-administrare').click();return;}
+      if(await page.locator('#base-admin-workspace').isVisible()){
+        await page.locator('#btn-inchide-administrare').click();
+        await page.locator('#base-admin-workspace').waitFor({state:'hidden'});
+        await page.locator('#spotivity-top').waitFor({state:'visible'});
+      }
       if(await page.locator('#btn-top-cont').isVisible())await page.locator('#btn-top-cont').click();
       else{if(!await page.locator('#home-mobile-menu').isVisible())await page.locator('#btn-mobile-menu').click();await page.locator('#home-mobile-menu [data-profile-target]').click();}
     };

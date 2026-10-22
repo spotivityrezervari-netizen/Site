@@ -23,7 +23,7 @@
     <script src="js/modules/public-profile.js?v=2" defer></script>
     <script src="js/modules/public-auth.js?v=2" defer></script>
     <script src="js/modules/public-ui.js?v=1" defer></script>
-    <script src="js/modules/public-courts.js?v=1" defer></script>
+    <script src="js/modules/public-courts.js?v=2" defer></script>
     <script src="js/modules/public-bookings.js?v=1" defer></script>
     <script src="js/modules/public-history.js?v=1" defer></script>
     <script src="js/modules/public-chat.js?v=1" defer></script>
@@ -40,13 +40,13 @@
     <script src="js/admin.js?v=27" defer></script>
     <script src="js/base-avatar-editor.js?v=1" defer></script>
     <script src="js/admin-baze.js?v=8" defer></script>
-    <script src="js/base-admin.js?v=4" defer></script>
+    <script src="js/base-admin.js?v=5" defer></script>
     <script src="js/admin-club-requests.js?v=2" defer></script>
     <link rel="stylesheet" href="css/home.css?v=3">
     <link rel="stylesheet" href="css/theme.css?v=3">
     <script src="js/home.js?v=7" defer></script>
     <script src="js/baze.js?v=4" defer></script>
-    <script src="js/home-discovery.js?v=4" defer></script>
+    <script src="js/home-discovery.js?v=5" defer></script>
     <link rel="stylesheet" href="css/profile-editor.css?v=2">
     <script src="js/profile-editor.js?v=1" defer></script>
     <link rel="stylesheet" href="css/home-layout.css?v=6">
@@ -58,7 +58,7 @@
 
     <link rel="stylesheet" href="css/admin.css?v=5">
     <link rel="stylesheet" href="css/admin-theme.css?v=2">
-    <link rel="stylesheet" href="css/base-admin.css?v=5">
+    <link rel="stylesheet" href="css/base-admin.css?v=6">
     <link rel="stylesheet" href="css/admin-club-requests.css?v=2">
 </head>
 <body class="pagina-publica">
@@ -83,6 +83,10 @@
         </section>
 
         <header class="home-header" id="home-header">
+            <div id="admin-site-preview" class="admin-site-preview" role="region" aria-label="Vizualizare site" hidden>
+                <span>Vizualizare site</span>
+                <button type="button" id="btn-return-to-administration" aria-controls="base-admin-workspace">Înapoi la administrare</button>
+            </div>
             <nav class="home-nav" aria-label="Navigare principală">
                 <a class="home-brand" id="home-brand" href="#spotivity-top" aria-label="Spotivity — pagina principală">
                     <img src="assets/imagini/avatar2.png" alt="Spotivity" width="30" height="30">
@@ -579,7 +583,7 @@
             <header class="base-admin-heading">
                 <div class="base-admin-heading-copy"><p class="base-admin-eyebrow">Contul tău · Administrare</p><h2 id="base-admin-title">Administrează baza sportivă</h2></div>
                 <div class="base-admin-account-actions" role="group" aria-label="Acțiunile contului">
-                    <button type="button" class="btn-cont" id="btn-inchide-administrare" aria-label="Înapoi la profil">Înapoi la profil</button>
+                    <button type="button" class="btn-cont" id="btn-inchide-administrare" aria-label="Vezi site-ul" aria-controls="spotivity-top">Vezi site-ul</button>
                     <button type="button" class="btn-deconectare" id="btn-deconectare-administrare" hidden>Deconectare</button>
                 </div>
             </header>

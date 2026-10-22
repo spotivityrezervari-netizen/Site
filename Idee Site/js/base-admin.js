@@ -9,11 +9,12 @@
     let signature = '';
     let selectedBaseId = null;
     let refreshing = null;
-    let lastFocus = null;
     let ownerView = false;
+    let sitePreview = false;
+    let navigationRequest = 0;
+    let administrationScroll = 0;
     let catalogWasInert = null;
     let catalogAriaHidden = null;
-    let accountRequest = 0;
     const ungrouped = '__ungrouped__';
 
     const publicDialogs = ['modal-terenuri', 'modal-rezervare', 'modal-cautare-terenuri',
@@ -32,24 +33,28 @@
         document.body.classList.toggle('base-admin-account-open', !!overlay);
     }
 
+    function closePublicSurfaces() {
+        // Controllers restore their own inert regions and cancel pending reads.
+        window.closeSpotivityHomeMenu?.(false);
+        const basesDialog = byId('modal-baze-sportive');
+        if (basesDialog && ['flex', 'block'].includes(basesDialog.style.display)) window.closeSportsBases?.(false);
+        window.closeCourtSearch?.(false);
+        window.closeSpotivityPublicCourts?.();
+        publicDialogs.forEach(id => { const modal = byId(id); if (modal) modal.style.display = 'none'; });
+    }
+
     function setOwnerView(enabled) {
         const catalog = byId('spotivity-top');
-        if (enabled) {
-            // Close public surfaces through their own lifecycle before saving
-            // accessibility state; their close handlers restore nested inert
-            // regions and cancel pending directory reads.
-            window.closeSpotivityHomeMenu?.(false);
-            const basesDialog = byId('modal-baze-sportive');
-            if (basesDialog && ['flex', 'block'].includes(basesDialog.style.display)) window.closeSportsBases?.(false);
-        }
-        if (enabled && !ownerView && catalog) {
+        const managementHome = enabled && !sitePreview;
+        if (managementHome) closePublicSurfaces();
+        if (managementHome && catalogWasInert === null && catalog) {
             catalogWasInert = catalog.inert;
             catalogAriaHidden = catalog.getAttribute('aria-hidden');
         }
         ownerView = enabled;
-        document.body.classList.toggle('base-admin-owner', enabled);
+        document.body.classList.toggle('base-admin-owner', managementHome);
         if (catalog) {
-            if (enabled) {
+            if (managementHome) {
                 catalog.inert = true;
                 catalog.setAttribute('aria-hidden', 'true');
             } else if (catalogWasInert !== null) {
@@ -59,9 +64,6 @@
                 catalogWasInert = null;
                 catalogAriaHidden = null;
             }
-        }
-        if (enabled) {
-            publicDialogs.forEach(id => { const modal = byId(id); if (modal) modal.style.display = 'none'; });
         }
         syncAccountOverlay();
     }
@@ -87,6 +89,7 @@
     }
 
     function showWorkspace({ account = false, focus = false } = {}) {
+        if (sitePreview) return;
         const workspace = byId('base-admin-workspace');
         workspace.hidden = false;
         document.body.classList.add('base-admin-open');
@@ -98,42 +101,41 @@
         if (focus && !workspace.inert) byId('btn-inchide-administrare').focus({ preventScroll: true });
     }
 
-    async function openAccount() {
-        if (!userId) return;
+    function viewSite() {
+        if (!userId || (!ownerView && !access?.can_manage)) return;
+        navigationRequest++;
+        administrationScroll = byId('base-admin-workspace').scrollTop;
+        sitePreview = true;
+        close();
+        setOwnerView(ownerView);
+        renderRole();
+        byId('btn-return-to-administration').disabled = false;
+        window.scrollTo({ top: 0, behavior: 'instant' });
+        byId('btn-return-to-administration').focus({ preventScroll: true });
+        Promise.resolve(window.refreshSpotivityPublicCatalog?.()).catch(() => {});
+    }
+
+    async function enterManagement() {
         const owner = userId;
+        if (!owner) return;
         const captured = generation;
-        const currentRequest = ++accountRequest;
-        const sameAccount = () => userId === owner && generation === captured && accountRequest === currentRequest
-            && byId('modal-profil').style.display === 'flex';
-        byId('base-admin-workspace').querySelectorAll('.modal').forEach(modal => { modal.style.display = 'none'; });
-        byId('modal-profil').style.display = 'flex';
-        syncAccountOverlay();
-        byId('btn-editeaza-profil')?.focus({ preventScroll: true });
-        if (window.getSpotivityProfileUser?.()?.id !== owner) return;
-        const status = byId('profil-refresh-status');
-        if (status) { status.hidden = true; status.textContent = ''; }
+        const navigation = ++navigationRequest;
+        const button = byId('btn-return-to-administration');
+        button.disabled = true;
         try {
-            // Refresh data only. Reusing the public entry click would reopen
-            // this modal after Escape if its asynchronous reads finish late.
-            await window.refreshSpotivityProfile?.();
-            if (!sameAccount()) return;
-            const { data, error } = await db.from('rezervari')
-                .select('id,booking_group_id,data_str,ora,stare,timestamp_start')
-                .eq('client_user_id', owner).neq('stare', 'anulata');
-            if (!sameAccount() || error) return;
-            const active = new Set();
-            for (const booking of data || []) {
-                if (!window.esteRezervareTrecuta(booking.data_str, booking.ora, booking.timestamp_start)) {
-                    active.add(booking.booking_group_id || booking.id);
-                }
-            }
-            if (byId('nr-active')) byId('nr-active').textContent = active.size;
-        } catch {
-            if (sameAccount() && status) {
-                status.textContent = window.dict?.[window.lang]?.profil_edit_profile_refresh_failed
-                    || 'Datele profilului nu au putut fi reîncărcate. Încearcă din nou.';
-                status.hidden = false;
-            }
+            const verified = await window.refreshSpotivityAdminAccess({ force: true });
+            if (generation !== captured || userId !== owner || navigation !== navigationRequest) return;
+            // On a temporary outage an established owner may reopen only the
+            // cleared retry shell. Revoked or stale scopes never reopen it.
+            if (!verified && (!ownerView || access !== null)) return;
+            sitePreview = false;
+            if (!ownerView) closePublicSurfaces();
+            setOwnerView(ownerView);
+            renderRole();
+            showWorkspace({ account: true, focus: true });
+            byId('base-admin-workspace').scrollTop = administrationScroll;
+        } finally {
+            if (navigation === navigationRequest) button.disabled = false;
         }
     }
 
@@ -144,27 +146,29 @@
         byId('btn-administreaza-baza').textContent = label;
         byId('base-admin-title').textContent = isSuper ? 'Panoul de administrare' : 'Administrează baza sportivă';
         byId('base-admin-select').closest('.base-admin-selector').hidden = isSuper || !access;
-        byId('btn-inchide-administrare').textContent = ownerView ? 'Profilul meu' : 'Înapoi la profil';
-        byId('btn-inchide-administrare').setAttribute('aria-label', ownerView ? 'Profilul meu' : 'Înapoi la profil');
+        byId('btn-inchide-administrare').textContent = 'Vezi site-ul';
+        byId('btn-inchide-administrare').setAttribute('aria-label', 'Vezi site-ul');
+        byId('admin-site-preview').hidden = !sitePreview || !userId || (!ownerView && !access?.can_manage);
         const logout = byId('btn-deconectare-administrare');
         if (logout) logout.hidden = !ownerView;
     }
 
-    function close(returnToProfile = true) {
-        if (ownerView && returnToProfile) { openAccount(); return; }
+    function close() {
         const workspace = byId('base-admin-workspace');
         workspace.hidden = true;
         workspace.inert = false;
         workspace.querySelectorAll('.modal').forEach(modal => { modal.style.display = 'none'; });
         document.body.classList.remove('base-admin-open');
         document.body.classList.remove('base-admin-account-open');
-        if (returnToProfile && userId) {
-            byId('modal-profil').style.display = 'flex';
-            (lastFocus || byId('btn-administreaza-baza')).focus({ preventScroll: true });
-        }
     }
 
     function clear({ preserveOwner = false } = {}) {
+        if (!preserveOwner) {
+            sitePreview = false;
+            navigationRequest++;
+            administrationScroll = 0;
+            byId('btn-return-to-administration').disabled = false;
+        }
         access = null;
         signature = '';
         selectedBaseId = null;
@@ -180,7 +184,7 @@
             showWorkspace();
         } else {
             accessNotice();
-            close(false);
+            close();
         }
     }
 
@@ -189,7 +193,6 @@
         userId = nextUserId;
         generation++;
         request++;
-        accountRequest++;
         refreshing = null;
         clear();
     }
@@ -276,7 +279,7 @@
             }
             const nextSignature = JSON.stringify(next);
             const changed = nextSignature !== signature;
-            const enteringOwner = !ownerView && !next.is_super;
+            const enteringOwner = !ownerView && !next.is_super && !sitePreview;
             access = next;
             signature = nextSignature;
             setOwnerView(!next.is_super);
@@ -311,14 +314,9 @@
     };
 
     document.addEventListener('DOMContentLoaded', () => {
-        byId('btn-administreaza-baza').addEventListener('click', async event => {
-            lastFocus = event.currentTarget;
-            const owner = userId;
-            const verified = await window.refreshSpotivityAdminAccess({ force: true });
-            if (!owner || userId !== owner || (!verified && !ownerView)) return;
-            showWorkspace({ account: true, focus: true });
-        });
-        byId('btn-inchide-administrare').addEventListener('click', () => close());
+        byId('btn-administreaza-baza').addEventListener('click', enterManagement);
+        byId('btn-return-to-administration').addEventListener('click', enterManagement);
+        byId('btn-inchide-administrare').addEventListener('click', viewSite);
         let logout = byId('btn-deconectare-administrare');
         if (!logout) {
             logout = document.createElement('button');
@@ -369,7 +367,7 @@
                     window.inchideSubPaginaOras?.();
                     byId('btn-inchide-administrare').focus({ preventScroll: true });
                 } else if (ownerView) byId('btn-inchide-administrare').focus({ preventScroll: true });
-                else close();
+                else viewSite();
                 return;
             }
             if (event.key !== 'Tab') return;

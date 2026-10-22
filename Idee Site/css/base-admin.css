@@ -2,6 +2,12 @@
 #btn-administreaza-baza[hidden], #base-admin-workspace[hidden],
 #base-admin-workspace [hidden] { display: none !important; }
 body.base-admin-open { overflow: hidden; }
+.admin-site-preview[hidden], .home-menu-open .admin-site-preview { display: none !important; }
+.admin-site-preview { display: flex; align-items: center; justify-content: space-between; gap: 12px; max-width: 1000px; margin: 0 auto; padding: 8px 18px; border-bottom: 1px solid rgba(216,182,106,.25); color: #d8b66a; }
+.admin-site-preview > span { font-size: 12px; line-height: 1.4; }
+.admin-site-preview > button { min-height: 44px; padding: 10px 14px; border: 1px solid rgba(216,182,106,.45); border-radius: 12px; background: #223023; color: #f5f0e3; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.admin-site-preview > button:hover { background: #293b2b; }
+.admin-site-preview > button:disabled { opacity: .6; cursor: wait; }
 body.fara-scroll #base-admin-workspace > .base-admin-panel { filter: blur(12px); }
 /* A verified facility owner has a dedicated management home in the same page. */
 body.base-admin-owner #spotivity-top,

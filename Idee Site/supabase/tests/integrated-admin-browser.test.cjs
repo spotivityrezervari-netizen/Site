@@ -15,7 +15,10 @@ let checks=0;
 
 async function profile(page){
   if(await page.locator('#modal-profil').isVisible())return;
-  if(await page.locator('body.base-admin-owner').count()){await page.locator('#btn-inchide-administrare').click();return;}
+  if(await page.locator('#base-admin-workspace').isVisible()){
+    await page.locator('#btn-inchide-administrare').click();
+    await page.locator('#spotivity-top').waitFor({state:'visible'});
+  }
   if(await page.locator('#btn-top-cont').isVisible())await page.locator('#btn-top-cont').click();
   else{if(!await page.locator('#home-mobile-menu').isVisible())await page.locator('#btn-mobile-menu').click();await page.locator('#home-mobile-menu [data-profile-target]').click();}
 }
@@ -117,12 +120,12 @@ async function fits(page,selector,label){
     const sdk=execFileSync('curl',['--fail','--location','--silent','--show-error','--max-time','30',sdkTag[1]],{maxBuffer:2*1024*1024});
     assert.equal('sha384-'+createHash('sha384').update(sdk).digest('base64'),sdkTag[2]);
     const errors=[],navigations=[];
-    const pageFor=async()=>{
+    const pageFor=async({clock=false}={})=>{
       const context=await browser.newContext({timezoneId:'Europe/Bucharest'});
       await context.route(sdkTag[1],r=>r.fulfill({status:200,contentType:'application/javascript',body:sdk,headers:{'access-control-allow-origin':'*'}}));
       await context.route(url=>url.hostname===host||url.hostname.endsWith('.supabase.co'),fixture.browserRoute);
       await context.routeWebSocket(url=>url.hostname===host||url.hostname.endsWith('.supabase.co'),ws=>ws.close());
-      const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));page.on('dialog',d=>d.accept());
+      const page=await context.newPage();if(clock)await page.clock.install();page.on('pageerror',error=>errors.push(error.message));page.on('dialog',d=>d.accept());
       page.on('framenavigated',frame=>{if(frame===page.mainFrame())navigations.push(frame.url());});return page;
     };
     const pass=label=>{checks++;console.log('PASS',label);};
@@ -144,7 +147,7 @@ async function fits(page,selector,label){
     const admin=await pageFor();await admin.goto(base,{waitUntil:'networkidle'});await login(admin,'admin@example.test');
     await admin.locator('#btn-administreaza-baza').waitFor({state:'visible'});assert.equal(await admin.locator('#btn-administreaza-baza').innerText(),'Administrează baza sportivă');
     const token=await admin.evaluate(async()=>(await db.auth.getSession()).data.session.access_token),logins=passwords(),navigationCount=navigations.length;
-    await admin.locator('#inchide-profil').click();await admin.locator('#base-admin-workspace').waitFor({state:'visible'});await admin.waitForLoadState('networkidle');
+    await admin.locator('#btn-administreaza-baza').click();await admin.locator('#base-admin-workspace').waitFor({state:'visible'});await admin.waitForLoadState('networkidle');
     assert.equal(passwords(),logins);assert.equal(navigations.length,navigationCount);assert.equal(await admin.evaluate(async()=>(await db.auth.getSession()).data.session.access_token),token);
     assert.equal(new URL(admin.url()).pathname,new URL(base).pathname);assert.equal(await admin.locator('iframe').count(),0);
     assert.equal(await admin.locator('#spotivity-top').isVisible(),false);assert.equal(await admin.locator('#spotivity-top').evaluate(node=>node.inert),true);
@@ -194,6 +197,23 @@ async function fits(page,selector,label){
     const saved=(await root(()=>pg.query("select * from public.terenuri where nume='Court A'"))).rows[0];assert.equal(Number(saved.pret),135);assert.ok(!saved.ore_rezervabile.includes('09:00'));
     assert.ok(saved.poza.includes('/poze_terenuri/'+uid(3)+'/'));assert.ok([...fixture.objects.keys()].some(path=>path.startsWith('poze_terenuri/'+uid(3)+'/')));
     pass('existing court settings save tariffs and reservable hours inside the integrated workspace');
+
+    const beforePreviewPassword=passwords(),beforePreviewNavigation=navigations.length,previewPages=admin.context().pages().length;
+    assert.equal(await admin.locator('#btn-inchide-administrare').innerText(),'Vezi site-ul');
+    assert.doesNotMatch(await admin.locator('.base-admin-account-actions').innerText(),/Profilul meu/);
+    await admin.locator('#btn-inchide-administrare').click();await admin.locator('#admin-site-preview').waitFor({state:'visible'});
+    assert.equal(await admin.locator('#base-admin-workspace').isVisible(),false);assert.equal(await admin.locator('#modal-profil').isVisible(),false);
+    assert.equal(await admin.locator('#spotivity-top').isVisible(),true);assert.equal(await admin.locator('#spotivity-top').evaluate(node=>node.inert),false);
+    await admin.evaluate(()=>window.spotivityDiscoveryReady);await admin.locator('#btn-home-search').click();await admin.locator('#modal-cautare-terenuri').waitFor({state:'visible'});
+    await admin.locator('#home-search-input').fill('Court A');
+    await admin.waitForFunction(()=>[...document.querySelectorAll('#home-search-results [data-discovery-court]')].some(card=>card.textContent.includes('Court A')&&card.textContent.includes('135')));
+    const publicSavedCourt=admin.locator('#home-search-results [data-discovery-court]').filter({hasText:'Court A'}).first();
+    assert.ok((await publicSavedCourt.innerText()).includes('135'));assert.equal(await publicSavedCourt.locator('img').getAttribute('src'),saved.poza);
+    await admin.keyboard.press('Escape');await admin.locator('#btn-return-to-administration').click();await admin.locator('#base-admin-workspace').waitFor({state:'visible'});await admin.waitForLoadState('networkidle');
+    assert.equal(await admin.locator('#admin-site-preview').isVisible(),false);assert.equal(await admin.locator('#spotivity-top').isVisible(),false);
+    assert.equal(await admin.locator('#base-admin-select').inputValue(),ids.first);assert.equal(passwords(),beforePreviewPassword);assert.equal(navigations.length,beforePreviewNavigation);assert.equal(admin.context().pages().length,previewPages);
+    assert.equal(await admin.evaluate(async()=>(await db.auth.getSession()).data.session.access_token),token);assert.equal(await admin.locator('iframe').count(),0);
+    pass('Vezi site-ul replaces the owner profile entry and shows freshly saved court details in the public site before returning to the same scoped session');
 
     await admin.locator('#base-admin-edit-base').click();await admin.locator('#admin-baza-form').waitFor({state:'visible'});
     await admin.locator('#baza-descriere').fill('Descriere actualizată în site');await admin.locator('#btn-salveaza-baza').click();await admin.waitForLoadState('networkidle');
@@ -269,10 +289,52 @@ async function fits(page,selector,label){
     await admin.keyboard.press('Escape');
     assert.equal(await admin.locator('#base-admin-workspace').isVisible(),true);assert.equal(await admin.locator('#spotivity-top').isVisible(),false);
     await profile(admin);await admin.locator('#modal-profil').waitFor({state:'visible'});
-    assert.equal(await admin.locator('#base-admin-workspace').isVisible(),true);
+    assert.equal(await admin.locator('#base-admin-workspace').isVisible(),false);assert.equal(await admin.locator('#admin-site-preview').isVisible(),true);
     const beforeReopen=passwords();await admin.keyboard.press('Escape');await admin.locator('#modal-profil').waitFor({state:'hidden'});
-    assert.equal(await admin.locator('#base-admin-workspace').isVisible(),true);assert.equal(await admin.locator('#spotivity-top').isVisible(),false);assert.equal(passwords(),beforeReopen);
-    pass('Escape closes nested screens and the owner profile without revealing the public catalog or losing the management session');
+    assert.equal(await admin.locator('#base-admin-workspace').isVisible(),false);assert.equal(await admin.locator('#spotivity-top').isVisible(),true);assert.equal(passwords(),beforeReopen);
+    await admin.locator('#btn-return-to-administration').click();await admin.locator('#base-admin-workspace').waitFor({state:'visible'});
+    assert.equal(await admin.locator('#spotivity-top').isVisible(),false);assert.equal(await admin.locator('#admin-site-preview').isVisible(),false);
+    pass('Escape closes nested management screens, while the public profile stays in the explicit site preview until returning to administration');
+
+    const previewOwner=await pageFor({clock:true});let previewAccessCalls=0;
+    previewOwner.on('request',request=>{const url=new URL(request.url());if(url.hostname===host&&url.pathname==='/rest/v1/rpc/get_admin_access')previewAccessCalls++;});
+    await previewOwner.goto(base,{waitUntil:'networkidle'});await login(previewOwner,'admin@example.test');
+    await previewOwner.locator('#btn-administreaza-baza').click();await previewOwner.locator('#base-admin-workspace').waitFor({state:'visible'});
+    await selectBase(previewOwner,ids.second,'Court B');
+    const previewSession=await previewOwner.evaluate(async()=>(await db.auth.getSession()).data.session.access_token),previewPasswordCount=passwords(),previewNavigationCount=navigations.length;
+    await previewOwner.locator('#btn-inchide-administrare').click();await previewOwner.locator('#admin-site-preview').waitFor({state:'visible'});
+    await fits(previewOwner,'#admin-site-preview','site-preview');
+    const accessChecksBeforeTick=previewAccessCalls;
+    await previewOwner.clock.runFor(31000);await previewOwner.waitForLoadState('networkidle');
+    assert.ok(previewAccessCalls>accessChecksBeforeTick,'The preview page actual periodic access refresh must run');
+    await previewOwner.evaluate(()=>window.dispatchEvent(new Event('focus')));await previewOwner.evaluate(()=>window.refreshSpotivityAdminAccess({force:true}));
+    assert.equal(await previewOwner.locator('#base-admin-workspace').isVisible(),false);assert.equal(await previewOwner.locator('#admin-site-preview').isVisible(),true);
+    await profile(previewOwner);await previewOwner.locator('#modal-profil').waitFor({state:'visible'});await previewOwner.waitForLoadState('networkidle');
+    assert.equal(await previewOwner.locator('#base-admin-workspace').isVisible(),false);await previewOwner.keyboard.press('Escape');
+    await previewOwner.setViewportSize({width:390,height:844});await previewOwner.locator('#btn-mobile-menu').click();await previewOwner.locator('#home-mobile-menu').waitFor({state:'visible'});
+    await previewOwner.locator('#btn-mobile-menu').click();await previewOwner.locator('#home-mobile-menu').waitFor({state:'hidden'});
+    await previewOwner.locator('#btn-home-baze').click();await previewOwner.locator('#modal-baze-sportive').waitFor({state:'visible'});await previewOwner.locator('#inchide-baze-sportive').click();
+    const accessChecksBeforeReturn=previewAccessCalls;
+    await previewOwner.locator('#btn-return-to-administration').click();await previewOwner.locator('#base-admin-workspace').waitFor({state:'visible'});await previewOwner.waitForLoadState('networkidle');
+    assert.ok(previewAccessCalls>accessChecksBeforeReturn,'Returning to management must revalidate current grants');
+    assert.equal(await previewOwner.locator('#base-admin-select').inputValue(),ids.second);assert.deepEqual(await previewOwner.locator('#container-meniu-terenuri .admin-court-card .admin-card-name').allTextContents(),['Court B']);
+    assert.equal(await previewOwner.locator('#spotivity-top').isVisible(),false);assert.equal(await previewOwner.locator('#admin-site-preview').isVisible(),false);
+    assert.equal(passwords(),previewPasswordCount);assert.equal(navigations.length,previewNavigationCount);assert.equal(await previewOwner.evaluate(async()=>(await db.auth.getSession()).data.session.access_token),previewSession);assert.equal(await previewOwner.locator('iframe').count(),0);
+    pass('site preview fits phones and desktop, survives periodic/focus/profile checks, and returns with fresh permissions to the previously selected base');
+    await previewOwner.locator('#btn-inchide-administrare').click();await previewOwner.locator('#admin-site-preview').waitFor({state:'visible'});
+    await previewOwner.reload({waitUntil:'networkidle'});await previewOwner.locator('#base-admin-workspace').waitFor({state:'visible'});
+    assert.equal(await previewOwner.locator('#admin-site-preview').isVisible(),false);assert.equal(await previewOwner.locator('#spotivity-top').isVisible(),false);assert.equal(passwords(),previewPasswordCount);
+    pass('reloading from the public site preview restores the ordinary administrator management home without another login');
+    await previewOwner.locator('#btn-inchide-administrare').click();await previewOwner.locator('#admin-site-preview').waitFor({state:'visible'});
+    await previewOwner.evaluate(async()=>{await db.auth.signInWithPassword({email:'alice@example.test',password:'fixture-password'});});await previewOwner.locator('#admin-site-preview').waitFor({state:'hidden'});await previewOwner.waitForLoadState('networkidle');
+    assert.equal(await previewOwner.locator('#base-admin-workspace').isVisible(),false);assert.equal(await previewOwner.locator('#spotivity-top').isVisible(),true);assert.equal(await previewOwner.locator('#spotivity-top').evaluate(node=>node.inert),false);
+    assert.equal(await previewOwner.locator('#container-meniu-terenuri').innerText(),'');assert.equal(await previewOwner.locator('#btn-administreaza-baza').isVisible(),false);
+    pass('switching from an owner preview to a client clears the return entry and all private management content');
+    const previewLogout=await pageFor();await previewLogout.goto(base,{waitUntil:'networkidle'});await login(previewLogout,'admin@example.test');
+    assert.equal(await previewLogout.locator('#admin-site-preview').isVisible(),true);await previewLogout.locator('#btn-logout').click();await previewLogout.locator('#admin-site-preview').waitFor({state:'hidden'});await previewLogout.waitForLoadState('networkidle');
+    assert.equal(await previewLogout.evaluate(async()=>(await db.auth.getSession()).data.session),null);assert.equal(await previewLogout.locator('#base-admin-workspace').isVisible(),false);assert.equal(await previewLogout.locator('#spotivity-top').evaluate(node=>node.inert),false);assert.equal(await previewLogout.locator('#container-meniu-terenuri').innerText(),'');
+    await profile(previewLogout);await previewLogout.locator('#modal-auth').waitFor({state:'visible'});await previewLogout.locator('#inchide-auth').click();
+    pass('logging out from the site preview removes management return access and leaves the public login usable');
 
     const failAccess=url=>url.hostname===host&&url.pathname==='/rest/v1/rpc/get_admin_access';
     await admin.route(failAccess,route=>route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({message:'Temporary access outage'})}));
@@ -285,14 +347,14 @@ async function fits(page,selector,label){
     catch(error){console.error('Owner retry state',await admin.evaluate(()=>({status:document.getElementById('base-admin-status-text')?.textContent,options:[...document.getElementById('base-admin-select').options].map(o=>({id:o.value,name:o.textContent})),selected:document.getElementById('base-admin-select').value,hint:document.getElementById('base-admin-access-hint').textContent,profile:document.getElementById('modal-profil').style.display,cards:document.getElementById('container-meniu-terenuri').innerHTML})));throw error;}
     const retryCourts=await admin.locator('#container-meniu-terenuri .admin-court-card .admin-card-name').allTextContents();
     assert.ok(retryCourts.length);assert.ok(retryCourts.every(name=>['Court A','Court A2','Court Tennis','Court B'].includes(name)));
-    pass('a temporary permission-service outage clears private content while keeping owner retry/profile/logout access and the public catalog hidden');
+    pass('a temporary permission-service outage clears private content while keeping owner retry/site-preview/logout access and the public catalog hidden');
 
-    const logoutOwner=await pageFor();await logoutOwner.goto(base,{waitUntil:'networkidle'});await login(logoutOwner,'admin@example.test');await logoutOwner.locator('#inchide-profil').click();await logoutOwner.locator('#btn-deconectare-administrare').click();
+    const logoutOwner=await pageFor();await logoutOwner.goto(base,{waitUntil:'networkidle'});await login(logoutOwner,'admin@example.test');await logoutOwner.locator('#btn-administreaza-baza').click();await logoutOwner.locator('#btn-deconectare-administrare').click();
     await logoutOwner.locator('#base-admin-workspace').waitFor({state:'hidden'});await logoutOwner.locator('#spotivity-top').waitFor({state:'visible'});
     assert.equal(await logoutOwner.evaluate(async()=>(await db.auth.getSession()).data.session),null);assert.equal(await logoutOwner.locator('#spotivity-top').evaluate(node=>node.inert),false);assert.equal(await logoutOwner.locator('#container-meniu-terenuri').innerText(),'');
     pass('the owner workspace has a working logout control that restores public browsing and clears the management session');
 
-    const restoringOwner=await pageFor();await restoringOwner.goto(base,{waitUntil:'networkidle'});await login(restoringOwner,'admin@example.test');await restoringOwner.locator('#inchide-profil').click();
+    const restoringOwner=await pageFor();await restoringOwner.goto(base,{waitUntil:'networkidle'});await login(restoringOwner,'admin@example.test');await restoringOwner.locator('#btn-administreaza-baza').click();
     let releaseProfile,enteredProfile,profileGateTimeout;
     const profileEntered=new Promise((resolve,reject)=>{profileGateTimeout=setTimeout(()=>reject(new Error('Expected initial owner profile read')),15000);enteredProfile=()=>{clearTimeout(profileGateTimeout);resolve();};});
     const profileReleased=new Promise(resolve=>releaseProfile=resolve);
@@ -351,6 +413,14 @@ async function fits(page,selector,label){
     const globalAccess=await raw(superPage,async()=>(await db.rpc('get_admin_access')).data);assert.equal(globalAccess.is_super,true);assert.ok(globalAccess.courts.some(c=>c.nume==='Court Excluded'));
     await fits(superPage,'#base-admin-workspace','superadmin-dashboard');
     pass('superadmin opens the complete global dashboard from the primary site session with no navigation, new window, iframe or second password');
+
+    assert.equal(await superPage.locator('#btn-inchide-administrare').innerText(),'Vezi site-ul');
+    await superPage.locator('#btn-inchide-administrare').click();await superPage.locator('#admin-site-preview').waitFor({state:'visible'});
+    assert.equal(await superPage.locator('#base-admin-workspace').isVisible(),false);assert.equal(await superPage.locator('#modal-profil').isVisible(),false);assert.equal(await superPage.locator('#spotivity-top').isVisible(),true);
+    await superPage.evaluate(()=>window.refreshSpotivityAdminAccess({force:true}));assert.equal(await superPage.locator('#base-admin-workspace').isVisible(),false);
+    await superPage.locator('#btn-return-to-administration').click();await superPage.locator('#base-admin-workspace.base-admin-super').waitFor({state:'visible'});await superPage.waitForLoadState('networkidle');
+    assert.equal(await superPage.locator('#admin-site-preview').isVisible(),false);assert.equal(await superPage.locator('#btn-cereri-baze-admin').isVisible(),true);assert.equal(passwords(),superLogins);assert.equal(superPage.context().pages().length,superPages);assert.equal(superPage.url(),superURL);assert.equal(await superPage.evaluate(async()=>(await db.auth.getSession()).data.session.access_token),superToken);
+    pass('superadmin can inspect the public site and return to the complete global panel with the same verified session');
 
     await superPage.locator('#container-meniu-terenuri .admin-city-card').filter({hasText:'Cluj-Napoca'}).click();
     await superPage.locator('.sub-pagina-oras').filter({hasText:'Setări Cluj-Napoca'}).waitFor({state:'visible'});
@@ -436,11 +506,19 @@ async function fits(page,selector,label){
     assert.equal(await normal.locator('#spotivity-top').evaluate(node=>node.inert),false);await normal.locator('#btn-home-baze').click();await normal.locator('#modal-baze-sportive').waitFor({state:'visible'});await normal.locator('#inchide-baze-sportive').click();
     pass('logout and client switching after approval restore interactive public controls without stale inert state from a prior dialog or menu');
 
+    const previewRevoked=await pageFor();await previewRevoked.goto(base,{waitUntil:'networkidle'});await login(previewRevoked,'admin@example.test');await previewRevoked.locator('#inchide-profil').click();
+    await previewRevoked.setViewportSize({width:390,height:844});await previewRevoked.locator('#btn-mobile-menu').click();await previewRevoked.locator('#home-mobile-menu').waitFor({state:'visible'});
     await admin.locator(`[data-admin-court="${seeded.courtA.id}"]`).click();await admin.locator(`#poza-${seeded.courtA.id}`).setInputFiles({name:'must-not-upload.png',mimeType:'image/png',buffer:png});
     const uploadGate=fixture.pauseNext('/auth/v1/user','GET');await admin.locator(`#btn-save-${seeded.courtA.id}`).click();await uploadGate.entered;
     const beforeStaleWrites=requests.filter(r=>r.source==='browser'&&(r.path.startsWith('/storage/v1/object/')&&r.method==='POST'||r.path==='/rest/v1/terenuri'&&r.method==='PATCH')).length;
     await root(()=>pg.query('delete from public.users_admin where user_id=$1',[uid(3)]));
     await admin.evaluate(()=>window.dispatchEvent(new Event('focus')));await admin.locator('#base-admin-workspace').waitFor({state:'hidden'});assert.equal(await admin.locator('#btn-administreaza-baza').isVisible(),false);
+    await previewRevoked.evaluate(()=>window.refreshSpotivityAdminAccess({force:true}));await previewRevoked.locator('#admin-site-preview').waitFor({state:'hidden'});
+    assert.equal(await previewRevoked.locator('#base-admin-workspace').isVisible(),false);assert.equal(await previewRevoked.locator('#container-meniu-terenuri').innerText(),'');assert.equal(await previewRevoked.locator('#btn-administreaza-baza').isVisible(),false);
+    if(await previewRevoked.locator('#home-mobile-menu').isVisible())await previewRevoked.locator('#btn-mobile-menu').click();
+    assert.equal(await previewRevoked.locator('#spotivity-top').evaluate(node=>node.inert),false);assert.equal(await previewRevoked.locator('#home-main').evaluate(node=>node.inert),false);
+    await previewRevoked.locator('#btn-home-baze').click();await previewRevoked.locator('#modal-baze-sportive').waitFor({state:'visible'});await previewRevoked.locator('#inchide-baze-sportive').click();
+    pass('revoking permissions during a public preview removes the return entry and private state without leaving public menu or base controls inert');
     uploadGate.release();await admin.waitForFunction(()=>document.getElementById('manual-teren').options.length===0);await admin.waitForLoadState('networkidle');
     assert.equal(requests.filter(r=>r.source==='browser'&&(r.path.startsWith('/storage/v1/object/')&&r.method==='POST'||r.path==='/rest/v1/terenuri'&&r.method==='PATCH')).length,beforeStaleWrites);
     pass('revocation during a pending court-photo Auth check prevents the stale upload and court update');

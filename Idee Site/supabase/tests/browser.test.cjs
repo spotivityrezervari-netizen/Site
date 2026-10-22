@@ -25,9 +25,10 @@ let checks = 0;
 
 async function openProfile(page) {
   if (await page.locator('#modal-profil').isVisible()) return;
-  if (await page.locator('body.base-admin-owner').count()) {
+  if (await page.locator('#base-admin-workspace').isVisible()) {
     await page.locator('#btn-inchide-administrare').click();
-    return;
+    await page.locator('#base-admin-workspace').waitFor({state:'hidden'});
+    await page.locator('#spotivity-top').waitFor({state:'visible'});
   }
   const profile = page.locator('#btn-top-cont');
   if (await profile.isVisible()) {

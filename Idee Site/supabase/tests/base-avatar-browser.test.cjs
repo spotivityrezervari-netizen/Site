@@ -16,7 +16,9 @@ let checks=0;
 async function profile(page){
   if(await page.locator('#modal-profil').isVisible())return;
   if(await page.locator('#base-admin-workspace').isVisible()&&await page.locator('#btn-inchide-administrare').isVisible()){
-    await page.locator('#btn-inchide-administrare').click();return;
+    await page.locator('#btn-inchide-administrare').click();
+    await page.locator('#base-admin-workspace').waitFor({state:'hidden'});
+    await page.locator('#spotivity-top').waitFor({state:'visible'});
   }
   if(await page.locator('#btn-top-cont').isVisible())await page.locator('#btn-top-cont').click();
   else{if(!await page.locator('#home-mobile-menu').isVisible())await page.locator('#btn-mobile-menu').click();await page.locator('#home-mobile-menu [data-profile-target]').click();}
@@ -28,6 +30,7 @@ async function login(page,email){
 }
 async function editor(page){
   if(await page.locator('#modal-profil').isVisible())await page.locator('#btn-administreaza-baza').click();
+  else if(!await page.locator('#base-admin-workspace').isVisible()&&await page.locator('#btn-return-to-administration').isVisible())await page.locator('#btn-return-to-administration').click();
   await page.locator('#base-admin-workspace').waitFor({state:'visible'});
   await page.locator('#base-admin-edit-base').click();await page.locator('#admin-baza-form').waitFor({state:'visible'});
 }

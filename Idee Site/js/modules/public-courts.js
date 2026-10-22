@@ -5,7 +5,7 @@
     const modules = window.SpotivityModules ||= {};
     modules.publicCourts = function(context) {
         const { db, state, services } = context;
-        let filterRequest = 0, baseCourtRequest = 0;
+        let filterRequest = 0, baseCourtRequest = 0, catalogRefresh = 0;
         async function incarcaTerenuri() {
             const { data, error } = await db.from('terenuri').select('*');
             if (error || !data) return false;
@@ -26,6 +26,49 @@
 
             selectOras.innerHTML = html;
         }
+        window.refreshSpotivityPublicCatalog = async function() {
+            const refresh = ++catalogRefresh;
+            const generation = state.authGeneration;
+            const identity = state.user?.id || null;
+            const current = () => refresh === catalogRefresh && generation === state.authGeneration
+                && identity === (state.user?.id || null);
+            try {
+                const initialAuth = await db.auth.getSession();
+                if (!current() || initialAuth.error) return false;
+                const authenticatedIdentity = initialAuth.data?.session?.user?.id || null;
+                // Keep the current page intact until the refreshed catalog is
+                // ready. This operation never opens or changes a booking form.
+                const { data, error } = await db.from('terenuri').select('*');
+                const latestAuth = await db.auth.getSession();
+                if (!current() || latestAuth.error || error || !Array.isArray(data)
+                    || authenticatedIdentity !== (latestAuth.data?.session?.user?.id || null)) return false;
+                state.courts = data;
+                const cities = document.getElementById('filtru-oras-global');
+                const selectedCity = cities?.value || 'ALL';
+                populeazaFiltruOrase();
+                if (cities) cities.value = Array.from(cities.options).some(option => option.value === selectedCity)
+                    ? selectedCity : 'ALL';
+                if (typeof window.refreshSpotivityDiscovery === 'function') {
+                    const loaded = await window.refreshSpotivityDiscovery({ isCurrent: current });
+                    if (!current() || loaded === false) return false;
+                }
+                return current();
+            } catch (_) {
+                return false;
+            }
+        };
+        window.closeSpotivityPublicCourts = function() {
+            catalogRefresh++;
+            filterRequest++;
+            baseCourtRequest++;
+            clearTimeout(searchTimer);
+            services.bookings?.invalidate();
+            for (const id of ['modal-terenuri', 'modal-rezervare']) {
+                const modal = document.getElementById(id);
+                if (modal) modal.style.display = 'none';
+            }
+            services.ui.resetSportBackground();
+        };
         let searchTimer;
         const normalizaNume = value => String(value ?? '').normalize('NFD')
             .replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('ro-RO').trim();

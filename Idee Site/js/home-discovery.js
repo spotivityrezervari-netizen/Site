@@ -38,6 +38,7 @@
         let courts = [], bases = [];
         let courtsState = 'loading', basesState = 'loading';
         let loadGeneration = 0, bookingGeneration = 0;
+        let authGeneration = 0, observedIdentity;
         let bookingController = null, loadingController = null;
         let bookingBusy = false, previousFocus = null;
         const isOpen = () => modal.style.display === 'flex';
@@ -173,33 +174,51 @@
                 if (result.data.length < pageSize) return { data: rows, error: null };
             }
         }
-        async function load() {
+        async function load({ quiet = false, isCurrent = null } = {}) {
             const token = ++loadGeneration;
             loadingController?.abort();
             loadingController = new AbortController();
             const controller = loadingController;
             const timeout = setTimeout(() => controller.abort(), 15000);
-            courtsState = basesState = 'loading';
-            render();
+            let current = () => token === loadGeneration
+                && (typeof isCurrent !== 'function' || isCurrent());
+            if (!quiet) {
+                courtsState = basesState = 'loading';
+                render();
+            }
             try {
+                const initialAuth = await db.auth.getSession();
+                if (!current()) return false;
+                if (initialAuth.error) throw initialAuth.error;
+                const identity = initialAuth.data?.session?.user?.id || null;
+                const capturedAuth = authGeneration;
+                const currentLoad = current;
+                current = () => currentLoad() && capturedAuth === authGeneration;
                 const reads = await Promise.allSettled([
                     readPublicRows('terenuri', 'id,nume,sport,oras,pret,poza,baza_sportiva_id,este_activ', 'este_activ', controller.signal),
                     window.readSportsBasePresentation(fields => readPublicRows('baze_sportive', fields, 'este_activa', controller.signal))
                 ]);
-                if (token !== loadGeneration) return;
+                const latestAuth = await db.auth.getSession();
+                if (!current()) return false;
+                if (latestAuth.error) throw latestAuth.error;
+                if (identity !== (latestAuth.data?.session?.user?.id || null)) return false;
                 for (const [index, read] of reads.entries()) {
                     const value = read.status === 'fulfilled' ? read.value : null;
                     const ok = value && !value.error && Array.isArray(value.data);
                     if (index === 0) { courtsState = ok ? 'ready' : 'error'; courts = ok ? value.data.filter(court => court.este_activ === true) : []; }
                     else { basesState = ok ? 'ready' : 'error'; bases = ok ? value.data.filter(base => base.este_activa === true) : []; }
                 }
+                return courtsState === 'ready' && basesState === 'ready';
             } catch {
-                if (token === loadGeneration) courtsState = basesState = 'error';
+                if (current()) courtsState = basesState = 'error';
+                return false;
             } finally {
                 clearTimeout(timeout);
-                if (token === loadGeneration) render();
+                if (current()) render();
             }
         }
+        window.refreshSpotivityDiscovery = options => load({ ...options, quiet: true });
+        window.closeCourtSearch = close;
         window.openCourtSearch = (query = '', trigger = null) => {
             previousFocus = trigger || document.activeElement;
             cancelBooking();
@@ -226,6 +245,16 @@
             renderBases();
         });
         window.addEventListener('spotivity:booking-ready', () => { cancelBooking(); render(); });
+        db.auth.onAuthStateChange((event, session) => {
+            const identity = session?.user?.id || null;
+            const changed = observedIdentity !== undefined && observedIdentity !== identity;
+            observedIdentity = identity;
+            if (changed) {
+                authGeneration++;
+                // Supabase Auth methods run after the synchronous SDK callback.
+                setTimeout(() => window.refreshSpotivityDiscovery(), 0);
+            }
+        });
         window.spotivityDiscoveryReady = load();
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
