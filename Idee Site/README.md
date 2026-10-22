@@ -1,10 +1,10 @@
 # Dezvoltare locală
 
-Migrările 013–016 sunt aplicate și verificate în proiectul live, iar funcțiile Edge pentru rezervări și notificări sunt active. Publicarea fișierelor statice nu execută SQL. Notificările și rezervările fără cont se activează numai după configurarea și verificarea scenariilor Make.
+Migrările 013–017 sunt aplicate și verificate în proiectul live, iar funcțiile Edge pentru rezervări și notificări sunt active. Publicarea fișierelor statice nu execută SQL. Notificările și rezervările fără cont se activează numai după configurarea și verificarea scenariilor Make.
 
 Administrarea se face exclusiv în `index.html`, cu sesiunea site-ului. Administratorii obișnuiți intră automat la bazele și terenurile alocate după conectare, restaurarea sesiunii sau aprobarea cererii; catalogul public este ascuns. Superadminul folosește **Profilul meu → Deschide panoul de admin**. Pagina separată `admin.html` a fost eliminată.
 
-Fotografia rotundă a bazei este separată de copertă și necesită migrarea `017_base_avatars.sql`. Aceasta este pregătită și testată izolat, dar încă neaplicată live: tokenul administrativ existent este refuzat. Până la activare, pagina folosește inițialele bazei, editorul fotografiei de profil rămâne ascuns, iar fotografiile existente funcționează în continuare.
+Fotografia rotundă a bazei este separată de copertă. Migrarea `017_base_avatars.sql` a fost aplicată și verificată live pe 22 octombrie 2026, după o probă închisă cu rollback și comparații ale datelor și protecțiilor existente. Editorul fotografiei de profil este activ pentru administratorii cu permisiune explicită asupra bazei. Până la încărcarea unei fotografii sunt afișate inițialele bazei; coperțile existente sunt păstrate.
 
 Site-ul din `Idee Site/` folosește HTML, CSS și JavaScript, cu un backend găzduit în Supabase. Nu are o etapă de build sau dependențe de instalat pentru a porni serverul local.
 
@@ -141,7 +141,7 @@ Alege baza din selector. Sunt afișate numai terenurile alocate explicit în `us
 
 După aprobarea unei cereri, accesul este actualizat fără reconectare la deschiderea profilului, revenirea în filă sau următoarea verificare automată (maximum 30 de secunde cât fila este vizibilă); administratorul este trecut direct în administrarea proprie. Retragerea permisiunilor este verificată imediat de Supabase la fiecare operațiune; verificarea interfeței ascunde și curăță ecranele la actualizarea accesului. Migrarea 013 păstrează datele și alocările, adaugă limite RLS restrictive și interzice și ștergerea sau mutarea în viitor a unei rezervări finalizate pentru a o anula ulterior.
 
-Fiecare bază are o copertă și o fotografie de profil rotundă. După aplicarea migrării 017, administratorii cu permisiune explicită de editare a bazei le pot modifica separat din **Editează baza → Fotografia de profil a bazei sportive**; simpla alocare a unui teren nu acordă acest drept. Sunt acceptate imagini raster de maximum 5 MB. Încărcarea, înlocuirea și eliminarea verifică sesiunea și permisiunile curente; curățarea fișierelor verifică ambele referințe, astfel încât o imagine încă folosită ca profil sau copertă să fie păstrată. Lipsa fotografiei afișează inițialele bazei în cerc. Migrarea nu schimbă rezervările, rolurile, alocările sau politicile Storage existente.
+Fiecare bază are o copertă și o fotografie de profil rotundă. Administratorii cu permisiune explicită de editare a bazei le pot modifica separat din **Editează baza sportivă → Fotografia de profil a bazei**; simpla alocare a unui teren nu acordă acest drept. Sunt acceptate imagini raster de maximum 5 MB. Încărcarea, înlocuirea și eliminarea verifică sesiunea și permisiunile curente; curățarea fișierelor verifică ambele referințe, astfel încât o imagine încă folosită ca profil sau copertă să fie păstrată. Lipsa fotografiei afișează inițialele bazei în cerc. Migrarea 017, aplicată live, păstrează rezervările, rolurile, alocările și politicile Storage existente.
 
 Verificări izolate, fără scrieri în proiectul real:
 

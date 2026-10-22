@@ -2,7 +2,7 @@
 
 **Administrare curentă:** toate operațiunile se deschid în `index.html`. Superadminul folosește **Profilul meu → Deschide panoul de admin**, iar administratorii obișnuiți intră direct la bazele și terenurile alocate după verificarea accesului. Pagina separată `admin.html` a fost eliminată; rolurile și limitele RLS rămân aceleași.
 
-**017 — pregătită, NEAPLICATĂ live:** fotografia de profil separată a bazei este implementată în [017_base_avatars.sql](017_base_avatars.sql) și a trecut **42 de verificări SQL izolate**: 21 cu UUID și 21 cu ID numeric. Aplicarea live este blocată deoarece bindingul de Management API existent `Supabse` răspunde cu **HTTP 401**. Ultimele migrări confirmate live rămân până la **016**, pe baza verificărilor anterioare; nu se afirmă o aplicare sau o verificare live nouă pentru 017.
+**22 octombrie 2026 — 017 aplicată și verificată live:** fotografia de profil separată a bazei este activă prin [017_base_avatars.sql](017_base_avatars.sql). Aplicarea a urmat unei probe cu rollback; comparațiile au confirmat păstrarea datelor din 48 de tabele, a celor 111 politici și 32 de triggere și a scopurilor de acces pentru cele 10 conturi Auth. Cele două funcții înlocuite au fost confirmate înainte de aplicare ca identice cu definițiile din 009 și 013. Testele izolate anterioare pentru 017 au trecut **42 de verificări SQL**: 21 cu UUID și 21 cu ID numeric. Nu este necesară reinstalarea migrărilor.
 
 **18 octombrie 2026:** migrarea 013 a fost verificată în proiectul live. Migrările 014–016 sunt aplicate și verificate pentru rezervări grupate, recuperarea contactelor și outboxul privat Make; funcțiile Edge aferente sunt active. Nu reinstala migrările vechi; SQL-ul și funcțiile Edge trebuie publicate separat de site.
 
@@ -60,7 +60,7 @@ Pe **12 octombrie 2026**, migrarea 003 a fost aplicată în **Rendez-Vous** prin
 
 Adresele de redirect Auth sunt exacte; wildcardul vechi pentru spotivity.ro a fost eliminat. La cererea proprietarului, parola nouă are în continuare minimum **6 caractere**. Confirmarea automată și absența SMTP au fost păstrate; configurarea emailului și datele firmei sunt amânate de proprietar. Raportul de verificare și pașii rămași sunt în [PRODUCTION_REVIEW.md](../PRODUCTION_REVIEW.md).
 
-Pentru **alt proiect**, ordinea migrărilor este **001 → 003 → 004 → 005 → 006 → 007 → 008 → 009 → 010 → 011 → 012 → 013 → 014 → 015 → 016 → 017** după inventar/backup și verificarea datelor. 017 este pregătită, dar încă neaplicată în proiectul existent, conform stării de mai sus. 002 conține numai exemple de roluri pentru conturi Auth existente și confirmate. Fișierele `tests/` se rulează exclusiv în baza izolată. Instrucțiunile istorice de mai jos pentru reinstalarea 001 se aplică numai proiectelor fără migrări ulterioare.
+Pentru **alt proiect**, ordinea migrărilor este **001 → 003 → 004 → 005 → 006 → 007 → 008 → 009 → 010 → 011 → 012 → 013 → 014 → 015 → 016 → 017** după inventar/backup și verificarea datelor. În proiectul existent sunt aplicate și verificate până la 017, conform stării de mai sus. 002 conține numai exemple de roluri pentru conturi Auth existente și confirmate. Fișierele `tests/` se rulează exclusiv în baza izolată. Instrucțiunile istorice de mai jos pentru reinstalarea 001 se aplică numai proiectelor fără migrări ulterioare.
 
 ## Căutare și afișare pe telefon
 
@@ -408,17 +408,21 @@ Testele browser pentru oaspeți și administrare folosesc SDK-ul real și Postgr
 
 ## 017 — fotografie de profil separată pentru baza sportivă
 
-**Stare: pregătită și testată izolat, NEAPLICATĂ live.** Migrarea [017_base_avatars.sql](017_base_avatars.sql) se aplică după 016. Secretul de Management API existent `Supabse` răspunde cu HTTP 401, astfel încât nu s-a aplicat 017 și nu s-a efectuat o verificare nouă a schemei live. Ultima stare confirmată a proiectului rămâne cea consemnată până la 016. Publicarea fișierului SQL în repository nu îl execută în Supabase.
+**Stare: aplicată și verificată live pe 22 octombrie 2026.** Migrarea [017_base_avatars.sql](017_base_avatars.sql) a fost executată după 016, întâi într-o probă închisă cu rollback și apoi cu `COMMIT`. Accesul de Management API prin bindingul existent `Supabse` funcționează. Editorul fotografiei de profil este activ pentru administratorii cu permisiune explicită asupra bazei. Publicarea fișierului SQL în repository nu îl execută în Supabase; aplicarea consemnată aici a fost efectuată separat.
 
 Coloana nullable `baze_sportive.poza_profil` păstrează imaginea mică, rotundă, separat de coperta existentă `poza`. Ambele folosesc bucketul public existent `poze_baze_sportive`, cu calea `UUID-bază/UUID-aleator.extensie-raster`. 017 verifică apartenența căii la bază și existența obiectului înainte de asociere; nu copiază imaginile vechi și nu înlocuiește coperta când se salvează fotografia de profil.
 
 Administratorul obișnuit poate modifica descrierea, coperta și fotografia de profil numai cu permisiunea explicită din `baze_sportive_admini`. Simpla alocare a unui teren nu acordă această permisiune. `get_admin_access()` include noul câmp pentru bazele deja autorizate, păstrând aceleași limite pentru terenuri și celelalte date. Sunt actualizate numai funcțiile `spotivity_private.guard_base()` și `public.get_admin_access()`; politicile Storage existente, trigger-ele, rolurile și rezervările nu sunt rescrise.
 
-Au trecut **42 de verificări SQL izolate**, câte 21 pentru UUID și ID numeric: păstrarea datelor și a coperților, permisiuni, căi invalide sau neîncărcate, izolarea între baze, retragerea accesului, reaplicarea migrării și protecția rezervărilor finalizate. Aceste rezultate nu confirmă aplicarea live.
+Testele izolate anterioare au trecut **42 de verificări SQL**, câte 21 pentru UUID și ID numeric: păstrarea datelor și a coperților, permisiuni, căi invalide sau neîncărcate, izolarea între baze, retragerea accesului, reaplicarea migrării și protecția rezervărilor finalizate. Acestea sunt distincte de verificările tranzacției live din 22 octombrie.
+
+Înainte de înlocuire, definițiile live ale `spotivity_private.guard_base()` și `public.get_admin_access()` au fost confirmate identice cu versiunile din 009, respectiv 013, pentru a evita suprascrierea unor modificări făcute de alte platforme. Proba cu rollback și tranzacția finală au verificat păstrarea datelor din **48 de tabele**, a celor **111 politici** și **32 de triggere**, a celorlalte funcții și a scopurilor de acces pentru toate cele **10 conturi Auth**. Au rămas **10 conturi Auth, 10 profiluri, 3 administratori, 6 terenuri, 3 baze, 64 de rezervări, 28 de mesaje, 2 cereri și 10 obiecte Storage**. Coperțile și permisiunile existente sunt păstrate.
+
+O probă RLS live ulterioară, închisă cu rollback, a confirmat editarea/eliminarea fotografiei proprii cu păstrarea copertei și refuzul pentru altă bază, o cale de imagine străină, un câmp structural și un client fără drepturi. Amprenta datelor bazelor a rămas identică după probă. Smoke testul cu citiri Supabase reale a trecut după activare, inclusiv HTTP 200 pentru noul câmp, fără scrieri sau fișiere reale de test.
 
 ```bash
 NODE_PATH=/workspace/shared/spotivity-rls-validation/node_modules:$NODE_PATH node supabase/tests/base-avatars.test.cjs
 SPOTIVITY_TEST_INTEGER_IDS=1 NODE_PATH=/workspace/shared/spotivity-rls-validation/node_modules:$NODE_PATH node supabase/tests/base-avatars.test.cjs
 ```
 
-După repararea securizată a bindingului existent `Supabse`, verifică proiectul și schema reală, inclusiv dacă versiunea 017 este liberă, înainte de orice aplicare. Păstrează inventarul datelor, o probă cu rollback și comparația protecțiilor existente; nu reinstala migrările vechi.
+Pentru actualizări ulterioare, verifică din nou proiectul și schema reală înainte de aplicare. Păstrează inventarul datelor, o probă cu rollback și comparația protecțiilor existente; nu reinstala migrările vechi.
