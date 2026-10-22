@@ -184,7 +184,20 @@ async function openProfile(page) {
     await page.locator('#modal-auth').waitFor({state:'hidden'});
     console.log('PASS mobile viewport: login dialog opens and closes');
     assert.equal(await page.locator('.home-sport-heading img').count(),0);
-    const basesRead = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/rest/v1/baze_sportive'));
+    const basesRead = page.waitForResponse(async response => {
+      const url = new URL(response.url());
+      if (!url.pathname.endsWith('/rest/v1/baze_sportive')) return false;
+      // A deployment may precede nullable avatar migration 017. Require the
+      // directory's successful compatibility read; keep every other error fatal.
+      if (response.status() === 400 && url.searchParams.get('select')?.split(',').includes('poza_profil')) {
+        try {
+          const error = await response.json();
+          if (['42703', 'PGRST204'].includes(error.code)
+              && /poza_profil/.test(`${error.message || ''} ${error.details || ''}`)) return false;
+        } catch (_) { /* An invalid error response must fail the status check. */ }
+      }
+      return true;
+    });
     await page.locator('#btn-home-baze').click();
     await page.locator('#modal-baze-sportive').waitFor({state:'visible'});
     assert.equal((await basesRead).status(),200);

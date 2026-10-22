@@ -10,7 +10,132 @@
     let selectedBaseId = null;
     let refreshing = null;
     let lastFocus = null;
+    let ownerView = false;
+    let catalogWasInert = null;
+    let catalogAriaHidden = null;
+    let accountRequest = 0;
     const ungrouped = '__ungrouped__';
+
+    const publicDialogs = ['modal-terenuri', 'modal-rezervare', 'modal-cautare-terenuri',
+        'modal-baze-sportive', 'modal-club-registration'];
+
+    function externalModal() {
+        return Array.from(document.querySelectorAll('.modal')).reverse().find(modal =>
+            !modal.closest('#base-admin-workspace') && modal.getClientRects().length
+            && ['flex', 'block'].includes(modal.style.display));
+    }
+
+    function syncAccountOverlay() {
+        const workspace = byId('base-admin-workspace');
+        const overlay = ownerView && !workspace.hidden ? externalModal() : null;
+        workspace.inert = !!overlay;
+        document.body.classList.toggle('base-admin-account-open', !!overlay);
+    }
+
+    function setOwnerView(enabled) {
+        const catalog = byId('spotivity-top');
+        if (enabled) {
+            // Close public surfaces through their own lifecycle before saving
+            // accessibility state; their close handlers restore nested inert
+            // regions and cancel pending directory reads.
+            window.closeSpotivityHomeMenu?.(false);
+            const basesDialog = byId('modal-baze-sportive');
+            if (basesDialog && ['flex', 'block'].includes(basesDialog.style.display)) window.closeSportsBases?.(false);
+        }
+        if (enabled && !ownerView && catalog) {
+            catalogWasInert = catalog.inert;
+            catalogAriaHidden = catalog.getAttribute('aria-hidden');
+        }
+        ownerView = enabled;
+        document.body.classList.toggle('base-admin-owner', enabled);
+        if (catalog) {
+            if (enabled) {
+                catalog.inert = true;
+                catalog.setAttribute('aria-hidden', 'true');
+            } else if (catalogWasInert !== null) {
+                catalog.inert = catalogWasInert;
+                if (catalogAriaHidden === null) catalog.removeAttribute('aria-hidden');
+                else catalog.setAttribute('aria-hidden', catalogAriaHidden);
+                catalogWasInert = null;
+                catalogAriaHidden = null;
+            }
+        }
+        if (enabled) {
+            publicDialogs.forEach(id => { const modal = byId(id); if (modal) modal.style.display = 'none'; });
+        }
+        syncAccountOverlay();
+    }
+
+    function accessNotice(message = '', retry = false) {
+        let notice = byId('base-admin-status');
+        if (!notice) {
+            notice = document.createElement('div');
+            notice.id = 'base-admin-status';
+            notice.className = 'base-admin-status';
+            notice.setAttribute('role', 'status');
+            const text = document.createElement('p'); text.id = 'base-admin-status-text';
+            const button = document.createElement('button');
+            button.type = 'button'; button.id = 'base-admin-retry-access'; button.className = 'btn-cont';
+            button.textContent = 'Încearcă din nou';
+            button.addEventListener('click', () => window.refreshSpotivityAdminAccess({ force: true }));
+            notice.append(text, button);
+            document.querySelector('.base-admin-heading').after(notice);
+        }
+        notice.hidden = !message;
+        byId('base-admin-status-text').textContent = message;
+        byId('base-admin-retry-access').hidden = !retry;
+    }
+
+    function showWorkspace({ account = false, focus = false } = {}) {
+        const workspace = byId('base-admin-workspace');
+        workspace.hidden = false;
+        document.body.classList.add('base-admin-open');
+        if (account) {
+            byId('modal-profil').style.display = 'none';
+            byId('modal-auth').style.display = 'none';
+        }
+        syncAccountOverlay();
+        if (focus && !workspace.inert) byId('btn-inchide-administrare').focus({ preventScroll: true });
+    }
+
+    async function openAccount() {
+        if (!userId) return;
+        const owner = userId;
+        const captured = generation;
+        const currentRequest = ++accountRequest;
+        const sameAccount = () => userId === owner && generation === captured && accountRequest === currentRequest
+            && byId('modal-profil').style.display === 'flex';
+        byId('base-admin-workspace').querySelectorAll('.modal').forEach(modal => { modal.style.display = 'none'; });
+        byId('modal-profil').style.display = 'flex';
+        syncAccountOverlay();
+        byId('btn-editeaza-profil')?.focus({ preventScroll: true });
+        if (window.getSpotivityProfileUser?.()?.id !== owner) return;
+        const status = byId('profil-refresh-status');
+        if (status) { status.hidden = true; status.textContent = ''; }
+        try {
+            // Refresh data only. Reusing the public entry click would reopen
+            // this modal after Escape if its asynchronous reads finish late.
+            await window.refreshSpotivityProfile?.();
+            if (!sameAccount()) return;
+            const { data, error } = await db.from('rezervari')
+                .select('id,booking_group_id,data_str,ora,stare,timestamp_start')
+                .eq('client_user_id', owner).neq('stare', 'anulata');
+            if (!sameAccount() || error) return;
+            const active = new Set();
+            for (const booking of data || []) {
+                if (!window.esteRezervareTrecuta(booking.data_str, booking.ora, booking.timestamp_start)) {
+                    active.add(booking.booking_group_id || booking.id);
+                }
+            }
+            if (byId('nr-active')) byId('nr-active').textContent = active.size;
+        } catch {
+            if (sameAccount() && status) {
+                status.textContent = window.dict?.[window.lang]?.profil_edit_profile_refresh_failed
+                    || 'Datele profilului nu au putut fi reîncărcate. Încearcă din nou.';
+                status.hidden = false;
+            }
+        }
+    }
 
     function renderRole() {
         const isSuper = access?.is_super === true;
@@ -18,31 +143,45 @@
         const label = isSuper ? 'Deschide panoul de admin' : 'Administrează baza sportivă';
         byId('btn-administreaza-baza').textContent = label;
         byId('base-admin-title').textContent = isSuper ? 'Panoul de administrare' : 'Administrează baza sportivă';
-        byId('base-admin-select').closest('.base-admin-selector').hidden = isSuper;
+        byId('base-admin-select').closest('.base-admin-selector').hidden = isSuper || !access;
+        byId('btn-inchide-administrare').textContent = ownerView ? 'Profilul meu' : 'Înapoi la profil';
+        byId('btn-inchide-administrare').setAttribute('aria-label', ownerView ? 'Profilul meu' : 'Înapoi la profil');
+        const logout = byId('btn-deconectare-administrare');
+        if (logout) logout.hidden = !ownerView;
     }
 
     function close(returnToProfile = true) {
+        if (ownerView && returnToProfile) { openAccount(); return; }
         const workspace = byId('base-admin-workspace');
         workspace.hidden = true;
+        workspace.inert = false;
         workspace.querySelectorAll('.modal').forEach(modal => { modal.style.display = 'none'; });
         document.body.classList.remove('base-admin-open');
+        document.body.classList.remove('base-admin-account-open');
         if (returnToProfile && userId) {
             byId('modal-profil').style.display = 'flex';
             (lastFocus || byId('btn-administreaza-baza')).focus({ preventScroll: true });
         }
     }
 
-    function clear() {
+    function clear({ preserveOwner = false } = {}) {
         access = null;
         signature = '';
         selectedBaseId = null;
+        setOwnerView(preserveOwner);
         renderRole();
-        byId('btn-administreaza-baza').hidden = true;
+        byId('btn-administreaza-baza').hidden = !preserveOwner;
         byId('base-admin-select').replaceChildren();
         byId('base-admin-access-hint').textContent = '';
         renderBaseCard();
-        close(false);
         window.clearSpotivityAdmin?.();
+        if (preserveOwner) {
+            accessNotice('Accesul la baza sportivă nu poate fi verificat momentan. Datele administrative au fost închise. Poți reîncerca sau te poți deconecta.', true);
+            showWorkspace();
+        } else {
+            accessNotice();
+            close(false);
+        }
     }
 
     function changeUser(nextUserId) {
@@ -50,6 +189,7 @@
         userId = nextUserId;
         generation++;
         request++;
+        accountRequest++;
         refreshing = null;
         clear();
     }
@@ -58,8 +198,13 @@
         const base = !access?.is_super && access?.bases.find(item => item.id === selectedBaseId);
         byId('base-admin-base-card').hidden = !base;
         byId('base-admin-base-photo').replaceChildren();
+        byId('base-admin-base-avatar')?.replaceChildren();
         byId('base-admin-edit-base').hidden = !base?.can_edit_details;
-        if (!base) return;
+        if (!base) {
+            byId('base-admin-base-name').textContent = '';
+            byId('base-admin-base-description').textContent = '';
+            return;
+        }
         byId('base-admin-base-name').textContent = base.nume;
         byId('base-admin-base-description').textContent = base.descriere || 'Adaugă o descriere și fotografia bazei tale sportive.';
         const image = window.createSportsBasePhoto?.(base, 'base-admin-base-image');
@@ -68,6 +213,19 @@
             const fallback = document.createElement('span');
             fallback.textContent = 'Fotografia bazei';
             byId('base-admin-base-photo').append(fallback);
+        }
+        const avatar = window.createSportsBaseAvatar?.(base, 'base-admin-avatar-image');
+        const avatarSlot = byId('base-admin-base-avatar');
+        if (avatarSlot) {
+            if (avatar) avatarSlot.append(avatar);
+            else {
+                const initials = document.createElement('span');
+                initials.className = 'base-admin-avatar-initials';
+                initials.textContent = String(base.nume || 'Bază sportivă').trim().split(/\s+/).slice(0, 2)
+                    .map(word => Array.from(word)[0] || '').join('').toLocaleUpperCase('ro-RO');
+                initials.setAttribute('aria-label', base.nume || 'Bază sportivă');
+                avatarSlot.append(initials);
+            }
         }
     }
 
@@ -102,7 +260,7 @@
             const { data, error } = await db.rpc('get_admin_access');
             if (generation !== captured || userId !== owner || request !== currentRequest) return false;
             if (error || !data || typeof data.can_manage !== 'boolean') {
-                clear();
+                clear({ preserveOwner: ownerView });
                 return false;
             }
             const next = {
@@ -118,10 +276,16 @@
             }
             const nextSignature = JSON.stringify(next);
             const changed = nextSignature !== signature;
+            const enteringOwner = !ownerView && !next.is_super;
             access = next;
             signature = nextSignature;
+            setOwnerView(!next.is_super);
             renderRole();
             byId('btn-administreaza-baza').hidden = false;
+            if (ownerView) {
+                accessNotice(changed || force ? 'Se încarcă terenurile bazei tale sportive…' : '');
+                showWorkspace({ account: enteringOwner, focus: enteringOwner });
+            }
             if (changed || force) {
                 const options = access.bases.map(base => ({ value: base.id, label: `${base.nume} · ${base.oras || ''}` }));
                 if (access.courts.some(court => !court.baza_sportiva_id)) options.push({ value: ungrouped, label: 'Terenuri fără bază sportivă' });
@@ -132,9 +296,13 @@
                 byId('base-admin-select').disabled = options.length < 2;
                 await renderSelection();
             }
+            if (generation === captured && userId === owner && request === currentRequest) {
+                accessNotice();
+                syncAccountOverlay();
+            }
             return generation === captured && userId === owner && request === currentRequest && access?.can_manage === true;
         })().catch(() => {
-            if (generation === captured && request === currentRequest) clear();
+            if (generation === captured && userId === owner && request === currentRequest) clear({ preserveOwner: ownerView });
             return false;
         });
         refreshing = operation;
@@ -146,13 +314,31 @@
         byId('btn-administreaza-baza').addEventListener('click', async event => {
             lastFocus = event.currentTarget;
             const owner = userId;
-            if (!await window.refreshSpotivityAdminAccess({ force: true }) || !owner || userId !== owner || !access?.can_manage) return;
-            byId('modal-profil').style.display = 'none';
-            byId('base-admin-workspace').hidden = false;
-            document.body.classList.add('base-admin-open');
-            byId('btn-inchide-administrare').focus({ preventScroll: true });
+            const verified = await window.refreshSpotivityAdminAccess({ force: true });
+            if (!owner || userId !== owner || (!verified && !ownerView)) return;
+            showWorkspace({ account: true, focus: true });
         });
         byId('btn-inchide-administrare').addEventListener('click', () => close());
+        let logout = byId('btn-deconectare-administrare');
+        if (!logout) {
+            logout = document.createElement('button');
+            logout.type = 'button'; logout.id = 'btn-deconectare-administrare'; logout.className = 'btn-cont';
+            logout.textContent = 'Deconectare'; logout.hidden = true;
+            byId('btn-inchide-administrare').after(logout);
+        }
+        logout.addEventListener('click', async () => {
+            if (!userId || logout.disabled) return;
+            const owner = userId;
+            logout.disabled = true;
+            try {
+                const { error } = await db.auth.signOut();
+                if (error) throw error;
+                if (userId === owner) changeUser(null);
+                if (!userId) byId('modal-profil').style.display = 'none';
+            } catch {
+                if (userId === owner) accessNotice('Deconectarea a eșuat. Încearcă din nou.', true);
+            } finally { logout.disabled = false; }
+        });
         byId('base-admin-edit-base').addEventListener('click', () => {
             const base = access?.bases.find(item => item.id === selectedBaseId && item.can_edit_details);
             if (base) window.openSpotivityBaseEditor?.(base.id);
@@ -169,6 +355,7 @@
         });
         document.addEventListener('keydown', event => {
             if (byId('base-admin-workspace').hidden) return;
+            if (ownerView && externalModal()) return;
             if (event.key === 'Escape') {
                 // Closing nested screens keeps the management workspace available.
                 const openModal = Array.from(byId('base-admin-workspace').querySelectorAll('.modal'))
@@ -181,7 +368,8 @@
                 } else if (Array.from(byId('base-admin-workspace').querySelectorAll('.sub-pagina-oras')).some(page => page.style.display === 'block')) {
                     window.inchideSubPaginaOras?.();
                     byId('btn-inchide-administrare').focus({ preventScroll: true });
-                } else close();
+                } else if (ownerView) byId('btn-inchide-administrare').focus({ preventScroll: true });
+                else close();
                 return;
             }
             if (event.key !== 'Tab') return;
@@ -199,6 +387,12 @@
             if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
             else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
         }, true);
+        new MutationObserver(mutations => {
+            if (!ownerView || !mutations.some(mutation => !mutation.target.closest?.('#base-admin-workspace'))) return;
+            const hadOverlay = byId('base-admin-workspace').inert;
+            syncAccountOverlay();
+            if (hadOverlay && !byId('base-admin-workspace').inert) byId('btn-inchide-administrare').focus({ preventScroll: true });
+        }).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['style', 'hidden'] });
         // A fresh server check when opening the profile, after tab focus, and while active
         // exposes approvals and removes revoked access without a second login.
         new MutationObserver(() => {

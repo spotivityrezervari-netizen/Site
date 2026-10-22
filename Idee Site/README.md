@@ -2,7 +2,9 @@
 
 Migrările 013–016 sunt aplicate și verificate în proiectul live, iar funcțiile Edge pentru rezervări și notificări sunt active. Publicarea fișierelor statice nu execută SQL. Notificările și rezervările fără cont se activează numai după configurarea și verificarea scenariilor Make.
 
-Administrarea se face exclusiv în `index.html`, cu sesiunea site-ului: **Profilul meu → Deschide panoul de admin** pentru superadmin și **Profilul meu → Administrează baza sportivă** pentru administratorii bazelor. Pagina separată `admin.html` a fost eliminată.
+Administrarea se face exclusiv în `index.html`, cu sesiunea site-ului. Administratorii obișnuiți intră automat la bazele și terenurile alocate după conectare, restaurarea sesiunii sau aprobarea cererii; catalogul public este ascuns. Superadminul folosește **Profilul meu → Deschide panoul de admin**. Pagina separată `admin.html` a fost eliminată.
+
+Fotografia rotundă a bazei este separată de copertă și necesită migrarea `017_base_avatars.sql`. Aceasta este pregătită și testată izolat, dar încă neaplicată live: tokenul administrativ existent este refuzat. Până la activare, pagina folosește inițialele bazei, editorul fotografiei de profil rămâne ascuns, iar fotografiile existente funcționează în continuare.
 
 Site-ul din `Idee Site/` folosește HTML, CSS și JavaScript, cu un backend găzduit în Supabase. Nu are o etapă de build sau dependențe de instalat pentru a porni serverul local.
 
@@ -69,7 +71,7 @@ Configurația publică Supabase este deja în codul site-ului. Nu adăuga creden
 
 ## Publicare și programul terenurilor
 
-Site-ul folosit este [GitHub Pages](https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/). Superadminul folosește **Profilul meu → Deschide panoul de admin**, iar administratorii bazelor folosesc **Profilul meu → Administrează baza sportivă**, în aceeași pagină și sesiune. Publicarea servește fișierele statice din `main`. Verifică ultimul deployment `github-pages` după actualizare.
+Site-ul folosit este [GitHub Pages](https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/). Superadminul folosește **Profilul meu → Deschide panoul de admin**, iar administratorii bazelor intră direct în administrarea alocărilor proprii, în aceeași pagină și sesiune. Publicarea servește fișierele statice din `main`. Verifică ultimul deployment `github-pages` după actualizare.
 
 Programul rezervabil se schimbă în setările fiecărui teren din admin: ore de început 09:00–22:00. Terenurile existente păstrează 12:00–22:00 până le modifici. Migrarea `supabase/003_court_hours.sql` este aplicată în proiectul existent; [instrucțiunile Supabase](supabase/README.md) explică pașii, rolurile și verificările. Nu rula din nou migrarea 001 după 003.
 
@@ -133,11 +135,13 @@ Cererile și fotografiile depuse sunt private prin RLS. La acceptare, fotografia
 
 ## Administrarea bazelor în site
 
-**Profilul meu → Administrează baza sportivă** deschide administrarea în pagina principală și folosește sesiunea curentă. Butonul apare numai după verificarea drepturilor reale în server prin `get_admin_access()`. Superadminul folosește **Profilul meu → Deschide panoul de admin**, tot în pagina principală, pentru cererile de înscriere, acceptarea/respingerea lor, conturile de administrator și toate operațiunile globale.
+După verificarea drepturilor reale prin `get_admin_access()`, administratorul obișnuit intră automat în administrarea proprie. Profilul și deconectarea rămân accesibile în antet, iar închiderea profilului revine la terenurile alocate. O întrerupere temporară a verificării permisiunilor ascunde datele private și oferă reîncercare; retragerea drepturilor sau deconectarea restabilește catalogul public. Superadminul folosește **Profilul meu → Deschide panoul de admin**, tot în pagina principală, pentru cererile de înscriere, acceptarea/respingerea lor, conturile de administrator și toate operațiunile globale.
 
 Alege baza din selector. Sunt afișate numai terenurile alocate explicit în `users_admin.terenuri`, inclusiv cele momentan ascunse. Terenurile alocate fără bază apar într-o opțiune separată. Rezervările manuale, programul/blocajele, tarifele, fotografiile terenurilor, istoricul și chatul folosesc aceleași formulare ca înainte. **Setări baze sportive** permite descrierea și fotografia numai cu alocarea explicită `baze_sportive_admini`; simpla alocare a unui teren nu acordă acel drept, iar alocarea bazei nu extinde accesul la celelalte terenuri.
 
-După aprobarea unei cereri, drepturile apar fără reconectare la deschiderea profilului, revenirea în filă sau următoarea verificare automată (maximum 30 de secunde cât fila este vizibilă). Retragerea permisiunilor este verificată imediat de Supabase la fiecare operațiune; verificarea interfeței ascunde și curăță ecranele la actualizarea accesului. Migrarea 013 păstrează datele și alocările, adaugă limite RLS restrictive și interzice și ștergerea sau mutarea în viitor a unei rezervări finalizate pentru a o anula ulterior.
+După aprobarea unei cereri, accesul este actualizat fără reconectare la deschiderea profilului, revenirea în filă sau următoarea verificare automată (maximum 30 de secunde cât fila este vizibilă); administratorul este trecut direct în administrarea proprie. Retragerea permisiunilor este verificată imediat de Supabase la fiecare operațiune; verificarea interfeței ascunde și curăță ecranele la actualizarea accesului. Migrarea 013 păstrează datele și alocările, adaugă limite RLS restrictive și interzice și ștergerea sau mutarea în viitor a unei rezervări finalizate pentru a o anula ulterior.
+
+Fiecare bază are o copertă și o fotografie de profil rotundă. După aplicarea migrării 017, administratorii cu permisiune explicită de editare a bazei le pot modifica separat din **Editează baza → Fotografia de profil a bazei sportive**; simpla alocare a unui teren nu acordă acest drept. Sunt acceptate imagini raster de maximum 5 MB. Încărcarea, înlocuirea și eliminarea verifică sesiunea și permisiunile curente; curățarea fișierelor verifică ambele referințe, astfel încât o imagine încă folosită ca profil sau copertă să fie păstrată. Lipsa fotografiei afișează inițialele bazei în cerc. Migrarea nu schimbă rezervările, rolurile, alocările sau politicile Storage existente.
 
 Verificări izolate, fără scrieri în proiectul real:
 

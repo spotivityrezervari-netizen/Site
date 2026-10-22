@@ -24,6 +24,11 @@ const ident = value => { assert.match(value,/^[a-zA-Z_][a-zA-Z0-9_]*$/); return 
 let checks = 0;
 
 async function openProfile(page) {
+  if (await page.locator('#modal-profil').isVisible()) return;
+  if (await page.locator('body.base-admin-owner').count()) {
+    await page.locator('#btn-inchide-administrare').click();
+    return;
+  }
   const profile = page.locator('#btn-top-cont');
   if (await profile.isVisible()) {
     await profile.click();
@@ -51,7 +56,7 @@ async function openProfile(page) {
     await pg.exec(readFileSync(join(__dirname,'../011_club_requests.sql'),'utf8'));
     await pg.exec(readFileSync(join(__dirname,'../012_club_approval.sql'),'utf8'));
     await pg.exec(readFileSync(join(__dirname,'../013_admin_integration.sql'),'utf8'));
-    for (const file of ['014_booking_groups.sql', '015_profile_contact.sql', '016_notification_outbox.sql']) {
+    for (const file of ['014_booking_groups.sql', '015_profile_contact.sql', '016_notification_outbox.sql', '017_base_avatars.sql']) {
       await pg.exec(readFileSync(join(__dirname, '..', file), 'utf8'));
     }
     await pg.exec("update public.terenuri set poza='assets/imagini/avatar2.png'");
@@ -211,9 +216,10 @@ async function openProfile(page) {
       await target.locator('#login-parola').fill(' test-password. ');
       await target.locator('#btn-executa-login').click();
       await target.locator('#modal-auth').waitFor({state:'hidden'});
-      await openProfile(target);
-      await target.locator('#btn-administreaza-baza').click();
+      await target.locator('body.base-admin-owner').waitFor();
       await target.locator('#base-admin-workspace').waitFor({state:'visible'});
+      assert.equal(await target.locator('#spotivity-top').isVisible(),false,'Ordinary managers enter only their own workspace');
+      assert.equal(await target.locator('#spotivity-top').evaluate(node=>node.inert),true);
       await target.locator('#sectiune-dashboard').waitFor({state:'visible'});
       assert.equal(new URL(target.url()).pathname,new URL(base).pathname,'Administration stays within the current site');
       assert.equal(await target.locator('#login-admin-btn').count(),0,'The integrated workspace reuses the current login');
@@ -263,8 +269,10 @@ async function openProfile(page) {
       const result=await target.evaluate(id=>{
         const modal=document.getElementById(id),box=modal.getBoundingClientRect();
         const styles=[getComputedStyle(modal),getComputedStyle(modal,'::before'),getComputedStyle(modal,'::after')];
-        const background=document.querySelector('.fundal-water'),backgroundBox=background.getBoundingClientRect();
-        const fullBackgroundBlur=getComputedStyle(background).filter.includes('blur(')
+        const owner=document.body.classList.contains('base-admin-owner');
+        const background=document.querySelector(owner?'#base-admin-workspace':'.fundal-water'),backgroundBox=background.getBoundingClientRect();
+        const backgroundContent=owner?background.querySelector('.base-admin-panel'):background;
+        const fullBackgroundBlur=getComputedStyle(backgroundContent).filter.includes('blur(')
           && backgroundBox.left<=1 && backgroundBox.top<=1 && backgroundBox.right>=innerWidth-1 && backgroundBox.bottom>=innerHeight-1;
         return {width:innerWidth,height:innerHeight,left:box.left,top:box.top,right:box.right,bottom:box.bottom,
           blurred:fullBackgroundBlur || styles.some(style=>[style.backdropFilter,style.webkitBackdropFilter].some(value=>value && value!=='none')),
@@ -628,7 +636,7 @@ async function openProfile(page) {
     await settingsReload;
     await admin.waitForFunction(id=>document.getElementById(`btn-save-${id}`)?.disabled===false,settingsId);
     // The integrated refresh may already have replaced and closed the editor.
-    // Escape on the workspace itself intentionally returns to the profile.
+    // Escape on the owner workspace must keep its scoped dashboard visible.
     if (await admin.locator(`#modal-setari-${settingsId}`).isVisible()) await admin.keyboard.press('Escape');
     assert.equal(await admin.locator('#base-admin-workspace').isVisible(),true);
     const cityBack=admin.locator('.sub-pagina-oras:visible [onclick*="inchideSubPaginaOras"]');
@@ -880,6 +888,8 @@ async function openProfile(page) {
     await admin.evaluate(async()=>{await db.auth.signOut({scope:'local'})});
     await admin.locator('#base-admin-workspace').waitFor({state:'hidden'});
     assert.equal(await admin.locator('#btn-administreaza-baza').isVisible(),false);
+    assert.equal(await admin.locator('#spotivity-top').isVisible(),true);
+    assert.equal(await admin.locator('#spotivity-top').evaluate(node=>node.inert),false);
     assert.ok(!(await admin.locator('#sectiune-dashboard').isVisible()));
     assert.equal(await admin.locator('#container-meniu-terenuri').innerText(),'');
     assert.equal(await admin.locator('#chat-admin-mesaje').innerText(),'');

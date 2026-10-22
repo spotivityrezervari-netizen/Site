@@ -36,6 +36,11 @@
                 ? await db.from('clienti').select('nume,telefon').eq('user_id', user.id).maybeSingle()
                 : { data: null, error: null };
             if (generation !== state.authGeneration) return false;
+            // The owner workspace can sign out before the public application's
+            // initial restore has finished. Never commit that obsolete identity.
+            const { data: currentAuth, error: sessionError } = await db.auth.getSession();
+            if (sessionError || generation !== state.authGeneration
+                || (currentAuth?.session?.user?.id || null) !== (user?.id || null)) return false;
             if (requireProfile && (profileError || !profile)) throw new Error('Profilul nu a putut fi reîncărcat. Încearcă din nou.');
             const storedPhone = typeof profile?.telefon === 'string' ? profile.telefon.trim() : '';
             const metadataPhone = typeof user?.user_metadata?.telefon === 'string' ? user.user_metadata.telefon.trim() : '';

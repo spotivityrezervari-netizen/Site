@@ -206,7 +206,14 @@
                 const grid = element('div', 'sports-base-courts');
                 baseCourts(base.id).forEach(court => grid.append(renderCourt(court)));
                 const photo = window.createSportsBasePhoto?.(base, 'sports-base-photo sports-base-photo-detail');
-                content.replaceChildren(...(photo ? [photo] : []), city, description, shareButton, status, heading, grid);
+                const identity = element('div', 'sports-base-identity');
+                identity.classList.toggle('has-base-cover', !!photo);
+                const avatar = window.createSportsBaseAvatar?.(base, 'sports-base-avatar-detail');
+                if (avatar) identity.append(avatar);
+                const name = element('div', 'sports-base-identity-copy');
+                name.append(element('h3', 'sports-base-profile-name', base.nume), city);
+                identity.append(name);
+                content.replaceChildren(...(photo ? [photo] : []), identity, description, shareButton, status, heading, grid);
                 return;
             }
             const selectedCity = document.getElementById('filtru-oras-global')?.value || 'ALL';
@@ -217,7 +224,10 @@
                 const card = button('sports-base-card', '', () => open(base.id));
                 card.dataset.baseId = base.id;
                 const photo = window.createSportsBasePhoto?.(base, 'sports-base-photo');
+                card.classList.toggle('has-base-cover', !!photo);
                 if (photo) card.append(photo);
+                const avatar = window.createSportsBaseAvatar?.(base);
+                if (avatar) card.append(avatar);
                 card.append(element('span', 'sports-base-city', base.oras), element('span', 'sports-base-name', base.nume));
                 const count = baseCourts(base.id).length;
                 card.append(element('span', 'sports-base-count', `${count} ${t(count === 1 ? 'single' : 'count')}`));
@@ -266,8 +276,8 @@
             const timeout = window.setTimeout(() => requestController.abort(), 15000);
             try {
                 const [baseResult, courtResult] = await Promise.all([
-                    db.from('baze_sportive').select('id,nume,oras,descriere,este_activa,poza').eq('este_activa', true)
-                        .order('nume').abortSignal(requestController.signal),
+                    window.readSportsBasePresentation(fields => db.from('baze_sportive').select(fields).eq('este_activa', true)
+                        .order('nume').abortSignal(requestController.signal)),
                     db.from('terenuri').select('id,nume,sport,oras,pret,poza,baza_sportiva_id,este_activ').eq('este_activ', true)
                         .order('nume').abortSignal(requestController.signal)
                 ]);
@@ -288,6 +298,12 @@
             }
         }
         window.openSportsBases = open;
+        window.closeSportsBases = hide;
+        window.addEventListener('spotivity:base-updated', event => {
+            if (!event.detail?.id) return;
+            bases = bases.map(base => base.id === event.detail.id ? { ...base, ...event.detail } : base);
+            if (isOpen()) render();
+        });
         close.addEventListener('click', () => hide());
         back.addEventListener('click', () => open());
         modal.addEventListener('click', event => { if (event.target === modal) hide(); });

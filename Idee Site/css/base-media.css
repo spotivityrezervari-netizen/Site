@@ -12,3 +12,31 @@
 .admin-page #baza-poza-selection { overflow-wrap: anywhere; }
 .admin-page .admin-base-photo-status { margin-block: 10px; overflow-wrap: anywhere; font-size: 14px; line-height: 1.5; }
 .admin-page .admin-base-photo-status.is-error { color: #f6b8aa; }
+
+.sports-base-avatar {
+    position: relative; display: inline-grid; place-items: center;
+    width: 68px; height: 68px; flex: 0 0 68px; overflow: hidden;
+    border: 3px solid #17271c; border-radius: 50%;
+    background: linear-gradient(145deg, #486444, #233e2a);
+    color: #f0d28c; font: 700 22px/1 system-ui, sans-serif;
+    box-shadow: 0 3px 15px rgba(0,0,0,.22);
+    vertical-align: middle;
+}
+.sports-base-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+.sports-base-avatar-initials { max-width: 100%; text-align: center; }
+.pagina-publica .sports-base-card > .sports-base-avatar { display: grid; margin: 0 0 12px; }
+.pagina-publica .sports-base-card.has-base-cover > .sports-base-avatar { margin-top: -38px; }
+.sports-base-identity { display: flex; align-items: center; gap: 16px; margin: 0 0 18px; min-width: 0; }
+.sports-base-identity.has-base-cover { margin-top: -40px; position: relative; }
+.sports-base-avatar-detail { width: 92px; height: 92px; flex-basis: 92px; border-width: 4px; font-size: 28px; }
+.sports-base-identity-copy { min-width: 0; }
+.sports-base-profile-name { color: #e7c77d; margin: 0 0 7px; overflow-wrap: anywhere; line-height: 1.3; }
+.sports-base-identity .sports-base-city { margin: 0; }
+.admin-page .admin-base-avatar-preview { display: block; width: 128px; height: 128px; max-width: 100%; border-radius: 50%; object-fit: cover; border: 3px solid rgba(216,182,106,.6); }
+.admin-page .admin-base-avatar-preview[hidden] { display: none; }
+.admin-page #baza-avatar-selection { overflow-wrap: anywhere; }
+@media (max-width: 480px) {
+    .sports-base-identity { gap: 12px; align-items: flex-end; }
+    .sports-base-avatar-detail { width: 76px; height: 76px; flex-basis: 76px; font-size: 24px; }
+    .sports-base-profile-name { font-size: 19px; }
+}

@@ -1,6 +1,8 @@
 # Instalarea protecțiilor Supabase și a rolurilor Spotivity
 
-**Administrare curentă:** toate operațiunile se deschid în `index.html`, prin **Profilul meu → Deschide panoul de admin** pentru superadmin sau **Profilul meu → Administrează baza sportivă** pentru administratorii bazelor. Pagina separată `admin.html` a fost eliminată; rolurile și limitele RLS rămân aceleași.
+**Administrare curentă:** toate operațiunile se deschid în `index.html`. Superadminul folosește **Profilul meu → Deschide panoul de admin**, iar administratorii obișnuiți intră direct la bazele și terenurile alocate după verificarea accesului. Pagina separată `admin.html` a fost eliminată; rolurile și limitele RLS rămân aceleași.
+
+**017 — pregătită, NEAPLICATĂ live:** fotografia de profil separată a bazei este implementată în [017_base_avatars.sql](017_base_avatars.sql) și a trecut **42 de verificări SQL izolate**: 21 cu UUID și 21 cu ID numeric. Aplicarea live este blocată deoarece bindingul de Management API existent `Supabse` răspunde cu **HTTP 401**. Ultimele migrări confirmate live rămân până la **016**, pe baza verificărilor anterioare; nu se afirmă o aplicare sau o verificare live nouă pentru 017.
 
 **18 octombrie 2026:** migrarea 013 a fost verificată în proiectul live. Migrările 014–016 sunt aplicate și verificate pentru rezervări grupate, recuperarea contactelor și outboxul privat Make; funcțiile Edge aferente sunt active. Nu reinstala migrările vechi; SQL-ul și funcțiile Edge trebuie publicate separat de site.
 
@@ -58,7 +60,7 @@ Pe **12 octombrie 2026**, migrarea 003 a fost aplicată în **Rendez-Vous** prin
 
 Adresele de redirect Auth sunt exacte; wildcardul vechi pentru spotivity.ro a fost eliminat. La cererea proprietarului, parola nouă are în continuare minimum **6 caractere**. Confirmarea automată și absența SMTP au fost păstrate; configurarea emailului și datele firmei sunt amânate de proprietar. Raportul de verificare și pașii rămași sunt în [PRODUCTION_REVIEW.md](../PRODUCTION_REVIEW.md).
 
-Pentru **alt proiect**, ordinea migrărilor este **001 → 003 → 004 → 005 → 006 → 007 → 008 → 009 → 010 → 011 → 012 → 013 → 014 → 015 → 016** după inventar/backup și verificarea datelor. 002 conține numai exemple de roluri pentru conturi Auth existente și confirmate. Fișierele `tests/` se rulează exclusiv în baza izolată. Instrucțiunile istorice de mai jos pentru reinstalarea 001 se aplică numai proiectelor fără migrări ulterioare.
+Pentru **alt proiect**, ordinea migrărilor este **001 → 003 → 004 → 005 → 006 → 007 → 008 → 009 → 010 → 011 → 012 → 013 → 014 → 015 → 016 → 017** după inventar/backup și verificarea datelor. 017 este pregătită, dar încă neaplicată în proiectul existent, conform stării de mai sus. 002 conține numai exemple de roluri pentru conturi Auth existente și confirmate. Fișierele `tests/` se rulează exclusiv în baza izolată. Instrucțiunile istorice de mai jos pentru reinstalarea 001 se aplică numai proiectelor fără migrări ulterioare.
 
 ## Căutare și afișare pe telefon
 
@@ -151,8 +153,8 @@ După backup și verificare în proiectul de test, ia **întregul `001_security.
 
 În mediul cloud al acestei conversații, accesul administrativ se configurează prin Management API:
 
-1. În [Supabase Account → Access Tokens](https://supabase.com/dashboard/account/tokens), generează un token.
-2. În setările securizate ale mediului Codex, introdu valoarea la secretul `SUPABASE_ACCESS_TOKEN`, permis numai pentru domeniul HTTPS `api.supabase.com`. Nu pune valoarea în chat, în GitHub sau în frontend.
+1. Refolosește bindingul existent **`Supabse`** din setările securizate ale mediului Codex, cu destinația HTTPS `api.supabase.com`. Nu crea un secret duplicat `SUPABASE_ACCESS_TOKEN`.
+2. Dacă tokenul existent răspunde cu HTTP 401, generează un token valid pentru Management API în [Supabase Account → Access Tokens](https://supabase.com/dashboard/account/tokens) și înlocuiește valoarea secretului existent `Supabse`. Nu pune valoarea în chat, în GitHub sau în frontend.
 3. Setează variabila nesensibilă `SUPABASE_PROJECT_REF` la referința proiectului corect. Proiectul folosit în `js/db.js` este `ndubcdwohqzgxpuiowye`.
 4. Salvează și publică configurația mediului. Declararea secretului fără valoare nu oferă acces, iar salvarea configurației nu execută migrarea bazei.
 5. După configurare, accesul și schema reală trebuie verificate înainte de aplicarea SQL-ului. Revocă tokenul din Supabase când lucrul administrativ s-a încheiat.
@@ -402,3 +404,21 @@ node --test supabase/tests/booking-workflow-edge.test.cjs supabase/tests/booking
 ```
 
 Testele browser pentru oaspeți și administrare folosesc SDK-ul real și PostgreSQL izolat; nicio adresă reală nu primește emailuri din aceste fixture-uri.
+
+
+## 017 — fotografie de profil separată pentru baza sportivă
+
+**Stare: pregătită și testată izolat, NEAPLICATĂ live.** Migrarea [017_base_avatars.sql](017_base_avatars.sql) se aplică după 016. Secretul de Management API existent `Supabse` răspunde cu HTTP 401, astfel încât nu s-a aplicat 017 și nu s-a efectuat o verificare nouă a schemei live. Ultima stare confirmată a proiectului rămâne cea consemnată până la 016. Publicarea fișierului SQL în repository nu îl execută în Supabase.
+
+Coloana nullable `baze_sportive.poza_profil` păstrează imaginea mică, rotundă, separat de coperta existentă `poza`. Ambele folosesc bucketul public existent `poze_baze_sportive`, cu calea `UUID-bază/UUID-aleator.extensie-raster`. 017 verifică apartenența căii la bază și existența obiectului înainte de asociere; nu copiază imaginile vechi și nu înlocuiește coperta când se salvează fotografia de profil.
+
+Administratorul obișnuit poate modifica descrierea, coperta și fotografia de profil numai cu permisiunea explicită din `baze_sportive_admini`. Simpla alocare a unui teren nu acordă această permisiune. `get_admin_access()` include noul câmp pentru bazele deja autorizate, păstrând aceleași limite pentru terenuri și celelalte date. Sunt actualizate numai funcțiile `spotivity_private.guard_base()` și `public.get_admin_access()`; politicile Storage existente, trigger-ele, rolurile și rezervările nu sunt rescrise.
+
+Au trecut **42 de verificări SQL izolate**, câte 21 pentru UUID și ID numeric: păstrarea datelor și a coperților, permisiuni, căi invalide sau neîncărcate, izolarea între baze, retragerea accesului, reaplicarea migrării și protecția rezervărilor finalizate. Aceste rezultate nu confirmă aplicarea live.
+
+```bash
+NODE_PATH=/workspace/shared/spotivity-rls-validation/node_modules:$NODE_PATH node supabase/tests/base-avatars.test.cjs
+SPOTIVITY_TEST_INTEGER_IDS=1 NODE_PATH=/workspace/shared/spotivity-rls-validation/node_modules:$NODE_PATH node supabase/tests/base-avatars.test.cjs
+```
+
+După repararea securizată a bindingului existent `Supabse`, verifică proiectul și schema reală, inclusiv dacă versiunea 017 este liberă, înainte de orice aplicare. Păstrează inventarul datelor, o probă cu rollback și comparația protecțiilor existente; nu reinstala migrările vechi.

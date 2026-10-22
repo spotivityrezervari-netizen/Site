@@ -131,7 +131,10 @@
                 const card = action('', () => window.openSportsBases?.(base.id), 'sports-base-card');
                 card.dataset.homeBaseId = base.id;
                 const photo = window.createSportsBasePhoto?.(base, 'sports-base-photo');
+                card.classList.toggle('has-base-cover', !!photo);
                 if (photo) card.append(photo);
+                const avatar = window.createSportsBaseAvatar?.(base);
+                if (avatar) card.append(avatar);
                 card.append(node('span', 'sports-base-city', cityName(base.oras)), node('strong', 'sports-base-name', base.nume));
                 if (base.descriere?.trim()) card.append(node('span', 'home-base-summary', base.descriere));
                 card.append(node('span', 'sports-base-count', `${courts.filter(court => court.baza_sportiva_id === base.id).length} ${t('courts')}`));
@@ -181,7 +184,7 @@
             try {
                 const reads = await Promise.allSettled([
                     readPublicRows('terenuri', 'id,nume,sport,oras,pret,poza,baza_sportiva_id,este_activ', 'este_activ', controller.signal),
-                    readPublicRows('baze_sportive', 'id,nume,oras,descriere,este_activa,poza', 'este_activa', controller.signal)
+                    window.readSportsBasePresentation(fields => readPublicRows('baze_sportive', fields, 'este_activa', controller.signal))
                 ]);
                 if (token !== loadGeneration) return;
                 for (const [index, read] of reads.entries()) {
@@ -217,6 +220,11 @@
         });
         document.getElementById('filtru-oras-global')?.addEventListener('change', () => { cancelBooking(); render(); });
         window.addEventListener('spotivity:language', render);
+        window.addEventListener('spotivity:base-updated', event => {
+            if (!event.detail?.id) return;
+            bases = bases.map(base => base.id === event.detail.id ? { ...base, ...event.detail } : base);
+            renderBases();
+        });
         window.addEventListener('spotivity:booking-ready', () => { cancelBooking(); render(); });
         window.spotivityDiscoveryReady = load();
     }

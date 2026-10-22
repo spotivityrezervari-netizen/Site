@@ -11,14 +11,7 @@
     let grants = [];
     let editingId = null;
     let saving = false;
-    let photoSaving = false;
-    let photoDraft = null;
-    let photoSelection = 0;
-    let photoOperation = null;
     let lastFocus = null;
-    const photoBucket = 'poze_baze_sportive';
-    const photoTypes = { 'image/jpeg': ['jpg', 'jpeg'], 'image/png': ['png'], 'image/webp': ['webp'], 'image/avif': ['avif'], 'image/gif': ['gif'] };
-    const photoPathPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(?:jpg|jpeg|png|webp|avif|gif)$/i;
     const byId = id => document.getElementById(id);
     const esc = value => window.escapeHtml(String(value ?? ''));
     const sameRole = captured => captured === generation && role !== null;
@@ -31,230 +24,37 @@
 
     function setSaving(value) {
         saving = value;
-        byId('btn-salveaza-baza').disabled = value || photoSaving;
+        byId('btn-salveaza-baza').disabled = value || photosSaving();
         byId('btn-salveaza-baza').textContent = value ? 'Se salvează…' : role?.isSuper ? 'Salvează baza' : 'Salvează descrierea';
-        byId('btn-inapoi-baze').disabled = value || photoSaving;
+        byId('btn-inapoi-baze').disabled = value || photosSaving();
         renderPhotoControls();
-    }
-
-    function photoStatus(message, error = false) {
-        const node = byId('admin-baza-photo-status');
-        if (!node) return;
-        node.textContent = message;
-        node.classList.toggle('is-error', error);
     }
 
     const currentBase = () => bases.find(base => base.id === editingId);
     const canEditPhoto = () => !!role && !!editingId && !!currentBase()
         && (role.isSuper || role.baseAccess?.some(base => base.id === editingId && base.can_edit_details === true)
             || grants.some(grant => grant.baza_id === editingId && grant.user_id === role.userId));
-
-    function discardPhotoDraft() {
-        photoSelection++;
-        if (photoDraft?.url) URL.revokeObjectURL(photoDraft.url);
-        photoDraft = null;
-        const input = byId('baza-poza-file');
-        if (input) input.value = '';
-    }
-
-    function cancelPhotoOperation() {
-        photoOperation?.controller.abort();
-        photoOperation = null;
-        photoSaving = false;
-        discardPhotoDraft();
-    }
-
-    function photoUrl(path) {
-        if (typeof path !== 'string' || !photoPathPattern.test(path) || path.split('/')[0] !== editingId) return '';
-        const publicUrl = db.storage.from(photoBucket).getPublicUrl(path)?.data?.publicUrl;
-        const safe = window.safeUrl(publicUrl);
-        if (!safe) return '';
-        try { return new URL(safe).origin === new URL(supabaseUrl).origin ? safe : ''; }
-        catch (_) { return ''; }
-    }
-
-    function renderPhotoControls() {
-        const input = byId('baza-poza-file');
-        if (!input) return;
-        const busy = saving || photoSaving;
-        const allowed = canEditPhoto();
-        input.disabled = busy || !allowed;
-        byId('btn-baza-poza-save').disabled = busy || !allowed || !photoDraft?.ready;
-        byId('btn-baza-poza-save').textContent = photoSaving ? 'Se salvează fotografia…' : 'Salvează fotografia';
-        byId('btn-baza-poza-clear').hidden = !photoDraft;
-        byId('btn-baza-poza-clear').disabled = busy;
-        byId('btn-baza-poza-remove').hidden = !currentBase()?.poza;
-        byId('btn-baza-poza-remove').disabled = busy || !allowed;
-        byId('baza-poza-selection').textContent = photoDraft
-            ? `${photoDraft.file.name} · ${(photoDraft.file.size / 1024 / 1024).toLocaleString('ro-RO', { maximumFractionDigits: 2 })} MB${photoDraft.ready ? ' · Fotografie nesalvată' : ' · Se verifică imaginea…'}` : '';
-        byId('baza-poza-hint').textContent = !editingId
-            ? 'Salvează mai întâi baza sportivă, apoi redeschide setările pentru a adăuga fotografia.'
-            : 'JPG, PNG, WebP, AVIF sau GIF, maximum 5 MB. Fotografia se salvează separat de celelalte date ale bazei.';
-        byId('admin-baza-photo-section').setAttribute('aria-busy', String(photoSaving));
-    }
-
-    function renderPhoto() {
-        const image = byId('baza-poza-preview');
-        if (!image) return;
-        const base = currentBase();
-        const source = photoDraft?.ready ? photoDraft.url : photoUrl(base?.poza);
-        image.hidden = !source;
-        byId('baza-poza-empty').hidden = !!source;
-        byId('baza-poza-empty').textContent = 'Baza nu are încă o fotografie.';
-        if (source) {
-            image.alt = `${photoDraft?.ready ? 'Previzualizarea fotografiei selectate' : 'Fotografia bazei'}${base?.nume ? ` · ${base.nume}` : ''}`;
-            image.src = source;
-        } else image.removeAttribute('src');
-        renderPhotoControls();
-    }
-
-    async function choosePhoto() {
-        if (saving || photoSaving || !canEditPhoto()) return;
-        const file = byId('baza-poza-file').files?.[0];
-        discardPhotoDraft();
-        photoStatus('');
-        if (!file) return renderPhoto();
-        const extension = file.name.split('.').pop()?.toLowerCase();
-        const accepted = Object.prototype.hasOwnProperty.call(photoTypes, file.type) ? photoTypes[file.type] : null;
-        if (!accepted || !accepted.includes(extension)) {
-            photoStatus('Alege o imagine JPG, PNG, WebP, AVIF sau GIF. Fișierele SVG nu sunt acceptate.', true);
-            return renderPhoto();
+    const photoContext = () => ({
+        generation, editor: editorGeneration, baseId: editingId, userId: role?.userId,
+        base: currentBase(), allowed: canEditPhoto(), open: byId('modal-baze-admin').style.display === 'flex'
+    });
+    const photoEditors = [
+        ['poza', 'baza-poza', 'admin-baza-photo-section', 'admin-baza-photo-status'],
+        ['poza_profil', 'baza-avatar', 'admin-baza-avatar-section', 'admin-baza-avatar-status']
+    ].map(([field, prefix, sectionId, statusId]) => window.createSportsBasePhotoEditor({
+        field, prefix, sectionId, statusId, getContext: photoContext,
+        isBusy: () => saving || photosSaving(),
+        onStateChange: () => setSaving(saving),
+        onSaved: update => {
+            bases = bases.map(base => base.id === update.id ? { ...base, ...update } : base);
+            window.dispatchEvent(new CustomEvent('spotivity:base-updated', { detail: update }));
         }
-        if (!file.size || file.size > 5 * 1024 * 1024) {
-            photoStatus('Fotografia trebuie să aibă cel mult 5 MB și să nu fie goală.', true);
-            return renderPhoto();
-        }
-        const captured = generation;
-        const editor = editorGeneration;
-        const selection = photoSelection;
-        const draft = { file, extension: accepted[0], url: URL.createObjectURL(file), ready: false };
-        photoDraft = draft;
-        renderPhotoControls();
-        try {
-            const image = new Image();
-            image.src = draft.url;
-            await image.decode();
-            if (!sameRole(captured) || editor !== editorGeneration || selection !== photoSelection || photoDraft !== draft) return;
-            if (!image.naturalWidth || !image.naturalHeight) throw new Error('Invalid image');
-            draft.ready = true;
-            renderPhoto();
-        } catch (_) {
-            if (!sameRole(captured) || editor !== editorGeneration || selection !== photoSelection || photoDraft !== draft) return;
-            discardPhotoDraft();
-            photoStatus('Fișierul nu poate fi afișat ca imagine. Alege o altă fotografie.', true);
-            renderPhoto();
-        }
-    }
-
-    const samePhotoContext = context => photoOperation === context && sameRole(context.generation)
-        && context.editor === editorGeneration && role.userId === context.userId && editingId === context.baseId
-        && !context.controller.signal.aborted && byId('modal-baze-admin').style.display === 'flex';
-    const checkPhotoContext = context => { if (!samePhotoContext(context)) throw new Error('Photo context changed'); };
-
-    async function photoClient(context) {
-        checkPhotoContext(context);
-        const { data: identity, error: identityError } = await db.auth.getUser();
-        checkPhotoContext(context);
-        if (identityError || identity?.user?.id !== context.userId) throw new Error('Sesiunea s-a schimbat. Conectează-te din nou.');
-        const { data, error } = await db.auth.getSession();
-        checkPhotoContext(context);
-        const session = data?.session;
-        if (error || session?.user?.id !== context.userId || !session.access_token || !session.refresh_token) throw new Error('Sesiunea a expirat. Conectează-te din nou.');
-        // Bind both Storage and the base UPDATE to this verified account, even if another tab switches accounts.
-        const client = createClient(supabaseUrl, supabaseKey, {
-            auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
-        });
-        context.client = client;
-        const { error: bindError } = await client.auth.setSession({ access_token: session.access_token, refresh_token: session.refresh_token });
-        checkPhotoContext(context);
-        if (bindError) throw new Error('Sesiunea a expirat. Conectează-te din nou.');
-        const { data: verified, error: verifiedError } = await client.auth.getUser();
-        checkPhotoContext(context);
-        if (verifiedError || verified?.user?.id !== context.userId) throw new Error('Sesiunea s-a schimbat. Conectează-te din nou.');
-        return client;
-    }
-
-    async function removeObject(client, path, baseId) {
-        if (!path || !photoPathPattern.test(path) || path.split('/')[0] !== baseId) return false;
-        try {
-            const { error } = await client.storage.from(photoBucket).remove([path]);
-            return !error;
-        } catch (_) { return false; }
-    }
-
-    async function savePhoto(remove = false) {
-        if (saving || photoSaving || !canEditPhoto() || (!remove && !photoDraft?.ready)) return;
-        const base = currentBase();
-        if (remove && !base.poza) return;
-        const draft = photoDraft;
-        const context = { generation, editor: editorGeneration, baseId: editingId, userId: role.userId, controller: new AbortController(), client: null };
-        photoOperation = context;
-        photoSaving = true;
-        setSaving(saving);
-        photoStatus(remove ? 'Se elimină fotografia…' : 'Se încarcă fotografia…');
-        let uploadedPath = null;
-        let metadataSaved = false;
-        let metadataAttempted = false;
-        try {
-            const client = await photoClient(context);
-            checkPhotoContext(context);
-            let nextPath = null;
-            if (!remove) {
-                nextPath = `${context.baseId}/${crypto.randomUUID()}.${draft.extension}`;
-                uploadedPath = nextPath;
-                const { data, error } = await client.storage.from(photoBucket).upload(nextPath, draft.file, {
-                    contentType: draft.file.type, upsert: false, cacheControl: '3600'
-                });
-                checkPhotoContext(context);
-                if (error || data?.path !== nextPath) throw new Error('Fotografia nu a putut fi încărcată. Verifică permisiunile și încearcă din nou.');
-            }
-            checkPhotoContext(context);
-            metadataAttempted = true;
-            let update = client.from('baze_sportive').update({ poza: nextPath }).eq('id', context.baseId).select('id,poza');
-            if (typeof update.abortSignal === 'function') update = update.abortSignal(context.controller.signal);
-            const result = await update;
-            checkPhotoContext(context);
-            if (result.error || !Array.isArray(result.data) || result.data.length !== 1
-                || result.data[0].id !== context.baseId || result.data[0].poza !== nextPath) {
-                throw new Error('Salvarea fotografiei nu a putut fi confirmată. Reîncarcă baza și verifică permisiunile înainte să încerci din nou.');
-            }
-            metadataSaved = true;
-            bases = bases.map(item => item.id === context.baseId ? { ...item, poza: nextPath } : item);
-            window.dispatchEvent(new CustomEvent('spotivity:base-updated', { detail: { id: context.baseId, poza: nextPath } }));
-            discardPhotoDraft();
-            renderPhoto();
-            let cleaned = true;
-            if (base.poza && base.poza !== nextPath) {
-                cleaned = await removeObject(client, base.poza, context.baseId);
-                checkPhotoContext(context);
-            }
-            photoStatus(cleaned ? remove ? 'Fotografia a fost eliminată.' : 'Fotografia a fost salvată.'
-                : `${remove ? 'Fotografia nu mai este afișată pe site.' : 'Fotografia a fost salvată.'} Imaginea anterioară nu a putut fi eliminată. Verifică permisiunile înainte să încerci din nou.`, !cleaned);
-        } catch (error) {
-            let cleanupFailed = false;
-            if (uploadedPath && !metadataSaved && context.client) {
-                // A lost UPDATE response may hide a committed change. Check the reference before deleting the new object.
-                let canCleanup = !metadataAttempted;
-                if (metadataAttempted) {
-                    try {
-                        const result = await context.client.from('baze_sportive').select('id,poza').eq('id', context.baseId).maybeSingle();
-                        canCleanup = !result.error && result.data?.id === context.baseId && result.data.poza !== uploadedPath;
-                    } catch (_) { canCleanup = false; }
-                }
-                if (canCleanup) cleanupFailed = !await removeObject(context.client, uploadedPath, context.baseId);
-                else cleanupFailed = true;
-            }
-            if (samePhotoContext(context)) photoStatus(`${error.message || 'Fotografia nu a putut fi salvată.'}${cleanupFailed ? ' Fișierul nou nu a putut fi curățat automat. Reîncarcă baza înainte de a încerca din nou.' : ''}`, true);
-        } finally {
-            context.client?.auth.stopAutoRefresh();
-            if (samePhotoContext(context)) {
-                photoOperation = null;
-                photoSaving = false;
-                setSaving(saving);
-                renderPhotoControls();
-            }
-        }
-    }
+    }));
+    const photosSaving = () => photoEditors.some(editor => editor.isSaving());
+    const renderPhotoControls = () => photoEditors.forEach(editor => editor.renderControls());
+    const renderPhoto = () => photoEditors.forEach(editor => editor.render());
+    const cancelPhotoOperation = () => photoEditors.forEach(editor => editor.cancel());
+    const photoStatus = message => photoEditors.forEach(editor => editor.status(message));
 
     function baseOptions() {
         const select = byId('teren-baza');
@@ -349,7 +149,7 @@
     }
 
     function showEditor(id) {
-        if (!role || saving || photoSaving) return;
+        if (!role || saving || photosSaving()) return;
         const base = id ? bases.find(item => item.id === id) : null;
         if ((id && !base) || (!id && !role.isSuper)) return;
         editorGeneration++;
@@ -413,7 +213,7 @@
 
     async function save(event) {
         event.preventDefault();
-        if (!role || saving || photoSaving || byId('admin-baza-form').hidden) return;
+        if (!role || saving || photosSaving() || byId('admin-baza-form').hidden) return;
         const captured = generation;
         const editor = editorGeneration;
         const sameEditor = () => sameRole(captured) && editor === editorGeneration && byId('modal-baze-admin').style.display === 'flex';
@@ -457,7 +257,7 @@
 
     // Opens the existing editor directly, after re-reading the current grants.
     window.openSpotivityBaseEditor = async function(id) {
-        if (!role || !id || saving || photoSaving) return false;
+        if (!role || !id || saving || photosSaving()) return false;
         const captured = generation;
         lastFocus = document.activeElement;
         showDirectory();
@@ -487,7 +287,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         new MutationObserver(() => {
-            if (byId('modal-baze-admin').style.display !== 'flex' && (photoDraft || photoOperation)) {
+            if (byId('modal-baze-admin').style.display !== 'flex' && photoEditors.some(editor => editor.hasPending())) {
                 editorGeneration++;
                 cancelPhotoOperation();
                 renderPhoto();
@@ -498,20 +298,7 @@
         byId('btn-inapoi-baze').addEventListener('click', () => { showDirectory(); status(''); refresh(); });
         byId('btn-inchide-baze-admin').addEventListener('click', close);
         byId('admin-baza-form').addEventListener('submit', save);
-        byId('baza-poza-file').addEventListener('change', choosePhoto);
-        byId('btn-baza-poza-save').addEventListener('click', () => savePhoto(false));
-        byId('btn-baza-poza-remove').addEventListener('click', () => savePhoto(true));
-        byId('btn-baza-poza-clear').addEventListener('click', () => {
-            if (saving || photoSaving) return;
-            discardPhotoDraft();
-            photoStatus('');
-            renderPhoto();
-        });
-        byId('baza-poza-preview').addEventListener('error', () => {
-            byId('baza-poza-preview').hidden = true;
-            byId('baza-poza-empty').hidden = false;
-            byId('baza-poza-empty').textContent = 'Fotografia nu a putut fi afișată. Poți alege o altă imagine.';
-        });
+        photoEditors.forEach(editor => editor.mount());
         byId('admin-baze-list').addEventListener('click', event => {
             const button = event.target.closest('[data-edit-base]');
             if (button) showEditor(button.dataset.editBase);

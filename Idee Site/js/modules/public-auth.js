@@ -131,7 +131,11 @@
         }
         function watchIdentity() {
             db.auth.onAuthStateChange((event, session) => {
-                if (['SIGNED_IN','SIGNED_OUT','USER_UPDATED','TOKEN_REFRESHED'].includes(event)) {
+                // restore() already fetched this user's authoritative Auth data.
+                // INITIAL_SESSION can carry older cached email-change metadata.
+                if (event === 'INITIAL_SESSION'
+                    && (state.user?.id || null) === (session?.user?.id || null)) return;
+                if (['INITIAL_SESSION','SIGNED_IN','SIGNED_OUT','USER_UPDATED','TOKEN_REFRESHED'].includes(event)) {
                     if (!session || (state.user && state.user.id !== session.user?.id)) {
                         state.authGeneration++;
                         state.user = null;

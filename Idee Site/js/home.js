@@ -71,6 +71,7 @@
             menu.querySelector('button')?.focus({ preventScroll: true });
         }
 
+        window.closeSpotivityHomeMenu = closeMenu;
         toggle.addEventListener('click', () => menu.hidden ? openMenu() : closeMenu());
         document.getElementById('home-brand')?.addEventListener('click', () => closeMenu(false));
         document.querySelectorAll('[data-sport-target]').forEach(button => {
