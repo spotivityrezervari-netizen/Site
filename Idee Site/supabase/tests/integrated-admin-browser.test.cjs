@@ -47,6 +47,31 @@ async function fits(page,selector,label){
     });
     assert.ok(dimensions.page<=width+1&&dimensions.left>=-1&&dimensions.right<=width+1,`${label} at ${width}: ${JSON.stringify(dimensions)}`);
     assert.deepEqual(dimensions.controls,[],`${label} controls at ${width}`);
+    if(selector==='#base-admin-workspace'){
+      const header=await root.evaluate(node=>{
+        const box=element=>{const rect=element.getBoundingClientRect();return {left:rect.left,right:rect.right,top:rect.top,bottom:rect.bottom,width:rect.width,height:rect.height};};
+        const visible=element=>element&&element.getClientRects().length&&getComputedStyle(element).visibility!=='hidden';
+        const heading=node.querySelector('.base-admin-heading');
+        const selector=node.querySelector('.base-admin-selector');
+        return {heading:box(heading),title:box(node.querySelector('#base-admin-title')),
+          actions:box(node.querySelector('.base-admin-account-actions')),
+          buttons:[...heading.querySelectorAll('button')].filter(visible).map(element=>({id:element.id,...box(element)})),
+          selector:visible(selector)?box(selector):null};
+      });
+      const details=`${label} compact account controls at ${width}: ${JSON.stringify(header)}`;
+      assert.ok(header.buttons.length>=1,details);
+      assert.ok(Math.max(0,header.actions.top-header.title.bottom)<=24,details);
+      for(const button of header.buttons){
+        assert.ok(button.width>=44&&button.height>=44,details);
+        assert.ok(button.left>=header.heading.left-1&&button.right<=header.heading.right+1,details);
+      }
+      if(header.buttons.length===2){
+        const [first,second]=header.buttons;
+        assert.ok(Math.abs(first.top-second.top)<=1,details);
+        assert.ok(second.left>=first.right&&second.left-first.right<=16,details);
+      }
+      if(header.selector)assert.ok(header.selector.top>=header.heading.bottom&&header.selector.top-header.heading.bottom<=24,details);
+    }
     if(screenshotDir)await page.screenshot({path:join(screenshotDir,`integrated-${label}-${width}.png`)});
   }
 }
