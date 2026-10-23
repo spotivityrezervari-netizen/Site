@@ -27,7 +27,7 @@
 .owner-home-nav-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .owner-home-nav-copy span { color: #b8c3b7; font-size: 12px; line-height: 1.4; }
 .owner-home-nav-copy strong { color: var(--owner-gold); font-size: 19px; line-height: 1.3; font-weight: 650; }
-#owner-home .owner-home-profile, #owner-home .owner-home-menu-toggle, #owner-home .owner-home-menu-close { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 46px; min-width: 46px; padding: 10px 12px; margin: 0; color: var(--owner-gold); background: transparent; border: 1px solid var(--owner-border); border-radius: 13px; font-size: 14px; font-weight: 600; }
+#owner-home .owner-home-menu-toggle, #owner-home .owner-home-menu-close { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 46px; min-width: 46px; padding: 10px 12px; margin: 0; color: var(--owner-gold); background: transparent; border: 1px solid var(--owner-border); border-radius: 13px; font-size: 14px; font-weight: 600; }
 #owner-home .owner-home-menu-toggle { padding: 10px; }
 .owner-home-content { width: 100%; padding-bottom: max(40px, env(safe-area-inset-bottom)); }
 .owner-home-heading { max-width: 1180px; padding: 34px 28px 24px; margin: 0 auto; }
@@ -91,8 +91,6 @@ body.owner-home-menu-open { overflow: hidden; }
     .owner-home-nav { padding: 8px 16px; gap: 10px; min-height: 68px; }
     .owner-home-nav-copy span { font-size: 10px; }
     .owner-home-nav-copy strong { font-size: 16px; }
-    #owner-home .owner-home-profile { padding: 10px; }
-    .owner-home-profile span { display: none; }
     .owner-home-heading { padding: 27px 18px 21px; }
     .owner-home-summary { font-size: 12px; }
     .owner-home-bases { padding: 0 18px 10px; }

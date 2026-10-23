@@ -26,8 +26,7 @@
         svg.setAttribute('viewBox', '0 0 24 24');
         svg.setAttribute('aria-hidden', 'true');
         svg.setAttribute('focusable', 'false');
-        const paths = kind === 'profile' ? ['M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8', 'M4 21v-2a8 8 0 0 1 16 0v2']
-            : kind === 'plus' ? ['M12 5v14', 'M5 12h14']
+        const paths = kind === 'plus' ? ['M12 5v14', 'M5 12h14']
                 : kind === 'close' ? ['m6 6 12 12', 'M18 6 6 18']
                     : ['M4 6h16', 'M4 12h16', 'M4 18h16'];
         for (const d of paths) {
@@ -75,7 +74,7 @@
 
     async function act(action, context, button) {
         if (!state.userId || !state.active || button.disabled
-            || (!state.access?.can_manage && !['profile', 'retry', 'logout'].includes(action))) return;
+            || (!state.access?.can_manage && !['retry', 'logout'].includes(action))) return;
         const captured = generation;
         closeMenu(false);
         status();
@@ -116,10 +115,6 @@
         brand.append(logo);
         const copy = element('div', 'owner-home-nav-copy');
         copy.append(element('span', '', 'Spațiul tău de administrare'), element('strong', '', 'Spotivity'));
-        const profile = actionButton('', 'profile', {}, 'owner-home-profile');
-        profile.id = 'owner-home-profile';
-        profile.setAttribute('aria-label', 'Profilul meu');
-        profile.append(icon('profile'), element('span', '', 'Profilul meu'));
         const menuToggle = element('button', 'owner-home-menu-toggle');
         menuToggle.type = 'button'; menuToggle.id = 'owner-home-menu-toggle';
         menuToggle.setAttribute('aria-label', 'Deschide meniul de administrare');
@@ -127,7 +122,7 @@
         menuToggle.setAttribute('aria-expanded', 'false');
         menuToggle.append(icon('menu'));
         menuToggle.addEventListener('click', openMenu);
-        nav.append(brand, copy, profile, menuToggle); header.append(nav);
+        nav.append(brand, copy, menuToggle); header.append(nav);
 
         const content = element('main', 'owner-home-content');
         content.id = 'owner-home-content';
@@ -267,7 +262,6 @@
 
     function renderMenu() {
         const nav = byId('owner-home-menu-links'); nav.replaceChildren();
-        nav.append(actionButton('Profilul meu', 'profile'));
         const bases = editableBases();
         for (const base of bases) nav.append(actionButton(bases.length === 1 ? 'Editează baza sportivă' : `Editează · ${base.nume || 'Bază sportivă'}`, 'base', { baseId: base.id }));
         if (state.courts.length) {

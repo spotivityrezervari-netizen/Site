@@ -19,7 +19,7 @@ async function profile(page){
     await page.locator('#btn-inchide-administrare').click();
     await page.locator('#base-admin-workspace').waitFor({state:'hidden'});
   }
-  if(await page.locator('#owner-home').isVisible()){await page.locator('#owner-home-profile').click();return;}
+  assert.equal(await page.locator('#owner-home').isVisible(),false,'The owner homepage intentionally has no profile entry');
   if(await page.locator('#btn-top-cont').isVisible())await page.locator('#btn-top-cont').click();
   else{if(!await page.locator('#home-mobile-menu').isVisible())await page.locator('#btn-mobile-menu').click();await page.locator('#home-mobile-menu [data-profile-target]').click();}
 }
@@ -28,7 +28,7 @@ async function login(page,email){
   await page.locator('#login-email').fill(email);await page.locator('#login-parola').fill('fixture-password');
   await page.locator('#btn-executa-login').click();await page.locator('#modal-auth').waitFor({state:'hidden'});await page.waitForLoadState('networkidle');
   const access=await page.evaluate(async()=>(await db.rpc('get_admin_access')).data);
-  if(access?.can_manage&&!access.is_super){await page.locator('body.base-admin-owner').waitFor();await page.locator('#owner-home').waitFor({state:'visible'});assert.equal(await page.locator('#base-admin-workspace').isVisible(),false);assert.equal(await page.locator('#spotivity-top').isVisible(),false);assert.equal(await page.locator('#spotivity-top').evaluate(node=>node.inert),true);}
+  if(access?.can_manage&&!access.is_super){await page.locator('body.base-admin-owner').waitFor();await page.locator('#owner-home').waitFor({state:'visible'});assert.equal(await page.locator('#base-admin-workspace').isVisible(),false);assert.equal(await page.locator('#spotivity-top').isVisible(),false);assert.equal(await page.locator('#spotivity-top').evaluate(node=>node.inert),true);assert.equal(await page.locator('#owner-home-profile').count(),0);assert.equal(await page.locator('#modal-profil').isVisible(),false);return;}
   await profile(page);await page.locator('#modal-profil').waitFor({state:'visible'});
   await page.waitForLoadState('networkidle');
 }
@@ -172,9 +172,9 @@ async function fits(page,selector,label){
     pass('a normal signed-in account has no admin access, cannot promote itself or edit bases/courts through direct API calls');
 
     const admin=await pageFor();await admin.goto(base,{waitUntil:'networkidle'});await login(admin,'admin@example.test');
-    await admin.locator('#btn-administreaza-baza').waitFor({state:'visible'});assert.equal(await admin.locator('#btn-administreaza-baza').innerText(),'Administrare baze de date');
+    assert.equal(await admin.locator('#owner-home [data-owner-action="administration"]').innerText(),'Administrare baze de date');
     const token=await admin.evaluate(async()=>(await db.auth.getSession()).data.session.access_token),logins=passwords(),navigationCount=navigations.length;
-    await admin.locator('#btn-administreaza-baza').click();await admin.locator('#base-admin-workspace').waitFor({state:'visible'});await admin.waitForLoadState('networkidle');
+    await management(admin);await admin.locator('#base-admin-workspace').waitFor({state:'visible'});await admin.waitForLoadState('networkidle');
     assert.equal(passwords(),logins);assert.equal(navigations.length,navigationCount);assert.equal(await admin.evaluate(async()=>(await db.auth.getSession()).data.session.access_token),token);
     assert.equal(new URL(admin.url()).pathname,new URL(base).pathname);assert.equal(await admin.locator('iframe').count(),0);
     assert.equal(await admin.locator('#spotivity-top').isVisible(),false);assert.equal(await admin.locator('#spotivity-top').evaluate(node=>node.inert),true);
@@ -315,17 +315,17 @@ async function fits(page,selector,label){
 
     await admin.keyboard.press('Escape');
     assert.equal(await admin.locator('#base-admin-workspace').isVisible(),false);assert.equal(await admin.locator('#owner-home').isVisible(),true);assert.equal(await admin.locator('#spotivity-top').isVisible(),false);
-    await profile(admin);await admin.locator('#modal-profil').waitFor({state:'visible'});
-    assert.equal(await admin.locator('#base-admin-workspace').isVisible(),false);assert.equal(await admin.locator('#admin-site-preview').isVisible(),false);
-    const beforeReopen=passwords();await admin.keyboard.press('Escape');await admin.locator('#modal-profil').waitFor({state:'hidden'});
-    assert.equal(await admin.locator('#owner-home').isVisible(),true);assert.equal(await admin.locator('#spotivity-top').isVisible(),false);assert.equal(passwords(),beforeReopen);
-    await management(admin);
-    pass('Escape closes management back to the owner homepage, and its profile uses the same session without entering the public catalog');
+    assert.equal(await admin.locator('#owner-home-profile').count(),0);assert.equal(await admin.locator('#owner-home [data-owner-action="profile"]').count(),0);
+    assert.equal(await admin.locator('#modal-profil').isVisible(),false);assert.equal(await admin.locator('#admin-site-preview').isVisible(),false);
+    const beforeReopen=passwords();
+    assert.equal(await admin.locator('#owner-home').isVisible(),true);assert.equal(await admin.locator('#spotivity-top').isVisible(),false);
+    await management(admin);assert.equal(passwords(),beforeReopen);assert.equal(await admin.evaluate(async()=>(await db.auth.getSession()).data.session.access_token),token);
+    pass('Escape returns to the owner homepage without profile links, while management remains available in the same Auth session');
 
     const previewOwner=await pageFor({clock:true});let previewAccessCalls=0;
     previewOwner.on('request',request=>{const url=new URL(request.url());if(url.hostname===host&&url.pathname==='/rest/v1/rpc/get_admin_access')previewAccessCalls++;});
     await previewOwner.goto(base,{waitUntil:'networkidle'});await login(previewOwner,'admin@example.test');
-    await previewOwner.locator('#btn-administreaza-baza').click();await previewOwner.locator('#base-admin-workspace').waitFor({state:'visible'});
+    await management(previewOwner);await previewOwner.locator('#base-admin-workspace').waitFor({state:'visible'});
     await selectBase(previewOwner,ids.second,'Court B');
     const previewSession=await previewOwner.evaluate(async()=>(await db.auth.getSession()).data.session.access_token),previewPasswordCount=passwords(),previewNavigationCount=navigations.length;
     await previewSite(previewOwner);
@@ -375,12 +375,12 @@ async function fits(page,selector,label){
     assert.ok(retryCourts.length);assert.ok(retryCourts.every(name=>['Court A','Court A2','Court Tennis','Court B'].includes(name)));
     pass('a temporary permission-service outage clears private content while keeping owner retry/site-preview/logout access and the public catalog hidden');
 
-    const logoutOwner=await pageFor();await logoutOwner.goto(base,{waitUntil:'networkidle'});await login(logoutOwner,'admin@example.test');await logoutOwner.locator('#btn-administreaza-baza').click();await logoutOwner.locator('#btn-deconectare-administrare').click();
+    const logoutOwner=await pageFor();await logoutOwner.goto(base,{waitUntil:'networkidle'});await login(logoutOwner,'admin@example.test');await management(logoutOwner);await logoutOwner.locator('#btn-deconectare-administrare').click();
     await logoutOwner.locator('#base-admin-workspace').waitFor({state:'hidden'});await logoutOwner.locator('#spotivity-top').waitFor({state:'visible'});
     assert.equal(await logoutOwner.evaluate(async()=>(await db.auth.getSession()).data.session),null);assert.equal(await logoutOwner.locator('#spotivity-top').evaluate(node=>node.inert),false);assert.equal(await logoutOwner.locator('#container-meniu-terenuri').innerText(),'');
     pass('the owner workspace has a working logout control that restores public browsing and clears the management session');
 
-    const restoringOwner=await pageFor();await restoringOwner.goto(base,{waitUntil:'networkidle'});await login(restoringOwner,'admin@example.test');await restoringOwner.locator('#btn-administreaza-baza').click();
+    const restoringOwner=await pageFor();await restoringOwner.goto(base,{waitUntil:'networkidle'});await login(restoringOwner,'admin@example.test');await management(restoringOwner);
     let releaseProfile,enteredProfile,profileGateTimeout;
     const profileEntered=new Promise((resolve,reject)=>{profileGateTimeout=setTimeout(()=>reject(new Error('Expected initial owner profile read')),15000);enteredProfile=()=>{clearTimeout(profileGateTimeout);resolve();};});
     const profileReleased=new Promise(resolve=>releaseProfile=resolve);
@@ -405,7 +405,7 @@ async function fits(page,selector,label){
     await profile(restoringOwner);await restoringOwner.locator('#modal-auth').waitFor({state:'visible'});await restoringOwner.locator('#inchide-auth').click();
     pass('logout during a blocked initial profile restore cannot resurrect the owner identity and leaves public browsing and sign-in usable');
 
-    const baseEditor=await pageFor();await baseEditor.goto(base,{waitUntil:'networkidle'});await login(baseEditor,'bob@example.test');await baseEditor.locator('#btn-administreaza-baza').click();await baseEditor.waitForLoadState('networkidle');
+    const baseEditor=await pageFor();await baseEditor.goto(base,{waitUntil:'networkidle'});await login(baseEditor,'bob@example.test');await management(baseEditor);await baseEditor.waitForLoadState('networkidle');
     assert.equal(await baseEditor.locator('#manual-teren option').count(),0);assert.equal(await baseEditor.locator('#container-meniu-terenuri .admin-court-card').count(),0);
     const editorAccess=await raw(baseEditor,async()=>(await db.rpc('get_admin_access')).data);assert.equal(editorAccess.can_manage,true);assert.deepEqual(editorAccess.courts,[]);assert.deepEqual(editorAccess.bases.map(b=>b.id),[ids.other]);
     const editorAttack=await raw(baseEditor,async()=>db.from('terenuri').update({pret:1}).eq('nume','Hidden Court').select('id'));assert.equal(editorAttack.data?.length||0,0);
@@ -415,7 +415,7 @@ async function fits(page,selector,label){
     assert.equal(stale.role.data.length,1);assert.equal(stale.access.data.can_manage,false);assert.equal(await baseEditor.locator('#btn-administreaza-baza').isVisible(),false);assert.equal(await baseEditor.locator('#spotivity-top').isVisible(),true);assert.equal(await baseEditor.locator('#spotivity-top').evaluate(node=>node.inert),false);
     pass('a leftover administrator row with no real court or base grant does not expose the management entry');
 
-    const restricted=await pageFor();await restricted.goto(base,{waitUntil:'networkidle'});await login(restricted,'admin@example.test');await restricted.locator('#btn-administreaza-baza').click();await restricted.locator('#base-admin-workspace').waitFor({state:'visible'});await restricted.waitForLoadState('networkidle');
+    const restricted=await pageFor();await restricted.goto(base,{waitUntil:'networkidle'});await login(restricted,'admin@example.test');await management(restricted);await restricted.locator('#base-admin-workspace').waitFor({state:'visible'});await restricted.waitForLoadState('networkidle');
     assert.equal(await restricted.locator('#base-admin-workspace.base-admin-super').count(),0);
     assert.equal(await restricted.locator('#sectiune-dashboard .super-admin-only:visible').count(),0);assert.equal(await restricted.locator('#btn-cereri-baze-admin').isVisible(),false);
     const restrictedAccess=await raw(restricted,async()=>({access:await db.rpc('get_admin_access'),applications:await db.from('cereri_baze_sportive').select('*'),court:await db.from('terenuri').update({pret:1}).eq('nume','Court Excluded').select('id')}));

@@ -326,7 +326,7 @@
     }
 
     window.openSpotivityOwnerHomeAction = async function(action, options = {}) {
-        if (!ownerView || !userId) return false;
+        if (!ownerView || !userId || action === 'profile') return false;
         window.closeSpotivityOwnerHomeMenu?.(false);
         if (action === 'site') { viewSite(); return true; }
         if (action === 'administration') { await enterManagement(); return true; }
@@ -336,10 +336,6 @@
         const navigation = ++navigationRequest;
         const origin = document.activeElement;
         const current = () => userId === owner && generation === captured && navigation === navigationRequest && ownerView;
-        if (action === 'profile') {
-            if (window.getSpotivityProfileUser?.()?.id !== owner) return false;
-            return await window.openSpotivityProfile?.({ guard: current });
-        }
         const verified = await window.refreshSpotivityAdminAccess({ force: action === 'retry' });
         if (!current() || !verified) return false;
         if (action === 'retry') return true;

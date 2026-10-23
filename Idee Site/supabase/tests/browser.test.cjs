@@ -29,10 +29,7 @@ async function openProfile(page) {
     await page.locator('#btn-inchide-administrare').click();
     await page.locator('#base-admin-workspace').waitFor({state:'hidden'});
   }
-  if (await page.locator('#owner-home').isVisible()) {
-    await page.locator('#owner-home-profile').click();
-    return;
-  }
+  assert.equal(await page.locator('#owner-home').isVisible(),false,'Facility administrators use the management menu instead of a profile entry');
   const profile = page.locator('#btn-top-cont');
   if (await profile.isVisible()) {
     await profile.click();
