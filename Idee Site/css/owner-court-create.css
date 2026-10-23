@@ -1,0 +1,50 @@
+#modal-owner-add-court { padding: 16px; box-sizing: border-box; }
+#modal-owner-add-court [hidden] { display: none !important; }
+#modal-owner-add-court .owner-court-panel {
+    box-sizing: border-box;
+    width: min(560px, 100%);
+    max-width: 100%;
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding: 24px;
+    border: 1px solid rgba(216, 182, 106, .35);
+    background: #142119;
+    color: #f5f0e3;
+}
+#modal-owner-add-court .owner-court-header { align-items: center; gap: 12px; }
+#modal-owner-add-court .titlu-modal { margin: 0; color: #edca82; font-size: 23px; }
+#modal-owner-add-court .buton-inchidere { position: static; flex-shrink: 0; min-width: 44px; min-height: 44px; color: #edca82; }
+#owner-court-base { margin: 12px 0 20px; color: #d3ddcc; line-height: 1.5; overflow-wrap: anywhere; }
+#owner-court-form { min-width: 0; }
+#owner-court-form .owner-court-fields { display: grid; gap: 16px; }
+#owner-court-form .grup-input { margin: 0; min-width: 0; }
+#owner-court-form :is(input, select) { box-sizing: border-box; max-width: 100%; min-width: 0; font: inherit; }
+#owner-court-form :is(input:not([type="checkbox"]), select) {
+    width: 100%;
+    min-height: 46px;
+    padding: 10px 12px;
+    border: 1px solid rgba(216, 182, 106, .3);
+    border-radius: 10px;
+    color: #f5f0e3;
+    background: #1c2c21;
+}
+#owner-court-form label { color: #f5f0e3; }
+#owner-court-hours { min-width: 0; margin: 0; padding: 12px; border: 1px solid rgba(216, 182, 106, .3); border-radius: 12px; }
+#owner-court-hours legend { padding: 0 5px; color: #edca82; font-weight: 600; }
+#modal-owner-add-court .owner-court-hint { margin: 8px 0 12px; color: #bdcaba; font-size: 13px; line-height: 1.55; overflow-wrap: anywhere; }
+#owner-court-hours .owner-court-hours-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
+#owner-court-hours label { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border: 1px solid rgba(216, 182, 106, .22); border-radius: 8px; background: rgba(216, 182, 106, .04); font-size: 13px; cursor: pointer; }
+#owner-court-hours input[type="checkbox"] { width: 17px; height: 17px; flex-shrink: 0; accent-color: #d8b66a; }
+#owner-court-status { min-height: 1.5em; margin: 16px 0; color: #edca82; font-size: 14px; line-height: 1.55; overflow-wrap: anywhere; }
+#owner-court-status[data-kind="error"] { color: #ffc2bc; }
+#owner-court-form #owner-court-submit { width: 100%; min-height: 48px; margin: 0; padding: 12px 16px; border-radius: 12px; background: linear-gradient(135deg, #edca82, #cfaa58); border: 1px solid #d8b66a; color: #20190f; font-weight: 700; }
+#owner-court-form #owner-court-submit:disabled { opacity: .65; cursor: wait; }
+#owner-court-form :is(input, select, button):focus-visible { outline: 2px solid #edca82; outline-offset: 3px; }
+@media (max-width: 380px) {
+    #modal-owner-add-court { padding: 10px; }
+    #modal-owner-add-court .owner-court-panel { padding: 16px; max-height: calc(100dvh - 20px); }
+    #modal-owner-add-court .titlu-modal { font-size: 21px; }
+    #owner-court-hours .owner-court-hours-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

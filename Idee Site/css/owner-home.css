@@ -1,0 +1,121 @@
+/* Owner home shares the public site's forest green, gold and sport imagery. */
+#owner-home[hidden], #owner-home [hidden] { display: none !important; }
+#owner-home {
+    --owner-bg: #101a14;
+    --owner-gold: #e1c073;
+    --owner-border: rgba(222, 195, 128, .25);
+    position: relative;
+    min-height: 100vh;
+    min-height: 100dvh;
+    width: 100%;
+    margin: 0;
+    background: var(--owner-bg);
+    color: #f4f2e8;
+    text-align: left;
+    overflow-x: clip;
+}
+#owner-home *, #owner-home *::before, #owner-home *::after { box-sizing: border-box; }
+#owner-home button, #owner-home a { -webkit-tap-highlight-color: transparent; }
+#owner-home button { font-family: inherit; cursor: pointer; }
+#owner-home button:disabled { opacity: .55; cursor: wait; }
+#owner-home button:focus-visible, #owner-home a:focus-visible { outline: 3px solid #f1d38b; outline-offset: 4px; }
+#owner-home svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; }
+.owner-home-header { position: sticky; top: 0; z-index: 120; padding-top: env(safe-area-inset-top); border-bottom: 1px solid var(--owner-border); background: rgba(16, 26, 20, .95); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+.owner-home-nav { max-width: 1180px; min-height: 76px; margin: 0 auto; padding: 10px 28px; display: flex; gap: 18px; align-items: center; }
+.owner-home-brand { display: inline-flex; width: 46px; min-width: 46px; height: 46px; align-items: center; justify-content: center; border-radius: 50%; }
+.owner-home-brand img { width: 36px; height: 36px; object-fit: contain; }
+.owner-home-nav-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.owner-home-nav-copy span { color: #b8c3b7; font-size: 12px; line-height: 1.4; }
+.owner-home-nav-copy strong { color: var(--owner-gold); font-size: 19px; line-height: 1.3; font-weight: 650; }
+#owner-home .owner-home-profile, #owner-home .owner-home-menu-toggle, #owner-home .owner-home-menu-close { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 46px; min-width: 46px; padding: 10px 12px; margin: 0; color: var(--owner-gold); background: transparent; border: 1px solid var(--owner-border); border-radius: 13px; font-size: 14px; font-weight: 600; }
+#owner-home .owner-home-menu-toggle { padding: 10px; }
+.owner-home-content { width: 100%; padding-bottom: max(40px, env(safe-area-inset-bottom)); }
+.owner-home-heading { max-width: 1180px; padding: 34px 28px 24px; margin: 0 auto; }
+.owner-home-eyebrow { margin: 0 0 8px; color: var(--owner-gold); font-size: 12px; font-weight: 600; line-height: 1.5; letter-spacing: .03em; }
+#owner-home h1 { margin: 0; color: #f4f2e8; font-size: clamp(28px, 4vw, 44px); font-weight: 650; line-height: 1.15; letter-spacing: -.025em; }
+.owner-home-summary { margin: 12px 0 0; color: #b9c3b9; font-size: 14px; line-height: 1.6; }
+.owner-home-status { max-width: 1124px; margin: 0 auto 22px; padding: 16px; background: rgba(222, 195, 128, .08); color: #f1dba4; border: 1px solid var(--owner-border); border-radius: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.owner-home-status .owner-button { margin-top: 12px; }
+.owner-home-bases { max-width: 1180px; padding: 0 28px 18px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr)); gap: 16px; }
+.owner-base-card { position: relative; isolation: isolate; overflow: hidden; min-width: 0; padding: 22px; background: #1b2b20; border: 1px solid var(--owner-border); border-radius: 22px; }
+.owner-base-cover { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .13; z-index: -2; }
+.owner-base-card::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(16,26,20,.35), rgba(16,26,20,.9)); z-index: -1; }
+.owner-base-info { display: flex; align-items: center; gap: 15px; min-width: 0; }
+#owner-home .owner-base-avatar { flex: 0 0 66px; width: 66px; height: 66px; border: 2px solid var(--owner-gold); box-shadow: 0 0 0 4px rgba(16,26,20,.55); }
+.owner-base-copy { min-width: 0; }
+#owner-home .owner-base-copy h2 { margin: 0; color: #efce82; font-size: 23px; line-height: 1.25; font-weight: 650; overflow-wrap: anywhere; }
+.owner-base-copy p { margin: 5px 0 0; color: #c2cabe; font-size: 14px; line-height: 1.5; }
+.owner-base-actions { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 10px; }
+.owner-base-permission { color: #bac5b9; font-size: 13px; }
+#owner-home .owner-button { min-height: 44px; min-width: 44px; padding: 11px 16px; margin: 0; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--owner-border); border-radius: 12px; font-size: 13px; font-weight: 600; line-height: 1.4; text-align: center; text-decoration: none; white-space: normal; }
+#owner-home .owner-button svg { width: 18px; height: 18px; }
+#owner-home .owner-button-primary { background: linear-gradient(125deg, #e6c67f, #cba354); border-color: #e6c67f; color: #1c2115; }
+#owner-home .owner-button-secondary { color: #ead59f; background: rgba(222,195,128,.07); }
+#owner-home .owner-button:hover:not(:disabled) { filter: brightness(1.08); }
+.owner-sport-section { position: relative; isolation: isolate; padding: 70px max(28px, calc((100vw - 1124px) / 2)) 58px; }
+.owner-sport-section + .owner-sport-section { padding-top: 90px; }
+.owner-sport-art { position: absolute; inset: 0; z-index: -2; pointer-events: none; overflow: hidden; }
+.owner-sport-art img { position: absolute; right: 0; top: -6%; width: min(100%, 960px); height: 95%; object-fit: cover; object-position: center; opacity: .38; mask-image: linear-gradient(to right, transparent, #000 38%); -webkit-mask-image: linear-gradient(to right, transparent, #000 38%); }
+.owner-sport-art::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, #101a14, rgba(16,26,20,.12) 24%, rgba(16,26,20,.65) 68%, #101a14); }
+.owner-sport-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 18px; margin-bottom: 24px; }
+.owner-sport-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
+#owner-home .owner-sport-heading h2 { margin: 0; color: #f7f1dc; font-size: clamp(32px, 4.5vw, 52px); font-weight: 650; line-height: 1.12; letter-spacing: -.025em; }
+.owner-courts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr)); gap: 20px; align-items: start; }
+.owner-court-card { width: 100%; max-width: 550px; min-width: 0; overflow: hidden; border-radius: 20px; border: 1px solid var(--owner-border); background: rgba(20,34,25,.95); box-shadow: 0 12px 34px rgba(0,0,0,.12); }
+.owner-court-image { position: relative; width: 100%; height: 180px; background: #22352a; overflow: hidden; }
+.owner-court-image > img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.owner-court-image::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(transparent 35%, rgba(12,24,16,.45)); }
+.owner-court-visibility { position: absolute; left: 12px; top: 12px; z-index: 1; max-width: calc(100% - 78px); padding: 6px 10px; border: 1px solid rgba(219,236,210,.25); border-radius: 18px; color: #e6efd9; background: rgba(17,39,25,.88); font-size: 11px; font-weight: 600; line-height: 1.4; }
+.owner-court-visibility.is-hidden { background: rgba(67,44,18,.9); color: #f7d39a; }
+#owner-home .owner-court-add { position: absolute; right: 12px; top: 12px; z-index: 2; width: 44px; height: 44px; padding: 10px; display: inline-flex; align-items: center; justify-content: center; background: #e2c17a; color: #1b271c; border: 1px solid #f6dda6; border-radius: 50%; box-shadow: 0 3px 12px rgba(0,0,0,.15); }
+.owner-court-body { padding: 19px; }
+#owner-home .owner-court-body h3 { margin: 0; font-size: 21px; font-weight: 650; line-height: 1.25; color: #f4ebd2; overflow-wrap: anywhere; }
+.owner-court-location { margin: 7px 0 0; color: #acbaa9; font-size: 12px; line-height: 1.55; overflow-wrap: anywhere; }
+.owner-court-price { margin: 13px 0 0; color: #e6c887; font-size: 14px; line-height: 1.4; font-weight: 600; }
+.owner-court-actions { display: grid; gap: 10px; margin-top: 19px; }
+.owner-court-shortcuts { display: flex; flex-wrap: wrap; gap: 8px; }
+.owner-court-shortcuts > .owner-button { flex: 1 1 auto; }
+.owner-home-empty { max-width: 1124px; margin: 28px auto; padding: 28px; border: 1px solid var(--owner-border); border-radius: 18px; background: rgba(222,195,128,.035); }
+#owner-home .owner-home-empty h2 { color: #e6cd92; margin: 0; font-size: 22px; }
+.owner-home-empty p { color: #b9c3b9; margin: 10px 0 0; line-height: 1.6; }
+body.owner-home-menu-open { overflow: hidden; }
+.owner-home-menu { position: fixed; inset: 0; z-index: 100000; padding: 12px; background: rgba(3,11,6,.62); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); display: flex; justify-content: flex-end; align-items: stretch; }
+.owner-home-menu-panel { width: min(100%, 390px); min-width: 0; max-height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: max(22px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom)); border: 1px solid var(--owner-border); border-radius: 22px; background: #142119; box-shadow: 0 25px 80px rgba(0,0,0,.3); }
+.owner-home-menu-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 22px; }
+#owner-home .owner-home-menu-header h2 { color: #ead095; font-size: 22px; margin: 0; font-weight: 600; }
+.owner-home-menu-links { display: flex; flex-direction: column; gap: 8px; }
+#owner-home .owner-home-menu-links > button { display: block; width: 100%; min-height: 54px; padding: 13px 12px; margin: 0; background: transparent; border: 1px solid transparent; border-radius: 12px; color: #e9ce8e; font-size: 19px; line-height: 1.4; font-weight: 550; text-align: left; white-space: normal; overflow-wrap: anywhere; }
+#owner-home .owner-home-menu-links > button:hover { border-color: var(--owner-border); background: rgba(226,193,122,.05); }
+#owner-home .owner-home-menu-links > .owner-menu-logout { margin-top: 16px; padding-top: 17px; border-top: 1px solid var(--owner-border); border-radius: 0; color: #eea79b; font-size: 16px; }
+@media (max-width: 600px) {
+    .owner-home-nav { padding: 8px 16px; gap: 10px; min-height: 68px; }
+    .owner-home-nav-copy span { font-size: 10px; }
+    .owner-home-nav-copy strong { font-size: 16px; }
+    #owner-home .owner-home-profile { padding: 10px; }
+    .owner-home-profile span { display: none; }
+    .owner-home-heading { padding: 27px 18px 21px; }
+    .owner-home-summary { font-size: 12px; }
+    .owner-home-bases { padding: 0 18px 10px; }
+    .owner-base-card { padding: 18px; border-radius: 18px; }
+    #owner-home .owner-base-copy h2 { font-size: 21px; }
+    #owner-home .owner-base-avatar { width: 56px; height: 56px; flex-basis: 56px; }
+    .owner-base-actions { gap: 9px; }
+    .owner-base-actions > .owner-button { flex: 1 1 auto; padding: 10px 12px; font-size: 12px; }
+    .owner-sport-section, .owner-sport-section + .owner-sport-section { padding: 50px 18px 30px; }
+    .owner-sport-heading { gap: 12px; align-items: flex-start; flex-direction: column; margin-bottom: 20px; }
+    .owner-sport-actions { justify-content: flex-start; gap: 8px; }
+    .owner-sport-heading .owner-home-eyebrow { font-size: 10px; }
+    #owner-home .owner-sport-heading h2 { font-size: 32px; }
+    #owner-home .owner-sport-add { padding: 10px 12px; font-size: 11px; max-width: 126px; }
+    .owner-sport-art img { top: 0; right: -25%; width: 125%; max-width: none; height: 580px; object-position: center; opacity: .32; }
+    .owner-courts-grid { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+    .owner-court-card { max-width: none; }
+    .owner-court-image { height: 180px; }
+    .owner-home-status, .owner-home-empty { margin-right: 18px; margin-left: 18px; }
+    .owner-home-menu { padding: 8px; }
+    .owner-home-menu-panel { padding-right: 18px; padding-left: 18px; border-radius: 18px; }
+    #owner-home .owner-home-menu-links > button { font-size: 18px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+    #owner-home .owner-button, #owner-home .owner-court-add { transition: filter .16s ease, background-color .16s ease; }
+}

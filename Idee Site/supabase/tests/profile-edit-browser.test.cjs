@@ -28,7 +28,10 @@ async function openProfile(page) {
   if (await page.locator('#base-admin-workspace').isVisible()) {
     await page.locator('#btn-inchide-administrare').click();
     await page.locator('#base-admin-workspace').waitFor({state: 'hidden'});
-    await page.locator('#spotivity-top').waitFor({state: 'visible'});
+  }
+  if (await page.locator('#owner-home').isVisible()) {
+    await page.locator('#owner-home-profile').click();
+    return;
   }
   const profile = page.locator('#btn-top-cont');
   if (await profile.isVisible()) {

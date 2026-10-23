@@ -236,14 +236,18 @@ async function fits(page){
     await manager.page.locator('#btn-google-login').click();await entered(pending);
     await manager.page.evaluate(()=>{document.querySelector('#btn-google-login').click();document.querySelector('#btn-google-login').click();});
     assert.equal(manager.authorize.length,0);pending.release();
-    await signedIn(manager.page,uid(3));await manager.page.locator('#base-admin-workspace').waitFor({state:'visible'});
+    await signedIn(manager.page,uid(3));await manager.page.locator('#owner-home').waitFor({state:'visible'});
+    assert.equal(await manager.page.locator('#base-admin-workspace').isVisible(),false);
+    await manager.page.locator('#owner-home-menu-toggle').click();
+    await manager.page.locator('#owner-home-menu [data-owner-action="administration"]').click();
+    await manager.page.locator('#base-admin-workspace').waitFor({state:'visible'});
     assert.equal(manager.authorize.length,1);assert.equal(manager.exchanges.length,1);
     const managerData=await manager.page.evaluate(async()=>({access:(await db.rpc('get_admin_access')).data,profile:window.getSpotivityProfileUser(),grants:(await db.from('baze_sportive_admini').select('*')).data}));
     assert.equal(managerData.profile.id,uid(3));assert.equal(managerData.access.can_manage,true);assert.equal(managerData.access.is_super,false);
     assert.ok(managerData.grants.some(row=>row.baza_id===baseId&&row.user_id===uid(3)));
     assert.equal(await manager.page.locator('#btn-cereri-baze-admin').isVisible(),false);
     await manager.page.context().close();
-    pass('an existing manager keeps UUID-bound base grants and its scoped workspace, while repeated clicks start only one OAuth redirect');
+    pass('an existing manager keeps UUID-bound base grants, its scoped homepage and same-page workspace, while repeated clicks start only one OAuth redirect');
 
     const superadmin=await enabledPage({identity:uid(4)});await superadmin.page.locator('#btn-google-login').click();await signedIn(superadmin.page,uid(4));
     const superAccess=await superadmin.page.evaluate(async()=>(await db.rpc('get_admin_access')).data);

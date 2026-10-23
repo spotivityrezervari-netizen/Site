@@ -1,5 +1,15 @@
 # Instalarea protecțiilor Supabase și a rolurilor Spotivity
 
+## 019 — adăugarea unui teren în baza proprie
+
+[019_owner_court_creation.sql](019_owner_court_creation.sql) este aplicată live. RPC-ul `create_managed_court(uuid,text,text,integer,text[])` verifică UUID-ul Auth, emailul confirmat, rolul existent și permisiunea explicită asupra bazei. Blochează rândurile relevante pe durata tranzacției pentru a serializa revocarea accesului, validează numele/sportul/tariful/orele și creează un singur teren. Un trigger privat alocă exact terenul nou creatorului obișnuit, fără schimbarea rolului sau a alocărilor existente.
+
+Inserarea directă în `terenuri` rămâne rezervată superadminului prin politicile permisive și restrictive existente. Mutarea unui teren între baze și schimbarea rolurilor rămân restricționate. Alocarea unui teren fără permisiune explicită asupra bazei nu permite crearea altor terenuri. Constrângerea existentă leagă permisiunile asupra bazelor de un rol `users_admin`; RPC-ul verifică din nou rolul și permisiunea curentă.
+
+Aplicarea a urmat unei probe cu rollback și comparațiilor din aceeași tranzacție: toate rândurile din 48 de tabele, cele 10 scopuri de acces, 111 politici, 32 triggeruri și 91 funcții existente au fost păstrate. Au fost înlocuite numai corpurile celor două guarduri verificate, plus două funcții noi și un trigger nou. Reaplicarea refuză definiții sau configurări necunoscute, pentru a păstra modificările făcute din alte platforme.
+
+Verificări izolate: `tests/owner-court-creation.test.cjs` (14 UUID și 14 numeric) și `tests/owner-home-browser.test.cjs`. Fixture-urile nu se execută în proiectul găzduit. Rezervările, protecția rezervărilor finalizate și politicile Storage rămân active.
+
 ## 018 — profiluri noi prin Google
 
 [018_google_profile_names.sql](018_google_profile_names.sql) a fost aplicată live pe 22 octombrie 2026, după proba cu rollback și verificarea definiției funcției existente. Schimbă numai corpul triggerului privat `create_profile()` pentru profilurile viitoare: păstrează prioritatea numelui introdus la înregistrare, apoi acceptă un `full_name`/`name` valid de la provider. Nu inventează un telefon și nu rescrie profilurile existente.

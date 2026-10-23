@@ -11,6 +11,13 @@
     let refreshing = null;
     let ownerView = false;
     let sitePreview = false;
+    let panelOpen = false;
+    let quickMode = false;
+    let ownerCourts = [];
+    let homeLoading = false;
+    let homeError = '';
+    let adminContextKey = '';
+    let quickOrigin = null;
     let navigationRequest = 0;
     let administrationScroll = 0;
     let catalogWasInert = null;
@@ -30,7 +37,19 @@
         const workspace = byId('base-admin-workspace');
         const overlay = ownerView && !workspace.hidden ? externalModal() : null;
         workspace.inert = !!overlay;
+        const home = byId('owner-home');
+        if (home) home.inert = !!(ownerView && (!workspace.hidden || externalModal()));
         document.body.classList.toggle('base-admin-account-open', !!overlay);
+    }
+
+    function renderOwnerHome() {
+        const detail = {
+            userId, access, courts: ownerCourts,
+            active: ownerView && !sitePreview && !panelOpen,
+            loading: homeLoading, error: homeError
+        };
+        window.renderSpotivityOwnerHome?.(detail);
+        syncAccountOverlay();
     }
 
     function closePublicSurfaces() {
@@ -88,15 +107,18 @@
         byId('base-admin-retry-access').hidden = !retry;
     }
 
-    function showWorkspace({ account = false, focus = false } = {}) {
+    function showWorkspace({ account = false, focus = false, quick = false } = {}) {
         if (sitePreview) return;
         const workspace = byId('base-admin-workspace');
+        quickMode = quick;
+        workspace.classList.toggle('owner-home-modal', quick);
         workspace.hidden = false;
         document.body.classList.add('base-admin-open');
         if (account) {
             byId('modal-profil').style.display = 'none';
             byId('modal-auth').style.display = 'none';
         }
+        renderOwnerHome();
         syncAccountOverlay();
         if (focus && !workspace.inert) byId('btn-inchide-administrare').focus({ preventScroll: true });
     }
@@ -105,14 +127,28 @@
         if (!userId || (!ownerView && !access?.can_manage)) return;
         navigationRequest++;
         administrationScroll = byId('base-admin-workspace').scrollTop;
+        panelOpen = false;
         sitePreview = true;
         close();
         setOwnerView(ownerView);
         renderRole();
+        renderOwnerHome();
         byId('btn-return-to-administration').disabled = false;
         window.scrollTo({ top: 0, behavior: 'instant' });
         byId('btn-return-to-administration').focus({ preventScroll: true });
         Promise.resolve(window.refreshSpotivityPublicCatalog?.()).catch(() => {});
+    }
+
+    function returnOwnerHome() {
+        navigationRequest++;
+        panelOpen = false;
+        sitePreview = false;
+        close();
+        closePublicSurfaces();
+        setOwnerView(ownerView);
+        renderRole();
+        renderOwnerHome();
+        byId('owner-home')?.querySelector('button')?.focus({ preventScroll: true });
     }
 
     async function enterManagement() {
@@ -129,9 +165,12 @@
             // cleared retry shell. Revoked or stale scopes never reopen it.
             if (!verified && (!ownerView || access !== null)) return;
             sitePreview = false;
+            panelOpen = true;
             if (!ownerView) closePublicSurfaces();
             setOwnerView(ownerView);
             renderRole();
+            if (verified && adminContextKey !== `${selectedBaseId}|${signature}`) await renderSelection();
+            if (generation !== captured || userId !== owner || navigation !== navigationRequest) return;
             showWorkspace({ account: true, focus: true });
             byId('base-admin-workspace').scrollTop = administrationScroll;
         } finally {
@@ -142,12 +181,16 @@
     function renderRole() {
         const isSuper = access?.is_super === true;
         byId('base-admin-workspace').classList.toggle('base-admin-super', isSuper);
-        const label = isSuper ? 'Deschide panoul de admin' : 'Administrează baza sportivă';
+        const label = isSuper ? 'Deschide panoul de admin' : 'Administrare baze de date';
         byId('btn-administreaza-baza').textContent = label;
         byId('base-admin-title').textContent = isSuper ? 'Panoul de administrare' : 'Administrează baza sportivă';
         byId('base-admin-select').closest('.base-admin-selector').hidden = isSuper || !access;
-        byId('btn-inchide-administrare').textContent = 'Vezi site-ul';
-        byId('btn-inchide-administrare').setAttribute('aria-label', 'Vezi site-ul');
+        const backLabel = ownerView ? 'Înapoi la terenurile mele' : 'Vezi site-ul';
+        byId('btn-inchide-administrare').textContent = backLabel;
+        byId('btn-inchide-administrare').setAttribute('aria-label', backLabel);
+        byId('btn-inchide-administrare').setAttribute('aria-controls', ownerView ? 'owner-home' : 'spotivity-top');
+        byId('btn-return-to-administration').textContent = ownerView ? 'Înapoi la terenurile mele' : 'Înapoi la administrare';
+        byId('btn-editeaza-profil').hidden = ownerView;
         byId('admin-site-preview').hidden = !sitePreview || !userId || (!ownerView && !access?.can_manage);
         const logout = byId('btn-deconectare-administrare');
         if (logout) logout.hidden = !ownerView;
@@ -157,9 +200,20 @@
         const workspace = byId('base-admin-workspace');
         workspace.hidden = true;
         workspace.inert = false;
+        workspace.classList.remove('owner-home-modal');
+        quickMode = false;
         workspace.querySelectorAll('.modal').forEach(modal => { modal.style.display = 'none'; });
         document.body.classList.remove('base-admin-open');
         document.body.classList.remove('base-admin-account-open');
+    }
+
+    function finishQuickView() {
+        close();
+        renderOwnerHome();
+        const origin = quickOrigin;
+        quickOrigin = null;
+        if (origin?.isConnected && origin.getClientRects().length && !origin.closest('[hidden]')) origin.focus({ preventScroll: true });
+        else byId('owner-home-menu-toggle')?.focus({ preventScroll: true });
     }
 
     function clear({ preserveOwner = false } = {}) {
@@ -167,9 +221,15 @@
             sitePreview = false;
             navigationRequest++;
             administrationScroll = 0;
+            panelOpen = false;
             byId('btn-return-to-administration').disabled = false;
         }
         access = null;
+        ownerCourts = [];
+        quickOrigin = null;
+        adminContextKey = '';
+        homeLoading = false;
+        homeError = preserveOwner ? 'Accesul nu poate fi verificat momentan. Reîncearcă pentru a încărca terenurile tale.' : '';
         signature = '';
         selectedBaseId = null;
         setOwnerView(preserveOwner);
@@ -181,11 +241,13 @@
         window.clearSpotivityAdmin?.();
         if (preserveOwner) {
             accessNotice('Accesul la baza sportivă nu poate fi verificat momentan. Datele administrative au fost închise. Poți reîncerca sau te poți deconecta.', true);
-            showWorkspace();
+            if (panelOpen) showWorkspace();
+            else close();
         } else {
             accessNotice();
             close();
         }
+        renderOwnerHome();
     }
 
     function changeUser(nextUserId) {
@@ -232,10 +294,15 @@
         }
     }
 
-    async function renderSelection() {
-        if (!access?.can_manage || !userId) return;
+    async function renderSelection({ allCourts = false, courtId = null } = {}) {
+        if (!access?.can_manage || !userId) return false;
+        const renderingUser = userId;
+        const renderingGeneration = generation;
+        const renderingBase = selectedBaseId;
+        const renderingSignature = signature;
         const base = access.bases.find(item => item.id === selectedBaseId);
-        const courts = access.is_super ? access.courts : access.courts.filter(court => selectedBaseId === ungrouped
+        const courts = courtId != null ? access.courts.filter(court => String(court.id) === String(courtId))
+            : access.is_super || allCourts ? access.courts : access.courts.filter(court => selectedBaseId === ungrouped
             ? !court.baza_sportiva_id : court.baza_sportiva_id === selectedBaseId);
         byId('base-admin-access-hint').textContent = base
             ? `${base.nume} · ${base.oras || ''}${courts.length ? ` · ${courts.length} ${courts.length === 1 ? 'teren' : 'terenuri'} cu acces` : ' · Acces la prezentarea bazei'}${base.can_edit_details ? '' : ' · Fără permisiune de editare a prezentării'}`
@@ -251,7 +318,92 @@
             selectedBaseId,
             baseAccess: access.is_super ? null : access.bases
         });
+        if (userId !== renderingUser || generation !== renderingGeneration
+            || selectedBaseId !== renderingBase || signature !== renderingSignature) return false;
+        adminContextKey = courtId != null ? `court:${courtId}|${renderingSignature}`
+            : `${allCourts ? 'all:' : ''}${renderingBase}|${renderingSignature}`;
+        return true;
     }
+
+    window.openSpotivityOwnerHomeAction = async function(action, options = {}) {
+        if (!ownerView || !userId) return false;
+        window.closeSpotivityOwnerHomeMenu?.(false);
+        if (action === 'site') { viewSite(); return true; }
+        if (action === 'administration') { await enterManagement(); return true; }
+        if (action === 'logout') { byId('btn-deconectare-administrare').click(); return true; }
+        const owner = userId;
+        const captured = generation;
+        const navigation = ++navigationRequest;
+        const origin = document.activeElement;
+        const current = () => userId === owner && generation === captured && navigation === navigationRequest && ownerView;
+        if (action === 'profile') {
+            if (window.getSpotivityProfileUser?.()?.id !== owner) return false;
+            return await window.openSpotivityProfile?.({ guard: current });
+        }
+        const verified = await window.refreshSpotivityAdminAccess({ force: action === 'retry' });
+        if (!current() || !verified) return false;
+        if (action === 'retry') return true;
+        const court = options.courtId == null ? null : ownerCourts.find(item => String(item.id) === String(options.courtId));
+        if (options.courtId != null && !court) return false;
+        const baseId = options.baseId || court?.baza_sportiva_id || (action === 'create' ? null : selectedBaseId);
+        const base = access.bases.find(item => String(item.id) === String(baseId));
+        if ((action === 'base' || action === 'create') && !base?.can_edit_details) return false;
+        if (base) {
+            selectedBaseId = base.id;
+            byId('base-admin-select').value = base.id;
+        }
+        const chatCourtId = action === 'chat' ? court?.id : null;
+        const key = chatCourtId != null ? `court:${chatCourtId}|${signature}` : `all:${selectedBaseId}|${signature}`;
+        if (adminContextKey !== key && !await renderSelection({ allCourts: true, courtId: chatCourtId })) return false;
+        if (!current()) return false;
+        byId('modal-profil').style.display = 'none';
+        byId('modal-auth').style.display = 'none';
+        panelOpen = false;
+        quickOrigin = origin;
+        showWorkspace({ quick: true });
+        let target;
+        if (action === 'court' && court) {
+            target = byId(`modal-setari-${court.id}`);
+            if (target) target.style.display = 'flex';
+        } else if (action === 'manual' && ownerCourts.length) {
+            if (court) byId('manual-teren').value = court.nume;
+            target = byId('modal-rezervare-manuala');
+            target.style.display = 'flex';
+            await window.actualizeazaOreManualAdmin();
+        } else if (action === 'chat' && ownerCourts.length) {
+            byId('btn-vezi-chat-admin').click();
+            target = byId('modal-chat-admin');
+        } else if (action === 'program' && ownerCourts.length) {
+            if (court) {
+                window.initializeazaTabel([court.nume]);
+                byId('modal-tabel-program').style.display = 'flex';
+            } else window.deschideProgramAdmin(options.sport || '');
+            target = byId('modal-tabel-program');
+        } else if (action === 'history' && ownerCourts.length) {
+            target = byId('modal-istoric'); target.style.display = 'flex';
+        } else if (action === 'base') {
+            target = byId('modal-baze-admin');
+            await window.openSpotivityBaseEditor(base.id);
+        } else if (action === 'create') {
+            window.openSpotivityOwnerCourtCreate({ base, sport: options.sport || court?.sport || '', userId: owner });
+            target = byId('modal-owner-add-court');
+        }
+        if (!current()) return false;
+        if (!target || !['flex', 'block'].includes(target.style.display)) {
+            close(); renderOwnerHome(); return false;
+        }
+        if (!target.matches('[role="dialog"]') && !target.querySelector('[role="dialog"]')) {
+            target.setAttribute('role', 'dialog');
+            target.setAttribute('aria-modal', 'true');
+            const heading = target.querySelector('h1, h2, h3');
+            if (heading) {
+                heading.id ||= `${target.id}-heading`;
+                target.setAttribute('aria-labelledby', heading.id);
+            } else target.setAttribute('aria-label', 'Administrarea terenurilor');
+        }
+        target.querySelector('button, input, select, [tabindex]')?.focus({ preventScroll: true });
+        return true;
+    };
 
     window.refreshSpotivityAdminAccess = async function({ force = false } = {}) {
         if (!userId) return false;
@@ -279,15 +431,43 @@
             }
             const nextSignature = JSON.stringify(next);
             const changed = nextSignature !== signature;
-            const enteringOwner = !ownerView && !next.is_super && !sitePreview;
+            const enteringOwner = !ownerView && !next.is_super;
+            if (changed && quickMode) {
+                close();
+                adminContextKey = '';
+                window.clearSpotivityAdmin?.();
+            }
             access = next;
             signature = nextSignature;
             setOwnerView(!next.is_super);
             renderRole();
             byId('btn-administreaza-baza').hidden = false;
             if (ownerView) {
-                accessNotice(changed || force ? 'Se încarcă terenurile bazei tale sportive…' : '');
-                showWorkspace({ account: enteringOwner, focus: enteringOwner });
+                homeError = '';
+                if (enteringOwner) {
+                    panelOpen = false;
+                    byId('modal-profil').style.display = 'none';
+                    byId('modal-auth').style.display = 'none';
+                    close();
+                }
+                if (changed || force) {
+                    homeLoading = true;
+                    // Remove stale cards before reading the freshly authorized IDs.
+                    ownerCourts = [];
+                    renderOwnerHome();
+                    const ids = next.courts.map(court => court.id);
+                    const hydrated = [];
+                    for (let start = 0; start < ids.length; start += 100) {
+                        const { data: rows, error: courtError } = await db.from('terenuri')
+                            .select('*').in('id', ids.slice(start, start + 100)).order('id');
+                        if (generation !== captured || userId !== owner || request !== currentRequest) return false;
+                        if (courtError) throw courtError;
+                        const allowed = new Set(ids.map(String));
+                        hydrated.push(...(rows || []).filter(court => allowed.has(String(court.id))));
+                    }
+                    ownerCourts = hydrated;
+                    homeLoading = false;
+                }
             }
             if (changed || force) {
                 const options = access.bases.map(base => ({ value: base.id, label: `${base.nume} · ${base.oras || ''}` }));
@@ -297,10 +477,13 @@
                 byId('base-admin-select').replaceChildren(...options.map(option => new Option(option.label, option.value)));
                 byId('base-admin-select').value = selectedBaseId;
                 byId('base-admin-select').disabled = options.length < 2;
-                await renderSelection();
+                // The existing panel is initialized on demand. Background access
+                // refreshes must not clear forms opened over the owner's home.
+                if (!ownerView || panelOpen) await renderSelection();
             }
             if (generation === captured && userId === owner && request === currentRequest) {
                 accessNotice();
+                renderOwnerHome();
                 syncAccountOverlay();
             }
             return generation === captured && userId === owner && request === currentRequest && access?.can_manage === true;
@@ -315,8 +498,8 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         byId('btn-administreaza-baza').addEventListener('click', enterManagement);
-        byId('btn-return-to-administration').addEventListener('click', enterManagement);
-        byId('btn-inchide-administrare').addEventListener('click', viewSite);
+        byId('btn-return-to-administration').addEventListener('click', () => ownerView ? returnOwnerHome() : enterManagement());
+        byId('btn-inchide-administrare').addEventListener('click', () => ownerView ? returnOwnerHome() : viewSite());
         let logout = byId('btn-deconectare-administrare');
         if (!logout) {
             logout = document.createElement('button');
@@ -346,12 +529,18 @@
             access.bases = access.bases.map(base => base.id === event.detail.id ? { ...base, ...event.detail } : base);
             signature = JSON.stringify(access);
             renderBaseCard();
+            renderOwnerHome();
         });
+        window.addEventListener('spotivity:owner-court-created', event => {
+            if (event.detail?.userId === userId && ownerView) returnOwnerHome();
+        });
+        byId('inchide-profil').addEventListener('click', () => { navigationRequest++; });
         byId('base-admin-select').addEventListener('change', async event => {
             selectedBaseId = event.target.value;
             await renderSelection();
         });
         document.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && ownerView) navigationRequest++;
             if (byId('base-admin-workspace').hidden) return;
             if (ownerView && externalModal()) return;
             if (event.key === 'Escape') {
@@ -362,11 +551,12 @@
                 event.stopPropagation();
                 if (openModal) {
                     byId('base-admin-workspace').querySelectorAll('.modal').forEach(modal => { modal.style.display = 'none'; });
-                    byId('btn-inchide-administrare').focus({ preventScroll: true });
+                    if (quickMode) finishQuickView();
+                    else byId('btn-inchide-administrare').focus({ preventScroll: true });
                 } else if (Array.from(byId('base-admin-workspace').querySelectorAll('.sub-pagina-oras')).some(page => page.style.display === 'block')) {
                     window.inchideSubPaginaOras?.();
                     byId('btn-inchide-administrare').focus({ preventScroll: true });
-                } else if (ownerView) byId('btn-inchide-administrare').focus({ preventScroll: true });
+                } else if (ownerView) returnOwnerHome();
                 else viewSite();
                 return;
             }
@@ -386,10 +576,14 @@
             else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
         }, true);
         new MutationObserver(mutations => {
-            if (!ownerView || !mutations.some(mutation => !mutation.target.closest?.('#base-admin-workspace'))) return;
+            if (!ownerView) return;
+            if (quickMode && !Array.from(byId('base-admin-workspace').querySelectorAll('.modal'))
+                .some(modal => ['flex', 'block'].includes(modal.style.display))) {
+                finishQuickView();
+            }
             const hadOverlay = byId('base-admin-workspace').inert;
             syncAccountOverlay();
-            if (hadOverlay && !byId('base-admin-workspace').inert) byId('btn-inchide-administrare').focus({ preventScroll: true });
+            if (hadOverlay && !byId('base-admin-workspace').hidden && !byId('base-admin-workspace').inert && !quickMode) byId('btn-inchide-administrare').focus({ preventScroll: true });
         }).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['style', 'hidden'] });
         // A fresh server check when opening the profile, after tab focus, and while active
         // exposes approvals and removes revoked access without a second login.

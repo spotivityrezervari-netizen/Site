@@ -70,45 +70,51 @@
             await syncAuthUser(restoredAuth.user);
             window.actualizeazaButonCont();
         }
-        function mount() {
-            if (btnTopCont) {
-                btnTopCont.addEventListener('click', async () => {
-                    if (state.user) {
-                        const owner = state.user.id;
-                        const refreshStatus = document.getElementById('profil-refresh-status');
-                        if (refreshStatus) { refreshStatus.hidden = true; refreshStatus.textContent = ''; }
-                        try {
-                            await window.refreshSpotivityProfile();
-                        } catch {
-                            if (state.user?.id !== owner) return;
-                            if (refreshStatus) {
-                                refreshStatus.textContent = window.dict?.[window.lang]?.profil_edit_profile_refresh_failed
-                                    || 'Datele profilului nu au putut fi reîncărcate. Încearcă din nou.';
-                                refreshStatus.hidden = false;
-                            }
-                        }
-                        if (state.user?.id !== owner) return;
-                        if(document.getElementById('profil-nume')) document.getElementById('profil-nume').innerText = state.user.nume || (window.dict[window.lang]['nume_nesetat'] || 'Nume Nesetat');
-                        document.getElementById('profil-email').innerText = state.user.email;
-                        if(document.getElementById('profil-telefon')) document.getElementById('profil-telefon').innerText = state.user.telefon || "-";
-
-                        const nrActiveSpan = document.getElementById('nr-active');
-                        if (nrActiveSpan) {
-                            const { data } = await db.from('rezervari').select('id, booking_group_id, data_str, ora, stare, timestamp_start').eq('client_user_id', owner).neq('stare', 'anulata');
-                            if (state.user?.id !== owner) return;
-                            const activeGroups = new Set();
-                            if (data) {
-                                data.forEach(r => {
-                                    if (!window.esteRezervareTrecuta(r.data_str, r.ora, r.timestamp_start)) activeGroups.add(r.booking_group_id || r.id);
-                                });
-                            }
-                            nrActiveSpan.innerText = activeGroups.size;
-                        }
-                        if (state.user?.id !== owner) return;
-                        document.getElementById('modal-profil').style.display = 'flex';
-                    } else document.getElementById('modal-auth').style.display = 'flex';
-                });
+        window.openSpotivityProfile = async function({ guard = () => true } = {}) {
+            if (!guard()) return false;
+            if (!state.user) {
+                if (!guard()) return false;
+                document.getElementById('modal-auth').style.display = 'flex';
+                return true;
             }
+            const owner = state.user.id;
+            const current = () => guard() && state.user?.id === owner;
+            const refreshStatus = document.getElementById('profil-refresh-status');
+            if (!current()) return false;
+            if (refreshStatus) { refreshStatus.hidden = true; refreshStatus.textContent = ''; }
+            try {
+                await window.refreshSpotivityProfile();
+            } catch {
+                if (!current()) return false;
+                if (refreshStatus) {
+                    refreshStatus.textContent = window.dict?.[window.lang]?.profil_edit_profile_refresh_failed
+                        || 'Datele profilului nu au putut fi reîncărcate. Încearcă din nou.';
+                    refreshStatus.hidden = false;
+                }
+            }
+            if (!current()) return false;
+            if(document.getElementById('profil-nume')) document.getElementById('profil-nume').innerText = state.user.nume || (window.dict[window.lang]['nume_nesetat'] || 'Nume Nesetat');
+            document.getElementById('profil-email').innerText = state.user.email;
+            if(document.getElementById('profil-telefon')) document.getElementById('profil-telefon').innerText = state.user.telefon || "-";
+
+            const nrActiveSpan = document.getElementById('nr-active');
+            if (nrActiveSpan) {
+                const { data } = await db.from('rezervari').select('id, booking_group_id, data_str, ora, stare, timestamp_start').eq('client_user_id', owner).neq('stare', 'anulata');
+                if (!current()) return false;
+                const activeGroups = new Set();
+                if (data) {
+                    data.forEach(r => {
+                        if (!window.esteRezervareTrecuta(r.data_str, r.ora, r.timestamp_start)) activeGroups.add(r.booking_group_id || r.id);
+                    });
+                }
+                nrActiveSpan.innerText = activeGroups.size;
+            }
+            if (!current()) return false;
+            document.getElementById('modal-profil').style.display = 'flex';
+            return true;
+        };
+        function mount() {
+            btnTopCont?.addEventListener('click', () => window.openSpotivityProfile());
         }
         return { syncUser: syncAuthUser, renderUser: renderProfileUser, restore, mount };
     };

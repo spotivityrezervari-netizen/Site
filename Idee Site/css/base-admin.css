@@ -1,6 +1,7 @@
 /* Keep facility management inside the public site's green and gold theme. */
 #btn-administreaza-baza[hidden], #base-admin-workspace[hidden],
 #base-admin-workspace [hidden] { display: none !important; }
+#btn-editeaza-profil[hidden] { display: none !important; }
 body.base-admin-open { overflow: hidden; }
 .admin-site-preview[hidden], .home-menu-open .admin-site-preview { display: none !important; }
 .admin-site-preview { display: flex; align-items: center; justify-content: space-between; gap: 12px; max-width: 1000px; margin: 0 auto; padding: 8px 18px; border-bottom: 1px solid rgba(216,182,106,.25); color: #d8b66a; }
@@ -31,6 +32,10 @@ body.base-admin-owner.base-admin-account-open #base-admin-workspace { pointer-ev
     color: #f5f0e3;
 }
 .base-admin-panel { width: min(1200px, 100%); margin: 0 auto; min-width: 0; }
+/* Existing dialogs can open directly over the owner's court catalogue. */
+.base-admin-workspace.owner-home-modal { padding: 0; background: transparent; overflow: hidden; }
+.owner-home-modal > .base-admin-panel { visibility: hidden; }
+.base-admin-workspace.owner-home-modal .modal { visibility: visible; }
 .base-admin-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px 20px; margin-bottom: 16px; }
 .base-admin-heading-copy { min-width: 0; }
 .base-admin-heading h2 { margin: 5px 0 0; font-size: clamp(21px, 3vw, 30px); line-height: 1.3; }

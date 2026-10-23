@@ -28,7 +28,10 @@ async function openProfile(page) {
   if (await page.locator('#base-admin-workspace').isVisible()) {
     await page.locator('#btn-inchide-administrare').click();
     await page.locator('#base-admin-workspace').waitFor({state:'hidden'});
-    await page.locator('#spotivity-top').waitFor({state:'visible'});
+  }
+  if (await page.locator('#owner-home').isVisible()) {
+    await page.locator('#owner-home-profile').click();
+    return;
   }
   const profile = page.locator('#btn-top-cont');
   if (await profile.isVisible()) {
@@ -218,6 +221,10 @@ async function openProfile(page) {
       await target.locator('#btn-executa-login').click();
       await target.locator('#modal-auth').waitFor({state:'hidden'});
       await target.locator('body.base-admin-owner').waitFor();
+      await target.locator('#owner-home').waitFor({state:'visible'});
+      assert.equal(await target.locator('#base-admin-workspace').isVisible(),false,'Ordinary managers start on their scoped court homepage');
+      await target.locator('#owner-home-menu-toggle').click();
+      await target.locator('#owner-home-menu [data-owner-action="administration"]').click();
       await target.locator('#base-admin-workspace').waitFor({state:'visible'});
       assert.equal(await target.locator('#spotivity-top').isVisible(),false,'Ordinary managers enter only their own workspace');
       assert.equal(await target.locator('#spotivity-top').evaluate(node=>node.inert),true);
