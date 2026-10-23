@@ -2,9 +2,9 @@
 (() => {
     'use strict';
     const labels = {
-        ro: { home_search: 'Caută un teren', home_search_hint: 'Caută după nume, sport sau oraș, în toate orașele.', home_search_placeholder: 'Nume, sport sau oraș', loading: 'Se încarcă…', error: 'Terenurile nu au putut fi încărcate.', basesError: 'Bazele sportive nu au putut fi încărcate.', retry: 'Încearcă din nou', empty: 'Nu sunt terenuri disponibile în acest oraș.', noResults: 'Nu am găsit terenuri. Încearcă alt nume, sport sau oraș.', noBases: 'Nu sunt baze sportive disponibile în acest oraș.', hour: 'Lei/oră', results: 'terenuri găsite', reserve: 'Rezervă', booking: 'Se deschide terenul…', bookingError: 'Terenul nu mai este disponibil sau nu a putut fi deschis. Încearcă din nou.', close: 'Închide', courts: 'terenuri' },
-        hu: { home_search: 'Pálya keresése', home_search_hint: 'Keress név, sport vagy város alapján, minden városban.', home_search_placeholder: 'Név, sport vagy város', loading: 'Betöltés…', error: 'A pályákat nem sikerült betölteni.', basesError: 'A sportközpontokat nem sikerült betölteni.', retry: 'Újrapróbálkozás', empty: 'Ebben a városban nincsenek elérhető pályák.', noResults: 'Nincs találat. Próbálj más nevet, sportot vagy várost.', noBases: 'Ebben a városban nincsenek elérhető sportközpontok.', hour: 'Lej/óra', results: 'talált pálya', reserve: 'Foglalás', booking: 'Pálya megnyitása…', bookingError: 'A pálya nem érhető el. Próbáld újra.', close: 'Bezárás', courts: 'pálya' },
-        en: { home_search: 'Find a court', home_search_hint: 'Search by name, sport or city, across all cities.', home_search_placeholder: 'Name, sport or city', loading: 'Loading…', error: 'Courts could not be loaded.', basesError: 'Sports centres could not be loaded.', retry: 'Try again', empty: 'No courts are available in this city.', noResults: 'No courts found. Try another name, sport or city.', noBases: 'No sports centres are available in this city.', hour: 'RON/hour', results: 'courts found', reserve: 'Book', booking: 'Opening court…', bookingError: 'The court is unavailable or could not be opened. Please try again.', close: 'Close', courts: 'courts' }
+        ro: { home_search: 'Caută un teren', home_search_hint: 'Caută după nume, sport sau oraș, în toate orașele.', home_search_placeholder: 'Nume, sport sau oraș', loading: 'Se încarcă…', error: 'Terenurile nu au putut fi încărcate.', basesError: 'Bazele sportive nu au putut fi încărcate.', retry: 'Încearcă din nou', empty: 'Nu sunt terenuri disponibile în acest oraș.', noResults: 'Nu am găsit terenuri. Încearcă alt nume, sport sau oraș.', noBases: 'Nu sunt baze sportive disponibile în acest oraș.', hour: 'Lei/oră', results: 'terenuri găsite', reserve: 'Rezervă', booking: 'Se deschide terenul…', bookingError: 'Terenul nu mai este disponibil sau nu a putut fi deschis. Încearcă din nou.', close: 'Închide', singleCourt: 'teren', courts: 'terenuri' },
+        hu: { home_search: 'Pálya keresése', home_search_hint: 'Keress név, sport vagy város alapján, minden városban.', home_search_placeholder: 'Név, sport vagy város', loading: 'Betöltés…', error: 'A pályákat nem sikerült betölteni.', basesError: 'A sportközpontokat nem sikerült betölteni.', retry: 'Újrapróbálkozás', empty: 'Ebben a városban nincsenek elérhető pályák.', noResults: 'Nincs találat. Próbálj más nevet, sportot vagy várost.', noBases: 'Ebben a városban nincsenek elérhető sportközpontok.', hour: 'Lej/óra', results: 'talált pálya', reserve: 'Foglalás', booking: 'Pálya megnyitása…', bookingError: 'A pálya nem érhető el. Próbáld újra.', close: 'Bezárás', singleCourt: 'pálya', courts: 'pálya' },
+        en: { home_search: 'Find a court', home_search_hint: 'Search by name, sport or city, across all cities.', home_search_placeholder: 'Name, sport or city', loading: 'Loading…', error: 'Courts could not be loaded.', basesError: 'Sports centres could not be loaded.', retry: 'Try again', empty: 'No courts are available in this city.', noResults: 'No courts found. Try another name, sport or city.', noBases: 'No sports centres are available in this city.', hour: 'RON/hour', results: 'courts found', reserve: 'Book', booking: 'Opening court…', bookingError: 'The court is unavailable or could not be opened. Please try again.', close: 'Close', singleCourt: 'court', courts: 'courts' }
     };
     for (const [language, copy] of Object.entries(labels)) {
         if (window.dict?.[language]) {
@@ -133,12 +133,19 @@
                 card.dataset.homeBaseId = base.id;
                 const photo = window.createSportsBasePhoto?.(base, 'sports-base-photo');
                 card.classList.toggle('has-base-cover', !!photo);
-                if (photo) card.append(photo);
+                photo?.addEventListener('error', () => card.classList.remove('has-base-cover'), { once: true });
+                const media = node('span', 'sports-base-card-media');
+                if (photo) media.append(photo);
                 const avatar = window.createSportsBaseAvatar?.(base);
-                if (avatar) card.append(avatar);
-                card.append(node('span', 'sports-base-city', cityName(base.oras)), node('strong', 'sports-base-name', base.nume));
-                if (base.descriere?.trim()) card.append(node('span', 'home-base-summary', base.descriere));
-                card.append(node('span', 'sports-base-count', `${courts.filter(court => court.baza_sportiva_id === base.id).length} ${t('courts')}`));
+                if (avatar) media.append(avatar);
+                const content = node('span', 'sports-base-card-content');
+                const heading = node('span', 'sports-base-card-heading');
+                const count = courts.filter(court => court.baza_sportiva_id === base.id).length;
+                heading.append(node('strong', 'sports-base-name', base.nume),
+                    node('span', 'sports-base-count', `${count} ${t(count === 1 ? 'singleCourt' : 'courts')}`));
+                content.append(node('span', 'sports-base-city', cityName(base.oras)), heading);
+                if (base.descriere?.trim()) content.append(node('span', 'home-base-summary', base.descriere));
+                card.append(media, content);
                 directory.append(card);
             }
         }

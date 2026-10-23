@@ -225,12 +225,18 @@
                 card.dataset.baseId = base.id;
                 const photo = window.createSportsBasePhoto?.(base, 'sports-base-photo');
                 card.classList.toggle('has-base-cover', !!photo);
-                if (photo) card.append(photo);
+                photo?.addEventListener('error', () => card.classList.remove('has-base-cover'), { once: true });
+                const media = element('span', 'sports-base-card-media');
+                if (photo) media.append(photo);
                 const avatar = window.createSportsBaseAvatar?.(base);
-                if (avatar) card.append(avatar);
-                card.append(element('span', 'sports-base-city', base.oras), element('span', 'sports-base-name', base.nume));
+                if (avatar) media.append(avatar);
+                const content = element('span', 'sports-base-card-content');
+                const heading = element('span', 'sports-base-card-heading');
                 const count = baseCourts(base.id).length;
-                card.append(element('span', 'sports-base-count', `${count} ${t(count === 1 ? 'single' : 'count')}`));
+                heading.append(element('span', 'sports-base-name', base.nume),
+                    element('span', 'sports-base-count', `${count} ${t(count === 1 ? 'single' : 'count')}`));
+                content.append(element('span', 'sports-base-city', base.oras), heading);
+                card.append(media, content);
                 grid.append(card);
             });
             content.replaceChildren(grid);
