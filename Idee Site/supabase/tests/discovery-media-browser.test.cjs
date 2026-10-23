@@ -422,6 +422,25 @@ let checks = 0;
     assert.ok(steps.filter(step => step > .025 && Math.abs(step-Math.round(step)) > .025).length >= 6,
       `Slow autoplay must render actual fractional-pixel movement: ${JSON.stringify(steps)}`);
 
+    await homepage.evaluate(() => {
+      const origin = scrollY;
+      let step = 0;
+      window.discoveryViewportScrollTimer = setInterval(() => {
+        scrollTo({top: origin+(++step % 2)*8, behavior: 'instant'});
+      }, 40);
+    });
+    await homepage.waitForFunction(() => document.querySelector('[data-home-courts="Fotbal"]').dataset.autoScroll === 'paused');
+    const viewportScrollPosition = await visualPosition();
+    await homepage.waitForTimeout(400);
+    assert.ok(Math.abs(await visualPosition()-viewportScrollPosition) < 1,
+      'Autoplay must leave the rendering thread free while the page keeps scrolling vertically');
+    await homepage.evaluate(() => clearInterval(window.discoveryViewportScrollTimer));
+    await homepage.waitForFunction(start => {
+      const node = document.querySelector('[data-home-courts="Fotbal"]');
+      return node.getBoundingClientRect().left-node.querySelector('[data-discovery-court]').getBoundingClientRect().left > start+4;
+    }, viewportScrollPosition, {timeout: 3000});
+    pass('vertical viewport scrolling pauses autoplay and promptly resumes it after scrolling settles');
+
     await strip.hover();
     await homepage.waitForFunction(() => document.querySelector('[data-home-courts="Fotbal"]').dataset.autoScroll === 'paused');
     const hoveredPosition = await visualPosition();
@@ -458,9 +477,38 @@ let checks = 0;
     assert.ok(Math.abs(await visualPosition()-heldPosition) < 1, 'Touch must stop autoplay before the drag');
     await touch.send('Input.dispatchTouchEvent', {type: 'touchMove', touchPoints: [{x: point.x-100, y: point.y}]});
     await touch.send('Input.dispatchTouchEvent', {type: 'touchEnd', touchPoints: []});
+    for (const sport of ['Fotbal', 'Baschet', 'Tenis', 'Volei', 'Tenis Picior']) {
+      const art = homepage.locator(`[data-home-sport="${sport}"] .home-hero-art`);
+      for (const distance of [-180, 180]) {
+        await art.evaluate(node => {
+          const box = node.getBoundingClientRect();
+          scrollTo({top: scrollY+box.top+box.height*.65-350, behavior: 'instant'});
+        });
+        await homepage.waitForTimeout(250);
+        const gesture = await art.evaluate(node => {
+          const box = node.getBoundingClientRect();
+          const x = box.left+box.width/2, y = box.top+box.height*.65;
+          return {x, y, before: scrollY, artIsTarget: document.elementFromPoint(x, y) === node,
+            overflow: getComputedStyle(node).overflow, heroOverflow: getComputedStyle(node.closest('.home-sport-hero')).overflow};
+        });
+        assert.equal(gesture.artIsTarget, true, `${sport}: the background must receive the native touch gesture`);
+        assert.equal(gesture.overflow, 'clip', `${sport}: decorative art must not create a nested scroll container`);
+        assert.equal(gesture.heroOverflow, 'clip', `${sport}: the hero must not create a nested scroll container`);
+        await touch.send('Input.dispatchTouchEvent', {type: 'touchStart', touchPoints: [{x: gesture.x, y: gesture.y}]});
+        for (let step = 1; step <= 12; step++) {
+          await touch.send('Input.dispatchTouchEvent', {type: 'touchMove', touchPoints: [{x: gesture.x, y: gesture.y+distance*step/12}]});
+          await homepage.waitForTimeout(16);
+        }
+        await touch.send('Input.dispatchTouchEvent', {type: 'touchEnd', touchPoints: []});
+        await homepage.waitForFunction(({before, distance}) => distance < 0 ? scrollY > before+60 : scrollY < before-60,
+          {before: gesture.before, distance}, {timeout: 3000});
+      }
+    }
     await touch.send('Emulation.setTouchEmulationEnabled', {enabled: false});
     await touch.detach();
     assert.equal(await homepage.locator('#modal-rezervare').isVisible(), false, 'A horizontal touch drag must not open a booking');
+    await strip.scrollIntoViewIfNeeded();
+    pass('trusted touch gestures starting on every sport background scroll the page in both directions');
     pass('cards move in fractional pixels without clones or controls, pause for hover/focus/touch/manual scrolling and resume after the interaction grace period');
 
     await homepage.locator('#home-nav-search-input').fill('Court');

@@ -18,6 +18,8 @@ body.pagina-publica { background: #101a14; }
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: var(--home-art-height) auto;
+    /* Clip the artwork without creating a nested scroll container on iOS. */
+    overflow: clip;
     isolation: isolate;
     padding: 0 0 32px;
     background: #101a14;
@@ -51,10 +53,11 @@ body.pagina-publica { background: #101a14; }
     margin: 0;
     border: 0;
     border-radius: 0;
-    overflow: hidden;
+    overflow: clip;
     background: #101a14;
     box-shadow: none;
-    pointer-events: none;
+    /* Let a swipe on the photograph pan the page, including under the copy. */
+    touch-action: pan-y pinch-zoom;
 }
 .pagina-publica .home-sport-hero .home-hero-art img {
     position: absolute;
@@ -65,6 +68,10 @@ body.pagina-publica { background: #101a14; }
     object-position: var(--home-art-position);
     transform: scale(1.035);
     z-index: 1;
+    pointer-events: none;
+    -webkit-user-drag: none;
+    -webkit-user-select: none;
+    user-select: none;
 }
 /* Keep the scene sharp and soften only its edges into the forest background. */
 .pagina-publica .home-hero-art::before,

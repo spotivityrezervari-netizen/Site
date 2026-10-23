@@ -77,6 +77,42 @@ async function sharedHomeLayout(owner,client){
     if(screenshotDir)await owner.screenshot({path:join(screenshotDir,`owner-client-home-${width}.png`),fullPage:true});
   }
 }
+async function ownerTouchScrolling(page){
+  await page.setViewportSize({width:390,height:844});
+  const touch=await page.context().newCDPSession(page);
+  await touch.send('Emulation.setTouchEmulationEnabled',{enabled:true});
+  async function swipe(from,to){
+    await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[from]});
+    for(let step=1;step<=10;step++){
+      await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:from.x+(to.x-from.x)*step/10,y:from.y+(to.y-from.y)*step/10}]});
+      await page.waitForTimeout(20);
+    }
+    await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+    await page.waitForTimeout(400);
+  }
+  for(const hero of await page.locator('#owner-home .owner-sport-section').all()){
+    for(const distance of [-140,140]){
+      await hero.evaluate(node=>scrollTo({top:scrollY+node.getBoundingClientRect().top+150,behavior:'instant'}));
+      await page.waitForTimeout(850);
+      assert.equal(await hero.evaluate(node=>document.elementFromPoint(190,200)===node.querySelector('.home-hero-art')),true,
+        'A swipe starts on the photograph, without a clipping layer intercepting it');
+      const before=await page.evaluate(()=>scrollY);
+      await swipe({x:190,y:200},{x:190,y:200+distance});
+      const after=await page.evaluate(()=>scrollY);
+      assert.ok(distance<0?after>before+60:after<before-60,`Owner background swipe ${distance}: ${before} → ${after}`);
+    }
+  }
+  const strip=page.locator('#owner-home .home-courts-strip').first();
+  await strip.evaluate(node=>{node.scrollLeft=0;scrollTo({top:scrollY+node.getBoundingClientRect().top-120,behavior:'instant'});});
+  await page.waitForTimeout(400);
+  const before=await strip.evaluate(node=>({x:node.scrollLeft,y:scrollY,max:node.scrollWidth-node.clientWidth}));
+  await swipe({x:280,y:170},{x:100,y:170});
+  const after=await strip.evaluate(node=>({x:node.scrollLeft,y:scrollY}));
+  assert.ok(before.max>10&&after.x>before.x+Math.min(60,before.max/2),
+    `Court rows still accept native horizontal swipes: ${JSON.stringify({before,after})}`);
+  assert.ok(Math.abs(after.y-before.y)<2,'A horizontal court swipe does not move the page vertically');
+  await touch.detach();
+}
 (async()=>{
   const fixture=await createFixture();let browser;
   const {pg,root,requests}=fixture;
@@ -177,6 +213,8 @@ async function sharedHomeLayout(owner,client){
     assert.equal(await admin.locator('#owner-home-menu-toggle').getAttribute('aria-expanded'),'false');
     assert.equal(await admin.locator('#owner-home-menu-toggle').evaluate(node=>node===document.activeElement),true);
     pass('the hamburger and owner drawer actions fit phones and desktop, and Escape closes the menu');
+    await ownerTouchScrolling(admin);
+    pass('owner backgrounds accept native vertical swipes in both directions after closing the drawer, while court rows still swipe horizontally');
     const addSport=()=>admin.locator('#owner-home-add-sport');
     assert.equal(await addSport().innerText(),'Adaugă teren în alt sport');
     for(const width of [390,1440]){
