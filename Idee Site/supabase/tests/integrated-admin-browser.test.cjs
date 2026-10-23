@@ -42,6 +42,9 @@ async function ownerAction(page,action){
 async function management(page){
   if(await page.locator('#base-admin-workspace').isVisible())return;
   await ownerAction(page,'administration');
+  assert.equal(await page.locator('#owner-home').isVisible(),true,'Visible owner administration navigation opens the new homepage');
+  // Shared widget contracts are verified separately from the owner's homepage route.
+  await page.evaluate(()=>window.openSpotivityAdminWorkspace());
   await page.locator('#base-admin-workspace').waitFor({state:'visible'});
   await page.waitForLoadState('networkidle');
 }

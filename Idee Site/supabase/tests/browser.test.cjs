@@ -222,6 +222,9 @@ async function openProfile(page) {
       assert.equal(await target.locator('#base-admin-workspace').isVisible(),false,'Ordinary managers start on their scoped court homepage');
       await target.locator('#owner-home-menu-toggle').click();
       await target.locator('#owner-home-menu [data-owner-action="administration"]').click();
+      assert.equal(await target.locator('#base-admin-workspace').isVisible(),false,'The visible owner administration entry opens the new homepage');
+      // Exercise shared legacy widgets through their explicit integration API.
+      await target.evaluate(()=>window.openSpotivityAdminWorkspace());
       await target.locator('#base-admin-workspace').waitFor({state:'visible'});
       assert.equal(await target.locator('#spotivity-top').isVisible(),false,'Ordinary managers enter only their own workspace');
       assert.equal(await target.locator('#spotivity-top').evaluate(node=>node.inert),true);

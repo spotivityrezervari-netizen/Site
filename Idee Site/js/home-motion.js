@@ -3,8 +3,9 @@
     'use strict';
 
     function init() {
-        const main = document.getElementById('home-main');
-        if (!main || !document.body.classList.contains('pagina-publica') || !window.requestAnimationFrame) return;
+        const roots = ['home-main', 'owner-home'].map(id => document.getElementById(id)).filter(Boolean);
+        if (!roots.length || !document.body.classList.contains('pagina-publica') || !window.requestAnimationFrame) return;
+        const findAll = selector => roots.flatMap(root => Array.from(root.querySelectorAll(selector)));
         const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
         const strips = new Map();
         const revealed = new WeakSet();
@@ -136,7 +137,7 @@
 
         function measure() {
             measurement = 0;
-            for (const strip of main.querySelectorAll('.home-courts-strip[data-home-courts]')) if (!strips.has(strip)) addStrip(strip);
+            for (const strip of findAll('.home-courts-strip[data-home-courts], .home-courts-strip[data-owner-courts]')) if (!strips.has(strip)) addStrip(strip);
             for (const [strip, state] of strips) {
                 if (!strip.isConnected) {
                     state.listeners.forEach(remove => remove());
@@ -158,7 +159,7 @@
                 if (state.max <= 1 || reducedMotion.matches) setStatus(state, 'idle');
             }
             if (revealObserver) {
-                for (const section of main.querySelectorAll('.home-sport-hero, .home-bases-section')) {
+                for (const section of findAll('.home-sport-hero, .home-bases-section')) {
                     if (revealed.has(section)) continue;
                     revealed.add(section);
                     const bounds = section.getBoundingClientRect();
@@ -176,6 +177,7 @@
 
         function updateBlocked() {
             blocked = document.hidden || document.body.classList.contains('fara-scroll') || document.body.classList.contains('home-menu-open')
+                || document.body.classList.contains('owner-home-menu-open') || document.body.classList.contains('owner-home-dialog-open')
                 || [...document.querySelectorAll('.modal')].some(modal => getComputedStyle(modal).display !== 'none');
             if (blocked) {
                 cancelAnimationFrame(frame);
@@ -188,11 +190,12 @@
             } else wake();
         }
 
-        new MutationObserver(records => {
+        const contentObserver = new MutationObserver(records => {
             if (records.some(record => record.target.matches?.('.home-courts-strip')
                 || record.type === 'childList' && [...record.addedNodes, ...record.removedNodes].some(node => node.nodeType === 1
                     && (node.matches('.home-courts-strip, .home-sport-hero, .home-bases-section') || node.querySelector('.home-courts-strip'))))) scheduleMeasure();
-        }).observe(main, { subtree: true, childList: true, attributes: true, attributeFilter: ['aria-busy'] });
+        });
+        roots.forEach(root => contentObserver.observe(root, { subtree: true, childList: true, attributes: true, attributeFilter: ['aria-busy'] }));
         new MutationObserver(records => {
             if (records.some(record => record.target === document.body || record.target.matches?.('.modal'))) updateBlocked();
         }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class', 'style', 'hidden'] });
@@ -211,7 +214,7 @@
             if (section) reveal(section);
         });
         const motionPreferenceChanged = () => {
-            if (reducedMotion.matches) main.querySelectorAll('.home-section-pending').forEach(reveal);
+            if (reducedMotion.matches) findAll('.home-section-pending').forEach(reveal);
             scheduleMeasure();
         };
         if (reducedMotion.addEventListener) reducedMotion.addEventListener('change', motionPreferenceChanged);

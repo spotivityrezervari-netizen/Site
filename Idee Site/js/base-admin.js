@@ -145,13 +145,15 @@
         sitePreview = false;
         close();
         closePublicSurfaces();
+        byId('modal-profil').style.display = 'none';
+        byId('modal-auth').style.display = 'none';
         setOwnerView(ownerView);
         renderRole();
         renderOwnerHome();
         byId('owner-home')?.querySelector('button')?.focus({ preventScroll: true });
     }
 
-    async function enterManagement() {
+    async function enterManagement({ workspace = false } = {}) {
         const owner = userId;
         if (!owner) return;
         const captured = generation;
@@ -164,6 +166,11 @@
             // On a temporary outage an established owner may reopen only the
             // cleared retry shell. Revoked or stale scopes never reopen it.
             if (!verified && (!ownerView || access !== null)) return;
+            if (ownerView && !workspace) {
+                returnOwnerHome();
+                window.scrollTo({ top: 0, behavior: 'instant' });
+                return;
+            }
             sitePreview = false;
             panelOpen = true;
             if (!ownerView) closePublicSurfaces();
@@ -178,11 +185,16 @@
         }
     }
 
+    // Shared widget integrations retain an explicit, freshly authorized panel
+    // entry. The owner's navigation labels always use the new homepage.
+    window.openSpotivityAdminWorkspace = () => enterManagement({ workspace: true });
+
     function renderRole() {
         const isSuper = access?.is_super === true;
         byId('base-admin-workspace').classList.toggle('base-admin-super', isSuper);
         const label = isSuper ? 'Deschide panoul de admin' : 'Administrare baze de date';
         byId('btn-administreaza-baza').textContent = label;
+        byId('btn-administreaza-baza').setAttribute('aria-controls', ownerView ? 'owner-home' : 'base-admin-workspace');
         byId('base-admin-title').textContent = isSuper ? 'Panoul de administrare' : 'Administrează baza sportivă';
         byId('base-admin-select').closest('.base-admin-selector').hidden = isSuper || !access;
         const backLabel = ownerView ? 'Înapoi la terenurile mele' : 'Vezi site-ul';

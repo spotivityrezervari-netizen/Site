@@ -13,6 +13,7 @@ if(screenshotDir)mkdirSync(screenshotDir,{recursive:true});
 let checks=0;
 const pass=label=>{checks++;console.log('PASS',label);};
 const visible=async(page,selector)=>page.locator(selector).waitFor({state:'visible'});
+const ownerCourtNames=page=>page.locator('#owner-home-sports .owner-court-card .home-court-name').allTextContents();
 async function openOwnerMenu(page){
   if(!await page.locator('#owner-home-menu').isVisible())await page.locator('#owner-home-menu-toggle').click();
   await visible(page,'#owner-home-menu');
@@ -41,12 +42,39 @@ async function fits(page,selector,label){
       const rect=node.getBoundingClientRect();
       return {viewport:innerWidth,page:document.documentElement.scrollWidth,left:rect.left,right:rect.right,
         controls:[...node.querySelectorAll('button,input,select,textarea')].filter(item=>item.getClientRects().length&&getComputedStyle(item).visibility!=='hidden').map(item=>{
-          const box=item.getBoundingClientRect();return {id:item.id,action:item.dataset.ownerAction,left:box.left,right:box.right,width:box.width,height:box.height};
-        }).filter(item=>item.left<rect.left-1||item.right>rect.right+1)};
+          const box=item.getBoundingClientRect();return {id:item.id,action:item.dataset.ownerAction,left:box.left,right:box.right,width:box.width,height:box.height,scrollingRow:!!item.closest('.home-courts-strip')};
+        // Compact client-style court rows deliberately scroll within the page.
+        }).filter(item=>!item.scrollingRow&&(item.left<rect.left-1||item.right>rect.right+1))};
     });
     assert.ok(dimensions.page<=width+1&&dimensions.left>=-1&&dimensions.right<=width+1,`${label} ${width}: ${JSON.stringify(dimensions)}`);
     assert.deepEqual(dimensions.controls,[],`${label} controls ${width}`);
     if(screenshotDir)await page.screenshot({path:join(screenshotDir,`owner-${label}-${width}.png`)});
+  }
+}
+async function sharedHomeLayout(owner,client){
+  for(const width of [390,1440]){
+    await owner.setViewportSize({width,height:width<768?844:1000});await client.setViewportSize({width,height:width<768?844:1000});
+    const clientCard=client.locator('.home-courts-strip .home-court-card').filter({hasText:'Court A'}).first();await clientCard.waitFor({state:'visible'});
+    const reference=await clientCard.evaluate(node=>({width:node.getBoundingClientRect().width,photoHeight:node.querySelector('.home-court-photo').getBoundingClientRect().height}));
+    const sections=await owner.locator('.owner-sport-section').evaluateAll(nodes=>nodes.map(section=>{
+      const strip=section.querySelector('.home-courts-strip'),cards=[...strip.children],plus=cards[0],court=cards.find(node=>node.matches('.owner-court-card'));
+      return {sport:section.dataset.ownerSport,hero:section.classList.contains('home-sport-hero'),copy:!!section.querySelector('.home-hero-copy .home-sport-heading'),
+        art:!!section.querySelector('.home-hero-art img[data-sport-background]'),heroHeight:section.getBoundingClientRect().height,
+        direction:getComputedStyle(strip).flexDirection,overflow:getComputedStyle(strip).overflowX,stripWidth:strip.clientWidth,scrollWidth:strip.scrollWidth,
+        plusFirst:plus.matches('.owner-add-court-card.home-court-card[data-owner-action="create"]'),plusCount:cards.filter(node=>node.matches('[data-owner-action="create"]')).length,
+        cards:cards.map(node=>({shared:node.classList.contains('home-court-card'),width:node.getBoundingClientRect().width,height:node.getBoundingClientRect().height})),
+        photoHeight:court?.querySelector('.home-court-photo')?.getBoundingClientRect().height};
+    }));
+    assert.equal(sections.length,2);
+    for(const section of sections){
+      assert.ok(section.hero&&section.copy&&section.art&&section.heroHeight>350,`Large shared sport hero at ${width}: ${JSON.stringify(section)}`);
+      assert.equal(section.direction,'row');assert.ok(['auto','scroll'].includes(section.overflow));
+      assert.equal(section.plusFirst,true);assert.equal(section.plusCount,1);
+      for(const card of section.cards){assert.equal(card.shared,true);assert.ok(Math.abs(card.width-reference.width)<1,`Client and owner card width at ${width}: ${JSON.stringify(section)}`);assert.ok(Math.abs(card.height-section.cards[0].height)<1,'The PLUS card has the same height as the court cards');}
+      assert.ok(Math.abs(section.photoHeight-reference.photoHeight)<1,`Shared client card image dimensions at ${width}`);
+      if(width===390)assert.ok(section.scrollWidth>section.stripWidth,'Phone court rows scroll horizontally');
+    }
+    if(screenshotDir)await owner.screenshot({path:join(screenshotDir,`owner-client-home-${width}.png`),fullPage:true});
   }
 }
 (async()=>{
@@ -116,10 +144,24 @@ async function fits(page,selector,label){
     const admin=await pageFor();await admin.goto(base,{waitUntil:'networkidle'});await login(admin,'admin@example.test');await visible(admin,'#owner-home');
     assert.equal(await admin.locator('#base-admin-workspace').isVisible(),false);assert.equal(await admin.locator('#spotivity-top').isVisible(),false);
     const token=await admin.evaluate(async()=>(await db.auth.getSession()).data.session.access_token),logins=passwords();
-    assert.deepEqual((await admin.locator('.owner-court-card h3,.owner-court-card h4').allTextContents()).sort(),['Court A','Court B']);
+    assert.deepEqual((await ownerCourtNames(admin)).sort(),['Court A','Court B']);
     assert.doesNotMatch(await admin.locator('#owner-home').innerText(),/Court Excluded|Hidden Court|Baza Străină/);
     assert.deepEqual(await admin.locator('.owner-sport-section').evaluateAll(nodes=>nodes.map(node=>node.dataset.ownerSport)).then(values=>values.sort()),['Fotbal','Tenis']);
-    pass('ordinary managers land on an app-style homepage containing only their allocated courts, grouped by sport, including inactive courts');
+    await sharedHomeLayout(admin,client);
+    assert.equal(await admin.locator('#owner-home-nav .home-brand img').isVisible(),true);
+    assert.equal(await admin.locator('#owner-home-nav-search.home-nav-search').isVisible(),true);
+    await admin.locator('#owner-home-nav-search-input').fill('Court');await admin.locator('#owner-home-nav-search-input').press('Enter');
+    await visible(admin,'#owner-home-dialog[data-owner-dialog="search"]');
+    const searchInput=admin.locator('#owner-home-search-input'),searchNames=()=>admin.locator('#owner-home-search-results .home-court-name').allTextContents();
+    for(const [query,names]of [['Court',['Court A','Court B']],['Cluj-Napoca',['Court A','Court B']],['Fotbal',['Court A']],['Tenis',['Court B']],['Court Excluded',[]],['Hidden Court',[]]]){
+      await searchInput.fill(query);
+      await admin.waitForFunction(({query,names})=>document.getElementById('owner-home-search-input')?.value===query&&JSON.stringify([...document.querySelectorAll('#owner-home-search-results .home-court-name')].map(node=>node.textContent).sort())===JSON.stringify(names),{query,names}).catch(async error=>{throw new Error(`Owner search ${JSON.stringify(query)}: ${JSON.stringify(await searchNames())}; ${error.message}`);});
+      assert.deepEqual((await searchNames()).sort(),names);
+      assert.doesNotMatch(await admin.locator('#owner-home-search-results').innerText(),/Court Excluded|Hidden Court|Baza Străină/);
+    }
+    assert.equal(await admin.locator('#modal-cautare-terenuri').isVisible(),false);
+    await admin.keyboard.press('Escape');await admin.locator('#owner-home-dialog').waitFor({state:'hidden'});
+    pass('ordinary managers get the client hero and compact rows with a first PLUS card, only allocated sports/courts, and owner-scoped name/city/sport search');
     await admin.reload({waitUntil:'networkidle'});await visible(admin,'#owner-home');
     assert.equal(passwords(),logins);assert.equal(await admin.evaluate(async()=>(await db.auth.getSession()).data.session.access_token),token);
     assert.equal(await admin.locator('#base-admin-workspace').isVisible(),false);assert.equal(await admin.locator('#modal-profil').isVisible(),false);
@@ -136,26 +178,34 @@ async function fits(page,selector,label){
     assert.equal(await admin.locator('#owner-home-menu-toggle').evaluate(node=>node===document.activeElement),true);
     pass('the hamburger and owner drawer actions fit phones and desktop, and Escape closes the menu');
     assert.equal(await admin.locator('#owner-home-profile').count(),0);
+    assert.equal(await admin.locator('#owner-home-nav .home-profile-button,#owner-home-nav [data-owner-action="profile"]').count(),0);
     assert.equal(await admin.locator('#btn-editeaza-profil').isVisible(),false);
     assert.equal(await admin.evaluate(()=>window.openSpotivityOwnerHomeAction('profile')),false);
     assert.equal(await admin.locator('#modal-profil').isVisible(),false);
     pass('ordinary managers have no profile entry in the header or drawer and cannot open it through the owner dispatcher');
-    const beforePanel={logins:passwords(),navigation:navigations.length,pages:admin.context().pages().length};
-    await ownerAction(admin,'administration');await visible(admin,'#base-admin-workspace');
-    assert.equal(await admin.locator('#owner-home').isVisible(),false);assert.equal(await admin.locator('#base-admin-workspace .super-admin-only:visible').count(),0);
-    assert.equal(passwords(),beforePanel.logins);assert.equal(navigations.length,beforePanel.navigation);assert.equal(admin.context().pages().length,beforePanel.pages);
+    const beforeEntry={logins:passwords(),navigation:navigations.length,pages:admin.context().pages().length};
+    await ownerAction(admin,'administration');await visible(admin,'#owner-home');await admin.waitForLoadState('networkidle');
+    assert.equal(await admin.locator('#base-admin-workspace').isVisible(),false);assert.equal(await admin.locator('#modal-profil').isVisible(),false);
+    assert.deepEqual((await ownerCourtNames(admin)).sort(),['Court A','Court B']);
+    await ownerAction(admin,'site');await visible(admin,'#admin-site-preview');
+    await admin.locator('#btn-top-cont').click();await visible(admin,'#modal-profil');
+    assert.equal(await admin.locator('#btn-administreaza-baza').getAttribute('aria-controls'),'owner-home');
+    await admin.locator('#btn-administreaza-baza').click();await visible(admin,'#owner-home');await admin.waitForLoadState('networkidle');
+    assert.equal(await admin.locator('#base-admin-workspace').isVisible(),false);assert.equal(await admin.locator('#modal-profil').isVisible(),false);
+    assert.equal(await admin.locator('#admin-site-preview').isVisible(),false);
+    assert.equal(passwords(),beforeEntry.logins);assert.equal(navigations.length,beforeEntry.navigation);assert.equal(admin.context().pages().length,beforeEntry.pages);
     assert.equal(await admin.evaluate(async()=>(await db.auth.getSession()).data.session.access_token),token);assert.equal(await admin.locator('iframe').count(),0);
     await home(admin);
-    pass('Administrare baze de date opens the existing complete scoped panel in the same tab and session, then returns to the owner homepage');
+    pass('Administrare baze de date opens the new scoped owner homepage in the same tab and session without exposing the legacy panel');
     const card=id=>admin.locator(`.owner-court-card[data-owner-court-id="${id}"]`);
-    await card(seeded.a.id).locator('[data-owner-action="court"]').click();await visible(admin,`#modal-setari-${seeded.a.id}`);
+    await card(seeded.a.id).click();await visible(admin,`#modal-setari-${seeded.a.id}`);
     assert.equal(await admin.locator(`#pret-${seeded.a.id}`).inputValue(),'100');
     const settingsDialog=admin.locator(`#modal-setari-${seeded.a.id}`);
     assert.equal(await settingsDialog.getAttribute('role'),'dialog');assert.equal(await settingsDialog.getAttribute('aria-modal'),'true');
     const settingsHeading=await settingsDialog.getAttribute('aria-labelledby');
     assert.ok(settingsHeading);assert.match(await admin.locator(`#${settingsHeading}`).innerText(),/Court A/);
     assert.equal(await admin.locator('#modal-terenuri').isVisible(),false);await admin.keyboard.press('Escape');await home(admin);
-    assert.equal(await card(seeded.a.id).locator('[data-owner-action="court"]').evaluate(node=>node===document.activeElement),true,'Closing quick settings restores focus to the original court action');
+    assert.equal(await card(seeded.a.id).evaluate(node=>node===document.activeElement),true,'Closing quick settings restores focus to the original court card');
     pass('a court card opens an accessible existing settings dialog for that exact court and restores focus after Escape');
     await admin.locator('.owner-sport-section[data-owner-sport="Fotbal"] [data-owner-action="program"]').click();await visible(admin,'#modal-tabel-program');await admin.waitForLoadState('networkidle');
     assert.deepEqual(await admin.locator('#tabel-teren option').allTextContents(),['Court A']);
@@ -163,20 +213,21 @@ async function fits(page,selector,label){
     await admin.locator('#tabel-data').fill('2034-06-15');await admin.evaluate(()=>window.incarcaTabelProgram());await admin.waitForLoadState('networkidle');
     assert.ok(!(await admin.locator('#tabel-corp-program').innerText()).includes('Se Încarcă'));await admin.keyboard.press('Escape');await home(admin);
     pass('each sport schedule uses the existing scoped calendar and accepts dates in any supported year');
-    await card(seeded.a.id).locator('[data-owner-action="manual"]').click();await visible(admin,'#modal-rezervare-manuala');
-    assert.equal(await admin.locator('#manual-teren').inputValue(),'Court A');
+    await ownerAction(admin,'manual');await visible(admin,'#modal-rezervare-manuala');
     assert.deepEqual((await admin.locator('#manual-teren option').allTextContents()).sort(),['Court A','Court B']);
-    await admin.locator('#manual-client').fill('Invitat owner home');await admin.locator('#manual-data').fill(seeded.tomorrow);await admin.locator('#manual-ora').selectOption('15:00');await admin.locator('#manual-pret').fill('100 RON');
+    await admin.locator('#manual-teren').selectOption('Court B');
+    assert.equal(await admin.locator('#manual-teren').inputValue(),'Court B');
+    await admin.locator('#manual-client').fill('Invitat owner home');await admin.locator('#manual-data').fill(seeded.tomorrow);await admin.locator('#manual-ora').selectOption('15:00');await admin.locator('#manual-pret').fill('200 RON');
     await admin.locator('#btn-rezervare-manuala').click();await admin.waitForFunction(()=>!document.getElementById('btn-rezervare-manuala').disabled);
     const booking=(await root(()=>pg.query("select * from public.rezervari where email_client='Invitat owner home'"))).rows;
-    assert.equal(booking.length,1);assert.equal(booking[0].teren,'Court A');assert.equal(booking[0].client_user_id,null);
+    assert.equal(booking.length,1);assert.equal(booking[0].teren,'Court B');assert.equal(booking[0].client_user_id,null);
     await admin.keyboard.press('Escape');await home(admin);
-    pass('manual reservation shortcuts select the matching base/court and retain the existing booking workflow');
-    await card(seeded.a.id).locator('[data-owner-action="chat"]').click();await visible(admin,'#modal-chat-admin');
-    await admin.waitForFunction(()=>document.querySelector('#chat-admin-lista-conversații')?.textContent.includes('Mesaj Nord'));
-    const chat=await admin.locator('#chat-admin-lista-conversații').innerText();assert.ok(!chat.includes('Mesaj Sud')&&!chat.includes('Mesaj privat străin'));
+    pass('the manual reservation menu retains all allocated courts and books the explicitly selected court through the existing workflow');
+    await ownerAction(admin,'chat');await visible(admin,'#modal-chat-admin');
+    await admin.waitForFunction(()=>['Mesaj Nord','Mesaj Sud'].every(text=>document.querySelector('#chat-admin-lista-conversații')?.textContent.includes(text)));
+    const chat=await admin.locator('#chat-admin-lista-conversații').innerText();assert.ok(chat.includes('Mesaj Nord')&&chat.includes('Mesaj Sud')&&!chat.includes('Mesaj privat străin'));
     await admin.keyboard.press('Escape');await home(admin);
-    pass('chat shortcuts reopen the existing chat with the allocated court scope and no unrelated conversations');
+    pass('the chat menu retains conversations for all allocated courts and excludes unrelated conversations');
     await ownerAction(admin,'base');await visible(admin,'#admin-baza-form');
     assert.equal(await admin.locator('#baza-nume').inputValue(),'Baza Nord');
     await admin.keyboard.press('Escape');await home(admin);
@@ -192,8 +243,12 @@ async function fits(page,selector,label){
     pass('the new homepage preserves RLS boundaries and the prohibition on cancelling completed reservations');
     const beforeCreate=await root(async()=>({courts:(await pg.query('select to_jsonb(t) value from public.terenuri t order by id')).rows,otherAdmin:(await pg.query('select to_jsonb(t) value from public.users_admin t where user_id<>$1 order by id',[uid(3)])).rows}));
     const createRequests=()=>requests.filter(record=>record.source==='browser'&&record.path==='/rest/v1/rpc/create_managed_court');
-    assert.equal(await card(seeded.a.id).locator('[data-owner-action="create"]').isVisible(),true);
-    await card(seeded.a.id).locator('[data-owner-action="create"]').click();await visible(admin,'#modal-owner-add-court');
+    const footballPlus=()=>admin.locator('.owner-sport-section[data-owner-sport="Fotbal"] .owner-add-court-card[data-owner-action="create"]');
+    assert.equal(await footballPlus().getAttribute('data-owner-base-id'),null);
+    assert.equal(await footballPlus().getAttribute('data-owner-sport'),'Fotbal');
+    await footballPlus().click();await visible(admin,'#owner-home-dialog[data-owner-dialog="base-choice"]');
+    await admin.locator(`#owner-home-dialog [data-owner-base-choice="${ids.first}"]`).click();await visible(admin,'#modal-owner-add-court');
+    assert.match(await admin.locator('#owner-court-base').innerText(),/Baza Nord/);assert.equal(await admin.locator('#owner-court-sport').inputValue(),'Fotbal');
     await fits(admin,'#modal-owner-add-court .modal-continut','create-court');
     await admin.locator('#owner-court-name').fill('Court Owner New');await admin.locator('#owner-court-sport').selectOption('Baschet');await admin.locator('#owner-court-price').fill('180');
     for(const checkbox of await admin.locator('#owner-court-hours input[type=checkbox]').all())await checkbox.uncheck();
@@ -216,15 +271,23 @@ async function fits(page,selector,label){
 
     await root(()=>pg.query("update public.terenuri set sport='Fotbal' where id=$1",[seeded.b.id]));
     await admin.evaluate(()=>window.refreshSpotivityAdminAccess({force:true}));await admin.waitForLoadState('networkidle');
-    assert.equal(await admin.locator('.owner-sport-section[data-owner-sport="Fotbal"] .owner-sport-heading [data-owner-action="create"]').count(),0,'A sport shared by two permitted bases must not choose a base implicitly');
-    assert.equal(await card(seeded.a.id).locator('[data-owner-action="create"]').getAttribute('data-owner-base-id'),ids.first);
-    assert.equal(await card(seeded.b.id).locator('[data-owner-action="create"]').getAttribute('data-owner-base-id'),ids.second);
+    assert.equal(await footballPlus().count(),1,'A sport shared by two permitted bases keeps one first PLUS card');
+    assert.equal(await footballPlus().getAttribute('data-owner-base-id'),null,'A shared sport must not choose a base implicitly');
     const ambiguousCount=createRequests().length;
+    await footballPlus().click();await visible(admin,'#owner-home-dialog[data-owner-dialog="base-choice"]');
+    const choices=admin.locator('#owner-home-dialog [data-owner-base-choice]');
+    assert.deepEqual((await choices.evaluateAll(nodes=>nodes.map(node=>node.dataset.ownerBaseChoice))).sort(),[ids.first,ids.second].sort());
+    assert.deepEqual(await choices.evaluateAll(nodes=>nodes.map(node=>node.dataset.ownerSport)),['Fotbal','Fotbal']);
+    assert.equal(createRequests().length,ambiguousCount);assert.equal(await admin.locator('#modal-owner-add-court').isVisible(),false);
+    await admin.locator(`#owner-home-dialog [data-owner-base-choice="${ids.second}"]`).click();await visible(admin,'#modal-owner-add-court');
+    assert.match(await admin.locator('#owner-court-base').innerText(),/Baza Sud/);assert.equal(await admin.locator('#owner-court-sport').inputValue(),'Fotbal');
+    assert.equal(await admin.locator('#owner-home-dialog').isVisible(),false);
+    await admin.keyboard.press('Escape');await home(admin);
     assert.equal(await admin.evaluate(()=>window.openSpotivityOwnerHomeAction('create',{sport:'Fotbal'})),false);
     assert.equal(createRequests().length,ambiguousCount);assert.equal(await admin.locator('#base-admin-workspace').isVisible(),false);
     await root(()=>pg.query('update public.terenuri set sport=$2 where id=$1',[seeded.b.id,seeded.b.sport]));
     await admin.evaluate(()=>window.refreshSpotivityAdminAccess({force:true}));await admin.waitForLoadState('networkidle');
-    pass('a sport shared by multiple bases keeps explicit per-court creation targets and rejects an ambiguous add action');
+    pass('a shared sport PLUS asks for an authorized base, passes the chosen base and sport explicitly, and rejects an ambiguous direct add action');
 
     const superadmin=await pageFor();await superadmin.goto(base,{waitUntil:'networkidle'});await login(superadmin,'super@example.test');
     assert.equal(await superadmin.locator('#owner-home').isVisible(),false);await superadmin.locator('#btn-top-cont').click();await visible(superadmin,'#modal-profil');await superadmin.locator('#btn-administreaza-baza').click();await visible(superadmin,'#base-admin-workspace');
