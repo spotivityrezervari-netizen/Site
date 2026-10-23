@@ -1,9 +1,9 @@
 // Public visual settings only. Booking and staff authorization remain in Supabase RLS.
 (() => {
     const defaults = {
-        Fotbal: { sport: 'Fotbal', icona_url: 'assets/imagini/fotbalrealist.png', fundal_url: 'assets/imagini/RealistFotbal1.png', ordine: 1 },
-        Baschet: { sport: 'Baschet', icona_url: 'assets/imagini/baschetrealist.png', fundal_url: 'assets/imagini/RealisBaschet.png', ordine: 2 },
-        Tenis: { sport: 'Tenis', icona_url: 'assets/imagini/tenisrealist.png', fundal_url: 'assets/imagini/RealistTenis.png', ordine: 3 },
+        Fotbal: { sport: 'Fotbal', icona_url: 'assets/imagini/fotbalrealist.png', fundal_url: 'assets/imagini/FotbalFinal.jpeg', ordine: 1 },
+        Baschet: { sport: 'Baschet', icona_url: 'assets/imagini/baschetrealist.png', fundal_url: 'assets/imagini/BaschetFinal.jpeg', ordine: 2 },
+        Tenis: { sport: 'Tenis', icona_url: 'assets/imagini/tenisrealist.png', fundal_url: 'assets/imagini/TenisFINAL.jpeg', ordine: 3 },
         Volei: { sport: 'Volei', icona_url: 'assets/imagini/voleirealist.png', fundal_url: 'assets/imagini/RealistVolei.png', ordine: 4 },
         'Tenis Picior': { sport: 'Tenis Picior', icona_url: 'assets/imagini/fotbalrealist.png', fundal_url: 'assets/imagini/RealistTenispicior.png', ordine: 5 }
     };

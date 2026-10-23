@@ -11,7 +11,13 @@
     const byId = id => document.getElementById(id);
     const knownSports = ['Fotbal', 'Baschet', 'Tenis', 'Volei', 'Tenis Picior'];
     const sportClasses = ['fotbal', 'baschet', 'tenis', 'volei', 'tenis-picior'];
-    const sportImages = ['RealistFotbal1.png', 'RealisBaschet.png', 'RealistTenis.png', 'RealistVolei.png', 'RealistTenispicior.png'];
+    const sportImages = [
+        { file: 'FotbalFinal.jpeg', width: 1600, height: 1020 },
+        { file: 'BaschetFinal.jpeg', width: 1600, height: 1043 },
+        { file: 'TenisFINAL.jpeg', width: 1000, height: 1333 },
+        { file: 'RealistVolei.png', width: 1672, height: 941 },
+        { file: 'RealistTenispicior.png', width: 1672, height: 941 }
+    ];
     const sportName = value => window.normalizeSportName?.(value) || String(value || 'Alte sporturi').trim();
     const displaySport = sport => sport === 'Tenis Picior' ? 'Tenis de picior' : sport;
     const normalize = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('ro-RO').trim();
@@ -340,10 +346,11 @@
             actions.append(actionButton('Program', 'program', { sport }, 'home-reserve-button owner-sport-program'));
             copy.append(heading, actions); section.append(copy);
             if (knownIndex >= 0) {
+                const artwork = sportImages[knownIndex];
                 const art = element('div', 'home-hero-art'); art.setAttribute('aria-hidden', 'true');
                 const image = element('img');
-                image.src = safeImage(window.getSportAppearance?.(sport)?.fundal_url) || `assets/imagini/${sportImages[knownIndex]}`;
-                image.alt = ''; image.dataset.sportBackground = sport; image.width = 1672; image.height = 941;
+                image.src = safeImage(window.getSportAppearance?.(sport)?.fundal_url) || `assets/imagini/${artwork.file}`;
+                image.alt = ''; image.dataset.sportBackground = sport; image.width = artwork.width; image.height = artwork.height;
                 image.loading = index === 0 ? 'eager' : 'lazy'; image.decoding = 'async';
                 if (index === 0) image.setAttribute('fetchpriority', 'high');
                 art.append(image); section.append(art);

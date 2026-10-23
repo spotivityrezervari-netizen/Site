@@ -44,14 +44,15 @@ Pagina principală folosește secțiuni mari pentru fiecare sport, navigare pe d
 
 | Sport | Pictogramă | Fundal |
 | --- | --- | --- |
-| Fotbal | `fotbalrealist.png` | `RealistFotbal.png` |
-| Baschet | `baschetrealist.png` | `RealisBaschet.png` |
-| Tenis | `tenisrealist.png` | `RealistTenis.png` |
+| Fotbal | `fotbalrealist.png` | `FotbalFinal.jpeg` |
+| Baschet | `baschetrealist.png` | `BaschetFinal.jpeg` |
+| Tenis | `tenisrealist.png` | `TenisFINAL.jpeg` |
 | Volei | `voleirealist.png` | `RealistVolei.png` |
+| Tenis de picior | `fotbalrealist.png` | `RealistTenispicior.png` |
 
-Căile sunt relative la `assets/imagini/`. Numele `RealisBaschet.png` corespunde exact fișierului încărcat în GitHub. `sport` identifică una dintre cele patru categorii, `icona_url` și `fundal_url` stabilesc imaginile, iar `ordine` este între 1 și 4. Vizitatorii și conturile autentificate pot citi configurația; numai superadminul poate scrie prin API. Proprietarul proiectului poate edita valorile și din Table Editor/SQL Editor. Sunt acceptate imagini locale și URL-uri HTTPS valide. La indisponibilitatea configurației, site-ul folosește imaginile locale incluse.
+Căile sunt relative la `assets/imagini/`, iar numele respectă exact literele mari și mici ale fișierelor din GitHub. Configurația curentă include cele cinci categorii, cu ordinea între 1 și 5. `sport` folosește cheia canonică `Tenis Picior` pentru tenisul de picior; `icona_url` și `fundal_url` stabilesc imaginile. Vizitatorii și conturile autentificate pot citi configurația; numai superadminul poate scrie prin API. Proprietarul proiectului poate edita valorile și din Table Editor/SQL Editor. Sunt acceptate imagini locale și URL-uri HTTPS valide. La indisponibilitatea configurației, site-ul folosește imaginile locale incluse. Fundalurile actuale pentru fotbal, baschet și tenis sunt stabilite prin [020_final_sport_backgrounds.sql](020_final_sport_backgrounds.sql), păstrând pictogramele, ordinea și celelalte categorii. Reaplicarea migrării păstrează personalizările ulterioare.
 
-Verificarea înainte/după aplicarea 005 a confirmat aceleași **8 conturi Auth, 5 profile, 2 admini, 5 terenuri, 48 rezervări, 22 mesaje și 24 sloturi**, precum și definiții/stări identice pentru trigger-ele, funcțiile private și politicile existente. Migrările instalate sunt acum **1, 3, 4 și 5**. Pozele specifice terenurilor sunt în continuare în `terenuri.poza`; noul tabel configurează imaginile categoriilor de sport.
+Verificarea înainte/după aplicarea 005 a confirmat aceleași **8 conturi Auth, 5 profile, 2 admini, 5 terenuri, 48 rezervări, 22 mesaje și 24 sloturi**, precum și definiții/stări identice pentru trigger-ele, funcțiile private și politicile existente. La acea verificare erau instalate migrările **1, 3, 4 și 5**. Pozele specifice terenurilor sunt în continuare în `terenuri.poza`; noul tabel configurează imaginile categoriilor de sport.
 
 ## Programul terenurilor: actualizarea din 12 octombrie 2026
 

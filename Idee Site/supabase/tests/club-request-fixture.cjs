@@ -15,7 +15,7 @@ const jsonResponse = (status,data,extra={}) => new Response(data===undefined?nul
 async function createFixture() {
   const pg = new PGlite();
   await pg.exec(readFileSync(join(__dirname,'schema.sql'),'utf8'));
-  const migrations = ['001_security.sql','003_court_hours.sql','004_admin_scope_hardening.sql','005_sport_appearance.sql','006_sports_bases.sql','007_completed_booking_cancellation.sql','008_profile_edit.sql','009_base_photos.sql','010_foot_tennis.sql',...readdirSync(join(__dirname,'..')).filter(name=>/^01[1-9]_.*\.sql$/.test(name)).sort()];
+  const migrations = ['001_security.sql','003_court_hours.sql','004_admin_scope_hardening.sql','005_sport_appearance.sql','006_sports_bases.sql','007_completed_booking_cancellation.sql','008_profile_edit.sql','009_base_photos.sql','010_foot_tennis.sql',...readdirSync(join(__dirname,'..')).filter(name=>/^(?:01[1-9]|020)_.*\.sql$/.test(name)).sort()];
   assert.ok(migrations.length>=11);
   for(const name of migrations) await pg.exec(readFileSync(join(__dirname,'..',name),'utf8'));
   // Bucket configuration is read internally by the Storage transport, while object RLS remains real.

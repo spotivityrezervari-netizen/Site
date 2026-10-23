@@ -97,8 +97,10 @@ let passed = 0;
       assert.equal((await root("select sport from public.terenuri where nume='Foot tennis court'")).rows[0].sport, 'Tenis Picior');
       assert.equal((await root('select sport from public.rezervari where id=$1', [completed.id])).rows[0].sport, 'Tenis Picior');
     });
-    await check('new football background points to the exact existing repository asset', async () => {
-      assert.ok(existsSync(join(__dirname, '..', '..', footballImage)), footballImage);
+    await check('the retained foot-tennis background resolves to its exact repository asset', async () => {
+      assert.ok(existsSync(join(__dirname, '..', '..', footImage)), footImage);
+      // Migration 020 replaces the historical football image; its dedicated
+      // test verifies the current football background exists after cleanup.
     });
     await check('anonymous visitors and authenticated users can read all five category settings', async () => {
       const expected = await read();

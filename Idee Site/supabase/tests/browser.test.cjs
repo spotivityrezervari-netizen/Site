@@ -57,7 +57,7 @@ async function openProfile(page) {
     await pg.exec(readFileSync(join(__dirname,'../011_club_requests.sql'),'utf8'));
     await pg.exec(readFileSync(join(__dirname,'../012_club_approval.sql'),'utf8'));
     await pg.exec(readFileSync(join(__dirname,'../013_admin_integration.sql'),'utf8'));
-    for (const file of ['014_booking_groups.sql', '015_profile_contact.sql', '016_notification_outbox.sql', '017_base_avatars.sql']) {
+    for (const file of ['014_booking_groups.sql', '015_profile_contact.sql', '016_notification_outbox.sql', '017_base_avatars.sql', '020_final_sport_backgrounds.sql']) {
       await pg.exec(readFileSync(join(__dirname, '..', file), 'utf8'));
     }
     await pg.exec("update public.terenuri set poza='assets/imagini/avatar2.png'");
@@ -233,13 +233,13 @@ async function openProfile(page) {
       assert.equal(await target.locator('#login-admin-btn').count(),0,'The integrated workspace reuses the current login');
     };
     const viewportWidths=[320,390,768,1440];
-    const assertPngLoaded=async locator=>{
+    const assertSportImageLoaded=async locator=>{
       const loaded=await locator.evaluate(async image=>{
         try {await image.decode();} catch {}
         return {src:image.getAttribute('src'),complete:image.complete,width:image.naturalWidth};
       });
-      assert.match(loaded.src,/\.png(?:\?|$)/);
-      assert.ok(loaded.complete && loaded.width>0,`Sport PNG did not load: ${JSON.stringify(loaded)}`);
+      assert.match(loaded.src,/\.(?:png|jpe?g)(?:\?|$)/);
+      assert.ok(loaded.complete && loaded.width>0,`Sport image did not load: ${JSON.stringify(loaded)}`);
     };
     const assertFits = async (target,selector,label) => {
       await target.waitForLoadState('networkidle');
@@ -1006,7 +1006,7 @@ async function openProfile(page) {
     assert.equal(await mobile.locator('.home-sport-hero').count(),sports.length);
     assert.equal(await mobile.locator('.card-sport[data-sport]').count(),sports.length);
     assert.equal(await mobile.locator('#home-brand img').getAttribute('src'),'assets/imagini/avatar2.png');
-    await assertPngLoaded(mobile.locator('#home-brand img'));
+    await assertSportImageLoaded(mobile.locator('#home-brand img'));
     const appearanceRows=await serial(async()=>{
       await pg.exec('reset role');
       return (await pg.query('select sport,icona_url,fundal_url from public.site_sporturi order by ordine')).rows;
@@ -1019,7 +1019,7 @@ async function openProfile(page) {
       await hero.scrollIntoViewIfNeeded();
       assert.equal(await hero.locator(`[data-sport-background="${appearance.sport}"]`).getAttribute('src'),appearance.fundal_url);
       assert.equal(await hero.locator('[data-sport-icon]').count(),0,'Sport headlines must be text only');
-      await assertPngLoaded(hero.locator('[data-sport-background]'));
+      await assertSportImageLoaded(hero.locator('[data-sport-background]'));
 
     }
     assert.ok(requests.some(request=>request.path==='/rest/v1/site_sporturi' && request.method==='GET' && !request.person));
@@ -1237,7 +1237,7 @@ async function openProfile(page) {
     await unavailableAppearance.goto(base,{waitUntil:'networkidle'});
     await unavailableAppearance.evaluate(()=>window.spotivitySportAppearanceReady);
     assert.equal(await unavailableAppearance.locator('.home-sport-hero [data-sport-icon]').count(),0);
-    assert.equal(await unavailableAppearance.locator('[data-sport-background="Fotbal"]').getAttribute('src'),'assets/imagini/RealistFotbal1.png');
+    assert.equal(await unavailableAppearance.locator('[data-sport-background="Fotbal"]').getAttribute('src'),'assets/imagini/FotbalFinal.jpeg');
     assert.equal(await unavailableAppearance.locator('[data-sport-background="Tenis Picior"]').getAttribute('src'),'assets/imagini/RealistTenispicior.png');
     await unavailableAppearance.locator('.card-sport[data-sport="Fotbal"]').click();
     await unavailableAppearance.locator('#modal-terenuri').waitFor({state:'visible'});
@@ -1393,7 +1393,7 @@ async function openProfile(page) {
     await basesPage.locator('#container-zile .btn-zi').nth(1).click();
     await basesPage.locator('.btn-ora').filter({hasText:/^09:00$/}).waitFor();
     assert.equal(await basesPage.locator('.btn-ora').count(),3);
-    assert.match(await basesPage.locator('#modal-rezervare .modal-continut').evaluate(node=>getComputedStyle(node).backgroundImage),/RealistTenis\.png/);
+    assert.match(await basesPage.locator('#modal-rezervare .modal-continut').evaluate(node=>getComputedStyle(node).backgroundImage),/TenisFINAL\.jpeg/);
     assert.ok(requests.some(item=>item.path==='/rest/v1/terenuri' && new URLSearchParams(item.search).get('id')===`eq.${baseCourts.a2}`));
     await basesPage.locator('.btn-ora').filter({hasText:/^09:00$/}).click();
     await basesPage.locator('#buton-confirma').click();
