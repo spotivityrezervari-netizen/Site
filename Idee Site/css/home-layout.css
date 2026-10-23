@@ -10,50 +10,119 @@ body.pagina-publica { background: #101a14; }
 .pagina-publica .home-mobile-menu:not([hidden]),
 .pagina-publica .home-footer { background: #142219; }
 .pagina-publica .home-sport-hero {
-    display: block;
+    --home-art-height: clamp(620px, 56vw, 980px);
+    --home-art-position: 50% 50%;
+    --home-edge-top: clamp(190px, 22vw, 300px);
+    --home-edge-bottom: clamp(140px, 16vw, 220px);
+    --home-side-fade: clamp(24px, 6vw, 110px);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: var(--home-art-height) auto;
+    isolation: isolate;
     padding: 0 0 32px;
-    background: linear-gradient(180deg, #101a14, #000 25%, #000 80%, #101a14);
+    background: #101a14;
     border-bottom: 0;
     text-align: center;
+    scroll-margin-top: 68px;
 }
-.pagina-publica .home-hero-copy { min-width: 0; padding: 58px 24px 14px; }
+.pagina-publica .home-hero-copy {
+    grid-area: 1 / 1;
+    align-self: start;
+    z-index: 2;
+    min-width: 0;
+    width: 100%;
+    padding: clamp(52px, 6vw, 92px) 24px 0;
+    pointer-events: none;
+}
+.pagina-publica .home-hero-copy button { pointer-events: auto; }
+.pagina-publica .home-sport-heading { text-shadow: 0 2px 18px rgba(0, 0, 0, .85), 0 1px 4px #000; }
 .pagina-publica .home-sport-heading,
 .pagina-publica .home-hero-actions { justify-content: center; }
-.pagina-publica .home-hero-art {
+.pagina-publica .home-sport-hero .home-hero-art {
+    grid-area: 1 / 1;
+    position: relative;
+    z-index: 0;
     min-width: 0;
-    width: min(100%, 1280px);
+    min-height: 0;
+    width: 100%;
+    height: 100%;
     max-width: none;
-    aspect-ratio: 1672 / 941;
-    margin: -12px auto 0;
+    aspect-ratio: auto;
+    margin: 0;
     border: 0;
     border-radius: 0;
     overflow: hidden;
-    background: #000;
+    background: #101a14;
     box-shadow: none;
+    pointer-events: none;
 }
-.pagina-publica .home-hero-art img { object-fit: contain; }
-.pagina-publica :is(.home-hero-fotbal, .home-hero-baschet, .home-hero-tenis) .home-hero-art img { object-fit: cover; }
-/* Blend the bright ground into the court row without fading the ball or racket. */
-.pagina-publica :is(.home-hero-fotbal, .home-hero-tenis-picior) { --home-art-fade: clamp(40px, 10vw, 140px); }
-.pagina-publica .home-hero-tenis { --home-art-fade: clamp(26px, 8vw, 105px); }
-.pagina-publica :is(.home-hero-fotbal, .home-hero-tenis) { --home-art-top-fade: clamp(18px, 4vw, 52px); }
-.pagina-publica :is(.home-hero-fotbal, .home-hero-tenis, .home-hero-tenis-picior) .home-hero-art {
-    --home-art-mask: linear-gradient(to bottom,
-        transparent 0,
-        #000 var(--home-art-top-fade, 0px),
-        #000 calc(100% - var(--home-art-fade)),
-        rgba(0, 0, 0, .92) calc(100% - var(--home-art-fade) * .65),
-        rgba(0, 0, 0, .55) calc(100% - var(--home-art-fade) * .32),
-        rgba(0, 0, 0, .16) calc(100% - var(--home-art-fade) * .12),
-        transparent 100%);
-    -webkit-mask-image: var(--home-art-mask);
-    mask-image: var(--home-art-mask);
+.pagina-publica .home-sport-hero .home-hero-art img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: var(--home-art-position);
+    transform: scale(1.035);
+    z-index: 1;
 }
+/* Keep the scene sharp and soften only its edges into the forest background. */
+.pagina-publica .home-hero-art::before,
+.pagina-publica .home-hero-art::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+}
+.pagina-publica .home-hero-art::before {
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    --home-edge-mask:
+        linear-gradient(to bottom, #000, transparent var(--home-edge-top), transparent calc(100% - var(--home-edge-bottom)), #000),
+        linear-gradient(to right, #000, transparent var(--home-side-fade), transparent calc(100% - var(--home-side-fade)), #000);
+    -webkit-mask-image: var(--home-edge-mask);
+    mask-image: var(--home-edge-mask);
+    -webkit-mask-composite: source-over;
+    mask-composite: add;
+}
+.pagina-publica .home-hero-art::after {
+    background:
+        linear-gradient(to bottom, #101a14, rgba(16, 26, 20, .78) 9%, transparent var(--home-edge-top), transparent calc(100% - var(--home-edge-bottom)), rgba(16, 26, 20, .8) calc(100% - 32px), #101a14),
+        linear-gradient(to right, #101a14, rgba(16, 26, 20, .55) calc(var(--home-side-fade) * .4), transparent var(--home-side-fade), transparent calc(100% - var(--home-side-fade)), rgba(16, 26, 20, .55) calc(100% - var(--home-side-fade) * .4), #101a14);
+}
+.pagina-publica .home-hero-fotbal { --home-art-position: 8% 55%; }
+.pagina-publica .home-hero-baschet { --home-art-position: 22% 55%; --home-edge-bottom: clamp(100px, 10vw, 170px); }
+.pagina-publica .home-hero-tenis { --home-art-height: clamp(800px, 70vw, 1120px); --home-art-position: 50% 50%; --home-edge-bottom: 100px; }
+/* Fit the full portrait over a softly blurred version of the same photograph. */
+.pagina-publica .home-sport-hero .home-hero-art .home-hero-ambient {
+    z-index: 0;
+    filter: blur(26px) brightness(.45) saturate(.75);
+    opacity: .8;
+    transform: scale(1.08);
+}
+.pagina-publica .home-hero-tenis .home-hero-art img[data-sport-background] {
+    inset: auto;
+    top: 0;
+    left: 50%;
+    width: auto;
+    max-width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transform: translateX(-50%);
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent);
+    mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent);
+}
+.pagina-publica .home-sport-hero:not(:has(.home-hero-art)) { grid-template-rows: auto auto; }
+.pagina-publica .home-sport-hero:not(:has(.home-hero-art)) .home-hero-copy { padding-bottom: 44px; }
 .pagina-publica .home-courts-wrap {
+    grid-area: 2 / 1;
+    position: relative;
+    z-index: 2;
     width: 100%;
     max-width: 1048px;
     min-width: 0;
-    margin: 0 auto;
+    margin: -28px auto 0;
     padding: 0 24px;
 }
 .pagina-publica .home-courts-strip { scrollbar-color: #9d854f transparent; }
@@ -102,13 +171,14 @@ body.pagina-publica { background: #101a14; }
     .pagina-publica .home-nav-search { flex: 1 1 0; }
     .pagina-publica.home-menu-open .home-nav-search { visibility: hidden; }
     .pagina-publica .home-sport-hero {
+        --home-art-height: clamp(490px, 136vw, 660px);
+        --home-edge-top: 190px;
+        --home-edge-bottom: 145px;
         padding: 0 0 24px;
     }
-    .pagina-publica .home-hero-copy { padding: 42px 18px 12px; }
-    .pagina-publica .home-hero-art { width: 100%; aspect-ratio: 4 / 3; margin: 8px auto 0; }
-    .pagina-publica .home-hero-art img { object-fit: cover; }
-    .pagina-publica .home-hero-tenis .home-hero-art { aspect-ratio: 3 / 4; }
-    .pagina-publica .home-hero-tenis .home-hero-art img { object-fit: cover; }
+    .pagina-publica .home-hero-copy { padding: 48px 18px 0; }
+    .pagina-publica .home-hero-tenis { --home-edge-bottom: 90px; }
+    .pagina-publica .home-hero-baschet { --home-edge-bottom: 105px; }
     .pagina-publica .home-courts-wrap { padding: 0 18px; }
 }
 

@@ -236,7 +236,8 @@
         const sports = element('div', 'owner-home-sports'); sports.id = 'owner-home-sports';
         const bases = element('section', 'home-bases-section owner-home-bases');
         bases.id = 'owner-home-bases'; bases.setAttribute('aria-label', 'Bazele tale sportive');
-        content.append(message, sports, bases);
+        const actions = element('div', 'owner-home-actions'); actions.id = 'owner-home-actions'; actions.hidden = true;
+        content.append(message, sports, bases, actions);
 
         const menu = element('div', 'owner-home-menu'); menu.id = 'owner-home-menu'; menu.hidden = true;
         menu.setAttribute('role', 'dialog'); menu.setAttribute('aria-modal', 'true'); menu.setAttribute('aria-labelledby', 'owner-home-menu-title');
@@ -319,11 +320,6 @@
 
     function renderSports() {
         const wrapper = byId('owner-home-sports'); wrapper.replaceChildren();
-        if (editableBases().length) {
-            const actions = element('div', 'owner-home-actions');
-            actions.append(newSportButton('owner-home-add-sport', 'owner-button owner-button-secondary'));
-            wrapper.append(actions);
-        }
         const groups = new Map();
         for (const court of state.courts) {
             const sport = sportName(court.sport);
@@ -353,6 +349,13 @@
                 image.alt = ''; image.dataset.sportBackground = sport; image.width = artwork.width; image.height = artwork.height;
                 image.loading = index === 0 ? 'eager' : 'lazy'; image.decoding = 'async';
                 if (index === 0) image.setAttribute('fetchpriority', 'high');
+                if (sport === 'Tenis') {
+                    const ambient = image.cloneNode(false);
+                    ambient.removeAttribute('data-sport-background');
+                    ambient.dataset.sportAmbient = sport;
+                    ambient.className = 'home-hero-ambient';
+                    art.append(ambient);
+                }
                 art.append(image); section.append(art);
             }
             const wrap = element('div', 'home-courts-wrap');
@@ -395,7 +398,14 @@
         if (state.loading || !state.access?.can_manage) {
             byId('owner-home-content').setAttribute('aria-busy', String(state.loading));
             status(state.loading ? 'Se încarcă terenurile tale…' : 'Accesul la terenuri nu este disponibil momentan.');
-        } else { renderSports(); renderBases(); }
+        } else {
+            renderSports(); renderBases();
+            if (editableBases().length) {
+                const actions = byId('owner-home-actions');
+                actions.hidden = false;
+                actions.append(newSportButton('owner-home-add-sport', 'owner-button owner-button-secondary'));
+            }
+        }
         renderMenu();
         if (state.error) {
             status(typeof state.error === 'string' ? state.error : 'Terenurile nu pot fi încărcate momentan. Încearcă din nou.');

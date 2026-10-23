@@ -19,7 +19,7 @@
     window.spotivitySportAppearance = { ...defaults };
     window.getSportAppearance = sport => window.spotivitySportAppearance[sportKey(sport)] || defaults.Fotbal;
     window.applySportAppearance = (root = document) => {
-        for (const [attribute, column] of [['data-sport-icon', 'icona_url'], ['data-sport-background', 'fundal_url']]) {
+        for (const [attribute, column] of [['data-sport-icon', 'icona_url'], ['data-sport-background', 'fundal_url'], ['data-sport-ambient', 'fundal_url']]) {
             root.querySelectorAll(`img[${attribute}]`).forEach(img => {
                 const key = sportKey(img.getAttribute(attribute));
                 if (!key) return;
