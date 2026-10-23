@@ -68,8 +68,9 @@
 
     function openOverlay(kind, focus) {
         if (!root || root.hidden || !state.userId || !state.active) return;
+        const origin = overlay ? previousFocus : document.activeElement;
         closeOverlay(false);
-        previousFocus = document.activeElement;
+        previousFocus = origin;
         overlay = kind;
         const target = byId(kind === 'menu' ? 'owner-home-menu' : 'owner-home-dialog');
         target.hidden = false;
@@ -145,7 +146,9 @@
             return;
         }
         const panel = dialogShell('base-choice', 'Alege baza sportivă');
-        panel.append(element('p', 'owner-dialog-hint', `În ce bază vrei să adaugi un teren de ${displaySport(sport)}?`));
+        panel.append(element('p', 'owner-dialog-hint', sport
+            ? `În ce bază vrei să adaugi un teren de ${displaySport(sport)}?`
+            : 'În ce bază vrei să adaugi terenul?'));
         const choices = element('div', 'owner-home-base-choices');
         for (const base of bases) {
             const button = actionButton('', 'create', { baseId: base.id, sport }, 'owner-home-base-choice');
@@ -156,6 +159,14 @@
         }
         panel.append(choices);
         openOverlay('base-choice');
+    }
+
+    function newSportButton(id, className = '') {
+        const button = buttonWithContext('Adaugă teren în alt sport', 'create', {}, className);
+        button.id = id;
+        button.setAttribute('aria-haspopup', 'dialog');
+        button.addEventListener('click', () => requestCreation('', button));
+        return button;
     }
 
     function openSearch() {
@@ -302,6 +313,11 @@
 
     function renderSports() {
         const wrapper = byId('owner-home-sports'); wrapper.replaceChildren();
+        if (editableBases().length) {
+            const actions = element('div', 'owner-home-actions');
+            actions.append(newSportButton('owner-home-add-sport', 'owner-button owner-button-secondary'));
+            wrapper.append(actions);
+        }
         const groups = new Map();
         for (const court of state.courts) {
             const sport = sportName(court.sport);
@@ -349,6 +365,7 @@
     function renderMenu() {
         const nav = byId('owner-home-menu-links'); nav.replaceChildren();
         const bases = editableBases();
+        if (bases.length && !state.loading && state.access?.can_manage) nav.append(newSportButton('owner-home-menu-add-sport'));
         for (const base of bases) nav.append(actionButton(bases.length === 1 ? 'Editează baza sportivă' : `Editează · ${base.nume || 'Bază sportivă'}`, 'base', { baseId: base.id }));
         if (state.courts.length) {
             nav.append(actionButton('Rezervare manuală', 'manual'));

@@ -196,6 +196,9 @@
             id: 'owner-court-name', type: 'text', required: '', minlength: '2', maxlength: '120', autocomplete: 'off', placeholder: 'Ex: Teren Fotbal 2'
         })));
         const sportSelect = element('select', { id: 'owner-court-sport', required: '' });
+        const sportPlaceholder = new Option('Alege sportul', '');
+        sportPlaceholder.disabled = true;
+        sportSelect.append(sportPlaceholder);
         sports.forEach(sport => sportSelect.append(new Option(sport === 'Tenis Picior' ? 'Tenis de picior' : sport, sport)));
         fields.append(field('Sport', sportSelect));
         fields.append(field('Tarif pe oră (lei)', element('input', {
@@ -235,7 +238,7 @@
         observedUserId = userId;
         current = { base: { id: base.id, nume: String(base.nume || 'Baza sportivă') }, userId, previousFocus: document.activeElement };
         byId('owner-court-base').textContent = `Baza sportivă: ${current.base.nume}`;
-        byId('owner-court-sport').value = sports.includes(sport) ? sport : 'Fotbal';
+        byId('owner-court-sport').value = sports.includes(sport) ? sport : '';
         const defaults = hours().filter(hour => Number(hour.slice(0, 2)) >= 12);
         byId('owner-court-hours').querySelectorAll('input').forEach(input => { input.checked = defaults.includes(input.value); });
         status();

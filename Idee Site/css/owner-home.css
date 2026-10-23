@@ -36,6 +36,7 @@
 }
 #owner-home .owner-home-menu-toggle span { display: block; width: 18px; height: 1px; background: var(--spotivity-gold-light, #eed397); }
 #owner-home .owner-home-content { padding-bottom: max(24px, env(safe-area-inset-bottom)); }
+.owner-home-actions { display: flex; justify-content: flex-end; max-width: 1048px; margin: 0 auto; padding: 16px 24px 0; }
 /* Stretch makes the first add card exactly as tall as its neighbouring court cards. */
 #owner-home .owner-courts-strip { align-items: stretch; }
 #owner-home .owner-add-court-card { align-self: stretch; }
@@ -92,6 +93,7 @@ body.owner-home-menu-open, body.owner-home-dialog-open { overflow: hidden; }
 .owner-home-base-choice strong { font-size: 16px; }
 .owner-home-base-choice span { font-size: 13px; color: var(--spotivity-muted, #b9b3a6); }
 @media (max-width: 767px) {
+    .owner-home-actions { padding: 14px 18px 0; }
     .owner-home-status { margin: 18px; }
     .owner-home-empty { padding: 20px 18px; }
     .owner-base-card { padding: 18px; }
