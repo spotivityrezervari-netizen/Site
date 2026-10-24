@@ -255,6 +255,9 @@ async function openProfile(page) {
           && !['inline','contents'].includes(getComputedStyle(node).display)
           && getComputedStyle(node).textOverflow!=='ellipsis'
           && !node.classList.contains('home-visually-hidden')
+          // Decorative photographs deliberately extend beyond a clip box;
+          // overflow:clip exposes their intrinsic size without a scroll rail.
+          && !(node.matches('.home-hero-art') && getComputedStyle(node).overflow==='clip')
           && !(node.matches('[data-home-courts]') && getComputedStyle(node).overflowX==='auto'));
         return {viewport:innerWidth,pageWidth:document.documentElement.scrollWidth,left:box.left,right:box.right,
           outsideControls:[...root.querySelectorAll('input,select,textarea,button')].filter(node=>visible(node) && !inCourtStrip(node)).map(node=>({node,rect:node.getBoundingClientRect()}))

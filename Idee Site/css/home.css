@@ -31,7 +31,7 @@ body.pagina-publica {
     background-repeat: no-repeat;
     transition: opacity .2s ease;
 }
-body.pagina-publica.fara-scroll > #fundal-imagine-sport { filter: blur(12px); }
+.pagina-publica #fundal-imagine-sport[hidden] { display: none; }
 .pagina-publica .home-city-region {
     background: #272727;
     padding: 16px 24px;

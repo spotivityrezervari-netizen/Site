@@ -4,6 +4,29 @@
     'use strict';
     const modules = window.SpotivityModules ||= {};
     modules.publicUi = function() {
+        function syncModalScroll() {
+            // A hidden workspace can still contain display:flex dialogs. Only
+            // rendered dialogs own a lock, including ones created after startup.
+            const open = [...document.querySelectorAll('.modal')].some(modal =>
+                modal.getClientRects().length > 0 && getComputedStyle(modal).visibility !== 'hidden');
+            if (document.body.classList.contains('fara-scroll') !== open) {
+                document.body.classList.toggle('fara-scroll', open);
+            }
+        }
+        window.syncSpotivityModalScroll = syncModalScroll;
+        const containsModal = node => node.nodeType === 1 &&
+            (node.matches('.modal') || !!node.querySelector('.modal'));
+        const modalObserver = new MutationObserver(records => {
+            if (records.some(record => record.type === 'childList'
+                ? [...record.addedNodes, ...record.removedNodes].some(containsModal)
+                : containsModal(record.target))) syncModalScroll();
+        });
+        modalObserver.observe(document.body, {
+            subtree: true, childList: true, attributes: true,
+            attributeFilter: ['style', 'class', 'hidden']
+        });
+        syncModalScroll();
+
         function actualizeazaDataFiltrului() {
             const valoare = document.getElementById('filtru-data')?.value || '';
             const afisaj = document.getElementById('filtru-data-afisata');
@@ -22,17 +45,22 @@
             element.style.backgroundSize = suprapunere ? '100% 100%, cover' : 'cover';
             element.style.backgroundRepeat = 'no-repeat';
             element.style.backgroundPosition = 'center';
+            if (element.id === 'fundal-imagine-sport') element.hidden = false;
         }
 
         function reseteazaFundalSport() {
             const fundal = document.getElementById('fundal-imagine-sport');
-            if (fundal) fundal.style.opacity = '0';
+            if (fundal) {
+                fundal.style.opacity = '0';
+                fundal.hidden = true;
+            }
             document.querySelectorAll('#modal-terenuri .modal-continut, #modal-rezervare .modal-continut')
                 .forEach(modal => {
                     modal.style.backgroundImage = '';
                     modal.style.removeProperty('--fundal-desktop');
                     modal.style.removeProperty('--fundal-mobil');
                 });
+            syncModalScroll();
         }
 
         let temporizatorNotificareRezervare;
@@ -85,29 +113,13 @@
             document.getElementById('btn-lang-hu')?.addEventListener('click', () => window.schimbaLimba('hu'));
             document.getElementById('btn-lang-en')?.addEventListener('click', () => window.schimbaLimba('en'));
 
-            // --- PREVENIRE SCROLL FUNDAL (MUTATION OBSERVER PENTRU MODALE) ---
-            const observerModale = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
-                    if (mutation.attributeName === 'style') {
-                        const anyModalOpen = Array.from(document.querySelectorAll('.modal')).some(m => m.style.display === 'flex' || m.style.display === 'block');
-                        if (anyModalOpen) {
-                            document.body.classList.add('fara-scroll');
-                        } else {
-                            document.body.classList.remove('fara-scroll');
-                        }
-                    }
-                });
-            });
-            document.querySelectorAll('.modal').forEach(m => {
-                observerModale.observe(m, { attributes: true });
-            });
-
         }
         return {
             mount,
             updateFilterDate: actualizeazaDataFiltrului,
             setSportBackground: seteazaFundalSport,
             resetSportBackground: reseteazaFundalSport,
+            syncModalScroll,
             showBookingSuccess: afiseazaSuccesRezervare,
             availabilityText: textProgram
         };

@@ -977,7 +977,7 @@ body.fara-scroll {
 
     overflow: hidden !important;
 
-    touch-action: none;
+    /* Overflow locks the page; native touch panning stays available in dialogs. */
 
 }
 
@@ -1214,11 +1214,7 @@ body.fara-scroll {
 .modal > div::-webkit-scrollbar-track:horizontal { margin-inline: 20px; }
 .modal-continut { overflow-x: hidden; }
 
-/* Blur the actual page layer: WebKit may clip nested backdrop-filter edges. */
-body.fara-scroll > .fundal-water,
-body.fara-scroll > #btn-legal {
-    filter: blur(12px);
-}
+/* Blur only the fixed dialog veil, without recompositing the scrolling page. */
 .modal {
     background: transparent !important;
     backdrop-filter: none;
@@ -1232,6 +1228,8 @@ body.fara-scroll > #btn-legal {
     position: fixed;
     inset: -24px;
     background: var(--modal-veil, rgba(0,0,0,0.75));
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
     pointer-events: none;
     z-index: -1;
 }

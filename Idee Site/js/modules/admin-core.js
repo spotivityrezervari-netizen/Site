@@ -157,30 +157,15 @@
                 }
             });
 
-            // --- PREVENIRE SCROLL FUNDAL (MUTATION OBSERVER PENTRU MODALE) ---
-            const observerModaleAdmin = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
-                    if (mutation.attributeName === 'style') {
-                        const anyModalOpen = Array.from(context.modalNodes()).some(m => m.style.display === 'flex' || m.style.display === 'block');
-                        if (anyModalOpen) {
-                            document.body.classList.add('fara-scroll');
-                        } else {
-                            document.body.classList.remove('fara-scroll');
-                        }
-                    }
-                });
-            });
-
-
             // NOU: Închide modalele când se dă click pe fundalul întunecat (în afara chenarului)
             document.addEventListener('click', function(event) {
                 if (event.target.classList.contains('modal') && event.target.closest('#base-admin-workspace')) {
                     event.target.style.display = 'none';
                 }
             });
-            context.observeModals = () => context.modalNodes().forEach(modal => {
-                observerModaleAdmin.observe(modal, { attributes: true });
-            });
+            // Public and administrative dialogs share the same rendered-state
+            // lock, so closing one cannot unlock another dialog still on screen.
+            context.observeModals = () => window.syncSpotivityModalScroll?.();
             context.observeModals();
             const manualCourtSelect = document.getElementById('manual-teren');
             if (manualCourtSelect) manualCourtSelect.onchange = window.actualizeazaOreManualAdmin;

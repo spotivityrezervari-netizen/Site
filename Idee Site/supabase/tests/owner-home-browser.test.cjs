@@ -265,6 +265,13 @@ async function ownerTouchScrolling(page){
     pass('ordinary managers have no profile entry in the header or drawer and cannot open it through the owner dispatcher');
     const beforeEntry={logins:passwords(),navigation:navigations.length,pages:admin.context().pages().length};
     await ownerAction(admin,'administration');await visible(admin,'#owner-home');await admin.waitForLoadState('networkidle');
+    // The drawer closes before its forced scope refresh hydrates the courts.
+    // Wait for that UI state, rather than a previous network-idle load state.
+    await admin.waitForFunction(()=>{
+      const content=document.querySelector('#owner-home-content');
+      return content&&content.getAttribute('aria-busy')!=='true'
+        &&document.querySelectorAll('#owner-home-sports .owner-court-card .home-court-name').length===2;
+    },null,{timeout:10000});
     assert.equal(await admin.locator('#base-admin-workspace').isVisible(),false);assert.equal(await admin.locator('#modal-profil').isVisible(),false);
     assert.deepEqual((await ownerCourtNames(admin)).sort(),['Court A','Court B']);
     await ownerAction(admin,'site');await visible(admin,'#admin-site-preview');
