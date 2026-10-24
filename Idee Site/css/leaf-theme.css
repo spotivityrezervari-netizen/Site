@@ -1,9 +1,10 @@
-/* Forest backgrounds with leaf-colour highlights. Base forest/gold styles stay intact. */
+/* Sunlit forest backgrounds with leaf accents and gold sport names. */
 :root {
     --leaf-background: #101a14;
     --leaf-rgb: 16, 26, 20;
     --leaf-accent: #c4ca3a;
     --leaf-accent-rgb: 196, 202, 58;
+    --leaf-sun-rgb: 255, 224, 145;
     --leaf-panel: #24351f;
     --leaf-input: #1c2d20;
     --leaf-ink: #f7f3e8;
@@ -26,15 +27,15 @@ body.admin-page,
 /* Transparent owner workspaces must still leave the court catalogue visible. */
 .base-admin-workspace.owner-home-modal { background: transparent; }
 .base-admin-workspace:not(.owner-home-modal) {
-    background: radial-gradient(ellipse at 100% 0%, rgba(var(--leaf-accent-rgb), .08), transparent 55%), var(--leaf-background);
+    background: radial-gradient(ellipse at 100% 0%, rgba(var(--leaf-sun-rgb), .16), transparent 55%), var(--leaf-background);
 }
 
 .pagina-publica :is(.home-city-region, .home-header, .home-footer),
 .pagina-publica .home-mobile-menu:not([hidden]) { background: var(--leaf-panel); }
 .pagina-publica .home-city-region {
-    background: linear-gradient(110deg, #203226, #343e22);
+    background: radial-gradient(ellipse at 85% 0%, rgba(var(--leaf-sun-rgb), .2), transparent 65%), linear-gradient(110deg, #203226, #343e22);
 }
-.pagina-publica .home-header { background: rgba(20, 34, 25, .97); }
+.pagina-publica .home-header { background: linear-gradient(110deg, rgba(20, 34, 25, .98), rgba(52, 59, 31, .97)); }
 .pagina-publica :is(.home-city-copy, .btn-lang, .home-mobile-links button,
     .home-profile-button, .home-desktop-nav button, .home-search-button),
 .pagina-publica #btn-legal,
@@ -43,6 +44,10 @@ body.admin-page,
 .pagina-publica .btn-lang { color: var(--leaf-ink) !important; }
 .pagina-publica :is(.home-mobile-links button, .home-desktop-nav button, .home-profile-button):hover {
     color: var(--leaf-accent);
+}
+.pagina-publica :is(.home-desktop-nav, .home-mobile-links) [data-sport-target],
+.pagina-publica :is(.home-desktop-nav, .home-mobile-links) [data-sport-target]:hover {
+    color: var(--spotivity-gold-light);
 }
 .pagina-publica .home-city-chevron,
 .pagina-publica .home-search-button svg,
@@ -72,17 +77,23 @@ body.admin-page,
     outline-color: var(--leaf-accent) !important;
 }
 
-/* Use the new page colour at every photo edge without changing its touch layers. */
+/* Forest fades sit above the sunlight wash, keeping all four photo edges seamless. */
 .pagina-publica .home-hero-art::after {
     background:
         linear-gradient(to bottom, var(--leaf-background), rgba(var(--leaf-rgb), .78) 9%, transparent var(--home-edge-top), transparent calc(100% - var(--home-edge-bottom)), rgba(var(--leaf-rgb), .8) calc(100% - 32px), var(--leaf-background)),
-        linear-gradient(to right, var(--leaf-background), rgba(var(--leaf-rgb), .55) calc(var(--home-side-fade) * .4), transparent var(--home-side-fade), transparent calc(100% - var(--home-side-fade)), rgba(var(--leaf-rgb), .55) calc(100% - var(--home-side-fade) * .4), var(--leaf-background));
+        linear-gradient(to right, var(--leaf-background), rgba(var(--leaf-rgb), .55) calc(var(--home-side-fade) * .4), transparent var(--home-side-fade), transparent calc(100% - var(--home-side-fade)), rgba(var(--leaf-rgb), .55) calc(100% - var(--home-side-fade) * .4), var(--leaf-background)),
+        radial-gradient(ellipse at 85% 5%, rgba(var(--leaf-sun-rgb), .2), rgba(237, 202, 130, .08) 40%, transparent 72%),
+        linear-gradient(125deg, transparent 20%, rgba(var(--leaf-sun-rgb), .045) 42%, transparent 65%);
 }
 .pagina-publica .home-sport-heading { text-shadow: 0 2px 18px rgba(0, 0, 0, .85), 0 1px 4px #000; }
-.pagina-publica .home-sport-heading :is(h1, h2),
+.pagina-publica .home-sport-heading :is(h1, h2) { color: var(--spotivity-gold-light); }
 .pagina-publica .home-section-heading h2 { color: var(--leaf-accent); }
 .pagina-publica .home-courts-wrap {
-    background: radial-gradient(ellipse at 50% 30%, rgba(var(--leaf-accent-rgb), .1), transparent 70%);
+    background:
+        linear-gradient(to bottom, var(--leaf-background), transparent 40px, transparent calc(100% - 40px), var(--leaf-background)),
+        linear-gradient(to right, var(--leaf-background), transparent 32px, transparent calc(100% - 32px), var(--leaf-background)),
+        radial-gradient(ellipse at 85% 35%, rgba(var(--leaf-sun-rgb), .14), transparent 70%),
+        radial-gradient(ellipse at 50% 40%, rgba(var(--leaf-accent-rgb), .08), transparent 70%);
 }
 .pagina-publica :is(.home-court-card, .sports-base-card) { border-color: var(--leaf-border); }
 .pagina-publica :is(.home-court-card, .sports-base-card):hover { border-color: var(--leaf-accent); }
@@ -96,7 +107,7 @@ body.admin-page,
 #owner-home .owner-home-status { background: var(--leaf-panel); border-color: var(--leaf-border); }
 #owner-home .owner-base-card { background: var(--leaf-panel); border-color: var(--leaf-border); }
 #owner-home .owner-base-card::after {
-    background: linear-gradient(90deg, rgba(var(--leaf-rgb), .45), rgba(var(--leaf-rgb), .95));
+    background: radial-gradient(ellipse at 85% 0%, rgba(var(--leaf-sun-rgb), .14), transparent 70%), linear-gradient(90deg, rgba(var(--leaf-rgb), .45), rgba(var(--leaf-rgb), .95));
 }
 #owner-home .owner-base-copy h3 { color: var(--leaf-accent); }
 #owner-home :is(.owner-base-copy p, .owner-base-permission) { color: var(--leaf-muted); }
@@ -135,7 +146,7 @@ body.admin-page,
     background: var(--leaf-dark-input);
 }
 .pagina-publica .club-registration-section {
-    background: radial-gradient(ellipse at right top, rgba(var(--leaf-accent-rgb), .15), transparent 70%), var(--leaf-panel);
+    background: radial-gradient(ellipse at right top, rgba(var(--leaf-sun-rgb), .2), transparent 70%), var(--leaf-panel);
     border-color: var(--leaf-border);
 }
 .pagina-publica .club-registration-copy h2,
