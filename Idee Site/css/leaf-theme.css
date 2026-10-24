@@ -1,4 +1,4 @@
-/* Sunlit forest backgrounds with leaf accents and gold sport names. */
+/* Sunlit forest backgrounds with gold typography throughout the application. */
 :root {
     --leaf-background: #101a14;
     --leaf-rgb: 16, 26, 20;
@@ -7,8 +7,10 @@
     --leaf-sun-rgb: 255, 224, 145;
     --leaf-panel: #24351f;
     --leaf-input: #1c2d20;
-    --leaf-ink: #f7f3e8;
-    --leaf-muted: #c3ccb4;
+    --leaf-ink: var(--spotivity-gold-light);
+    --leaf-muted: #d5b777;
+    --spotivity-cream: var(--spotivity-gold-light);
+    --spotivity-muted: #d5b777;
     --leaf-border: rgba(196, 202, 58, .38);
     --leaf-dark: #17271b;
     --leaf-dark-input: #243620;
@@ -100,7 +102,7 @@ body.admin-page,
 .pagina-publica .home-discovery-message { color: var(--leaf-muted); }
 .pagina-publica .home-reserve-button { border-color: var(--leaf-border); }
 
-/* Retained dark court cards keep their original cream text and gold actions. */
+/* Dark court cards keep clear lettering and matching gold actions. */
 #owner-home :is(.owner-home-status, .owner-home-empty),
 #owner-home .owner-home-empty h1 { color: var(--leaf-ink); }
 #owner-home .owner-home-empty p { color: var(--leaf-muted); }
@@ -205,3 +207,92 @@ body.admin-page,
     #btn-istoric, #btn-salveaza-baza, #btn-baza-poza-save, [id^="btn-save-"],
     .program-reincarca):disabled,
 .admin-page #admin-cerere-save:disabled { background: var(--leaf-dark-input) !important; }
+
+/* Layered important rules also cover legacy inline colours and dynamic dialogs.
+   SVG artwork retains its explicit brand and status colours. */
+@layer site-gold-text {
+    body.pagina-publica,
+    body.pagina-publica :not(svg, svg *) {
+        color: var(--spotivity-gold-light) !important;
+    }
+    body.pagina-publica :is(input, textarea)::placeholder {
+        color: var(--spotivity-gold-light) !important;
+        opacity: .78 !important;
+    }
+    body.pagina-publica :is(input, textarea) {
+        caret-color: var(--spotivity-gold-light) !important;
+    }
+    body.pagina-publica :is(input, textarea):autofill {
+        -webkit-text-fill-color: var(--spotivity-gold-light) !important;
+        box-shadow: 0 0 0 1000px var(--leaf-dark-input) inset !important;
+    }
+    body.pagina-publica :is(input, textarea):-webkit-autofill {
+        -webkit-text-fill-color: var(--spotivity-gold-light) !important;
+        box-shadow: 0 0 0 1000px var(--leaf-dark-input) inset !important;
+    }
+    body.pagina-publica input::file-selector-button {
+        background: var(--leaf-dark-input) !important;
+        color: var(--spotivity-gold-light) !important;
+        border-color: var(--spotivity-gold) !important;
+    }
+    body.pagina-publica #chat-admin-btn-trimite svg {
+        stroke: var(--spotivity-gold-light) !important;
+    }
+    body.pagina-publica ::marker,
+    body.pagina-publica ::selection {
+        color: var(--spotivity-gold-light) !important;
+    }
+    body.pagina-publica ::selection { background: #4a4526 !important; }
+    body.pagina-publica :where(button, input[type="submit"], input[type="button"]):disabled {
+        opacity: .55;
+        cursor: not-allowed;
+    }
+
+    /* Gold lettering needs dark surfaces even on the primary actions. */
+    body.pagina-publica :where(.home-reserve-button,
+        .sports-bases-action:not(.sports-bases-share), .buton-rezervare,
+        .owner-button-primary, #owner-home-add-sport, .club-registration-primary,
+        .tab-auth.activ, #btn-google-login, #btn-adauga-teren,
+        #creeaza-supervisor-btn, #btn-rezervare-manuala, #btn-istoric,
+        #btn-salveaza-baza, #btn-baza-poza-save, #btn-baza-avatar-save,
+        [id^="btn-save-"], .program-reincarca, .chat-btn-trimite) {
+        background: linear-gradient(135deg, #493d20, #24311e) !important;
+        border: 1px solid var(--spotivity-gold) !important;
+    }
+    body.pagina-publica :where(.btn-zi, .btn-ora, .pastila-zi, .pastila-ora) {
+        background: #1d2e23 !important;
+    }
+    body.pagina-publica :where(.btn-zi.selectat, .btn-ora.selectat,
+        .pastila-zi.activa, .pastila-ora.activa,
+        button[style*="#22c55e"], button[style*="34, 197, 94"],
+        button[style*="#10b981"], button[style*="16, 185, 129"]) {
+        background: #24472c !important;
+        border: 1px solid #5a9b65 !important;
+        box-shadow: inset 0 0 0 1px rgba(90, 155, 101, .3);
+    }
+    body.pagina-publica :where(.btn-ora.ocupat, .btn-anulare, .anulare-client,
+        .program-anulare, .workflow-danger, .admin-club-reject,
+        button[style*="#ef4444"], button[style*="239, 68, 68"],
+        button[style*="#dc2626"], button[style*="220, 38, 38"]) {
+        background: #57241f !important;
+        border: 1px solid #c66d5d !important;
+    }
+    body.pagina-publica :where(button[style*="#3b82f6"], button[style*="59, 130, 246"]) {
+        background: #20324a !important;
+        border: 1px solid #6489b8 !important;
+    }
+    body.pagina-publica :where(.chat-teren-client,
+        button[style*="#8b5cf6"], button[style*="139, 92, 246"]) {
+        background: #342543 !important;
+        border: 1px solid #9b80ba !important;
+    }
+    body.pagina-publica :where(.sports-base-avatar, .admin-club-count,
+        .admin-club-state[data-state="noua"]) {
+        background: #2a3923 !important;
+        border-color: var(--spotivity-gold) !important;
+    }
+    body.pagina-publica .bulina-notificare {
+        background: #682f24 !important;
+        border: 1px solid #c66d5d !important;
+    }
+}
