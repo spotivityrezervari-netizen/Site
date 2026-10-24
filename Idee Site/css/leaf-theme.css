@@ -1,0 +1,174 @@
+/* Leaf-colour trial. Removing this stylesheet restores the saved forest/gold theme. */
+:root {
+    --leaf-background: #c4ca3a;
+    --leaf-rgb: 196, 202, 58;
+    --leaf-panel: #d5d968;
+    --leaf-input: #e5e8a0;
+    --leaf-ink: #30321b;
+    --leaf-muted: #454b23;
+    --leaf-border: rgba(48, 50, 27, .35);
+    --leaf-dark: #292b19;
+    --leaf-dark-input: #343821;
+}
+
+html,
+body.pagina-publica,
+body.admin-page,
+.pagina-publica :is(.home-shell, .home-main, .home-sport-hero),
+.pagina-publica .home-sport-hero .home-hero-art,
+#owner-home,
+.base-admin-workspace {
+    background: var(--leaf-background);
+    color: var(--leaf-ink);
+}
+/* Transparent owner workspaces must still leave the court catalogue visible. */
+.base-admin-workspace.owner-home-modal { background: transparent; }
+
+.pagina-publica :is(.home-city-region, .home-header, .home-footer),
+.pagina-publica .home-mobile-menu:not([hidden]) { background: var(--leaf-panel); }
+.pagina-publica :is(.home-city-copy, .btn-lang, .home-mobile-links button,
+    .home-profile-button, .home-desktop-nav button, .home-search-button),
+.pagina-publica #btn-legal,
+.pagina-publica .home-legal-link { color: var(--leaf-ink); }
+/* Language switching writes inline text colours for the original dark theme. */
+.pagina-publica .btn-lang { color: var(--leaf-ink) !important; }
+.pagina-publica :is(.home-mobile-links button, .home-desktop-nav button, .home-profile-button):hover {
+    color: #151807;
+}
+.pagina-publica .home-city-chevron,
+.pagina-publica .home-search-button svg,
+#owner-home .home-search-button svg { stroke: var(--leaf-ink); }
+.pagina-publica .home-menu-toggle span,
+#owner-home .owner-home-menu-toggle span { background: var(--leaf-ink); }
+
+.pagina-publica .home-nav-search,
+.pagina-publica #filtru-oras-global,
+.pagina-publica #filtru-oras-global option {
+    background: var(--leaf-input);
+    border-color: var(--leaf-border);
+    color: var(--leaf-ink);
+    color-scheme: light;
+}
+.pagina-publica #home-nav-search-input,
+#owner-home-nav-search-input { color: var(--leaf-ink); }
+.pagina-publica #home-nav-search-input::placeholder,
+#owner-home-nav-search-input::placeholder { color: var(--leaf-muted); }
+.pagina-publica .home-nav-search:focus-within {
+    border-color: var(--leaf-ink);
+    box-shadow: 0 0 0 2px rgba(48, 50, 27, .18);
+}
+.pagina-publica .home-nav :is(button, a, input):focus-visible,
+.pagina-publica .home-city-region :is(button, select):focus-visible,
+.pagina-publica .home-mobile-links button:focus-visible {
+    outline-color: var(--leaf-ink) !important;
+}
+
+/* Use the new page colour at every photo edge without changing its touch layers. */
+.pagina-publica .home-hero-art::after {
+    background:
+        linear-gradient(to bottom, var(--leaf-background), rgba(var(--leaf-rgb), .78) 9%, transparent var(--home-edge-top), transparent calc(100% - var(--home-edge-bottom)), rgba(var(--leaf-rgb), .8) calc(100% - 32px), var(--leaf-background)),
+        linear-gradient(to right, var(--leaf-background), rgba(var(--leaf-rgb), .55) calc(var(--home-side-fade) * .4), transparent var(--home-side-fade), transparent calc(100% - var(--home-side-fade)), rgba(var(--leaf-rgb), .55) calc(100% - var(--home-side-fade) * .4), var(--leaf-background));
+}
+.pagina-publica .home-sport-heading { text-shadow: 0 1px 12px rgba(245, 247, 205, .65); }
+.pagina-publica .home-sport-heading :is(h1, h2),
+.pagina-publica .home-section-heading h2 { color: var(--leaf-ink); }
+.pagina-publica .home-discovery-message { color: var(--leaf-muted); }
+.pagina-publica .home-reserve-button { border-color: var(--leaf-border); }
+
+/* Retained dark court cards keep their original cream text and gold actions. */
+#owner-home :is(.owner-home-status, .owner-home-empty),
+#owner-home .owner-home-empty h1 { color: var(--leaf-ink); }
+#owner-home .owner-home-empty p { color: var(--leaf-muted); }
+#owner-home .owner-home-status { background: var(--leaf-panel); border-color: var(--leaf-border); }
+#owner-home .owner-base-card { background: var(--leaf-panel); border-color: var(--leaf-border); }
+#owner-home .owner-base-card::after {
+    background: linear-gradient(90deg, rgba(var(--leaf-rgb), .45), rgba(var(--leaf-rgb), .95));
+}
+#owner-home .owner-base-copy h3 { color: var(--leaf-ink); }
+#owner-home :is(.owner-base-copy p, .owner-base-permission) { color: var(--leaf-muted); }
+#owner-home :is(.owner-home-actions, .owner-base-actions, .owner-home-status) .owner-button-secondary {
+    background: var(--leaf-input);
+    border-color: var(--leaf-border);
+    color: var(--leaf-ink);
+}
+.sports-base-avatar {
+    border-color: #898f29;
+    background: linear-gradient(145deg, var(--leaf-panel), #a9af2f);
+    color: var(--leaf-ink);
+}
+
+/* Olive panels carry the leaf hue into drawers, account forms and administration. */
+.owner-home-menu,
+.owner-home-dialog { background-color: rgba(31, 33, 17, .62); }
+.owner-home-menu-panel,
+.owner-home-dialog-panel,
+.workflow-modal .workflow-panel,
+#modal-owner-add-court .owner-court-panel,
+#modal-club-registration .modal-continut,
+.admin-page .modal-continut { background-color: var(--leaf-dark); }
+.owner-home-menu-panel,
+.owner-home-dialog-panel { color: var(--spotivity-cream); }
+#owner-home .owner-home-search-input,
+#owner-home .owner-home-base-choice,
+.workflow-form input,
+#owner-court-form :is(input:not([type="checkbox"]), select),
+#club-registration-form :is(input:not([type="checkbox"]), select, textarea) {
+    background: var(--leaf-dark-input);
+}
+.pagina-publica .club-registration-section {
+    background: var(--leaf-panel);
+    border-color: var(--leaf-border);
+}
+.pagina-publica .club-registration-copy h2,
+.club-registration-eyebrow { color: var(--leaf-ink); }
+.club-registration-copy p { color: var(--leaf-muted); }
+.pagina-publica .club-registration-secondary { background: var(--leaf-dark-input); }
+.pagina-publica .club-registration-secondary:not(:disabled):hover { background: #414626; }
+
+.admin-site-preview,
+.base-admin-eyebrow,
+.base-admin-status { color: var(--leaf-ink); }
+.admin-site-preview > button,
+.admin-site-preview > button:hover { background: var(--leaf-dark-input); }
+#base-admin-access-hint { color: var(--leaf-muted); }
+.base-admin-selector { border-color: var(--leaf-border); }
+.base-admin-base-card { background: var(--leaf-panel); border-color: var(--leaf-border); }
+.base-admin-base-copy h3 { color: var(--leaf-ink); }
+.base-admin-base-copy p { color: var(--leaf-muted); }
+.base-admin-sport-heading h3 { color: var(--leaf-ink); }
+.base-admin-empty { color: var(--leaf-muted); }
+:is(.base-admin-heading, .base-admin-base-card, .base-admin-status) .btn-cont,
+#base-admin-workspace .base-admin-program {
+    background: var(--leaf-dark-input);
+    color: var(--spotivity-cream);
+}
+.base-admin-court { background: var(--leaf-dark); color: var(--spotivity-cream); }
+.base-admin-base-photo,
+.base-admin-base-avatar { background: var(--leaf-dark-input); }
+
+.admin-page .admin-shell { background: var(--leaf-background); background-image: none; }
+.admin-page .admin-header { background: var(--leaf-dark) !important; }
+.admin-page :is(.admin-menu-card, .admin-base-card, .sub-pagina-oras) {
+    background: var(--leaf-dark);
+    color: var(--spotivity-cream);
+}
+.admin-page :is(.admin-menu-card, .admin-base-card):hover { background: #3d4224; }
+.admin-page .modal { --modal-veil: rgba(31, 33, 17, .8); }
+.admin-page :is(input:not([type="checkbox"]), select, textarea) {
+    background-color: var(--leaf-dark-input) !important;
+}
+.admin-page :is(input:not([type="checkbox"]), select, textarea):disabled {
+    background-color: #30331e !important;
+}
+.admin-page input::file-selector-button { background: #414626; }
+.admin-page :is(.program-filtre, .program-tabel th) { background: var(--leaf-dark-input); }
+.admin-page .program-scroll { background: var(--leaf-dark); }
+.admin-page :is(.admin-existing-court, .admin-history-card) { background: var(--leaf-dark) !important; }
+.admin-page .admin-baza-check { background: rgba(52, 56, 33, .5); }
+.admin-page :is(.lista-mesaje, .card-conversatie:not(.necitit), .admin-club-request,
+    .admin-club-detail, .admin-club-confirm, .admin-club-photo) { background-color: var(--leaf-dark); }
+.admin-page .card-conversatie:not(.necitit):hover { background: var(--leaf-dark-input); }
+.admin-page :is(#btn-adauga-teren, #creeaza-supervisor-btn, #btn-rezervare-manuala,
+    #btn-istoric, #btn-salveaza-baza, #btn-baza-poza-save, [id^="btn-save-"],
+    .program-reincarca):disabled,
+.admin-page #admin-cerere-save:disabled { background: var(--leaf-dark-input) !important; }
