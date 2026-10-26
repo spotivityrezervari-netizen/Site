@@ -54,7 +54,7 @@
 .owner-base-cover { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .13; z-index: -2; }
 .owner-base-card::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(16,26,20,.35), rgba(16,26,20,.9)); z-index: -1; }
 .owner-base-info { display: flex; align-items: center; gap: 15px; min-width: 0; }
-#owner-home .owner-base-avatar { flex: 0 0 56px; width: 56px; height: 56px; border: 1px solid var(--owner-gold); }
+#owner-home .owner-base-avatar { flex: 0 0 66.08px; width: 66.08px; height: 66.08px; border: 1px solid var(--owner-gold); }
 .owner-base-copy { min-width: 0; }
 #owner-home .owner-base-copy h3 { margin: 0; color: #efce82; font-size: 21px; line-height: 1.3; font-weight: 600; overflow-wrap: anywhere; }
 .owner-base-copy p { margin: 5px 0 0; color: #c2cabe; font-size: 14px; line-height: 1.5; }
