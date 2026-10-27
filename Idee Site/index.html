@@ -84,9 +84,9 @@
                     <svg class="home-city-chevron" viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7 5 5 5-5"/></svg>
                 </div>
                 <div id="selector-limba" aria-label="Limba site-ului">
-                    <button type="button" id="btn-lang-ro" class="btn-lang" onclick="schimbaLimba('ro')">RO</button>
-                    <button type="button" id="btn-lang-hu" class="btn-lang" onclick="schimbaLimba('hu')">HU</button>
-                    <button type="button" id="btn-lang-en" class="btn-lang" onclick="schimbaLimba('en')">EN</button>
+                    <button type="button" id="btn-lang-ro" class="btn-lang">RO</button>
+                    <button type="button" id="btn-lang-hu" class="btn-lang">HU</button>
+                    <button type="button" id="btn-lang-en" class="btn-lang">EN</button>
                 </div>
             </div>
         </section>
@@ -236,7 +236,7 @@
             </section>
         </main>
         <footer class="home-footer" id="home-footer">
-            <button type="button" id="btn-legal" onclick="document.getElementById('modal-legal').style.display='flex'">
+            <button type="button" id="btn-legal" data-open-modal="modal-legal">
                 <span data-i18n="copyright_text">&copy; 2026 Numele SRL</span> &bull; <span data-i18n="drepturi_rezervate">Toate drepturile rezervate</span> &bull; <span class="home-legal-link" data-i18n="info_legale">Info Legale</span>
             </button>
         </footer>
@@ -554,7 +554,7 @@
 
     <div id="modal-legal" class="modal" style="display: none; background: rgba(0,0,0,0.85); z-index: 100000;">
         <div style="background: #1a1a2e; border: 1px solid rgba(255,255,255,0.15); border-radius: 20px; padding: 35px; max-width: 500px; width: 90%; max-height: 85vh; overflow-y: auto; color: white; font-family: sans-serif; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.8);">
-            <button onclick="document.getElementById('modal-legal').style.display='none'" style="position: absolute; top: 15px; right: 20px; background: none; border: none; color: white; font-size: 22px; cursor: pointer; font-weight: bold;">X</button>
+            <button class="buton-inchidere" style="position: absolute; top: 15px; right: 20px; background: none; border: none; color: white; font-size: 22px; cursor: pointer; font-weight: bold;">X</button>
 
             <h2 style="margin-top: 0; font-size: 20px; color: #3b82f6; margin-bottom: 20px;" data-i18n="info_legale_titlu">Informații Legale</h2>
 
@@ -644,10 +644,10 @@
             <!-- Meniul de Carduri (Generează Pop-up-uri la Click) -->
             <div class="grila-sporturi base-admin-tools" style="max-width: 100%; padding: 0;">
                 <!-- PANOURI SUPER ADMIN -->
-                <button type="button" class="card-sport admin-menu-card super-admin-only" style="display: none; padding: 20px;" onclick="window.deschideModalAdaugaTeren()">
+                <button type="button" class="card-sport admin-menu-card super-admin-only" style="display: none; padding: 20px;" data-admin-action="add-court">
                     <h2 style="font-size: 18px;">Adaugă Teren</h2>
                 </button>
-                <button type="button" class="card-sport admin-menu-card super-admin-only" style="display: none; padding: 20px;" onclick="document.getElementById('modal-creeaza-cont').style.display='flex'">
+                <button type="button" class="card-sport admin-menu-card super-admin-only" style="display: none; padding: 20px;" data-open-modal="modal-creeaza-cont">
                     <h2 style="font-size: 18px;">Creare Angajat</h2>
                 </button>
 
@@ -657,13 +657,13 @@
                 </button>
 
                 <!-- Administrarea terenurilor permise -->
-                <button type="button" class="card-sport admin-menu-card admin-comun" style="display: none; padding: 20px;" onclick="document.getElementById('modal-rezervare-manuala').style.display='flex'">
+                <button type="button" class="card-sport admin-menu-card admin-comun" style="display: none; padding: 20px;" data-open-modal="modal-rezervare-manuala">
                     <h2 style="font-size: 18px;"><span data-trad="t-rez-man-scurt">Rezervare Manuală</span></h2>
                 </button>
-                <button type="button" class="card-sport admin-menu-card admin-comun" style="display: none; padding: 20px;" onclick="window.deschideProgramAdmin()">
+                <button type="button" class="card-sport admin-menu-card admin-comun" style="display: none; padding: 20px;" data-admin-action="open-schedule">
                     <h2 style="font-size: 18px;"><span data-trad="t-prog-scurt">Program & Active</span></h2>
                 </button>
-                <button type="button" class="card-sport admin-menu-card admin-comun" style="display: none; padding: 20px;" onclick="document.getElementById('modal-istoric').style.display='flex'">
+                <button type="button" class="card-sport admin-menu-card admin-comun" style="display: none; padding: 20px;" data-open-modal="modal-istoric">
                     <h2 style="font-size: 18px;"><span data-trad="t-istoric-titlu-scurt">Rezervări</span></h2>
                 </button>
 
@@ -756,7 +756,7 @@
 
     <div class="modal" id="modal-adauga-teren">
         <div class="modal-continut modal-mare" style="border-color: #f59e0b; width: 100%; max-width: 550px;">
-            <button class="buton-inchidere" aria-label="Închide" onclick="this.parentElement.parentElement.style.display='none'">X</button>
+            <button class="buton-inchidere" aria-label="Închide">X</button>
             <div>
                 <h2 class="titlu-modal" style="font-size: 20px; text-align: left; color: #f59e0b;">Adaugă Teren Nou</h2>
             </div>
@@ -782,7 +782,7 @@
 
     <div class="modal" id="modal-creeaza-cont">
         <div class="modal-continut modal-mare" style="border-color: #34c759; width: 100%; max-width: 550px;">
-            <button class="buton-inchidere" aria-label="Închide" onclick="this.parentElement.parentElement.style.display='none'">X</button>
+            <button class="buton-inchidere" aria-label="Închide">X</button>
             <div>
                 <h2 class="titlu-modal" style="font-size: 20px; text-align: left; color: #34c759;">Alocare Terenuri Angajat</h2>
                 <p style="color: #ccc; font-size: 13px; margin-top: -10px; margin-bottom: 10px;">(ATENȚIE: Contul cu parola trebuie creat întâi în Supabase Auth)</p>
@@ -859,7 +859,7 @@
 
     <div class="modal" id="modal-rezervare-manuala">
         <div class="modal-continut modal-mare" style="border-color: #a855f7; width: 100%; max-width: 550px;">
-            <button class="buton-inchidere" aria-label="Închide" onclick="this.parentElement.parentElement.style.display='none'">X</button>
+            <button class="buton-inchidere" aria-label="Închide">X</button>
             <div>
                 <h2 class="titlu-modal" style="font-size: 20px; text-align: left; color: #a855f7;" data-trad="t-rez-man">Adaugă Rezervare Manuală</h2>
                 <p style="color: #ccc; font-size: 13px; margin-top: -10px; margin-bottom: 10px;" data-trad="t-rez-desc">(Dacă e ocupată, sistemul blochează)</p>
@@ -879,7 +879,7 @@
 
     <div class="modal" id="modal-tabel-program">
         <div class="modal-continut modal-mare program-modal" style="border-color: #06b6d4; max-width: 600px;">
-            <button class="buton-inchidere" aria-label="Închide" onclick="this.parentElement.parentElement.style.display='none'">X</button>
+            <button class="buton-inchidere" aria-label="Închide">X</button>
             <div class="program-continut">
                 <h2 class="titlu-modal program-titlu" data-trad="t-prog">Program & Disponibilitate</h2>
                 <div class="program-filtre">
@@ -908,13 +908,13 @@
                     </table>
                 </div>
             </div>
-            <button class="buton-rezervare program-reincarca" onclick="window.incarcaTabelProgram()" data-trad="t-reincarca">Reîncarcă Programul</button>
+            <button class="buton-rezervare program-reincarca" data-admin-action="reload-schedule" data-trad="t-reincarca">Reîncarcă Programul</button>
         </div>
     </div>
 
     <div class="modal" id="modal-istoric">
         <div class="modal-continut modal-mare" style="border-color: #3b82f6; width: 100%; max-width: 600px;">
-            <button class="buton-inchidere" aria-label="Închide" onclick="this.parentElement.parentElement.style.display='none'">X</button>
+            <button class="buton-inchidere" aria-label="Închide">X</button>
             <div style="flex-shrink: 0;">
                 <h2 class="titlu-modal" style="font-size: 20px; text-align: left; margin-bottom: 15px; color: #3b82f6;" data-trad="t-istoric-titlu">Rezervări viitoare și recente</h2>
                 <p class="admin-baze-help">Rezervările finalizate de peste 30 de zile sunt ascunse din această listă. Le poți consulta în „Program &amp; Active”, alegând data.</p>
@@ -934,7 +934,7 @@
         <div class="modal-continut modal-mare modal-chat-box" style="width: 100%; max-width: 900px; padding: 20px; border-color: #3b82f6;">
             <div class="chat-header">
                 <h2 style="font-size: 20px; color: #3b82f6;">Mesaje Clienți</h2>
-                <button class="buton-inchidere" aria-label="Închide" style="position: static;" onclick="document.getElementById('modal-chat-admin').style.display='none'">X</button>
+                <button class="buton-inchidere" aria-label="Închide" style="position: static;">X</button>
             </div>
 
             <div class="container-dual-chat">

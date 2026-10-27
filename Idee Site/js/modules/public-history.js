@@ -72,8 +72,7 @@
 
                 const terenAsociat = state.courts.find(t => t.nume === r.teren);
                 const linkLocatie = (terenAsociat && terenAsociat.locatie) ? terenAsociat.locatie : '';
-                const onClickLocatie = linkLocatie ? `window.open('${window.escapeJs(window.safeUrl(linkLocatie))}', '_blank', 'noopener,noreferrer')` : `alert('Error')`;
-                const butonLocatie = `<button onclick="${onClickLocatie}" style="margin-top: 10px; margin-right: 10px; background: #3b82f6; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer;">📍 ${window.dict[window.lang]['vezi_locatia'].split(' ')[0]}</button>`;
+                const butonLocatie = `<button class="location-teren-client" data-location="${window.escapeHtml(window.safeUrl(linkLocatie))}" style="margin-top: 10px; margin-right: 10px; background: #3b82f6; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer;">📍 ${window.dict[window.lang]['vezi_locatia'].split(' ')[0]}</button>`;
 
                 let butonChat = '';
                 if (tip === 'active') {
@@ -109,6 +108,14 @@
             document.getElementById('inchide-istoric-client')?.addEventListener('click', () => document.getElementById('modal-lista-rezervari').style.display = 'none');
 
             document.getElementById('container-rezervari')?.addEventListener('click', async (e) => {
+                const location = e.target.closest('.location-teren-client');
+                if (location) {
+                    const url = window.safeUrl(location.dataset.location);
+                    if (url) window.open(url, '_blank', 'noopener,noreferrer');
+                    else alert('Error');
+                    return;
+                }
+
                 if (e.target.classList.contains('anulare-client')) {
                     const button = e.target;
                     const idRez = button.getAttribute('data-id');

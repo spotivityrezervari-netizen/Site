@@ -101,7 +101,7 @@
                         // Only the superadmin navigates through city groups.
                         if (state.account.is_super) {
                             htmlMeniu += `
-                                <button type="button" class="card-sport admin-menu-card admin-city-card admin-comun" onclick="window.deschideSubPaginaOras('pagina-oras-${safeOras}')">
+                                <button type="button" class="card-sport admin-menu-card admin-city-card admin-comun" data-admin-city="pagina-oras-${safeOras}">
                                     <h2>Setări <span class="admin-card-name">${window.escapeHtml(oras)}</span></h2>
                                     <span class="admin-card-detail">${courts.length} ${courts.length === 1 ? 'teren' : 'terenuri'}</span>
                                 </button>
@@ -111,12 +111,11 @@
                         let carduriTerenuri = '';
                         for (const terenDB of courts) {
                             const courtId = window.escapeHtml(terenDB.id);
-                            const courtJsId = window.escapeJs(terenDB.id);
                             const sportLabel = terenDB.sport === 'Tenis Picior' ? 'Tenis de picior' : terenDB.sport || 'Sport';
                             let culoareTeren = terenDB.este_activ !== false ? '#3b82f6' : '#ef4444';
 
                             carduriTerenuri += `
-                                <button type="button" class="card-sport admin-menu-card admin-court-card admin-comun" onclick="document.getElementById('modal-setari-${courtJsId}').style.display='flex'">
+                                <button type="button" class="card-sport admin-menu-card admin-court-card admin-comun" data-admin-court="${courtId}">
                                     <h2>Setări <span class="admin-card-name">${window.escapeHtml(terenDB.nume)}</span></h2>
                                     <span class="admin-card-detail">${window.escapeHtml(sportLabel)}</span>
                                 </button>
@@ -125,7 +124,7 @@
                             htmlModale += `
                                 <div class="modal" id="modal-setari-${courtId}">
                                     <div class="modal-continut modal-mare" style="border-color: ${culoareTeren}; width: 100%; max-width: 550px;">
-                                        <button class="buton-inchidere" aria-label="Închide" onclick="this.parentElement.parentElement.style.display='none'">X</button>
+                                        <button class="buton-inchidere" aria-label="Închide" data-close-court-modal>X</button>
                                         <div class="admin-settings-header">
                                             <h2 class="titlu-modal" style="font-size: 20px; text-align: left; color: ${culoareTeren};">Setări ${window.escapeHtml(terenDB.nume)}</h2>
                                         </div>
@@ -146,8 +145,8 @@
                                                 <label style="color: #ef4444; font-weight: bold; font-size: 15px;">Blochează / Deblochează o zi</label>
                                                 <div class="admin-day-actions" style="display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px;">
                                                     <input type="date" id="data-blocare-${courtId}" style="background: rgba(0,0,0,0.5); color: white; padding: 8px; border-radius: 5px; flex: 1; min-width: 120px;">
-                                                    <button type="button" onclick="blocheazaZiuaIntreaga('${window.escapeJs(terenDB.nume)}', '${window.escapeJs(terenDB.id)}', event)" style="background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold;">Închide</button>
-                                                    <button type="button" onclick="deblocheazaZiua('${window.escapeJs(terenDB.nume)}', '${window.escapeJs(terenDB.id)}', event)" style="background: #22c55e; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold;">Deblochează</button>
+                                                    <button type="button" data-court-action="block-day" data-court-id="${courtId}" data-court-name="${window.escapeHtml(terenDB.nume)}" style="background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold;">Închide</button>
+                                                    <button type="button" data-court-action="unblock-day" data-court-id="${courtId}" data-court-name="${window.escapeHtml(terenDB.nume)}" style="background: #22c55e; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold;">Deblochează</button>
                                                 </div>
                                             </div>
 
@@ -175,8 +174,8 @@
                                                 <input type="checkbox" id="are-chat-${courtId}" ${terenDB.are_chat !== false ? 'checked' : ''} style="width:20px;height:20px; cursor: pointer;">
                                             </div>
 
-                                            <button id="btn-save-${courtId}" type="button" onclick="salveazaSetariTeren('${window.escapeJs(terenDB.id)}', '${window.escapeJs(terenDB.nume)}')" class="buton-rezervare" style="background: #3b82f6; margin-top: 15px;">Salvează Setările pt ${window.escapeHtml(terenDB.nume)}</button>
-                                            <button ${state.account.is_super ? '' : 'hidden'} type="button" onclick="stergeTerenDublaConfirmare('${window.escapeJs(terenDB.id)}', '${window.escapeJs(terenDB.nume)}')" class="buton-rezervare" style="background: #ef4444; margin-top: 10px;">Șterge Terenul</button>
+                                            <button id="btn-save-${courtId}" type="button" data-court-action="save-settings" data-court-id="${courtId}" data-court-name="${window.escapeHtml(terenDB.nume)}" class="buton-rezervare" style="background: #3b82f6; margin-top: 15px;">Salvează Setările pt ${window.escapeHtml(terenDB.nume)}</button>
+                                            <button ${state.account.is_super ? '' : 'hidden'} type="button" data-court-action="delete-court" data-court-id="${courtId}" data-court-name="${window.escapeHtml(terenDB.nume)}" class="buton-rezervare" style="background: #ef4444; margin-top: 10px;">Șterge Terenul</button>
                                         </div>
                                     </div>
                                 </div>
@@ -187,7 +186,7 @@
                         const pageHtml = `
                             <div id="pagina-oras-${safeOras}" class="sub-pagina-oras" style="display: none; width: 100%; margin-top: 20px;">
                                 <div class="admin-city-header" style="display: flex; align-items: center; justify-content: flex-start; margin-bottom: 20px; width: 100%;">
-                                    <button class="btn-cont" onclick="window.inchideSubPaginaOras()">
+                                    <button class="btn-cont" data-admin-city-back>
                                         Înapoi
                                     </button>
                                     <h1 style="color: white; margin: 0; margin-left: 20px; font-size: 24px;">Setări ${window.escapeHtml(oras)}</h1>
@@ -233,6 +232,35 @@
                     document.querySelector('#base-admin-workspace .base-admin-tools')?.removeAttribute('hidden');
                     containerMeniu.innerHTML = htmlMeniu;
                     containerModale.innerHTML = htmlModale;
+                    containerModale.querySelectorAll('[data-close-court-modal]').forEach(button => {
+                        button.addEventListener('click', () => { button.closest('.modal').style.display = 'none'; });
+                    });
+                    containerModale.querySelectorAll('[data-court-action]').forEach(button => {
+                        button.addEventListener('click', event => {
+                            const { courtAction, courtId, courtName } = button.dataset;
+                            if (!state.managedCourts.some(court => String(court.id) === courtId)) return;
+                            if (courtAction === 'block-day') window.blocheazaZiuaIntreaga(courtName, courtId, event);
+                            if (courtAction === 'unblock-day') window.deblocheazaZiua(courtName, courtId, event);
+                            if (courtAction === 'save-settings') window.salveazaSetariTeren(courtId, courtName);
+                            if (courtAction === 'delete-court') window.stergeTerenDublaConfirmare(courtId, courtName);
+                        });
+                    });
+                    subPagesContainer.querySelectorAll('[data-admin-city-back]').forEach(button => {
+                        button.addEventListener('click', () => window.inchideSubPaginaOras());
+                    });
+                    // City pages and the main court list are replaced on each render.
+                    [containerMeniu, subPagesContainer].forEach(container => {
+                        container.querySelectorAll('[data-admin-city]').forEach(button => {
+                            button.addEventListener('click', () => window.deschideSubPaginaOras(button.dataset.adminCity));
+                        });
+                        container.querySelectorAll('[data-admin-court]').forEach(button => {
+                            button.addEventListener('click', () => {
+                                if (!state.managedCourts.some(court => String(court.id) === button.dataset.adminCourt)) return;
+                                const modal = document.getElementById(`modal-setari-${button.dataset.adminCourt}`);
+                                if (modal) modal.style.display = 'flex';
+                            });
+                        });
+                    });
                     window.applySportAppearance?.();
 
                     // Reatașează observerul pentru scroll pe noile modale create
@@ -256,10 +284,6 @@
         document.getElementById('container-meniu-terenuri').addEventListener('click', event => {
             const program = event.target.closest('[data-admin-program]');
             if (program) return window.deschideProgramAdmin(program.dataset.adminProgram);
-            const edit = event.target.closest('[data-admin-court]');
-            if (!edit || !state.managedCourts.some(court => String(court.id) === edit.dataset.adminCourt)) return;
-            const modal = document.getElementById(`modal-setari-${edit.dataset.adminCourt}`);
-            if (modal) modal.style.display = 'flex';
         });
 
     };

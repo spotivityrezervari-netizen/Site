@@ -42,8 +42,6 @@
                 dataInput.value = window.siteDate();
             }
 
-            dataInput.onchange = window.incarcaTabelProgram;
-            select.onchange = window.incarcaTabelProgram;
             window.incarcaTabelProgram();
         };
 
@@ -95,6 +93,11 @@
             const terenAreChatActivat = infoTeren ? infoTeren.are_chat !== false : true;
 
             let html = '';
+            const actions = [];
+            const action = (type, handler) => {
+                const index = actions.push({ type, handler }) - 1;
+                return `data-program-action="${index}"`;
+            };
             const oreRezervabile = window.getCourtBookingHours(infoTeren);
             const ore = [...new Set([...oreRezervabile, ...(rezervari || []).map(r => r.ora)])]
                 .sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
@@ -112,10 +115,10 @@
                     const eBlocat = rGasita.email_client === 'Teren Blocat';
                     bg = eBlocat ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.05)';
 
-                    if (!window.bookingEnded(rGasita.data_str, rGasita.ora)) col1 += `<br><button class="program-anulare" aria-label="Anulează rezervarea de la ora ${window.escapeHtml(ora)}" title="Anulează rezervarea de la ora ${window.escapeHtml(ora)}" onclick="window.anulareDublaAdmin('${rGasita.id}', '${ora}')" style="background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 5px; width: 100%;"><span class="program-anulare-icon" aria-hidden="true">✕</span><span class="program-anulare-text">Anulează</span></button>`;
+                    if (!window.bookingEnded(rGasita.data_str, rGasita.ora)) col1 += `<br><button class="program-anulare" aria-label="Anulează rezervarea de la ora ${window.escapeHtml(ora)}" title="Anulează rezervarea de la ora ${window.escapeHtml(ora)}" ${action('click', () => window.anulareDublaAdmin(rGasita.id, ora))} style="background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 5px; width: 100%;"><span class="program-anulare-icon" aria-hidden="true">✕</span><span class="program-anulare-text">Anulează</span></button>`;
 
                     col2 = `
-                        <select onchange="window.schimbaStareExistenta(this, '${rGasita.id}', '${ora}', '${window.escapeJs(terenAles)}', '${dataFormata}')" style="background: #1f2937; color: white; border: 1px solid ${eBlocat ? '#ef4444' : '#f59e0b'}; border-radius: 5px; padding: 6px; font-weight: bold; cursor: pointer; width: 100%;">
+                        <select ${action('change', event => window.schimbaStareExistenta(event.currentTarget, rGasita.id, ora, terenAles, dataFormata))} style="background: #1f2937; color: white; border: 1px solid ${eBlocat ? '#ef4444' : '#f59e0b'}; border-radius: 5px; padding: 6px; font-weight: bold; cursor: pointer; width: 100%;">
                             <option value="liber">LIBER</option>
                             <option value="ocupat" ${!eBlocat ? 'selected' : ''}>OCUPAT</option>
                             <option value="blocat" ${eBlocat ? 'selected' : ''}>BLOCAT</option>
@@ -152,7 +155,7 @@
                         if (terenAreChatActivat && !isGuest) {
                             const clientName = contClient ? (contClient.nume || contClient.email.split('@')[0]) : (rGasita.email_client.split('@')[0]);
                             const emailParam = contClient ? contClient.email : rGasita.email_client;
-                            chatBtnStr = `<button class="btn-tabel-chat" onclick="deschideChatDinTabel('${window.escapeJs(emailParam)}', '${window.escapeJs(terenAles)}', '${window.escapeJs(clientName)}')" style="background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.5); color: #3b82f6; border-radius: 8px; padding: 4px 10px; font-size: 11px; font-weight: bold; cursor: pointer; margin-left: 10px; transition: 0.3s; vertical-align: middle;">Chat</button>`;
+                            chatBtnStr = `<button class="btn-tabel-chat" ${action('click', () => window.deschideChatDinTabel(emailParam, terenAles, clientName))} style="background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.5); color: #3b82f6; border-radius: 8px; padding: 4px 10px; font-size: 11px; font-weight: bold; cursor: pointer; margin-left: 10px; transition: 0.3s; vertical-align: middle;">Chat</button>`;
                         }
 
                         col3 = `<span style="color:white; font-size:12px; line-height:1.4;">${infoClient}</span><div class="program-detalii-footer"><span style="font-size:12px; color:#aaa;">${window.escapeHtml(rGasita.pret_total)}</span>${chatBtnStr}</div>`;
@@ -160,7 +163,7 @@
                 } else {
                     const oraId = ora.replace(':', '');
                     col2 = `
-                        <select onchange="window.schimbaStareNoua(this, '${window.escapeJs(terenAles)}', '${dataFormata}', '${ora}')" id="select-stare-${oraId}" style="background: #1f2937; color: white; border: 1px solid #22c55e; border-radius: 5px; padding: 6px; font-weight: bold; cursor: pointer; width: 100%;">
+                        <select ${action('change', event => window.schimbaStareNoua(event.currentTarget, terenAles, dataFormata, ora))} id="select-stare-${oraId}" style="background: #1f2937; color: white; border: 1px solid #22c55e; border-radius: 5px; padding: 6px; font-weight: bold; cursor: pointer; width: 100%;">
                             <option value="liber" selected>LIBER</option>
                             <option value="ocupat">OCUPAT</option>
                             <option value="blocat">BLOCAT</option>
@@ -171,7 +174,7 @@
                         <div id="form-inline-${oraId}" style="display: none; flex-direction: column; gap: 5px; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 5px; border: 1px dashed #f59e0b;">
                             <input type="text" id="inline-nume-${oraId}" placeholder="Nume Client / Telefon" style="padding: 6px; border-radius: 3px; border: 1px solid #444; background: #222; color: white; font-size: 12px; width: 100%; box-sizing: border-box;">
                             <input type="text" id="inline-pret-${oraId}" placeholder="Detalii" style="padding: 6px; border-radius: 3px; border: 1px solid #444; background: #222; color: white; font-size: 12px; width: 100%; box-sizing: border-box;">
-                            <button onclick="window.salveazaRezervareInlineAdmin('${window.escapeJs(terenAles)}', '${dataFormata}', '${ora}')" style="background: #22c55e; color: black; border: none; padding: 6px; border-radius: 3px; font-weight: bold; cursor: pointer; font-size: 12px;">Salvează Rezervarea</button>
+                            <button ${action('click', () => window.salveazaRezervareInlineAdmin(terenAles, dataFormata, ora))} style="background: #22c55e; color: black; border: none; padding: 6px; border-radius: 3px; font-weight: bold; cursor: pointer; font-size: 12px;">Salvează Rezervarea</button>
                         </div>
                         <span id="text-liber-${oraId}" style="color:#888;">-</span>
                     `;
@@ -183,7 +186,13 @@
                         <td>${col3}</td></tr>`;
             });
             tbody.innerHTML = html || '<tr><td colspan="3">Nu sunt ore rezervabile. Alege orele în setările terenului pentru a relua rezervările.</td></tr>';
+            tbody.querySelectorAll('[data-program-action]').forEach(element => {
+                const binding = actions[Number(element.dataset.programAction)];
+                element.addEventListener(binding.type, binding.handler);
+            });
         };
 
+        document.getElementById('tabel-data')?.addEventListener('change', () => window.incarcaTabelProgram());
+        document.getElementById('tabel-teren')?.addEventListener('change', () => window.incarcaTabelProgram());
     };
 })();

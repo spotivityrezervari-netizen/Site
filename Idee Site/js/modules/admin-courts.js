@@ -26,11 +26,14 @@
                                 <p style="margin: 0; font-size: 13px; color: #ccc;">Preț: ${t.pret} Lei/oră | Minge: ${textMinge}</p>
                             </div>
                         </div>
-                        <button onclick="stergeTerenAdmin('${window.escapeJs(t.id)}')" style="background: #ef4444; color: white; border: none; padding: 6px 10px; border-radius: 5px; cursor: pointer;">Șterge</button>
+                        <button data-delete-court="${window.escapeHtml(t.id)}" style="background: #ef4444; color: white; border: none; padding: 6px 10px; border-radius: 5px; cursor: pointer;">Șterge</button>
                     </div>
                 `;
             });
             container.innerHTML = html;
+            container.querySelectorAll('[data-delete-court]').forEach(button => {
+                button.addEventListener('click', () => window.stergeTerenAdmin(button.dataset.deleteCourt));
+            });
         };
 
         window.stergeTerenAdmin = async function(id) {

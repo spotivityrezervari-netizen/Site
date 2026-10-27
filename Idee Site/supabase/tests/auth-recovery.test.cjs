@@ -35,9 +35,12 @@ let passed=0;
     const n=bearer===token(3)?3:bearer===token(1)?1:null;
     const reply=(status,data)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(data)});
     if(u.pathname==='/auth/v1/token'){
+     if(r.postDataJSON().email==='rejected@example.test')return reply(400,{code:'invalid_credentials',msg:'Invalid login credentials'});
      const who=r.postDataJSON().email==='admin@example.test'?3:1;
      return reply(200,{access_token:token(who),refresh_token:'fixture-refresh',expires_in:3600,token_type:'bearer',user:user(who)});
     }
+    if(u.pathname==='/auth/v1/signup')return reply(200,user(1));
+    if(u.pathname==='/auth/v1/logout')return route.fulfill({status:204,body:''});
     if(u.pathname==='/auth/v1/user'&&n){
      initialUserResolve();
      if(r.method()==='GET'&&userGate){const gate=userGate;userGate=null;gate.enter();await gate.wait}
@@ -96,6 +99,31 @@ let passed=0;
   const cancelled=await fixture();await cancelled.page.goto(recoveryUrl(),{waitUntil:'networkidle'});await cancelled.page.locator('#modal-parola-noua').waitFor({state:'visible'});await cancelled.page.keyboard.press('Escape');
   assert.equal(await cancelled.page.locator('#modal-parola-noua').count(),0);assert.equal(cancelled.writes.length,0);assert.ok(!cancelled.page.url().includes('access_token'));
   console.log('PASS recovery can be closed with Escape without changing a password');passed++;
+  const forms=await fixture();await forms.page.goto(base,{waitUntil:'networkidle'});
+  await forms.page.locator('#btn-top-cont').click();await forms.page.locator('#modal-auth').waitFor({state:'visible'});
+  await forms.page.locator('#login-email').fill('alice@example.test');await forms.page.locator('#login-parola').fill('fixture-password');
+  await forms.page.locator('#inchide-auth').click();
+  assert.equal(await forms.page.locator('#login-parola').inputValue(),'');
+  assert.equal(await forms.page.locator('#login-email').inputValue(),'alice@example.test','Closing only clears credentials, preserving the email for retry');
+  await forms.page.locator('#btn-top-cont').click();await forms.page.locator('#login-parola').fill('fixture-password');
+  await forms.page.keyboard.press('Escape');assert.equal(await forms.page.locator('#login-parola').inputValue(),'');
+  await forms.page.locator('#btn-top-cont').click();await forms.page.locator('#login-email').fill('rejected@example.test');
+  await forms.page.locator('#login-parola').fill('wrong-password');await forms.page.locator('#btn-executa-login').click();
+  await forms.page.waitForFunction(()=>!document.getElementById('btn-executa-login').disabled);
+  assert.equal(await forms.page.locator('#login-parola').inputValue(),'');assert.equal(await forms.page.locator('#modal-auth').isVisible(),true);
+  await forms.page.locator('#login-email').fill('alice@example.test');await forms.page.locator('#login-parola').fill('fixture-password');
+  await forms.page.locator('#btn-executa-login').click();await forms.page.locator('#modal-auth').waitFor({state:'hidden'});
+  assert.equal(await forms.page.locator('#login-parola').inputValue(),'');
+  await forms.page.locator('#btn-top-cont').click();await forms.page.locator('#modal-profil').waitFor({state:'visible'});
+  await forms.page.evaluate(()=>{document.getElementById('reg-parola').value='stale-password'});
+  await forms.page.locator('#btn-logout').click();await forms.page.waitForFunction(async()=>(await db.auth.getSession()).data.session===null);
+  assert.equal(await forms.page.locator('#reg-parola').inputValue(),'');
+  await forms.page.locator('#btn-top-cont').click();await forms.page.locator('#tab-register').click();
+  await forms.page.locator('#reg-nume').fill('Fixture Person');await forms.page.locator('#reg-email').fill('alice@example.test');
+  await forms.page.locator('#reg-telefon').fill('0700000000');await forms.page.locator('#reg-parola').fill('fixture-password');
+  await forms.page.locator('#btn-executa-register').click();await forms.page.locator('#form-login').waitFor({state:'visible'});
+  assert.equal(await forms.page.locator('#reg-parola').inputValue(),'');
+  console.log('PASS passwords are cleared after login/register attempts, close, Escape and logout while email retry data stays available');passed++;
   await normal.page.locator('.card-sport[data-sport="Fotbal"]').click();await normal.page.locator('#modal-terenuri').waitFor({state:'visible'});
   const image=normal.page.locator('.card-teren-poza img');await image.waitFor();await normal.page.waitForFunction(()=>document.querySelector('.card-teren-poza img')?.naturalWidth>0);
   assert.equal(await image.getAttribute('src'),'assets/imagini/avatar2.png');

@@ -85,13 +85,17 @@
         }
 
         function mount() {
+            const clearModalPasswords = modal => {
+                // Hidden forms must not retain passwords after their dialog closes.
+                modal?.querySelectorAll('input[type="password"]').forEach(input => { input.value = ''; });
+            };
             // --- ESC PENTRU A ÎNCHIDE ORICE MODAL ---
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') {
                     const modals = ['modal-auth', 'modal-profil', 'modal-terenuri', 'modal-rezervare', 'modal-lista-rezervari', 'modal-chat-client', 'modal-parola-noua', 'modal-legal'];
                     modals.forEach(id => {
                         const el = document.getElementById(id);
-                        if (el && el.style.display !== 'none') { el.style.display = 'none';
+                        if (el && el.style.display !== 'none') { clearModalPasswords(el); el.style.display = 'none';
                             if(id === 'modal-terenuri' || id === 'modal-rezervare') reseteazaFundalSport(); if (id === 'modal-chat-client') { const inp = document.getElementById('chat-client-input'); if (inp) inp.value = ''; } }
                     });
                 }
@@ -102,6 +106,7 @@
                 btn.addEventListener('click', function() {
                     const modalParent = this.closest('.modal');
                     if (modalParent) {
+                        clearModalPasswords(modalParent);
                         modalParent.style.display = 'none';
                         if (modalParent.id === 'modal-chat-client') { const inp = document.getElementById('chat-client-input'); if (inp) inp.value = ''; }
                     }

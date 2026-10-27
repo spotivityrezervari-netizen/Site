@@ -5,6 +5,12 @@
     const modules = window.SpotivityModules ||= {};
     modules.publicAuth = function(context) {
         const { db, state, services } = context;
+        const clearPasswords = () => {
+            for (const id of ['login-parola', 'reg-parola']) {
+                const input = document.getElementById(id);
+                if (input) input.value = '';
+            }
+        };
         function mount() {
             // --- ENTER PENTRU LOGIN / REGISTER ---
             document.getElementById('form-login')?.addEventListener('keydown', (e) => {
@@ -14,10 +20,14 @@
                 if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-executa-register')?.click(); }
             });
 
-            document.getElementById('inchide-auth')?.addEventListener('click', () => document.getElementById('modal-auth').style.display = 'none');
+            document.getElementById('inchide-auth')?.addEventListener('click', () => {
+                clearPasswords();
+                document.getElementById('modal-auth').style.display = 'none';
+            });
             document.getElementById('inchide-profil')?.addEventListener('click', () => document.getElementById('modal-profil').style.display = 'none');
 
             document.getElementById('btn-logout')?.addEventListener('click', async () => {
+                clearPasswords();
                 const { error } = await db.auth.signOut();
                 if (error) return alert('Deconectarea a eșuat: ' + error.message);
                 await services.profile.syncUser(null);
@@ -46,7 +56,7 @@
                 const { data: authData, error: authError } = await db.auth.signInWithPassword({
                     email: email,
                     password: parola,
-                });
+                }).finally(clearPasswords);
 
                 if (authError) {
                     btn.innerText = textInitial; btn.disabled = false;
@@ -76,7 +86,7 @@
                     email: email,
                     password: parola,
                     options: { data: { nume, telefon }, emailRedirectTo: window.siteHomeUrl() },
-                });
+                }).finally(clearPasswords);
 
                 if (authError) {
                     btn.innerText = window.dict[window.lang]['btn_creare_cont']; btn.disabled = false;
@@ -131,6 +141,7 @@
         }
         function watchIdentity() {
             db.auth.onAuthStateChange((event, session) => {
+                if (['SIGNED_IN', 'SIGNED_OUT'].includes(event)) clearPasswords();
                 // restore() already fetched this user's authoritative Auth data.
                 // INITIAL_SESSION can carry older cached email-change metadata.
                 if (event === 'INITIAL_SESSION'

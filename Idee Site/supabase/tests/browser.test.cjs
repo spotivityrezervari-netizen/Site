@@ -45,6 +45,8 @@ async function openProfile(page) {
   let browser;
   try {
     await pg.exec(readFileSync(join(__dirname,'schema.sql'),'utf8'));
+    // Match Supabase Auth's trusted timestamp before the welcome-email migration.
+    await pg.exec('alter table auth.users add column created_at timestamptz not null default now()');
     await pg.exec(readFileSync(join(__dirname,'../001_security.sql'),'utf8'));
     await pg.exec(readFileSync(join(__dirname,'../003_court_hours.sql'),'utf8'));
     await pg.exec(readFileSync(join(__dirname,'../004_admin_scope_hardening.sql'),'utf8'));
@@ -57,7 +59,7 @@ async function openProfile(page) {
     await pg.exec(readFileSync(join(__dirname,'../011_club_requests.sql'),'utf8'));
     await pg.exec(readFileSync(join(__dirname,'../012_club_approval.sql'),'utf8'));
     await pg.exec(readFileSync(join(__dirname,'../013_admin_integration.sql'),'utf8'));
-    for (const file of ['014_booking_groups.sql', '015_profile_contact.sql', '016_notification_outbox.sql', '017_base_avatars.sql', '020_final_sport_backgrounds.sql']) {
+    for (const file of ['014_booking_groups.sql', '015_profile_contact.sql', '016_notification_outbox.sql', '017_base_avatars.sql', '018_google_profile_names.sql', '019_owner_court_creation.sql', '020_final_sport_backgrounds.sql', '021_account_welcome.sql', '022_email_booking_context.sql', '023_late_cancellations.sql']) {
       await pg.exec(readFileSync(join(__dirname, '..', file), 'utf8'));
     }
     await pg.exec("update public.terenuri set poza='assets/imagini/avatar2.png'");
@@ -652,7 +654,7 @@ async function openProfile(page) {
     // Escape on the owner workspace must keep its scoped dashboard visible.
     if (await admin.locator(`#modal-setari-${settingsId}`).isVisible()) await admin.keyboard.press('Escape');
     assert.equal(await admin.locator('#base-admin-workspace').isVisible(),true);
-    const cityBack=admin.locator('.sub-pagina-oras:visible [onclick*="inchideSubPaginaOras"]');
+    const cityBack=admin.locator('.sub-pagina-oras:visible [data-admin-city-back]');
     if (await cityBack.count()) await cityBack.click();
     pass('allocated admin changes the court hours to 09:00, 10:00 and 11:00 through settings and the real SDK');
     const unallocatedUpdate=await admin.evaluate(async ()=>{
@@ -667,7 +669,7 @@ async function openProfile(page) {
     });
     assert.equal(await admin.locator('[id^="modal-setari-"]').count(),1);
     pass('changing hours preserves assigned-admin boundaries and leaves an unallocated court unchanged');
-    await admin.locator('[onclick*="modal-rezervare-manuala"]').click();
+    await admin.locator('[data-open-modal="modal-rezervare-manuala"]').click();
     await admin.locator('#manual-teren').selectOption('Court A');
     await admin.waitForFunction(()=>document.querySelector('#manual-ora option[value="09:00"]')!==null);
     assert.deepEqual(await admin.locator('#manual-ora option').evaluateAll(nodes=>nodes.map(node=>node.value).filter(Boolean)),enabledHours);
@@ -871,7 +873,7 @@ async function openProfile(page) {
         if (id==='modal-chat-admin') await admin.locator('#btn-vezi-chat-admin').click();
         else if (id==='modal-tabel-program') await admin.locator('[data-admin-program="Fotbal"]').click();
         else if (id.startsWith('modal-setari-')) await admin.locator(`[data-admin-court="${settingsId}"]`).click();
-        else await admin.locator(`.card-sport[onclick*="${id}"]`).click();
+        else await admin.locator(`.card-sport[data-open-modal="${id}"]`).click();
         await admin.locator(`#${id}`).waitFor({state:'visible'});
         if (id==='modal-istoric') {
           await admin.locator('#btn-istoric').click();
@@ -962,7 +964,7 @@ async function openProfile(page) {
         assert.equal(await superAdmin.locator(`#pret-minge-${court.id}`).inputValue(),String(court.pret_minge ??15));
         await superAdmin.locator(`#modal-setari-${court.id} .buton-inchidere`).click();
       }
-      await cityPage.locator('[onclick*="inchideSubPaginaOras"]').click();
+      await cityPage.locator('[data-admin-city-back]').click();
     }
     pass('only superadmin navigates Setări city → allocated court settings with plain labels for each sport, including foot tennis');
     for (const width of viewportWidths) {
@@ -985,10 +987,10 @@ async function openProfile(page) {
           assert.doesNotMatch(await superAdmin.locator(`#modal-setari-${court.id}`).innerText(),/\p{Extended_Pictographic}/u);
           await superAdmin.locator(`#modal-setari-${court.id} .buton-inchidere`).click();
         }
-        await superAdmin.locator('.sub-pagina-oras:visible [onclick*="inchideSubPaginaOras"]').click();
+        await superAdmin.locator('.sub-pagina-oras:visible [data-admin-city-back]').click();
       }
       for (const id of ['modal-adauga-teren','modal-creeaza-cont']) {
-        await superAdmin.locator(`.card-sport[onclick*="${id === 'modal-adauga-teren' ? 'deschideModalAdaugaTeren' : id}"]`).click();
+        await superAdmin.locator(id === 'modal-adauga-teren' ? '.card-sport[data-admin-action="add-court"]' : `.card-sport[data-open-modal="${id}"]`).click();
         await superAdmin.locator(`#${id}`).waitFor({state:'visible'});
         if (id==='modal-adauga-teren') await superAdmin.locator('#container-lista-terenuri').getByText(longCourt,{exact:false}).waitFor();
         if (id==='modal-adauga-teren') {
@@ -1487,7 +1489,7 @@ async function openProfile(page) {
     assert.ok(requests.some(item=>item.path==='/rest/v1/rpc/save_sports_base' && item.person===4 && item.body.p_court_ids.includes(String(unassignedCourtId))));
     pass('superadmin creates a base, associates an existing court and grants description editing atomically through the authenticated SDK and PostgreSQL RLS');
     await superAdmin.keyboard.press('Escape');
-    await superAdmin.locator('.card-sport[onclick*="deschideModalAdaugaTeren"]').click();
+    await superAdmin.locator('.card-sport[data-admin-action="add-court"]').click();
     await superAdmin.locator('#teren-baza').selectOption(createdBase.id);
     await superAdmin.locator('#teren-nume').fill('Teren creat direct în bază');
     await superAdmin.locator('#teren-sport').selectOption('Tenis Picior');

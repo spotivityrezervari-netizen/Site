@@ -23,6 +23,7 @@
 
             data.sort((a, b) => b.id - a.id);
             let html = ""; let rezervariGasite = 0;
+            const cancellations = [];
 
             const terenurileLui = state.account.is_super ? [] : (state.account.terenuri ? state.account.terenuri.split(',').map(n => n.trim()).filter(Boolean) : []);
             const acum = new Date();
@@ -52,7 +53,7 @@
                 if (eAnulata) { culoareBorder = '#ef4444'; culoareTitlu = '#ef4444'; opacitate = '0.7'; textStare = `<span style="color: #ef4444; font-weight: bold;">[${txtAnulata}]</span>`; }
                 else if (eBlocaj) { culoareBorder = '#ef4444'; culoareTitlu = '#ef4444'; textStare = `<span style="color: #ef4444; font-weight: bold;">[${txtBlocata}]</span>`; }
                 else if (esteTrecuta) { culoareBorder = '#6b7280'; culoareTitlu = '#9ca3af'; opacitate = '0.85'; textStare = `<span style="color: #9ca3af; font-weight: bold;">[${txtFinalizata}]</span>`; }
-                else { butonAnulare = `<button onclick="anuleazaRezervareAdmin('${window.escapeJs(r.id)}')" style="margin-top: 10px; background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; width: 100%;">${txtBtnAnuleaza}</button>`; }
+                else { butonAnulare = `<button data-cancel-history="${cancellations.push(r.id) - 1}" style="margin-top: 10px; background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; width: 100%;">${txtBtnAnuleaza}</button>`; }
 
                 const dataTradusa = (typeof window.traduData === 'function') ? window.traduData(r.data_str) : r.data_str;
 
@@ -89,6 +90,10 @@
             });
 
             container.innerHTML = rezervariGasite === 0 ? "<p style='color: white;'>Nu există date.</p>" : html;
+            container.querySelectorAll('[data-cancel-history]').forEach(button => {
+                const id = cancellations[Number(button.dataset.cancelHistory)];
+                button.addEventListener('click', () => window.anuleazaRezervareAdmin(id));
+            });
         };
 
         document.getElementById('btn-istoric')?.addEventListener('click', window.reincarcaIstoricAdmin);

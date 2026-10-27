@@ -51,6 +51,3 @@ const db = createClient(supabaseUrl, supabaseKey, {
         return session;
     };
 })();
-
-console.log('Client Supabase inițializat.');
-

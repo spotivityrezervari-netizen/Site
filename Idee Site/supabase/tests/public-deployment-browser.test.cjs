@@ -23,12 +23,13 @@ const pass=message=>{checks++;console.log('PASS',message);};
     assert.deepEqual(directives.get('default-src'),["'none'"]);
     assert.ok(directives.get('script-src').includes("'self'"));
     assert.ok(!directives.get('script-src').some(source=>["'unsafe-inline'","'unsafe-eval'",'https:','*'].includes(source)));
-    assert.deepEqual(directives.get('script-src-attr'),["'unsafe-inline'"]);
+    assert.deepEqual(directives.get('script-src-attr'),["'none'"]);
     assert.deepEqual(directives.get('base-uri'),["'none'"]);assert.deepEqual(directives.get('object-src'),["'none'"]);
     assert.deepEqual(directives.get('frame-ancestors'),["'none'"]);assert.deepEqual(directives.get('form-action'),["'self'"]);
     assert.equal(headers.get('x-content-type-options'),'nosniff');assert.equal(headers.get('x-frame-options'),'DENY');assert.equal(headers.get('referrer-policy'),'no-referrer');
     assert.match(headers.get('strict-transport-security'),/max-age=31536000/);assert.match(headers.get('permissions-policy'),/geolocation=\(\)/);
     assert.ok(!html.includes('Content-Security-Policy-Report-Only'));
+    assert.doesNotMatch(html, /\son[a-z]+\s*=/i, 'Published HTML must not contain inline event attributes');
     pass('the built index is served with enforced CSP, anti-framing, no-referrer, MIME, permissions and HTTPS headers');
 
     const privatePaths=['/README.md','/netlify.toml','/package.json','/admin.html','/.git/config','/_headers','/deploy/netlify/_headers',
@@ -80,7 +81,7 @@ const pass=message=>{checks++;console.log('PASS',message);};
     await page.locator('#sport-fotbal .home-reserve-button').click();await page.locator('#modal-terenuri').waitFor({state:'visible'});
     await page.locator('.card-teren-poza').filter({hasText:'Court A'}).click();await page.locator('#modal-rezervare').waitFor({state:'visible'});
     await page.keyboard.press('Escape');await page.locator('#modal-rezervare').waitFor({state:'hidden'});
-    pass('the real built modules and images initialize under CSP, existing inline language handlers work, and the court/booking dialogs still open');
+    pass('the real built modules and images initialize under CSP, language listeners work, and the court/booking dialogs still open');
 
     for(const width of [390,1440]){
       await page.setViewportSize({width,height:width<768?844:1000});
@@ -99,16 +100,19 @@ const pass=message=>{checks++;console.log('PASS',message);};
 
     await page.evaluate(()=>{
       const inline=document.createElement('script');inline.textContent='window.__deploymentInlineExecuted = true';document.head.append(inline);
+      const attribute=document.createElement('button');attribute.setAttribute('onclick','window.__deploymentAttributeExecuted = true');document.body.append(attribute);attribute.click();attribute.remove();
       const external=document.createElement('script');external.src='https://unapproved-script.example.invalid/injected.js';document.head.append(external);
       const alternate=document.createElement('script');alternate.src='https://cdn.jsdelivr.net/npm/unapproved-package@1.0.0/index.js';document.head.append(alternate);
     });
     await page.waitForFunction(()=>window.__deploymentCSP.filter(event=>event.directive==='script-src-elem').length>=3);
-    const attacks=await page.evaluate(()=>({inline:window.__deploymentInlineExecuted,violations:window.__deploymentCSP}));
+    await page.waitForFunction(()=>window.__deploymentCSP.some(event=>event.directive==='script-src-attr'));
+    const attacks=await page.evaluate(()=>({inline:window.__deploymentInlineExecuted,attribute:window.__deploymentAttributeExecuted,violations:window.__deploymentCSP}));
+    assert.equal(attacks.attribute,undefined,'Injected event attributes must never execute');
     assert.equal(attacks.inline,undefined);assert.ok(attacks.violations.some(event=>event.blocked==='inline'&&event.disposition==='enforce'));
     assert.ok(attacks.violations.some(event=>event.blocked.startsWith('https://unapproved-script.example.invalid/')));
     assert.ok(attacks.violations.some(event=>event.blocked.startsWith('https://cdn.jsdelivr.net/npm/unapproved-package')));
     assert.deepEqual(forbiddenRequests,[],'CSP must reject unapproved scripts before the network adapter');
-    pass('enforced browser CSP blocks injected inline scripts, unapproved external hosts and other packages on the approved CDN');
+    pass('enforced browser CSP blocks injected inline scripts and event attributes, unapproved external hosts and other packages on the approved CDN');
     console.log(`${checks} public deployment browser checks passed.`);
   }finally{if(browser)await browser.close();if(fixture)await fixture.close();await site.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

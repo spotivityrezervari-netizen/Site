@@ -1,6 +1,6 @@
 # Public browser assets only. Supabase enforces data/role permissions separately.
 /*
-  Content-Security-Policy: default-src 'none'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3; script-src-attr 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; connect-src 'self' https://ndubcdwohqzgxpuiowye.supabase.co wss://ndubcdwohqzgxpuiowye.supabase.co; font-src 'self'; media-src 'none'; worker-src 'none'; manifest-src 'self'; form-action 'self'; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'none'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; connect-src 'self' https://ndubcdwohqzgxpuiowye.supabase.co wss://ndubcdwohqzgxpuiowye.supabase.co; font-src 'self'; media-src 'none'; worker-src 'none'; manifest-src 'self'; form-action 'self'; upgrade-insecure-requests
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: no-referrer

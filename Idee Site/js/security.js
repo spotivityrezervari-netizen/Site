@@ -60,3 +60,26 @@ window.bookingInRecentHistory = (row, now = Date.now()) => {
     const finish = `${String(end.getUTCFullYear()).padStart(4, '0')}-${String(end.getUTCMonth()+1).padStart(2,'0')}-${String(end.getUTCDate()).padStart(2,'0')} ${String(end.getUTCHours()).padStart(2,'0')}:${String(end.getUTCMinutes()).padStart(2,'0')}`;
     return finish >= boundary;
 };
+
+// Bind the static navigation controls from trusted markup. No event attribute
+// strings are interpreted, so CSP can reject all inline JavaScript handlers.
+document.addEventListener('DOMContentLoaded', () => {
+    const allowedModals = new Set(['modal-legal', 'modal-creeaza-cont', 'modal-rezervare-manuala', 'modal-istoric']);
+    document.querySelectorAll('[data-open-modal]').forEach(button => {
+        const id = button.dataset.openModal;
+        if (!allowedModals.has(id)) return;
+        button.addEventListener('click', () => {
+            const modal = document.getElementById(id);
+            if (modal) modal.style.display = 'flex';
+        });
+    });
+    document.querySelectorAll('[data-admin-action]').forEach(button => {
+        const actions = {
+            'add-court': () => window.deschideModalAdaugaTeren(),
+            'open-schedule': () => window.deschideProgramAdmin(),
+            'reload-schedule': () => window.incarcaTabelProgram()
+        };
+        const action = actions[button.dataset.adminAction];
+        if (Object.hasOwn(actions, button.dataset.adminAction)) button.addEventListener('click', action);
+    });
+});
