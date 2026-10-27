@@ -159,8 +159,9 @@ export function renderTransactionalMail(input: TransactionalMailInput): Rendered
     if (!booking || !Array.isArray(booking.hours) || !booking.hours.length || booking.hours.length > 24 || booking.hours.some(hour => typeof hour !== 'string' || !line(hour)) || !Number.isFinite(booking.amountRON) || booking.amountRON < 0) throw new TypeError('Invalid booking details');
     const owner = input.kind === 'booking_created_owner' || input.kind === 'booking_cancelled_owner';
     const created = input.kind === 'booking_created_client' || input.kind === 'booking_created_owner';
+    const mapsURL = mapsLink(booking.mapsURL);
     rows = [
-      { label: 'Locație', value: line(booking.baseName) || line(booking.courtName), href: mapsLink(booking.mapsURL) },
+      { label: 'Locație', value: mapsURL ? 'Vezi terenul în Google Maps' : line(booking.baseName) || line(booking.courtName), href: mapsURL },
       { label: 'Teren', value: line(booking.courtName) }, { label: 'Sport', value: line(booking.sport) },
       { label: 'Oraș', value: line(booking.city) }, { label: 'Data', value: romanianDay(booking.dayISO) },
       { label: created ? 'Interval orar' : 'Ore', value: created ? interval(booking.hours) : booking.hours.map(line).join(', ') },
