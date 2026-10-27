@@ -1,6 +1,6 @@
 # Organizarea JavaScript
 
-Toată interfața publică și administrarea rămân în `index.html`. Nu există o pagină separată de admin, un bundler sau o etapă de build.
+Toată interfața publică și administrarea rămân în `index.html`. Nu există o pagină separată de admin sau un bundler. Buildul de publicare `node scripts/build-public.mjs`, din rădăcina repository-ului, copiază numai fișierele frontend aprobate în `dist/`; nu transformă modulele și nu ascunde JavaScript-ul din browser. La adăugarea unui fișier runtime, actualizează și `scripts/public-files.json`.
 
 `app.js` și `admin.js` compun funcționalitățile din `modules/`. Fișierele din acel folder înregistrează fabrici în `window.SpotivityModules`; punctele de intrare le inițializează o singură dată, cu un context explicit. Sunt scripturi clasice cu `defer`, nu importuri ES modules. Ordinea lor din `index.html` este parte din inițializare.
 

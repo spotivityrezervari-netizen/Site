@@ -1,0 +1,3 @@
+# Generated Netlify deployment files; source stays in Idee Site/.
+/dist/
+/.public-build-*/

@@ -1,5 +1,11 @@
 # Dezvoltare locală
 
+## Publicarea sigură pe Netlify
+
+Domeniul curent indicat de proprietar este **https://spotivity.ro**. Netlify construiește din rădăcina repository-ului cu `node scripts/build-public.mjs` și publică numai `dist/`. Lista explicită `scripts/public-files.json` include doar pagina, JavaScript, CSS și imagini; SQL, testele, documentația și funcțiile Edge nu ajung în pachetul public. Antetele din `deploy/netlify/_headers` limitează scripturile și conexiunile și blochează încadrarea în iframe. Codul frontend rămâne vizibil în browser.
+
+Instrucțiunile, limitele politicii CSP și verificările sunt în [PUBLICARE_SIGURA.md](PUBLICARE_SIGURA.md). Noile origini CORS pentru domeniul propriu din `club-applications` și `booking-workflow` necesită deployment separat în Supabase; publicarea pe Netlify nu le aplică. În sesiunea din 27 octombrie 2026, deploymentul Supabase și verificarea domeniului live sunt blocate de bindingul administrativ HTTP 401, respectiv politica de rețea. Testele locale rulează pe pachetul real `dist`, cu aceleași antete.
+
 Migrările 013–017 sunt aplicate și verificate în proiectul live, iar funcțiile Edge pentru rezervări și notificări sunt active. Publicarea fișierelor statice nu execută SQL. Notificările și rezervările fără cont se activează numai după configurarea și verificarea scenariilor Make.
 
 Administrarea se face exclusiv în `index.html`, cu sesiunea site-ului. Administratorii obișnuiți intră automat în **Terenurile tale**, o pagină principală cu aceeași prezentare ca pagina de client, dar numai cu sporturile și terenurile alocate, inclusiv cele ascunse clienților. Meniul cu trei linii oferă editarea bazei, chat, rezervare manuală, program, istoric și **Administrare baze de date**, care deschide pagina nouă cu terenurile proprii. Superadminul folosește **Profilul meu → Deschide panoul de admin**. Pagina separată `admin.html` a fost eliminată.
@@ -71,7 +77,7 @@ Configurația publică Supabase este deja în codul site-ului. Nu adăuga creden
 
 ## Publicare și programul terenurilor
 
-Site-ul folosit este [GitHub Pages](https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/). Superadminul folosește **Profilul meu → Deschide panoul de admin**, iar administratorii bazelor intră direct în administrarea alocărilor proprii, în aceeași pagină și sesiune. Publicarea servește fișierele statice din `main`. Verifică ultimul deployment `github-pages` după actualizare.
+Site-ul curent este [spotivity.ro](https://spotivity.ro), găzduit pe Netlify. Adresa [GitHub Pages](https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/) rămâne o adresă legacy. Superadminul folosește **Profilul meu → Deschide panoul de admin**, iar administratorii bazelor intră direct în administrarea alocărilor proprii, în aceeași pagină și sesiune. După actualizarea `main`, verifică deploymentul Netlify care publică `dist`; un push Git reușit nu confirmă deploymentul.
 
 Programul rezervabil se schimbă în setările fiecărui teren din admin: ore de început 09:00–22:00. Terenurile existente păstrează 12:00–22:00 până le modifici. Migrarea `supabase/003_court_hours.sql` este aplicată în proiectul existent; [instrucțiunile Supabase](supabase/README.md) explică pașii, rolurile și verificările. Nu rula din nou migrarea 001 după 003.
 

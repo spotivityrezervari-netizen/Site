@@ -16,13 +16,13 @@ const PNG = new Uint8Array([137,80,78,71,13,10,26,10,0,0,0,1]);
 const PRIVATE = `${USER}/${APP}/${APP}.png`;
 function json(body, status = 200) { return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } }); }
 function input(overrides = {}) { return { action: 'submit', request_id: APP, nume_baza: 'Baza nouă', nume_contact: 'Nume Contact', email: 'owner@example.test', telefon: '+40 721 123 456', oras: 'Cluj-Napoca', adresa: 'Strada Sportului 10', link_maps: 'https://maps.app.goo.gl/Abc123', terenuri: [{ nume: 'Teren unu', sport: 'Fotbal' }, { nume: 'Teren doi', sport: 'Tenis Picior' }], prices: [100, 80], descriere: 'O bază pentru sport.\nDouă terenuri.', password: PASSWORD, ...overrides }; }
-function submission(data = input(), photo) {
+function submission(data = input(), photo, origin = 'https://spotivityrezervari-netizen.github.io') {
   const form = new FormData(); form.set('payload', JSON.stringify(data));
   if (photo) form.set('photo', photo);
-  return new Request('https://edge.example.test/club-applications', { method: 'POST', headers: { Origin: 'https://spotivityrezervari-netizen.github.io' }, body: form });
+  return new Request('https://edge.example.test/club-applications', { method: 'POST', headers: { Origin: origin }, body: form });
 }
-function review(action = 'approve', overrides = {}, token = TOKEN) {
-  const headers = { 'Content-Type': 'application/json', Origin: 'https://spotivityrezervari-netizen.github.io' };
+function review(action = 'approve', overrides = {}, token = TOKEN, origin = 'https://spotivityrezervari-netizen.github.io') {
+  const headers = { 'Content-Type': 'application/json', Origin: origin };
   if (token) headers.Authorization = `Bearer ${token}`;
   return new Request('https://edge.example.test/club-applications', { method: 'POST', headers, body: JSON.stringify({ action, request_id: APP, prices: [100,80], expected_updated_at: '2026-10-17T11:00:00Z', note: 'Verificat', ...overrides }) });
 }
@@ -292,4 +292,43 @@ test('CORS supports public form preflight, rejects other origins and restricts m
   const evil = await handler(new Request('https://edge.test', { method: 'OPTIONS', headers: { Origin: 'https://evil.test' } }));
   assert.equal(evil.status, 403); assert.equal(evil.headers.get('Access-Control-Allow-Origin'), null);
   assert.equal((await handler(new Request('https://edge.test'))).status, 405); assert.equal(calls.length, 0);
+});
+
+test('CORS admits exact Spotivity domains, legacy Pages and canonical loopback without broadening browser access', async () => {
+  const { handler, calls } = await fixture();
+  const allowed = ['https://spotivity.ro', 'https://www.spotivity.ro', 'https://spotivityrezervari-netizen.github.io', 'http://localhost', 'http://localhost:8038', 'http://127.0.0.1:8038', 'http://[::1]:8038'];
+  for (const origin of allowed) {
+    const response = await handler(new Request('https://edge.test', { method: 'OPTIONS', headers: { Origin: origin } }));
+    assert.equal(response.status, 204, origin); assert.equal(response.headers.get('Access-Control-Allow-Origin'), origin);
+    assert.equal(response.headers.get('Vary'), 'Origin'); assert.equal(response.headers.get('Access-Control-Allow-Credentials'), null);
+    assert.equal(response.headers.get('Access-Control-Allow-Methods'), 'POST, OPTIONS');
+  }
+  const denied = ['https://spotivity.ro.evil.test', 'https://evilspotivity.ro', 'https://spotivity.ro@evil.test', 'https://evil.test@spotivity.ro', 'https://admin.spotivity.ro', 'https://www.spotivity.ro.evil.test', 'http://spotivity.ro', 'http://www.spotivity.ro', 'https://spotivity.ro:443', 'https://spotivity.ro:8443', 'https://www.spotivity.ro:8443', 'https://spotivity.ro/', 'https://spotivity.ro?origin=evil', 'https://spotivity.ro#evil', 'https://spotivity-ro.netlify.app', 'https://deploy-preview-42--spotivity.netlify.app', 'https://spotivityrezervari-netizen.github.io.evil.test', 'https://localhost:8038', 'http://localhost.evil.test:8038', 'http://evil.test@localhost:8038', 'http://localhost:8038/path', 'null', 'https://spotivity.ro https://evil.test', 'https://spotivity.ro,https://evil.test', 'https://spotivity.ro%0d%0a.evil.test', 'https://spotivity.ro/%0d%0aAccess-Control-Allow-Origin:*'];
+  for (const origin of denied) for (const method of ['OPTIONS', 'POST']) {
+    const response = await handler(new Request('https://edge.test', { method, headers: { Origin: origin } }));
+    assert.equal(response.status, 403, `${method} ${origin}`); assert.equal(response.headers.get('Access-Control-Allow-Origin'), null);
+  }
+  const withoutOrigin = await handler(new Request('https://edge.test', { method: 'OPTIONS' }));
+  assert.equal(withoutOrigin.status, 204); assert.equal(withoutOrigin.headers.get('Access-Control-Allow-Origin'), null);
+  assert.equal(calls.length, 0);
+});
+
+test('Spotivity production origins permit submissions while approval still verifies the user JWT and database superadmin', async () => {
+  for (const origin of ['https://spotivity.ro', 'https://www.spotivity.ro']) {
+    const submit = await fixture(); const submitted = await submit.handler(submission(input(), undefined, origin));
+    assert.equal(submitted.status, 201); assert.equal(submitted.headers.get('Access-Control-Allow-Origin'), origin);
+    for (const scenario of ['missing JWT', 'revoked JWT', 'ordinary admin']) {
+      const { handler, calls } = await fixture({ fetch: call => {
+        if (scenario === 'revoked JWT' && call.path === '/auth/v1/user') return json({ error: 'invalid token' }, 401);
+        if (scenario === 'ordinary admin' && call.path === '/rest/v1/users_admin') return json([{ user_id: SUPER, is_super: false }]);
+      } });
+      const response = await handler(review('approve', {}, scenario === 'missing JWT' ? null : TOKEN, origin));
+      assert.equal(response.status, scenario === 'ordinary admin' ? 403 : 401);
+      assert.equal(response.headers.get('Access-Control-Allow-Origin'), origin);
+      assert.ok(!calls.some(call => call.path.startsWith('/storage/') || call.path === '/rest/v1/cereri_baze_sportive' || call.path.startsWith('/rest/v1/rpc/')));
+    }
+    const approved = await fixture({ row: { poza_path: null } });
+    assert.equal((await approved.handler(review('approve', {}, TOKEN, origin))).status, 200);
+    assert.equal(approved.calls.find(call => call.path.endsWith('/approve_club_request')).headers.get('Authorization'), `Bearer ${TOKEN}`);
+  }
 });
