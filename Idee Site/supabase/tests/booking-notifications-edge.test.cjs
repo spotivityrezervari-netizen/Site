@@ -71,7 +71,7 @@ test('client receipt derives/attaches only the digest before submitting a determ
   assert.ok(!JSON.stringify(attach.body).includes(token));
   const send=calls.find(call=>call.url===BOOKING_HOOK);assert.ok(calls.indexOf(attach)<calls.indexOf(send));
   assert.equal(send.headers.get('X-Spotivity-Notification-Id'),ID);assert.equal(send.headers.get('Authorization'),null);assert.equal(send.redirect,'error');
-  assert.equal(send.body.notification_id,ID);assert.equal(send.body.to.email,'client@example.test');assert.match(send.body.text,/18:00–19:00, 19:00–20:00/);
+  assert.equal(send.body.notification_id,ID);assert.equal(send.body.to.email,'client@example.test');assert.match(send.body.text,/18:00\s*–\s*20:00/);
   assert.ok(send.body.text.includes(`#anulare-rezervare=${BOOKING}&token=${token}`));
   assert.ok(!JSON.stringify(send.body).includes(SERVICE));assert.ok(!JSON.stringify(send.body).includes(CANCEL_SECRET));
   const finished=calls.find(call=>call.path.endsWith('/finish_booking_notification'));assert.equal(finished.body.p_outcome,'submitted');assert.equal(finished.body.p_error_code,null);
@@ -89,7 +89,7 @@ test('a partial booking receipt retains the cancellation link for its remaining 
   const {handler,calls}=await fixture({jobs:[job('booking_created_client',{booking:{...job().booking,hours:['19:00'],amountRON:100}})]});
   assert.equal((await (await handler(request())).json()).submitted,1);
   const send=calls.find(call=>call.url===BOOKING_HOOK);
-  assert.match(send.body.text,/19:00–20:00/);assert.ok(!send.body.text.includes('18:00–19:00'));
+  assert.match(send.body.text,/19:00\s*–\s*20:00/);assert.ok(!send.body.text.includes('18:00–19:00'));
   assert.ok(send.body.text.includes(`#anulare-rezervare=${BOOKING}&token=`));
   assert.equal(send.body.record.amountRON,100);
 });
@@ -103,7 +103,7 @@ test('chat uses its separate scenario and carries escaped HTML with the authoriz
 test('a missing chat scenario does not claim chat jobs',async()=>{
   const {handler,calls}=await fixture({settings:{ready:true,booking_webhook_url:BOOKING_HOOK,chat_webhook_url:null},jobs:[]});
   await handler(request());const claim=calls.find(call=>call.path.endsWith('/claim_booking_notifications'));
-  assert.ok(!claim.body.p_kinds.includes('chat_owner'));assert.equal(claim.body.p_kinds.length,4);
+  assert.ok(!claim.body.p_kinds.includes('chat_owner'));assert.ok(claim.body.p_kinds.includes('account_welcome'));assert.equal(claim.body.p_kinds.length,5);
 });
 test('temporary Make errors retry the same stable notification ID and permanent errors block without leaking provider responses',async()=>{
   for(const [status,outcome,errorCode] of [[429,'retry','make_http_429'],[503,'retry','make_http_503'],[400,'blocked','make_rejected']]){
@@ -136,4 +136,17 @@ test('invalid request payloads fail before any database or provider access',asyn
   for(const body of [{action:'other'},{action:'dispatch',booking_id:'not-a-uuid'},[],null]){
     const {handler,calls}=await fixture();assert.equal((await handler(request(body))).status,400);assert.equal(calls.length,0);
   }
+});
+
+
+test('verified account welcome uses the booking transport and exposes no booking or cancellation capability',async()=>{
+  const {handler,calls}=await fixture({jobs:[job('account_welcome',{booking_id:null,booking:undefined,chat:undefined,account:{firstName:'Ana'}})]});
+  const result=await(await handler(request())).json();
+  assert.equal(result.submitted,1);
+  const send=calls.find(call=>call.url===BOOKING_HOOK);
+  assert.equal(send.body.kind,'account_welcome');assert.equal(send.body.booking_id,null);
+  assert.deepEqual(send.body.record,{firstName:'Ana'});assert.match(send.body.text,/Salut, Ana!/);
+  assert.ok(!calls.some(call=>call.path.endsWith('/attach_cancellation_token')));
+  assert.ok(!send.body.html.includes('token='));assert.ok(!send.body.html.includes('#anulare-rezervare'));
+  assert.ok(!JSON.stringify(send.body).includes(SERVICE));
 });

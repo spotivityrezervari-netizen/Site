@@ -1,0 +1,25 @@
+#btn-late-cancellations[hidden] { display: none !important; }
+#btn-late-cancellations h2 { font-size: 18px; }
+.late-cancellation-panel { width: min(860px, 100%); max-height: 88vh; max-height: 88dvh; overflow-y: auto; padding: 24px; text-align: left; }
+.late-cancellation-heading, .late-cancellation-customer-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.late-cancellation-heading h2 { color: #edca82; font-size: clamp(21px, 4vw, 28px); margin: 0; }
+.late-cancellation-close, .late-cancellation-refresh { width: auto; min-height: 44px; padding: 10px 16px; margin: 0; flex-shrink: 0; border: 1px solid rgba(216,182,106,.35); border-radius: 10px; color: #f7f3e8; background: #243329; font: inherit; cursor: pointer; }
+.late-cancellation-intro, .late-cancellation-policy, .late-cancellation-status { margin: 16px 0; color: #d2ccbd; font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.late-cancellation-policy { color: #edca82; }
+.late-cancellation-list { display: grid; gap: 14px; }
+.late-cancellation-customer { padding: 18px; min-width: 0; border: 1px solid rgba(216,182,106,.28); border-radius: 14px; background: #17271c; }
+.late-cancellation-customer h3 { font-size: 18px; color: #f7f3e8; margin: 0; overflow-wrap: anywhere; }
+.late-cancellation-count { flex-shrink: 0; padding: 5px 10px; border: 1px solid rgba(216,182,106,.4); border-radius: 30px; font-size: 13px; color: #edca82; }
+.late-cancellation-flag { margin: 12px 0; font-size: 13px; color: #f0b59c; }
+.late-cancellation-contact, .late-cancellation-last { margin: 10px 0; line-height: 1.5; font-size: 14px; overflow-wrap: anywhere; }
+.late-cancellation-contact a, .late-cancellation-events summary { color: #edca82; }
+.late-cancellation-events { margin-top: 16px; font-size: 14px; line-height: 1.6; }
+.late-cancellation-events summary { min-height: 44px; padding: 10px 0; cursor: pointer; }
+.late-cancellation-events ul { padding-left: 20px; }
+.late-cancellation-events li { margin: 8px 0; overflow-wrap: anywhere; }
+@media (max-width: 480px) {
+ .late-cancellation-panel { padding: 18px 14px; }
+ .late-cancellation-customer { padding: 14px; }
+ .late-cancellation-customer-heading { align-items: flex-start; }
+ .late-cancellation-close { padding: 10px; }
+}

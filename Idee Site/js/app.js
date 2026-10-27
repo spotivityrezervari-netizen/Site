@@ -37,5 +37,7 @@
         services.courts.mount();
         services.chat.mount();
         services.auth.watchIdentity();
+        services.emailLinks = modules.emailLinks(context);
+        services.emailLinks.mount();
     });
 })();

@@ -13,3 +13,17 @@ Codul pune în coadă confirmările/anulările către client și proprietarul au
 9. Abia apoi setează `ready=true` prin RPC. Rezervarea fără cont verifică această stare înainte de creare. Lipsa configurării lasă conturile normale să folosească rezervările și istoricul; joburile rămân în coadă. `submitted` înseamnă acceptat de Make, nu confirmare de livrare în inbox.
 
 Tokenul din linkul de anulare este o capabilitate privată, disponibilă doar clientului. Nu îl include în emailul proprietarului, în linkuri de distribuire, loguri sau stocarea browserului. Deschiderea emailului sau GET-ul paginii nu anulează rezervarea; serverul efectuează anularea numai după POST-ul de confirmare și păstrează orele finalizate.
+
+## Modele Spotivity și conturi noi
+
+Rendererul comun produce HTML și text pentru confirmarea clientului, rezervarea primită de proprietar și bun venit, păstrând notificările de anulare și chat. Folosește logo-ul existent, verde închis/gold și adresa de contact `spotivity.rezervari@gmail.com`. Calendarul folosește ora locală `Europe/Bucharest`; linkurile de calendar nu conțin datele clientului sau capabilitatea de anulare.
+
+Aplică în ordine `021_account_welcome.sql`, `022_email_booking_context.sql` și `023_late_cancellations.sql`. Evenimentul nou `account_welcome` folosește webhookul rezervărilor și același câmp `to.email`. Este generat o singură dată după confirmarea unui cont înregistrat după activarea migrării, inclusiv la autentificarea Google. Nu se trimit mesaje de bun venit retroactiv conturilor existente.
+
+Butoanele din email deschid rezervarea, chatul, administrarea sau contul în `index.html`. Referința din URL nu acordă acces: RPC-ul verifică din nou contul confirmat și proprietatea rezervării ori alocarea terenului. Pentru rezervările fără cont, vizualizarea folosește capabilitatea privată existentă; chatul necesită o rezervare asociată contului autentificat. Intentul reluat după Google conține numai acțiunea și UUID-ul, fără capabilități, date de contact sau tokenuri Auth.
+
+Nu se introduce o limită fixă de anulare cu patru ore înainte. Orele nefinalizate rămân anulabile conform regulilor existente. Anulările inițiate de client cu mai puțin de o oră înainte sau în timpul unei ore nefinalizate sunt înregistrate o singură dată pentru fiecare rezervare. Anulările personalului nu sunt atribuite clientului. Numai superadminul poate deschide „Anulări târzii”; în ultimele 30 de zile, cel puțin trei rezervări anulate târziu sunt marcate pentru verificare. Nu există blocare automată și nu se inventează evenimente istorice.
+
+În Make, ruta normalizată folosește un Data Store persistent și procesare secvențială. Verifică interfața modulului nativ de existență pe date controlate înainte de activare; nu presupune numele câmpului rezultat. Înregistrează ID-ul numai după succesul Gmail. Păstrează incomplete executions pentru erori și opțiunea de confidențialitate pentru datele personale. Webhookurile trebuie păstrate private, iar destinatarii trebuie să provină exclusiv din payloadul serverului.
+
+La prima activare, confirmările vechi pentru rezervări deja încheiate pot fi marcate explicit `skipped` cu motivul `stale_at_activation`, fără ștergerea lor. Nu elimina notificările recente pentru rezervări încă nefinalizate. Configurează trezirea și reîncercările periodice prin funcția existentă și secretele Vault, fără chei în textul jobului programat.

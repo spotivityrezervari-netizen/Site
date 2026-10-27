@@ -152,7 +152,7 @@
 
             // Dacă aveam deja unul selectat, îi re-randăm mesajele (în caz că a venit un mesaj nou)
             if (chatClientTerenCurent) {
-                deschideConversatiaClient(chatClientTerenCurent);
+                await deschideConversatiaClient(chatClientTerenCurent);
             }
         }
 
@@ -269,6 +269,22 @@
                 else db.removeChannel(previous);
             }
         }
+        async function openCourt(teren) {
+            const owner = state.user?.id;
+            if (!owner || typeof teren !== 'string' || !teren) return false;
+            const { data: bookings, error } = await db.from('rezervari').select('id')
+                .eq('client_user_id', owner).eq('teren', teren).limit(1);
+            if (error || state.user?.id !== owner || !bookings?.length) return false;
+            const { data: courts, error: courtError } = await db.from('terenuri').select('nume,are_chat').eq('nume', teren);
+            if (courtError || state.user?.id !== owner || !courts?.some(court => court.are_chat !== false)) return false;
+            document.getElementById('modal-profil').style.display = 'none';
+            modalChatClient.style.display = 'flex';
+            await incarcaMesajeClient(false);
+            if (state.user?.id !== owner) return false;
+            chatClientTerenCurent = teren;
+            await randeazaListaConversatiiClient();
+            return state.user?.id === owner && modalChatClient.style.display === 'flex';
+        }
         function mount() {
             btnVeziChat?.addEventListener('click', () => {
                 document.getElementById('modal-profil').style.display = 'none';
@@ -316,6 +332,7 @@
             mount,
             load: incarcaMesajeClient,
             clearIdentity,
+            openCourt,
             selectCourt: teren => { chatClientTerenCurent = teren; return deschideConversatiaClient(teren); }
         };
     };

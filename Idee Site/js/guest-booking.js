@@ -9,9 +9,10 @@
     let cancelLink = null;
     const initial = new URL(window.location.href);
     const fragment = new URLSearchParams(initial.hash.slice(1));
-    if (fragment.has('anulare-rezervare')) {
-        cancelLink = { booking_id: fragment.get('anulare-rezervare'), token: fragment.get('token') };
+    if (fragment.has('anulare-rezervare') || fragment.has('rezervare')) {
+        cancelLink = { booking_id: fragment.get('anulare-rezervare') || fragment.get('rezervare'), token: fragment.get('token'), viewOnly: !fragment.has('anulare-rezervare') };
         fragment.delete('anulare-rezervare');
+        fragment.delete('rezervare');
         fragment.delete('token');
         initial.hash = fragment.toString();
         window.history.replaceState(window.history.state, '', initial.pathname + initial.search + initial.hash);
@@ -235,7 +236,7 @@
     async function openCancellation() {
         if (!cancelLink) return;
         const link = cancelLink; cancelLink = null;
-        const dialog = mountDialog('modal-anulare-rezervare-email', 'Anulare rezervare');
+        const dialog = mountDialog('modal-anulare-rezervare-email', link.viewOnly ? 'Rezervarea ta' : 'Anulare rezervare');
         const status = statusNode(); const summary = document.createElement('p'); summary.className = 'workflow-summary';
         const actions = document.createElement('div'); actions.className = 'workflow-actions';
         const confirm = document.createElement('button'); confirm.type = 'button'; confirm.id = 'email-booking-cancel-confirm'; confirm.className = 'workflow-danger'; confirm.textContent = 'Confirmă anularea'; confirm.hidden = true;
@@ -250,11 +251,13 @@
         try {
             preview = await post({ action: 'preview_cancel', ...link });
             if (!dialog.modal.isConnected) return;
-            summary.textContent = summaryText(preview);
+            summary.textContent = `${summaryText(preview)} · Total: ${Number(preview.total).toLocaleString('ro-RO')} lei`;
             if (preview.state === 'anulata' || preview.state === 'cancelled') { status.textContent = 'Rezervarea este deja anulată.'; link.token = ''; }
             else if (preview.can_cancel === false || (preview.day && preview.hours?.length && window.bookingEnded?.(preview.day, preview.hours[preview.hours.length - 1]))) {
                 status.textContent = errors.booking_ended; link.token = '';
-            } else { status.textContent = 'Vrei să anulezi această rezervare? Orele vor deveni disponibile din nou.'; confirm.hidden = false; }
+            } else { status.textContent = link.viewOnly
+                ? 'Rezervarea este confirmată. Dacă dorești anularea, apasă pe „Confirmă anularea”. Orele vor deveni disponibile din nou.'
+                : 'Vrei să anulezi această rezervare? Orele vor deveni disponibile din nou.'; confirm.hidden = false; }
         } catch (error) { if (dialog.modal.isConnected) status.textContent = error.message; }
         confirm.onclick = async () => {
             if (busy || !link.token || !preview) return;

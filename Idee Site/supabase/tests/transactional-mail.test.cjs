@@ -20,7 +20,7 @@ test('booking client confirmation has complete local date, multiple hours, amoun
   const rendered = renderTransactionalMail(input());
   assert.deepEqual(rendered.to, { email: 'ana@example.test', name: 'Ana' });
   assert.match(rendered.subject, /Rezervare confirmată/);
-  for (const value of ['Baza Sportului', 'Terenul unu', 'Fotbal', 'Cluj-Napoca', '25 octombrie 2026', '18:00–19:00, 19:00–20:00', '240', 'booking-123']) {
+  for (const value of ['Baza Sportului', 'Terenul unu', 'Fotbal', 'Cluj-Napoca', '25 octombrie 2026', '18:00 – 20:00', '240', 'booking-123']) {
     assert.ok(rendered.text.includes(value), `missing ${value}`);
     assert.ok(rendered.html.includes(value), `missing HTML ${value}`);
   }
@@ -40,7 +40,7 @@ test('owner reservation emails include customer contact but no cancellation cred
     for (const value of [booking.customerName, booking.customerEmail, booking.customerPhone]) assert.ok(rendered.text.includes(value));
     assert.ok(!rendered.html.includes('opaque-test-token'));
     assert.ok(!rendered.text.includes('Anulează rezervarea'));
-    assert.match(rendered.html, /Administrează rezervările/);
+    assert.match(rendered.html, kind === 'booking_created_owner' ? /Deschide în Panoul de Administrare/ : /Administrează rezervările/);
   }
 });
 
@@ -66,7 +66,9 @@ test('chat email escapes previews and preserves readable plaintext without crede
   const { renderTransactionalMail } = await template;
   const rendered = renderTransactionalMail({ kind: 'chat_owner', recipient: { email: 'owner@example.test' }, chat: { courtName: '<Teren & "unu">', customerName: '<Ana>', preview: '<img src=x onerror="attack()"> & Salut!\nAș dori o informație.' }, password: 'must-not-be-rendered', access_token: 'secret-token-ignored' });
   assert.ok(rendered.html.includes('&lt;img src=x onerror=&quot;attack()&quot;&gt; &amp; Salut!'));
-  assert.ok(!rendered.html.includes('<img'));
+  assert.equal((rendered.html.match(/<img /g)||[]).length, 1);
+  assert.ok(rendered.html.includes('assets/imagini/avatar2.png'));
+  assert.ok(!rendered.html.includes('<img src=x'));
   assert.ok(rendered.text.includes('<img src=x onerror="attack()"> & Salut! Aș dori o informație.'));
   assert.match(rendered.text, /Deschide conversațiile/);
   assert.ok(!JSON.stringify(rendered).includes('must-not-be-rendered'));
@@ -133,4 +135,97 @@ test('recipient and booking constraints prevent malformed mail delivery metadata
     assert.throws(() => renderTransactionalMail(input('booking_created_owner', { booking: { ...booking, ...change } })), TypeError);
   }
   assert.throws(() => renderTransactionalMail(input('not-a-kind')), TypeError);
+});
+
+function links(html) {
+  return [...html.matchAll(/href="([^"]+)"/g)].map(match => match[1].replace(/&amp;/g, '&'));
+}
+
+test('client model has secure view/cancel actions, maps, calendar and a real Romanian deadline', async () => {
+  const { renderTransactionalMail } = await template;
+  const id = '734cd157-5baa-4d5f-93d7-6bb6e8155b59';
+  const cancel = `${SITE}#anulare-rezervare=${id}&token=client-only-opaque`;
+  const mail = renderTransactionalMail(input('booking_created_client', {
+    booking: { ...booking, id, dayISO: '2026-10-20', hours: ['15:00–16:00', '16:00–17:00'], cancellationDeadlineISO: '2026-10-20T12:00:00Z', mapsURL: 'https://www.google.com/maps/search/?api=1&query=Complex+XYZ', paymentMethods: 'cash_card' },
+    cancellationURL: cancel,
+  }));
+  for (const text of ['Confirmare oficială a rezervării tale', `#SPT-${id}`, '15:00 – 17:00', '15:00, 20 octombrie 2026', 'cash sau cu cardul', 'Adaugă în Calendar', 'Vezi rezervarea', 'Chat cu baza sportivă', '15 minute', 'spotivity.rezervari@gmail.com']) assert.ok(mail.text.includes(text), text);
+  const urls = links(mail.html);
+  const calendar = new URL(urls.find(url => url.startsWith('https://calendar.google.com/')));
+  assert.equal(calendar.searchParams.get('dates'), '20261020T150000/20261020T170000');
+  assert.equal(calendar.searchParams.get('ctz'), 'Europe/Bucharest');
+  assert.equal(calendar.searchParams.has('add'), false, 'No client email becomes a calendar attendee');
+  assert.ok(!calendar.href.includes('client-only-opaque'));
+  assert.ok(!calendar.href.includes('ana%40'));
+  assert.ok(urls.includes('https://www.google.com/maps/search/?api=1&query=Complex+XYZ'));
+  assert.ok(urls.includes(`${SITE}#token=client-only-opaque&rezervare=${id}`));
+  assert.ok(urls.includes(cancel));
+  for (const url of urls.filter(url => url.includes('client-only-opaque'))) assert.ok(url.startsWith(SITE) && (url.includes('rezervare=') || url.includes('anulare-rezervare=')));
+  assert.ok(!urls.some(url => url.includes('spotivity-action=chat') && url.includes('token=')));
+});
+
+test('calendar handles midnight and date rollover without combining nonconsecutive intervals', async () => {
+  const { renderTransactionalMail } = await template;
+  for (const [dayISO, expectedEnd] of [['2026-12-31', '20270101T000000'], ['2028-02-29', '20280301T000000'], ['2026-10-25', '20261026T000000']]) {
+    const mail = renderTransactionalMail(input('booking_created_client', { booking: { ...booking, dayISO, hours: ['23:00–00:00'] } }));
+    const url = new URL(links(mail.html).find(url => url.startsWith('https://calendar.google.com/')));
+    assert.equal(url.searchParams.get('dates'), `${dayISO.replaceAll('-', '')}T230000/${expectedEnd}`);
+    assert.ok(mail.text.includes('23:00 – 24:00'));
+  }
+  const mail = renderTransactionalMail(input('booking_created_client', { booking: { ...booking, hours: ['15:00–16:00', '18:00–19:00'] } }));
+  assert.ok(mail.text.includes('15:00–16:00, 18:00–19:00'));
+  assert.ok(!links(mail.html).some(url => url.startsWith('https://calendar.google.com/')), 'Do not create a continuous calendar slot across a gap');
+});
+
+test('owner contact shortcuts and app actions do not contain the client cancellation capability', async () => {
+  const { renderTransactionalMail } = await template;
+  const mail = renderTransactionalMail(input('booking_created_owner'));
+  const urls = links(mail.html);
+  assert.ok(urls.includes('tel:+40721123456'));
+  assert.ok(urls.includes('mailto:ana%40example.test'));
+  for (const action of ['admin','reservation','chat']) assert.ok(urls.some(url => url.includes(`spotivity-action=${action}`) && url.includes('booking=booking-123')));
+  assert.ok(!urls.some(url => url.includes('token=') || url.includes('anulare-rezervare') || url.startsWith('https://calendar.google.com/')));
+  const unsafe = renderTransactionalMail(input('booking_created_owner', { booking: { ...booking, customerPhone: '+40721" onclick="bad()', customerEmail: 'x@example.test?subject=attack\r\nBcc:evil@example.test' } }));
+  assert.ok(!links(unsafe.html).some(url => url.startsWith('tel:')));
+  assert.ok(!links(unsafe.html).some(url => url.startsWith('mailto:') && url !== 'mailto:spotivity.rezervari@gmail.com'));
+});
+
+test('maps only links approved HTTPS Google Maps hosts and never creates a misleading arbitrary link', async () => {
+  const { renderTransactionalMail } = await template;
+  for (const url of ['https://maps.app.goo.gl/exampleMap9', 'https://maps.google.ro/?q=test', 'https://google.ro/maps?q=test', 'https://goo.gl/maps/exampleMap9']) {
+    assert.ok(links(renderTransactionalMail(input('booking_created_owner', { booking: { ...booking, mapsURL: url } })).html).includes(url));
+  }
+  for (const url of ['javascript:alert(1)', 'https://evil.example/maps', 'https://google.com.evil.example/maps', 'https://google.com/not-maps', 'https://user:password@google.com/maps', 'http://google.com/maps']) {
+    const mail = renderTransactionalMail(input('booking_created_owner', { booking: { ...booking, mapsURL: url } }));
+    assert.ok(!links(mail.html).includes(url));
+    assert.ok(!mail.html.includes(url), 'Unsafe map is neither linked nor printed');
+  }
+});
+
+test('welcome email uses the first name, support contact and functional account/site actions without booking data', async () => {
+  const { renderTransactionalMail } = await template;
+  const mail = renderTransactionalMail({ kind: 'account_welcome', recipient: { email: 'ana@example.test', name: 'Ana Exemplu' }, firstName: 'Ana' });
+  for (const text of ['Contul tău este înregistrat. Hai la sport!', 'Salut, Ana!', 'Alege un teren', 'Accesează contul', 'Ne vedem pe teren', 'spotivity.rezervari@gmail.com', 'Dacă nu ai creat tu contul']) assert.ok(mail.text.includes(text), text);
+  const urls = links(mail.html);
+  assert.ok(urls.includes(SITE)); assert.ok(urls.includes(`${SITE}#spotivity-action=account`));
+  assert.ok(!mail.html.includes('Cod rezervare'));
+  assert.ok(!mail.text.includes('token='));
+  const escaped = renderTransactionalMail({ kind: 'account_welcome', recipient: { email: 'ana@example.test' }, firstName: '<img src=x onerror="bad()">' });
+  assert.equal((escaped.html.match(/<img /g) || []).length, 1, 'Only the trusted logo image is present');
+  assert.ok(escaped.html.includes('&lt;img src=x onerror=&quot;bad()&quot;&gt;'));
+  assert.throws(() => renderTransactionalMail({ kind: 'account_welcome', recipient: { email: 'ana@example.test' }, cancellationURL: CANCEL }), TypeError);
+});
+
+test('payment copy follows the confirmed default and explicit alternatives; missing deadlines never invent a cutoff', async () => {
+  const { renderTransactionalMail } = await template;
+  const mail = renderTransactionalMail(input());
+  assert.ok(mail.text.includes('cash sau cu cardul'));
+  assert.ok(!renderTransactionalMail(input('booking_created_client', { booking: { ...booking, paymentMethods: 'at_location' } })).text.includes('cash sau cu cardul'));
+  assert.ok(!mail.text.includes('Termen de anulare comunicat'));
+  assert.ok(mail.text.includes('Poți anula orele nefinalizate din rezervare'));
+  assert.ok(!mail.text.includes('înainte de începerea rezervării'));
+  assert.ok(mail.text.includes('Anulările cu mai puțin de o oră înainte sunt înregistrate pentru verificare'));
+  assert.ok(!mail.text.includes('restricționat'));
+  assert.ok(mail.text.includes('Rezervările finalizate nu pot fi anulate'));
+  assert.throws(() => renderTransactionalMail(input('booking_created_client', { booking: { ...booking, cancellationDeadlineISO: 'whenever' } })), TypeError);
 });

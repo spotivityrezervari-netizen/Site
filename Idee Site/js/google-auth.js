@@ -211,7 +211,9 @@
                 const current = await db.auth.getSession();
                 if (!stillCurrent() || current.error || (current.data?.session?.user?.id || null) !== userId) return;
                 // Store only the time of this tab's explicit action, immediately before navigation.
-                try { sessionStorage.setItem(intentKey, String(Date.now())); } catch { /* OAuth itself can still continue. */ }
+                const startedAt = String(Date.now());
+                try { sessionStorage.setItem(intentKey, startedAt); } catch { /* OAuth itself can still continue. */ }
+                window.saveSpotivityEmailIntent?.(startedAt);
                 navigating = true;
                 window.location.assign(authorizeUrl.href);
             } catch {
