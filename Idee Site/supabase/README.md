@@ -1,5 +1,11 @@
 # Instalarea protecțiilor Supabase și a rolurilor Spotivity
 
+## 025 — anulări târzii pentru fiecare administrator
+
+[025_admin_late_cancellation_scope.sql](025_admin_late_cancellation_scope.sql) este aplicată și verificată live. Înlocuiește numai RPC-ul de citire `list_late_cancellations(integer)`, păstrând tabelele, regulile anulării, trigger-ele și alocările. Administratorul confirmat vede evenimentele pentru ID-urile terenurilor alocate în prezent; numărătorile și datele de contact sunt filtrate înainte de gruparea pe client. Superadminul păstrează istoricul tuturor terenurilor, inclusiv al celor șterse. Refolosirea numelui unui teren nu acordă acces la clienții terenului vechi. Un client obișnuit, un cont neconfirmat sau un utilizator fără rol nu poate accesa lista. Nu se introduc blocări automate.
+
+Au trecut testele izolate pentru ID numeric și UUID (câte 10 teste), 3 verificări ale dialogului și 25 de verificări browser pentru pagina administratorului, inclusiv intrarea din meniu. Proba live cu rollback și tranzacția finală au verificat accesul pentru cei 3 administratori, refuzul pentru celelalte 7 conturi și păstrarea amprentelor datelor din 18 tabele, a politicilor, triggerelor și celorlalte funcții. Singura adăugare de date este versiunea 25 în registrul migrărilor. Nu sunt necesare comenzi SQL manuale în proiectul existent.
+
 ## 019 — adăugarea unui teren în baza proprie
 
 [019_owner_court_creation.sql](019_owner_court_creation.sql) este aplicată live. RPC-ul `create_managed_court(uuid,text,text,integer,text[])` verifică UUID-ul Auth, emailul confirmat, rolul existent și permisiunea explicită asupra bazei. Blochează rândurile relevante pe durata tranzacției pentru a serializa revocarea accesului, validează numele/sportul/tariful/orele și creează un singur teren. Un trigger privat alocă exact terenul nou creatorului obișnuit, fără schimbarea rolului sau a alocărilor existente.

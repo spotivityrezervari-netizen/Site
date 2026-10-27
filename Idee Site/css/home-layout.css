@@ -120,6 +120,16 @@ body.pagina-publica { background: #101a14; }
     -webkit-mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent);
     mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent);
 }
+@media (min-width: 768px) {
+    /* Use the desktop canvas instead of a narrow portrait column. Crop the
+       photograph to its frame without stretching the racket or tennis balls. */
+    .pagina-publica .home-hero-tenis .home-hero-art img[data-sport-background] {
+        width: min(90%, 1440px);
+        max-width: none;
+        object-fit: cover;
+        object-position: 50% 75%;
+    }
+}
 .pagina-publica .home-sport-hero:not(:has(.home-hero-art)) { grid-template-rows: auto auto; }
 .pagina-publica .home-sport-hero:not(:has(.home-hero-art)) .home-hero-copy { padding-bottom: 44px; }
 .pagina-publica .home-courts-wrap {

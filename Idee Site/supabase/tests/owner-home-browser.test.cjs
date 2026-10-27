@@ -119,6 +119,10 @@ async function ownerTouchScrolling(page){
   const ids={first:uid(8101),second:uid(8102),other:uid(8103)};
   const contexts=[],errors=[],navigations=[];
   try{
+    await root(async()=>{
+      for(const name of ['023_late_cancellations.sql','025_admin_late_cancellation_scope.sql'])
+        await pg.exec(readFileSync(join(__dirname,'..',name),'utf8'));
+    });
     const seeded=await root(async()=>{
       for(const [id,name]of [[ids.first,'Baza Nord'],[ids.second,'Baza Sud'],[ids.other,'Baza Străină']])await pg.query("insert into public.baze_sportive(id,nume,oras,descriere) values($1,$2,'Cluj-Napoca','Descriere existentă')",[id,name]);
       await pg.query("update public.terenuri set baza_sportiva_id=$1,oras='Cluj-Napoca',poza='assets/imagini/avatar2.png' where nume='Court A'",[ids.first]);
@@ -149,7 +153,7 @@ async function ownerTouchScrolling(page){
         const url=new URL(route.request().url());
         if(url.pathname==='/rest/v1/rpc/get_admin_access'&&faults.access)return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({message:'Fixture access temporarily unavailable'}),headers:{'access-control-allow-origin':'*'}});
         if(url.pathname==='/auth/v1/settings')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({external:{google:false}}),headers:{'access-control-allow-origin':'*'}});
-        if(url.pathname==='/rest/v1/rpc/create_managed_court'){
+        if(['/rest/v1/rpc/create_managed_court','/rest/v1/rpc/list_late_cancellations'].includes(url.pathname)){
           const request=route.request(),body=request.postDataJSON();
           const id=fixture.tokens.get((request.headers().authorization||'').replace(/^Bearer /,''));
           const record={source:'browser',path:url.pathname,method:request.method(),userId:id,body,status:null};requests.push(record);
@@ -157,7 +161,9 @@ async function ownerTouchScrolling(page){
             let status=200,result;
             try{
               await pg.exec('reset role');await pg.query("select set_config('request.jwt.claim.sub',$1,false)",[id||'']);await pg.exec(`set role ${id?'authenticated':'anon'}`);
-              result=(await pg.query('select public.create_managed_court(p_base_id=>$1::uuid,p_name=>$2,p_sport=>$3,p_price=>$4::integer,p_hours=>$5::text[]) value',[body.p_base_id,body.p_name,body.p_sport,body.p_price,body.p_hours])).rows[0].value;
+              result=url.pathname.endsWith('/list_late_cancellations')
+                ?(await pg.query('select public.list_late_cancellations($1::integer) value',[body.p_days])).rows[0].value
+                :(await pg.query('select public.create_managed_court(p_base_id=>$1::uuid,p_name=>$2,p_sport=>$3,p_price=>$4::integer,p_hours=>$5::text[]) value',[body.p_base_id,body.p_name,body.p_sport,body.p_price,body.p_hours])).rows[0].value;
             }catch(error){status=error.code==='42501'?403:error.code==='23505'?409:400;result={code:error.code,message:error.message};}
             record.status=status;
             return route.fulfill({status,contentType:'application/json',body:JSON.stringify(result),headers:{'access-control-allow-origin':'*','x-supabase-api-version':'2024-01-01'}});
@@ -213,6 +219,14 @@ async function ownerTouchScrolling(page){
     assert.equal(await admin.locator('#owner-home-menu-toggle').getAttribute('aria-expanded'),'false');
     assert.equal(await admin.locator('#owner-home-menu-toggle').evaluate(node=>node===document.activeElement),true);
     pass('the hamburger and owner drawer actions fit phones and desktop, and Escape closes the menu');
+    await ownerAction(admin,'late-cancellations');await visible(admin,'#modal-late-cancellations');
+    await admin.waitForFunction(()=>document.querySelector('#late-cancellation-status')?.textContent.includes('Nu sunt'));
+    assert.ok(requests.some(item=>item.path==='/rest/v1/rpc/list_late_cancellations'&&item.userId===uid(3)&&item.status===200));
+    assert.equal(await admin.locator('#owner-home-menu').isVisible(),false);
+    await fits(admin,'#modal-late-cancellations .late-cancellation-panel','late-cancellations');
+    await admin.keyboard.press('Escape');await home(admin);
+    assert.equal(await admin.locator('#modal-late-cancellations').isVisible(),false);
+    pass('the owner drawer opens late cancellations through the real administrator-authorized RPC on phone and desktop and closes back to the owner home');
     await ownerTouchScrolling(admin);
     pass('owner backgrounds accept native vertical swipes in both directions after closing the drawer, while court rows still swipe horizontally');
     const addSport=()=>admin.locator('#owner-home-add-sport');

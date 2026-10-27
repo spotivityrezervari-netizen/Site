@@ -389,6 +389,8 @@
             target = byId('modal-tabel-program');
         } else if (action === 'history' && ownerCourts.length) {
             target = byId('modal-istoric'); target.style.display = 'flex';
+        } else if (action === 'late-cancellations') {
+            if (window.openLateCancellationReview?.()) target = byId('modal-late-cancellations');
         } else if (action === 'base') {
             target = byId('modal-baze-admin');
             await window.openSpotivityBaseEditor(base.id);

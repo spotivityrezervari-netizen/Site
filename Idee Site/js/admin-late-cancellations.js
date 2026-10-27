@@ -1,4 +1,4 @@
-/* Superadmin-only late cancellation review; the RPC authorizes every read. */
+/* Current court-scoped administrator review; the RPC authorizes every read. */
 (() => {
     'use strict';
     const element = (tag, className, text) => {
@@ -18,7 +18,7 @@
         const tools = workspace?.querySelector('.base-admin-tools');
         if (!tools || document.getElementById('btn-late-cancellations')) return null;
         let role = null, generation = 0, request = 0, controller = null, previousFocus = null;
-        const button = element('button', 'card-sport admin-menu-card super-admin-only');
+        const button = element('button', 'card-sport admin-menu-card admin-comun');
         button.id = 'btn-late-cancellations'; button.type = 'button'; button.hidden = true; button.style.display = 'none';
         button.append(element('h2', '', 'Anulări târzii'), element('span', 'admin-card-detail', 'Monitorizarea anulărilor neconforme'));
         tools.append(button);
@@ -32,10 +32,11 @@
         header.append(title, closeButton);
         const intro = element('p', 'late-cancellation-intro', 'Clienți cu anulări efectuate cu mai puțin de o oră înainte sau în timpul unei ore încă nefinalizate. Sunt excluse anulările făcute de personal.');
         const policy = element('p', 'late-cancellation-policy', 'Perioadă: ultimele 30 de zile. De la 3 rezervări anulate târziu, clientul este marcat pentru verificare. Conturile nu sunt blocate automat.');
+        const scope = element('p', 'late-cancellation-intro'); scope.id = 'late-cancellation-scope';
         const refresh = element('button', 'btn-cont late-cancellation-refresh', 'Reîncarcă'); refresh.type = 'button';
         const status = element('p', 'late-cancellation-status'); status.id = 'late-cancellation-status'; status.setAttribute('role', 'status');
         const list = element('div', 'late-cancellation-list'); list.id = 'late-cancellation-list';
-        panel.append(header, intro, policy, refresh, status, list); modal.append(panel); workspace.append(modal);
+        panel.append(header, intro, scope, policy, refresh, status, list); modal.append(panel); workspace.append(modal);
         function close(restore = true) {
             request++; controller?.abort(); controller = null; refresh.disabled = false;
             modal.style.display = 'none'; list.replaceChildren(); status.textContent = '';
@@ -43,7 +44,7 @@
             if (restore && previousFocus?.isConnected && !previousFocus.hidden) previousFocus.focus();
         }
         function clear() {
-            generation++; role = null; close(false); button.hidden = true; button.style.display = 'none';
+            generation++; role = null; close(false); scope.textContent = ''; button.hidden = true; button.style.display = 'none';
         }
         function contact(parent, value, type) {
             if (!value) return;
@@ -78,7 +79,7 @@
             }
         }
         async function load() {
-            if (!role?.isSuper || modal.style.display !== 'flex') return;
+            if (!role?.userId || modal.style.display !== 'flex') return;
             const currentGeneration = generation, currentRole = role.userId, currentRequest = ++request;
             controller?.abort(); controller = new AbortController();
             refresh.disabled = true; list.replaceChildren(); status.textContent = 'Se încarcă anulările târzii…';
@@ -87,7 +88,7 @@
                 if (typeof query.abortSignal === 'function') query = query.abortSignal(controller.signal);
                 const { data, error } = await query;
                 if (generation !== currentGeneration || role?.userId !== currentRole || request !== currentRequest || modal.style.display !== 'flex') return;
-                if (error) throw new Error('Anulările nu au putut fi încărcate. Verifică accesul de superadmin și încearcă din nou.');
+                if (error) throw new Error('Anulările nu au putut fi încărcate. Verifică accesul de administrator și încearcă din nou.');
                 render(data);
             } catch (error) {
                 if (generation === currentGeneration && request === currentRequest && modal.style.display === 'flex') status.textContent = error.name === 'AbortError' ? '' : error.message;
@@ -95,10 +96,13 @@
                 if (request === currentRequest) refresh.disabled = false;
             }
         }
-        button.addEventListener('click', () => {
-            if (!role?.isSuper) return;
+        function open() {
+            if (!role?.userId) return false;
             previousFocus = document.activeElement; modal.style.display = 'flex'; window.syncSpotivityModalScroll?.(); closeButton.focus(); load();
-        });
+            return true;
+        }
+        window.openLateCancellationReview = open;
+        button.addEventListener('click', open);
         refresh.addEventListener('click', load); closeButton.addEventListener('click', () => close());
         modal.addEventListener('click', event => { if (event.target === modal) close(); });
         modal.addEventListener('keydown', event => {
@@ -111,12 +115,16 @@
         });
         window.addEventListener('spotivity:admin-role', event => {
             clear();
-            if (event.detail?.isSuper === true && event.detail.userId) {
-                role = { isSuper: true, userId: event.detail.userId }; button.hidden = false; button.style.display = 'flex';
+            if (event.detail?.userId) {
+                role = { isSuper: event.detail.isSuper === true, userId: event.detail.userId };
+                scope.textContent = role.isSuper
+                    ? 'Vezi anulările târzii de la toate terenurile.'
+                    : 'Vezi numai anulările de la terenurile alocate în prezent. Numărul anulărilor și marcajele se calculează numai pentru aceste terenuri.';
+                button.hidden = false; button.style.display = 'flex';
             }
         });
         window.addEventListener('spotivity:admin-clear', clear);
-        return { close, clear };
+        return { open, close, clear };
     };
     // Deferred scripts already have the parsed workspace. Listen before the
     // admin bootstrap's DOMContentLoaded callback can emit the initial role.
