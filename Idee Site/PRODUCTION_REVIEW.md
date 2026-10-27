@@ -1,4 +1,16 @@
-# Verificare pentru producție — actualizare 14 octombrie 2026
+# Verificare pentru producție — actualizare 27 octombrie 2026
+
+## 27 octombrie 2026 — emailuri Spotivity și monitorizarea anulărilor târzii
+
+Cele trei modele cerute (confirmare client, rezervare primită de bază, bun venit) folosesc rendererul comun HTML/text, logo-ul existent și contactul `spotivity.rezervari@gmail.com`. Calendarul folosește `Europe/Bucharest`. Referințele din email sunt rezolvate în site și autorizate din nou de server; capabilitatea privată de vizualizare/anulare este transmisă numai clientului. Modelele de anulare și chat rămân disponibile. Această integrare tranzacțională Make nu configurează separat SMTP-ul Supabase Auth pentru confirmări sau recuperarea parolei.
+
+Migrarea 021 pune bun venit în coadă o singură dată, după confirmarea unui cont nou, inclusiv Google, fără mesaje retroactive. 022 adaugă date Maps din teren și contextul rezervării autorizat pentru butoane. 023 înregistrează numai anulările clientului sub o oră sau în timpul unei ore nefinalizate; cele făcute de personal sunt excluse. Superadminul vede lista pentru ultimele 30 de zile și marcajul de verificare de la trei rezervări distincte, fără blocare automată. Regulile de anulare și istoricul finalizat rămân protejate.
+
+021–023 au fost aplicate live într-o tranzacție care a verificat păstrarea amprentelor pentru Auth, clienți, roluri, baze, terenuri, rezervări și chat. Workerul `booking-notifications` este versiunea 2, cu verificarea serviciului păstrată. Make are ambele scenarii active, conexiunile Gmail verificate, ruta legacy păstrată și ruta normalizată cu Data Store persistent, procesare secvențială și confidențialitate. Câmpul nativ `exist` a fost verificat prin execuții controlate; notificările deja cunoscute au ocolit Gmail, iar probele tehnice au fost eliminate. Cele șase notificări vechi au fost excluse de la retrimitere fără ștergerea rezervărilor. Nu s-au trimis emailuri de test către clienți.
+
+Trezirea prin Vault și reapelarea pg_cron sunt configurate fără chei în textul jobului. Cheia din Vault a fost aliniată cu cheia secretă existentă folosită efectiv de worker, fără rotirea cheilor proiectului. Verificarea live finală: `ready=true`, coadă goală, reapelare activă și răspunsuri HTTP 200 de la worker. Drepturile anonime pentru cele două RPC-uri noi sunt refuzate, iar tabelele private păstrează RLS.
+
+Verificări relevante: 16 pentru modele, 15 pentru dispatcher după integrarea modificărilor de securitate, 31 SQL pentru welcome/context/listă, 8 browser pentru butoane, 17 Google OAuth, 7 pentru rezervări și derulare, 3 pentru lista privată, 6 pentru artefactul public cu CSP și 12 pentru lista explicită de fișiere publice. Modelele au fost verificate vizual la 320, 390 și 1440 px. Rezultatele nu reprezintă o verificare a livrării în inboxul unui destinatar real.
 
 Revizuire a codului, migrărilor SQL, configurației Supabase reale și publicării GitHub Pages. Corecțiile tehnice sunt implementate; lansarea publică finală mai necesită email, datele firmei și o soluție verificată de backup. Datele firmei și SMTP au fost amânate explicit de proprietar. Parolele noi păstrează minimum **6 caractere**, conform cererii sale.
 
