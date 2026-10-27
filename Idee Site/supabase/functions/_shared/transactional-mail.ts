@@ -161,7 +161,7 @@ export function renderTransactionalMail(input: TransactionalMailInput): Rendered
     const created = input.kind === 'booking_created_client' || input.kind === 'booking_created_owner';
     const mapsURL = mapsLink(booking.mapsURL);
     rows = [
-      { label: 'Locație', value: mapsURL ? 'Vezi terenul în Google Maps' : line(booking.baseName) || line(booking.courtName), href: mapsURL },
+      { label: 'Locație', value: mapsURL ? 'Vezi terenul în Google Maps' : '—', href: mapsURL },
       { label: 'Teren', value: line(booking.courtName) }, { label: 'Sport', value: line(booking.sport) },
       { label: 'Oraș', value: line(booking.city) }, { label: 'Data', value: romanianDay(booking.dayISO) },
       { label: created ? 'Interval orar' : 'Ore', value: created ? interval(booking.hours) : booking.hours.map(line).join(', ') },

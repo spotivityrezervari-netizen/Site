@@ -18,7 +18,7 @@ Tokenul din linkul de anulare este o capabilitate privată, disponibilă doar cl
 
 Rendererul comun produce HTML și text pentru confirmarea clientului, rezervarea primită de proprietar și bun venit, păstrând notificările de anulare și chat. Folosește logo-ul existent, verde închis/gold și adresa de contact `spotivity.rezervari@gmail.com`. Calendarul folosește ora locală `Europe/Bucharest`; linkurile de calendar nu conțin datele clientului sau capabilitatea de anulare.
 
-În confirmările și anulările către client și proprietar, câmpul „Locație” afișează „Vezi terenul în Google Maps” când terenul rezervat are un link Maps valid în `terenuri.locatie`. Linkul este ales după ID-ul terenului rezervat; o locație absentă sau invalidă rămâne text simplu, fără înlocuire cu locația altui teren.
+În confirmările și anulările către client și proprietar, câmpul „Locație” afișează „Vezi terenul în Google Maps” când terenul rezervat are un link Maps valid în `terenuri.locatie`. Linkul este ales după ID-ul terenului rezervat; o locație absentă sau invalidă afișează „—”, fără înlocuire cu locația altui teren. Linkurile completate ulterior sunt folosite automat în emailurile noi.
 
 Aplică în ordine `021_account_welcome.sql`, `022_email_booking_context.sql` și `023_late_cancellations.sql`. Evenimentul nou `account_welcome` folosește webhookul rezervărilor și același câmp `to.email`. Este generat o singură dată după confirmarea unui cont înregistrat după activarea migrării, inclusiv la autentificarea Google. Nu se trimit mesaje de bun venit retroactiv conturilor existente.
 
