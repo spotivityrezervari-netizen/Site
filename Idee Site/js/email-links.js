@@ -1,23 +1,28 @@
-// Email links carry a booking reference, never an owner's identity or authority.
+// Email links carry an opaque booking/message reference, never an identity or authority.
 // The server resolves that reference again for the currently confirmed account.
 (() => {
     'use strict';
     const UUID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
+    const messageID = value => typeof value === 'string' && (UUID.test(value) || /^[1-9]\d{0,19}$/.test(value));
     const supported = new Set(['reservation', 'chat', 'admin', 'account']);
     const oauthIntentKey = 'spotivity.email-link.oauth';
     let request = null;
     function validRequest(value) {
         return value && supported.has(value.action) && (!value.booking || UUID.test(value.booking))
-            && (!['reservation', 'chat'].includes(value.action) || UUID.test(value.booking || ''));
+            && (!value.message || (value.action === 'chat' && messageID(value.message) && !value.booking))
+            && (value.action !== 'reservation' || UUID.test(value.booking || ''))
+            && (value.action !== 'chat' || !!(value.booking || value.message));
     }
     function readLink() {
         const url = new URL(location.href), params = new URLSearchParams(url.hash.slice(1));
         if (!params.has('spotivity-action')) return;
-        const action = params.get('spotivity-action'), booking = params.get('booking');
-        params.delete('spotivity-action'); params.delete('booking');
+        const action = params.get('spotivity-action'), booking = params.get('booking'), message = params.get('message');
+        params.delete('spotivity-action'); params.delete('booking'); params.delete('message');
         url.hash = params.toString();
         history.replaceState(history.state, '', url.pathname + url.search + url.hash);
-        request = validRequest({ action, booking }) ? { action, booking: booking?.toLowerCase() || null } : { action: 'invalid' };
+        request = validRequest({ action, booking, message })
+            ? { action, booking: booking?.toLowerCase() || null, message: message?.toLowerCase() || null }
+            : { action: 'invalid' };
     }
     readLink();
     // A full Google redirect may resume only this tab's short-lived explicit
@@ -28,13 +33,13 @@
         const startedAt = Number(sessionStorage.getItem('spotivity.google-oauth.started-at'));
         if (!request && validRequest(saved) && saved.startedAt === startedAt
             && startedAt > 0 && Date.now() >= startedAt && Date.now() - startedAt <= 15 * 60 * 1000) {
-            request = { action: saved.action, booking: saved.booking || null };
+            request = { action: saved.action, booking: saved.booking?.toLowerCase() || null, message: saved.message?.toLowerCase() || null };
         }
     } catch { /* Blocked storage never prevents ordinary login. */ }
     window.saveSpotivityEmailIntent = startedAt => {
         try {
             if (validRequest(request) && Number.isFinite(Number(startedAt))) sessionStorage.setItem(oauthIntentKey,
-                JSON.stringify({ action: request.action, booking: request.booking, startedAt: Number(startedAt) }));
+                JSON.stringify({ action: request.action, booking: request.booking, message: request.message, startedAt: Number(startedAt) }));
             else sessionStorage.removeItem(oauthIntentKey);
         } catch { /* OAuth can continue even when tab storage is unavailable. */ }
     };
@@ -155,9 +160,13 @@
                     if (current()) request = null;
                     return;
                 }
-                const { data, error } = await db.rpc('get_email_booking_context', { p_booking_id: link.booking });
+                const messageLink = link.action === 'chat' && !!link.message;
+                const { data, error } = messageLink
+                    ? await db.rpc('get_email_chat_context', { p_message_id: link.message })
+                    : await db.rpc('get_email_booking_context', { p_booking_id: link.booking });
                 if (!current()) return;
-                if (error || !data || data.booking_id !== link.booking || typeof data.court_name !== 'string') throw new Error('forbidden');
+                if (error || !data || (messageLink ? data.message_id !== link.message : data.booking_id !== link.booking)
+                    || typeof data.court_name !== 'string') throw new Error('forbidden');
                 if (link.action === 'reservation') { await showReservation(data, owner, captured); }
                 else if (link.action === 'chat') {
                     hidePublicDialogs();
@@ -169,9 +178,11 @@
             } catch (error) {
                 if (!current()) return;
                 request = null; hidePublicDialogs();
-                dialog('Link de rezervare').status.textContent = error.message === 'chat_unavailable'
+                dialog(link.message ? 'Conversație' : 'Link de rezervare').status.textContent = error.message === 'chat_unavailable'
                     ? 'Chatul nu este disponibil pentru această rezervare.'
-                    : 'Rezervarea nu este disponibilă pentru acest cont. Conectează-te cu adresa folosită pentru rezervare sau contactează baza sportivă.';
+                    : link.message
+                        ? 'Conversația nu este disponibilă pentru acest cont. Conectează-te cu contul care a primit mesajul sau contactează baza sportivă.'
+                        : 'Rezervarea nu este disponibilă pentru acest cont. Conectează-te cu adresa folosită pentru rezervare sau contactează baza sportivă.';
             } finally { busy = false; if (request && generation !== captured) setTimeout(process, 0); }
         }
         function mount() {

@@ -8,12 +8,12 @@ export type BookingMailDetails = {
   amountRON: number; customerName: string; customerEmail: string; customerPhone: string;
   mapsURL?: string; cancellationDeadlineISO?: string; paymentMethods?: 'cash_card' | 'at_location';
 };
-export type ChatMailDetails = { courtName: string; customerName: string; preview: string };
+export type ChatMailDetails = { courtName: string; customerName: string; preview: string; baseName?: string; messageID?: string };
 type CommonInput = { recipient: MailRecipient; siteURL?: string };
 export type TransactionalMailInput = CommonInput & (
   | { kind: 'booking_created_client'; booking: BookingMailDetails; cancellationURL: string }
   | { kind: 'booking_created_owner' | 'booking_cancelled_client' | 'booking_cancelled_owner'; booking: BookingMailDetails; cancellationURL?: never }
-  | { kind: 'chat_owner'; chat: ChatMailDetails; cancellationURL?: never }
+  | { kind: 'chat_owner' | 'chat_client'; chat: ChatMailDetails; cancellationURL?: never }
   | { kind: 'account_welcome'; firstName?: string; cancellationURL?: never }
 );
 export type RenderedTransactionalMail = { to: MailRecipient; subject: string; html: string; text: string };
@@ -57,6 +57,12 @@ function appAction(siteURL: string, action: string, booking?: BookingMailDetails
   const hash = new URLSearchParams({ 'spotivity-action': action });
   if (booking) hash.set('booking', String(booking.id));
   url.hash = hash.toString(); return validateTransactionalURL(url.href);
+}
+function clientChatAction(siteURL: string, messageID?: string): string {
+  if (typeof messageID !== 'string' || !/^(?:[1-9]\d{0,19}|[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})$/i.test(messageID)) return appAction(siteURL, 'account');
+  const url = new URL(siteURL); url.search = ''; url.hash = '';
+  url.hash = new URLSearchParams({ 'spotivity-action': 'chat', message: messageID }).toString();
+  return validateTransactionalURL(url.href);
 }
 function mapsLink(value?: string): string | undefined {
   if (!value || value.length > 2048 || /[\s\u0000-\u001f\u007f]/.test(value)) return undefined;
@@ -137,13 +143,17 @@ export function renderTransactionalMail(input: TransactionalMailInput): Rendered
     content = actionsHTML(actions) + paragraph('În contul tău poți vedea rezervările și detaliile lor, ca să ai toate informațiile la îndemână înainte de fiecare meci.') + actionsHTML([{ label: 'Accesează contul', href: appAction(siteURL, 'account'), secondary: true }]) + `<p style="margin:18px 0 0;font-size:14px;line-height:1.75;color:#304936">Ne vedem pe teren,<br>Echipa Spotivity</p>`;
     after = 'În contul tău poți vedea rezervările și detaliile lor, ca să ai toate informațiile la îndemână înainte de fiecare meci.\nAccesează contul: ' + appAction(siteURL, 'account') + '\n\nNe vedem pe teren,\nEchipa Spotivity';
     footer = 'Ai primit acest email deoarece a fost creat un cont Spotivity cu această adresă. Dacă nu ai creat tu contul, contactează-ne la ' + TRANSACTIONAL_SUPPORT_EMAIL + '.';
-  } else if (input.kind === 'chat_owner') {
+  } else if (input.kind === 'chat_owner' || input.kind === 'chat_client') {
     if (!input.chat || typeof input.chat.preview !== 'string') throw new TypeError('Invalid chat details');
-    title = 'Ai un mesaj nou'; subject = `Mesaj nou pentru ${line(input.chat.courtName)} · ${BRAND}`;
-    introduction = `${line(input.chat.customerName) || 'Un client'} ți-a trimis un mesaj. Deschide conversația din cont pentru a răspunde.`;
-    rows = [{ label: 'Teren', value: line(input.chat.courtName) }, { label: 'Mesaj', value: line(input.chat.preview).slice(0, 600) }];
-    actions = [{ label: 'Deschide conversațiile', href: appAction(siteURL, 'admin') }];
-    content = rowsHTML(rows) + actionsHTML(actions);
+    const client = input.kind === 'chat_client';
+    const base = line(input.chat.baseName) || line(input.chat.courtName);
+    title = client ? 'Ai un mesaj nou de la baza sportivă' : 'Ai un mesaj nou';
+    subject = client ? `Mesaj nou de la ${base} · ${BRAND}` : `Mesaj nou pentru ${line(input.chat.courtName)} · ${BRAND}`;
+    introduction = client ? `${base} ți-a trimis un mesaj despre ${line(input.chat.courtName)}. Deschide conversația din contul tău pentru a vedea detaliile și a răspunde.` : `${line(input.chat.customerName) || 'Un client'} ți-a trimis un mesaj. Deschide conversația din cont pentru a răspunde.`;
+    rows = [...(client ? [{ label: 'Baza sportivă', value: base }] : []), { label: 'Teren', value: line(input.chat.courtName) }, { label: 'Mesaj', value: line(input.chat.preview).slice(0, 600) }];
+    actions = [{ label: client ? 'Deschide conversația' : 'Deschide conversațiile', href: client ? clientChatAction(siteURL, input.chat.messageID) : appAction(siteURL, 'admin') }];
+    after = client ? 'Pentru a continua conversația, folosește chatul din Spotivity. Ne vedem pe teren!' : '';
+    content = (client ? section('Detalii mesaj') : '') + rowsHTML(rows) + actionsHTML(actions) + (client ? paragraph(after) : '');
   } else {
     const booking = input.booking;
     if (!booking || !Array.isArray(booking.hours) || !booking.hours.length || booking.hours.length > 24 || booking.hours.some(hour => typeof hour !== 'string' || !line(hour)) || !Number.isFinite(booking.amountRON) || booking.amountRON < 0) throw new TypeError('Invalid booking details');
@@ -190,10 +200,11 @@ export function renderTransactionalMail(input: TransactionalMailInput): Rendered
       case 'booking_cancelled_owner': {
         title = booking.remainingHours?.length ? (owner ? 'O rezervare a fost anulată parțial' : 'O parte din rezervare a fost anulată') : owner ? 'O rezervare a fost anulată' : 'Rezervarea ta a fost anulată';
         subject = `Rezervare anulată: ${line(booking.courtName)} · ${BRAND}`;
-        introduction = booking.remainingHours?.length ? `Orele afișate mai jos au fost anulate. Orele păstrate în rezervare: ${booking.remainingHours.map(line).join(', ')}.` : 'Anularea rezervării de mai jos a fost înregistrată. Intervalele eliberate pot fi rezervate din nou.';
+        introduction = booking.remainingHours?.length ? `Orele afișate mai jos au fost anulate. Orele păstrate în rezervare: ${booking.remainingHours.map(line).join(', ')}.` : owner ? 'Anularea rezervării de mai jos a fost înregistrată. Intervalele eliberate pot fi rezervate din nou.' : `Anularea rezervării tale la ${line(booking.baseName) || line(booking.courtName)} a fost înregistrată cu succes. Mai jos găsești detaliile orelor anulate.`;
         rows.push({ label: 'Valoarea orelor anulate', value: money });
-        actions = [{ label: owner ? 'Administrează rezervările' : 'Găsește un teren', href: owner ? appAction(siteURL, 'admin', booking) : siteURL }];
-        content = rowsHTML(rows) + (owner ? section('Detalii client') + rowsHTML(contacts) : '') + actionsHTML(actions);
+        actions = owner ? [{ label: 'Administrează rezervările', href: appAction(siteURL, 'admin', booking) }] : [{ label: 'Găsește un teren', href: siteURL }, { label: 'Accesează contul', href: appAction(siteURL, 'account'), secondary: true }];
+        after = owner ? '' : booking.remainingHours?.length ? 'Au fost eliberate numai orele anulate. Restul rezervării tale rămâne neschimbat. Îți mulțumim că ai ales Spotivity!' : 'Orele anulate au fost eliberate. Când ești pregătit pentru următorul meci, poți alege un alt teren pe Spotivity. Ne vedem pe teren!';
+        content = (owner ? '' : section('Detalii anulare')) + rowsHTML(rows) + (owner ? section('Detalii client') + rowsHTML(contacts) : note(booking.remainingHours?.length ? 'Orele păstrate în rezervare rămân confirmate. Valoarea de mai sus descrie numai orele anulate.' : 'Rezervarea este anulată. Valoarea de mai sus descrie orele anulate și nu reprezintă o solicitare de plată.')) + actionsHTML(actions) + (after ? paragraph(after) : '');
         break;
       }
       default: throw new TypeError('Unsupported transactional email kind');

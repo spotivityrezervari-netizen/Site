@@ -229,3 +229,68 @@ test('payment copy follows the confirmed default and explicit alternatives; miss
   assert.ok(mail.text.includes('Rezervările finalizate nu pot fi anulate'));
   assert.throws(() => renderTransactionalMail(input('booking_created_client', { booking: { ...booking, cancellationDeadlineISO: 'whenever' } })), TypeError);
 });
+
+test('client chat uses the shared Spotivity model and an authenticated message reference without contact details', async () => {
+  const { renderTransactionalMail } = await template;
+  for (const messageID of ['42', '734cd157-5baa-4d5f-93d7-6bb6e8155b59']) {
+    const mail = renderTransactionalMail({ kind: 'chat_client', recipient: { email: 'ana@example.test', name: 'Ana' }, chat: { courtName: 'Teren Acoperit #2', baseName: 'Complex Sportiv XYZ', customerName: 'Ana', preview: 'Vestiarul este disponibil. Te așteptăm la teren.', messageID } });
+    for (const copy of ['Salut, Ana!', 'Ai un mesaj nou de la baza sportivă', 'Complex Sportiv XYZ', 'Teren Acoperit #2', 'Deschide conversația', 'spotivity.rezervari@gmail.com']) assert.ok(mail.text.includes(copy), copy);
+    const urls = links(mail.html);
+    assert.ok(urls.includes(`${SITE}#spotivity-action=chat&message=${messageID}`));
+    assert.ok(!urls.some(url => url.includes('ana%40') || url.includes('token=') || url.includes('anulare-rezervare')));
+    assert.ok(!mail.text.includes('Cod rezervare'));
+    assert.ok(!/\p{Extended_Pictographic}/u.test(mail.subject + mail.text));
+    assert.match(mail.html, /#101a14/); assert.match(mail.html, /#d8b66a/); assert.match(mail.html, /max-width:600px/);
+  }
+});
+
+test('client chat escapes user content, limits preview and never turns an unsafe message reference into an action', async () => {
+  const { renderTransactionalMail } = await template;
+  const mail = renderTransactionalMail({ kind: 'chat_client', recipient: { email: 'ana@example.test', name: '<Ana>' }, chat: { courtName: '<Teren>', baseName: 'Complex\r\nBcc: other@example.test', customerName: 'not rendered', preview: '<img src=x onerror="attack()">' + 'a'.repeat(1000), messageID: '42&token=untrusted' }, password: 'not-rendered-password', access_token: 'not-rendered-token' });
+  assert.ok(!/[\r\n\u2028\u2029]/.test(mail.subject));
+  assert.ok(mail.html.includes('&lt;img src=x onerror=&quot;attack()&quot;&gt;'));
+  assert.equal((mail.html.match(/<img /g) || []).length, 1);
+  assert.ok(!mail.html.includes('a'.repeat(601)));
+  assert.ok(!mail.html.includes('42&amp;token=untrusted'));
+  assert.ok(links(mail.html).includes(`${SITE}#spotivity-action=account`));
+  assert.ok(!JSON.stringify(mail).includes('not-rendered-password'));
+  assert.ok(!JSON.stringify(mail).includes('not-rendered-token'));
+  assert.throws(() => renderTransactionalMail({ kind: 'chat_client', recipient: { email: 'ana@example.test' }, chat: { courtName: 'Teren', customerName: 'Ana', preview: 'Salut', messageID: '42' }, cancellationURL: CANCEL }), TypeError);
+});
+
+test('full client cancellation is a receipt, keeps the original reference and never asks for payment or a repeated cancellation', async () => {
+  const { renderTransactionalMail } = await template;
+  const mail = renderTransactionalMail(input('booking_cancelled_client'));
+  for (const text of ['Rezervarea ta a fost anulată', '#SPT-booking-123', 'Baza Sportului', 'Terenul unu', '25 octombrie 2026', '18:00–19:00, 19:00–20:00', 'Valoarea orelor anulate: 240 lei', 'Găsește un teren', 'Accesează contul', 'Ne vedem pe teren']) assert.ok(mail.text.includes(text), text);
+  assert.ok(mail.html.includes('nu reprezintă o solicitare de plată'));
+  assert.ok(!mail.text.includes('Total de achitat'));
+  assert.ok(!mail.text.includes('cash sau'));
+  assert.ok(!mail.text.includes('Anulează rezervarea'));
+  assert.ok(!links(mail.html).some(url => url.includes('anulare-rezervare') || url.startsWith('https://calendar.google.com/')));
+  assert.ok(links(mail.html).includes(`${SITE}#spotivity-action=account`));
+});
+
+test('partial client cancellation clearly preserves the remaining booking without changing the owner model', async () => {
+  const { renderTransactionalMail } = await template;
+  const mail = renderTransactionalMail(input('booking_cancelled_client', { booking: { ...booking, hours: ['19:00–20:00'], remainingHours: ['18:00–19:00'], amountRON: 120 } }));
+  assert.ok(mail.text.includes('Orele păstrate în rezervare: 18:00–19:00'));
+  assert.ok(mail.text.includes('Restul rezervării tale rămâne neschimbat'));
+  assert.ok(mail.html.includes('Orele păstrate în rezervare rămân confirmate'));
+  assert.ok(mail.text.includes('Valoarea orelor anulate: 120 lei'));
+  assert.ok(!mail.text.includes('Total de achitat'));
+  const owner = renderTransactionalMail(input('booking_cancelled_owner', { recipient: { email: 'owner@example.test' } }));
+  assert.ok(owner.text.includes('Administrează rezervările'));
+  assert.ok(!owner.text.includes('Ne vedem pe teren'));
+  assert.ok(!owner.text.includes('Accesează contul'));
+});
+
+test('all four client emails share the logo, palette and contact and contain no decorative emoji', async () => {
+  const { renderTransactionalMail } = await template;
+  const mails = [renderTransactionalMail(input()), renderTransactionalMail(input('booking_cancelled_client')), renderTransactionalMail({ kind: 'account_welcome', recipient: { email: 'ana@example.test', name: 'Ana Exemplu' }, firstName: 'Ana' }), renderTransactionalMail({ kind: 'chat_client', recipient: { email: 'ana@example.test', name: 'Ana' }, chat: { courtName: 'Teren', baseName: 'Baza Sportului', customerName: 'Ana', preview: 'Te așteptăm la teren.', messageID: '42' } })];
+  for (const mail of mails) {
+    assert.ok(mail.html.includes('assets/imagini/avatar2.png'));
+    assert.match(mail.html, /#101a14/); assert.match(mail.html, /#d8b66a/);
+    assert.ok(mail.text.includes('spotivity.rezervari@gmail.com'));
+    assert.ok(!/\p{Extended_Pictographic}/u.test(mail.subject + mail.text));
+  }
+});

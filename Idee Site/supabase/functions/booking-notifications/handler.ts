@@ -13,6 +13,7 @@ type Json = Record<string, any>;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const BOOKING_KINDS = ['booking_created_client','booking_created_owner','booking_cancelled_client','booking_cancelled_owner'];
 const ACCOUNT_KINDS = ['account_welcome'];
+const CHAT_KINDS = ['chat_owner', 'chat_client'];
 const MAKE = /^https:\/\/hook\.(?:(?:eu|us)[0-9]+\.)?(?:make|integromat)\.com\/[A-Za-z0-9_-]{10,}\/?$/;
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
 const object = (value: unknown): value is Json => !!value && typeof value === 'object' && !Array.isArray(value);
@@ -77,7 +78,7 @@ export function createHandler(config: NotificationWorkerConfig, dependencies: De
     let bookingID: string | null = null;
     try {
       const input: any = { kind: job.kind, recipient: job.recipient, siteURL: TRANSACTIONAL_SITE_URL };
-      if (job.kind === 'chat_owner') input.chat = job.chat;
+      if (CHAT_KINDS.includes(job.kind)) input.chat = job.chat;
       else if (job.kind === 'account_welcome') {
         if (!object(job.account)) throw new TypeError('Invalid account notification');
         input.firstName = job.account.firstName;
@@ -115,7 +116,7 @@ export function createHandler(config: NotificationWorkerConfig, dependencies: De
           to: rendered.to, subject: rendered.subject, html: rendered.html, text: rendered.text,
           // Records are normalized server data, never a browser-supplied request
           // object. No Auth/session credentials are included in the webhook.
-          record: job.kind === 'chat_owner' ? job.chat : job.kind === 'account_welcome' ? job.account : job.booking,
+          record: CHAT_KINDS.includes(job.kind) ? job.chat : job.kind === 'account_welcome' ? job.account : job.booking,
         }),
       });
     } catch {
@@ -151,7 +152,7 @@ export function createHandler(config: NotificationWorkerConfig, dependencies: De
       // Never substitute the database service key for the independent
       // cancellation secret. Leave jobs recoverable until it is provisioned.
       if (!config.cancellationSecret) return json({ status: 'pending_configuration', submitted: 0, queued: 0, blocked: 0 });
-      const kinds = [...(configured.bookingURL ? [...BOOKING_KINDS, ...ACCOUNT_KINDS] : []), ...(configured.chatURL ? ['chat_owner'] : [])];
+      const kinds = [...(configured.bookingURL ? [...BOOKING_KINDS, ...ACCOUNT_KINDS] : []), ...(configured.chatURL ? CHAT_KINDS : [])];
       const jobs = await rpc('claim_booking_notifications', { p_limit: 8, p_lease_seconds: 120, p_booking_id: input.booking_id ?? null, p_kinds: kinds });
       if (!Array.isArray(jobs)) throw new Error('database_unavailable');
       const outcomes: ('submitted' | 'queued' | 'blocked')[] = [];
@@ -160,7 +161,7 @@ export function createHandler(config: NotificationWorkerConfig, dependencies: De
       await Promise.all(Array.from({ length: Math.min(4, jobs.length) }, async () => {
         while (cursor < jobs.length) {
           const job = jobs[cursor++];
-          const url = job.kind === 'chat_owner' ? configured.chatURL : configured.bookingURL;
+          const url = CHAT_KINDS.includes(job.kind) ? configured.chatURL : configured.bookingURL;
           if (!url) { outcomes.push('queued'); continue; }
           outcomes.push(await deliver(job, url));
         }

@@ -19,7 +19,7 @@ const pass = text => { checks++; console.log('PASS', text); };
     try {
         const seeded = await fixture.root(async () => {
             await fixture.pg.exec("alter table auth.users add column if not exists created_at timestamptz not null default '2026-01-01T00:00:00Z'");
-            for (const file of ['021_account_welcome.sql', '022_email_booking_context.sql']) await fixture.pg.exec(readFileSync(join(__dirname, '..', file), 'utf8'));
+            for (const file of ['021_account_welcome.sql', '022_email_booking_context.sql', '023_late_cancellations.sql', '024_client_chat_notifications.sql']) await fixture.pg.exec(readFileSync(join(__dirname, '..', file), 'utf8'));
             await fixture.pg.query("update public.clienti set telefon='0721123456' where user_id=$1", [uid(1)]);
             const day = (await fixture.pg.query("select ((now() at time zone 'Europe/Bucharest')::date+1)::text value")).rows[0].value;
             const court = String((await fixture.pg.query("select id from public.terenuri where nume='Court A'")).rows[0].id);
@@ -32,7 +32,11 @@ const pass = text => { checks++; console.log('PASS', text); };
             const tokenModule = await import(pathToFileURL(join(__dirname, '../functions/_shared/booking-token.ts')).href);
             const token = await tokenModule.deriveBookingCancellationToken('fixture-booking-stable-cancellation-secret', guestId);
             await fixture.pg.query('select public.attach_cancellation_token($1,$2)', [guestId, await tokenModule.hashCancellationToken(token)]);
-            return { day, court, token };
+            await fixture.pg.query("select set_config('request.jwt.claim.sub',$1,false)", [uid(3)]);
+            await fixture.pg.exec('set role authenticated');
+            const message = (await fixture.pg.query("insert into public.mesaje_chat(email_client,teren,expeditor,mesaj) values('alice@example.test','Court A','admin','Mesaj de la baza din email') returning id::text id")).rows[0].id;
+            await fixture.pg.exec("reset role; select set_config('request.jwt.claim.sub','',false)");
+            return { day, court, token, message };
         });
         const booking = await createBookingWorkflowFixture({ pg: fixture.pg, host, resolveUser: bearer => fixture.tokens.get(bearer), records: fixture.requests });
         const html = readFileSync(join(__dirname, '../../index.html'), 'utf8');
@@ -50,13 +54,14 @@ const pass = text => { checks++; console.log('PASS', text); };
                     if (req.postDataJSON()?.action === 'cancel') cancellationPosts++;
                     return fixture.serial(() => booking.browserRoute(route));
                 }
-                if (url.pathname === '/rest/v1/rpc/get_email_booking_context') return fixture.serial(async () => {
+                if (['/rest/v1/rpc/get_email_booking_context', '/rest/v1/rpc/get_email_chat_context'].includes(url.pathname)) return fixture.serial(async () => {
                     const user = fixture.tokens.get((req.headers().authorization || '').replace(/^Bearer /, ''));
                     try {
                         await fixture.pg.exec('reset role');
                         await fixture.pg.query("select set_config('request.jwt.claim.sub',$1,false)", [user || '']);
                         await fixture.pg.exec(`set role ${user ? 'authenticated' : 'anon'}`);
-                        const result = await fixture.pg.query('select public.get_email_booking_context($1::uuid) value', [req.postDataJSON().p_booking_id]);
+                        const chat = url.pathname.endsWith('/get_email_chat_context');
+                        const result = await fixture.pg.query(chat ? 'select public.get_email_chat_context($1::text) value' : 'select public.get_email_booking_context($1::uuid) value', [chat ? req.postDataJSON().p_message_id : req.postDataJSON().p_booking_id]);
                         return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(result.rows[0].value), headers: { 'access-control-allow-origin': '*' } });
                     } catch (error) {
                         return route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ code: error.code, message: 'Not available for this account' }), headers: { 'access-control-allow-origin': '*' } });
@@ -147,6 +152,49 @@ const pass = text => { checks++; console.log('PASS', text); };
         await returning.locator(`#modal-email-booking[data-booking-id="${id}"]`).waitFor({ state: 'visible' });
         assert.equal(await returning.evaluate(() => sessionStorage.getItem('spotivity.email-link.oauth')), null);
         pass('the explicit Google OAuth handoff resumes a validated non-secret email reference after a full-page return and consumes it once');
+
+        const chatClient = await pageFor(`#spotivity-action=chat&message=${seeded.message}`);
+        assert.equal(new URL(chatClient.url()).hash, '');
+        await login(chatClient, 'alice@example.test');
+        await chatClient.locator('#modal-chat-client').waitFor({ state: 'visible' });
+        await chatClient.waitForFunction(() => document.getElementById('chat-client-teren-titlu').textContent.includes('Court A') && document.getElementById('chat-client-mesaje').textContent.includes('Mesaj de la baza din email'));
+        assert.ok(!(await chatClient.evaluate(() => JSON.stringify(sessionStorage))).includes('alice@example.test'));
+        pass('a client message email resumes login and opens its authorised existing conversation without putting contact data in the link or tab storage');
+
+        const chatOutsider = await pageFor(`#spotivity-action=chat&message=${seeded.message}`);
+        await login(chatOutsider, 'bob@example.test');
+        await chatOutsider.locator('#modal-email-booking').waitFor({ state: 'visible' });
+        assert.match(await chatOutsider.locator('#modal-email-booking').innerText(), /Conversația nu este disponibilă pentru acest cont/);
+        assert.ok(!(await chatOutsider.locator('#modal-email-booking').innerText()).includes('Court A'));
+        assert.equal(await chatOutsider.locator('#modal-chat-client').isVisible(), false);
+        pass('a copied client chat email reference cannot disclose another customer conversation');
+
+        for (const message of ['99999999999999999999', uid(59999)]) {
+            const forged = await pageFor(`#spotivity-action=chat&message=${message}`);
+            await login(forged, 'alice@example.test');
+            await forged.locator('#modal-email-booking').waitFor({ state: 'visible' });
+            assert.match(await forged.locator('#modal-email-booking').innerText(), /Conversația nu este disponibilă pentru acest cont/);
+            assert.ok(!(await forged.locator('#modal-email-booking').innerText()).includes('Court A'));
+            assert.equal(new URL(forged.url()).hash, '');
+        }
+        pass('unknown numeric and UUID message references are re-authorised by SQL and reveal no conversation metadata');
+
+        const returningChat = await pageFor(`#spotivity-action=chat&message=${seeded.message}`);
+        const savedIntent = await returningChat.evaluate(() => {
+            const timestamp = String(Date.now()); sessionStorage.setItem('spotivity.google-oauth.started-at', timestamp);
+            window.saveSpotivityEmailIntent(timestamp);
+            return JSON.parse(sessionStorage.getItem('spotivity.email-link.oauth'));
+        });
+        assert.deepEqual(Object.keys(savedIntent).sort(), ['action', 'booking', 'message', 'startedAt']);
+        assert.equal(savedIntent.message, seeded.message);
+        assert.equal(savedIntent.action, 'chat');
+        await returningChat.goto(base, { waitUntil: 'networkidle' });
+        await login(returningChat, 'alice@example.test');
+        await returningChat.locator('#modal-chat-client').waitFor({ state: 'visible' });
+        await returningChat.waitForFunction(() => document.getElementById('chat-client-mesaje').textContent.includes('Mesaj de la baza din email'));
+        assert.equal(await returningChat.evaluate(() => sessionStorage.getItem('spotivity.email-link.oauth')), null);
+        pass('Google handoff retains only the validated opaque chat message reference and consumes it once after reload');
+        assert.deepEqual(errors, []);
         console.log(`${checks} email-link browser checks passed`);
     } finally { for (const context of contexts) await context.close(); if (browser) await browser.close(); await fixture.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

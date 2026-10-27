@@ -115,7 +115,7 @@ test('chat uses its separate scenario and carries escaped HTML with the authoriz
 test('a missing chat scenario does not claim chat jobs',async()=>{
   const {handler,calls}=await fixture({settings:{ready:true,booking_webhook_url:BOOKING_HOOK,chat_webhook_url:null},jobs:[]});
   await handler(request());const claim=calls.find(call=>call.path.endsWith('/claim_booking_notifications'));
-  assert.ok(!claim.body.p_kinds.includes('chat_owner'));assert.ok(claim.body.p_kinds.includes('account_welcome'));assert.equal(claim.body.p_kinds.length,5);
+  assert.ok(!claim.body.p_kinds.includes('chat_owner'));assert.ok(!claim.body.p_kinds.includes('chat_client'));assert.ok(claim.body.p_kinds.includes('account_welcome'));assert.equal(claim.body.p_kinds.length,5);
 });
 test('temporary Make errors retry the same stable notification ID and permanent errors block without leaking provider responses',async()=>{
   for(const [status,outcome,errorCode] of [[429,'retry','make_http_429'],[503,'retry','make_http_503'],[400,'blocked','make_rejected']]){
@@ -161,4 +161,15 @@ test('verified account welcome uses the booking transport and exposes no booking
   assert.ok(!calls.some(call=>call.path.endsWith('/attach_cancellation_token')));
   assert.ok(!send.body.html.includes('token='));assert.ok(!send.body.html.includes('#anulare-rezervare'));
   assert.ok(!JSON.stringify(send.body).includes(SERVICE));
+});
+
+test('client chat notification uses the chat transport, current authorized recipient and secure message reference',async()=>{
+  const chat={courtName:'Teren unu',baseName:'Baza Verde',customerName:'Ana',preview:'Răspuns de la bază',messageID:'12345'};
+  const {handler,calls}=await fixture({jobs:[job('chat_client',{booking_id:null,booking:undefined,chat})]});
+  const result=await(await handler(request())).json();assert.equal(result.submitted,1);
+  const claim=calls.find(call=>call.path.endsWith('/claim_booking_notifications'));assert.ok(claim.body.p_kinds.includes('chat_client'));
+  const send=calls.find(call=>call.url===CHAT_HOOK);assert.ok(send);assert.equal(send.body.kind,'chat_client');assert.equal(send.body.to.email,'client@example.test');assert.equal(send.body.booking_id,null);
+  assert.equal(send.body.record.messageID,'12345');assert.match(send.body.html,/spotivity-action=chat&amp;message=12345/);
+  assert.ok(!calls.some(call=>call.path.endsWith('/attach_cancellation_token')));
+  for(const secret of [SERVICE,CANCEL_SECRET,'#anulare-rezervare='])assert.ok(!JSON.stringify(send.body).includes(secret));
 });
