@@ -73,7 +73,8 @@ async function boundedBody(request: Request, max: number): Promise<Uint8Array> {
 function duplicate(response: Response, data: Json): boolean { return response.status === 409 || /duplicate|already exists/i.test([data?.error, data?.code, data?.message].join(' ')); }
 async function digest(bytes: Uint8Array): Promise<string> { return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))).map(n => n.toString(16).padStart(2,'0')).join(''); }
 function allowedOrigin(origin: string | null): boolean {
-  if (!origin || origin === 'https://spotivityrezervari-netizen.github.io') return true;
+  if (!origin || origin === 'https://spotivity.ro' || origin === 'https://www.spotivity.ro'
+    || origin === 'https://spotivityrezervari-netizen.github.io') return true;
   try { const url = new URL(origin); return url.protocol === 'http:' && ['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname) && url.origin === origin; } catch { return false; }
 }
 

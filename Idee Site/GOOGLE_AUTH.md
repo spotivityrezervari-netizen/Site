@@ -13,6 +13,7 @@ Configurează numele aplicației, emailul de suport și datele de contact. Pentr
 | Câmp | Valoare exactă |
 | --- | --- |
 | Authorized JavaScript origins | `https://spotivityrezervari-netizen.github.io` |
+| Authorized JavaScript origins, domeniul propriu | `https://spotivity.ro` și `https://www.spotivity.ro`, ca intrări separate |
 | Authorized redirect URIs | `https://ndubcdwohqzgxpuiowye.supabase.co/auth/v1/callback` |
 
 Callbackul este adresa Supabase de mai sus. Păstrează valorile exacte, inclusiv `/auth/v1/callback`.
@@ -26,14 +27,16 @@ Deschide [providerii proiectului Rendez-Vous](https://supabase.com/dashboard/pro
 În **Authentication → URL Configuration**, păstrează:
 
 ```text
-Site URL:
-https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/
+Site URL pentru domeniul principal:
+https://spotivity.ro/
 
-Redirect URLs (valoare explicită):
+Redirect URLs (intrări explicite; păstrează și callbackurile legitime existente):
+https://spotivity.ro/
+https://www.spotivity.ro/
 https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/
 ```
 
-Aceste adrese erau deja configurate la verificarea din 22 octombrie 2026. Păstrează și celelalte adrese legitime existente. Nu activa skip nonce check, email opțional sau asocierea manuală a identităților pentru această integrare.
+Adresa legacy GitHub era configurată la verificarea din 22 octombrie 2026. Înainte de activarea domeniului propriu, verifică și salvează intrările exacte de mai sus, fără wildcarduri globale. Configurația Auth live nu a putut fi citită în sesiunea din 27 octombrie din cauza HTTP 401 al bindingului administrativ; documentația nu confirmă aplicarea ei. Nu activa skip nonce check, email opțional sau asocierea manuală a identităților pentru această integrare.
 
 ## 3. Verifică din site
 

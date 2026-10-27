@@ -1,0 +1,18 @@
+# Keep the legacy GitHub Pages route from publishing development/server files.
+# Netlify uses the stricter reviewed dist/ artifact instead of Jekyll.
+exclude:
+  - scripts
+  - deploy
+  - dist
+  - netlify.toml
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+  - Idee Site/supabase
+  - Idee Site/scripts
+  - Idee Site/README.md
+  - Idee Site/GOOGLE_AUTH.md
+  - Idee Site/PRODUCTION_REVIEW.md
+  - Idee Site/PUBLICARE_SIGURA.md
+  - Idee Site/js/README.md

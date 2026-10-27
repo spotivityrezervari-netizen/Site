@@ -46,7 +46,8 @@ function createInput(input: Json): Json {
   return result;
 }
 function allowedOrigin(origin: string | null): boolean {
-  if (!origin || origin === 'https://spotivityrezervari-netizen.github.io') return true;
+  if (!origin || origin === 'https://spotivity.ro' || origin === 'https://www.spotivity.ro'
+    || origin === 'https://spotivityrezervari-netizen.github.io') return true;
   try { const url = new URL(origin); return url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname) && url.origin === origin; } catch { return false; }
 }
 async function boundedBody(request: Request): Promise<Uint8Array> {

@@ -1,4 +1,4 @@
 [build]
   base = "."
-  publish = "Idee Site"
-  command = ""
+  publish = "dist"
+  command = "node scripts/build-public.mjs"

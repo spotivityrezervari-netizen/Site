@@ -47,6 +47,18 @@ test('dispatcher requires exact server authorization and never trusts a public J
   assert.equal((await handler(request({},SERVICE,'GET'))).status,405);
   assert.equal(calls.length,0);
 });
+test('browser production origins do not grant CORS or replace exact notification service authorization',async()=>{
+  const {handler,calls}=await fixture();
+  for(const origin of ['https://spotivity.ro','https://www.spotivity.ro']) {
+    for(const token of [null,'real-user-access-jwt-validated-by-auth','eyJhbGciOiJub25lIn0.eyJyb2xlIjoic2VydmljZV9yb2xlIn0.']) {
+      const incoming=request({action:'dispatch'},token);incoming.headers.set('Origin',origin);
+      const response=await handler(incoming);assert.equal(response.status,401);assert.equal(response.headers.get('Access-Control-Allow-Origin'),null);
+    }
+    const preflight=await handler(new Request('https://edge.test/booking-notifications',{method:'OPTIONS',headers:{Origin:origin,'Access-Control-Request-Method':'POST','Access-Control-Request-Headers':'authorization,content-type'}}));
+    assert.equal(preflight.status,405);assert.equal(preflight.headers.get('Access-Control-Allow-Origin'),null);
+  }
+  assert.equal(calls.length,0);
+});
 test('unconfigured transport and missing independent production secret leave all jobs queued',async()=>{
   for(const options of [
     {settings:{ready:false,booking_webhook_url:BOOKING_HOOK,chat_webhook_url:CHAT_HOOK}},

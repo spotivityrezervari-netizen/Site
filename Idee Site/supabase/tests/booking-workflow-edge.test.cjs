@@ -260,3 +260,42 @@ test('CORS permits only production and local development; preflight never touche
   const rejected = await handler(request(createInput(), undefined, { Origin: 'https://spotivityrezervari-netizen.github.io.evil.test' }));
   assert.equal(rejected.status, 403); assert.equal(rejected.headers.get('Access-Control-Allow-Origin'), null); assert.equal(calls.length, 0);
 });
+
+test('CORS admits exact Spotivity domains and legacy development origins and rejects lookalikes or noncanonical origins', async () => {
+  const { handler, calls } = await fixture();
+  const allowed = ['https://spotivity.ro', 'https://www.spotivity.ro', ORIGIN, 'http://localhost', 'http://localhost:8123', 'http://127.0.0.1:8123', 'http://[::1]:8123'];
+  for (const origin of allowed) {
+    const response = await handler(new Request('https://edge.test', { method: 'OPTIONS', headers: { Origin: origin } }));
+    assert.equal(response.status, 204, origin); assert.equal(response.headers.get('Access-Control-Allow-Origin'), origin);
+    assert.equal(response.headers.get('Vary'), 'Origin'); assert.equal(response.headers.get('Access-Control-Allow-Credentials'), null);
+    assert.equal(response.headers.get('Access-Control-Allow-Methods'), 'POST, OPTIONS');
+  }
+  const denied = ['https://spotivity.ro.evil.test', 'https://evilspotivity.ro', 'https://spotivity.ro@evil.test', 'https://evil.test@spotivity.ro', 'https://admin.spotivity.ro', 'https://www.spotivity.ro.evil.test', 'http://spotivity.ro', 'http://www.spotivity.ro', 'https://spotivity.ro:443', 'https://spotivity.ro:8443', 'https://www.spotivity.ro:8443', 'https://spotivity.ro/', 'https://spotivity.ro?origin=evil', 'https://spotivity.ro#evil', 'https://spotivity-ro.netlify.app', 'https://deploy-preview-42--spotivity.netlify.app', 'https://spotivityrezervari-netizen.github.io.evil.test', 'https://localhost:8123', 'http://localhost.evil.test:8123', 'http://evil.test@localhost:8123', 'http://localhost:8123/path', 'null', 'https://spotivity.ro https://evil.test', 'https://spotivity.ro,https://evil.test', 'https://spotivity.ro%0d%0a.evil.test', 'https://spotivity.ro/%0d%0aAccess-Control-Allow-Origin:*'];
+  for (const origin of denied) for (const method of ['OPTIONS', 'POST']) {
+    const response = await handler(new Request('https://edge.test', { method, headers: { Origin: origin } }));
+    assert.equal(response.status, 403, `${method} ${origin}`); assert.equal(response.headers.get('Access-Control-Allow-Origin'), null);
+  }
+  const withoutOrigin = await handler(new Request('https://edge.test', { method: 'OPTIONS' }));
+  assert.equal(withoutOrigin.status, 204); assert.equal(withoutOrigin.headers.get('Access-Control-Allow-Origin'), null);
+  assert.equal(calls.length, 0);
+});
+
+test('Spotivity production CORS permits guest and account bookings without weakening user ownership verification', async () => {
+  for (const origin of ['https://spotivity.ro', 'https://www.spotivity.ro']) {
+    const guest = await fixture(); const response = await guest.handler(request(createInput(), undefined, { Origin: origin }));
+    assert.equal(response.status, 201); assert.equal(response.headers.get('Access-Control-Allow-Origin'), origin);
+    assert.ok(!guest.calls.some(call => call.path.startsWith('/auth/')));
+    const account = await fixture();
+    assert.equal((await account.handler(request(createInput({ action: 'create' }), TOKEN, { Origin: origin }))).status, 201);
+    assert.equal(account.calls.find(call => call.path.endsWith('/create_booking_group')).headers.get('Authorization'), `Bearer ${TOKEN}`);
+    for (const action of ['create', 'cancel_owned']) for (const token of [undefined, SECRET, 'anon-key-public']) {
+      const blocked = await fixture();
+      const input = action === 'create' ? createInput({ action }) : { action, booking_id: BOOKING };
+      const denied = await blocked.handler(request(input, token, { Origin: origin }));
+      assert.equal(denied.status, 401); assert.equal(denied.headers.get('Access-Control-Allow-Origin'), origin); assert.equal(blocked.calls.length, 0);
+    }
+    const revoked = await fixture({ fetch: call => call.path === '/auth/v1/user' ? json({ error: 'revoked user JWT' }, 401) : undefined });
+    assert.equal((await revoked.handler(request(createInput({ action: 'create' }), TOKEN, { Origin: origin }))).status, 401);
+    assert.deepEqual(revoked.calls.map(call => call.path), ['/auth/v1/user']);
+  }
+});
