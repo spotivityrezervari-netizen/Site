@@ -149,7 +149,7 @@ test('client model has secure view/cancel actions, maps, calendar and a real Rom
     booking: { ...booking, id, dayISO: '2026-10-20', hours: ['15:00–16:00', '16:00–17:00'], cancellationDeadlineISO: '2026-10-20T12:00:00Z', mapsURL: 'https://www.google.com/maps/search/?api=1&query=Complex+XYZ', paymentMethods: 'cash_card' },
     cancellationURL: cancel,
   }));
-  for (const text of ['Confirmare oficială a rezervării tale', `#SPT-${id}`, '15:00 – 17:00', '15:00, 20 octombrie 2026', 'cash sau cu cardul', 'Adaugă în Calendar', 'Vezi rezervarea', 'Chat cu baza sportivă', '15 minute', 'spotivity.rezervari@gmail.com']) assert.ok(mail.text.includes(text), text);
+  for (const text of ['Confirmare oficială a rezervării tale', '15:00 – 17:00', '15:00, 20 octombrie 2026', 'cash sau cu cardul', 'Adaugă în Calendar', 'Vezi rezervarea', 'Chat cu baza sportivă', '15 minute', 'spotivity.rezervari@gmail.com']) assert.ok(mail.text.includes(text), text);
   const urls = links(mail.html);
   const calendar = new URL(urls.find(url => url.startsWith('https://calendar.google.com/')));
   assert.equal(calendar.searchParams.get('dates'), '20261020T150000/20261020T170000');
@@ -258,10 +258,10 @@ test('client chat escapes user content, limits preview and never turns an unsafe
   assert.throws(() => renderTransactionalMail({ kind: 'chat_client', recipient: { email: 'ana@example.test' }, chat: { courtName: 'Teren', customerName: 'Ana', preview: 'Salut', messageID: '42' }, cancellationURL: CANCEL }), TypeError);
 });
 
-test('full client cancellation is a receipt, keeps the original reference and never asks for payment or a repeated cancellation', async () => {
+test('full client cancellation is a receipt and never asks for payment or a repeated cancellation', async () => {
   const { renderTransactionalMail } = await template;
   const mail = renderTransactionalMail(input('booking_cancelled_client'));
-  for (const text of ['Rezervarea ta a fost anulată', '#SPT-booking-123', 'Baza Sportului', 'Terenul unu', '25 octombrie 2026', '18:00–19:00, 19:00–20:00', 'Valoarea orelor anulate: 240 lei', 'Găsește un teren', 'Accesează contul', 'Ne vedem pe teren']) assert.ok(mail.text.includes(text), text);
+  for (const text of ['Rezervarea ta a fost anulată', 'Baza Sportului', 'Terenul unu', '25 octombrie 2026', '18:00–19:00, 19:00–20:00', 'Valoarea orelor anulate: 240 lei', 'Găsește un teren', 'Accesează contul', 'Ne vedem pe teren']) assert.ok(mail.text.includes(text), text);
   assert.ok(mail.html.includes('nu reprezintă o solicitare de plată'));
   assert.ok(!mail.text.includes('Total de achitat'));
   assert.ok(!mail.text.includes('cash sau'));

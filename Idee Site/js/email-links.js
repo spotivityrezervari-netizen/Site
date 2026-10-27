@@ -116,7 +116,7 @@
             const detail = document.createElement('div'); detail.className = 'workflow-summary';
             const hours = Array.isArray(context.hours) ? context.hours : [];
             const end = hours.length && /^\d{2}:00$/.test(hours.at(-1)) ? `${String(Number(hours.at(-1).slice(0, 2)) + 1).padStart(2, '0')}:00` : '';
-            for (const [label, value] of [['Cod rezervare', `SPT-${context.booking_id}`], ['Baza sportivă', context.base_name], ['Teren', context.court_name], ['Sport', context.sport], ['Data', context.day], ['Interval orar', end ? `${hours[0]}–${end}` : hours.join(', ')], ['Total de achitat la locație', Number.isFinite(Number(context.total)) ? `${Number(context.total).toLocaleString('ro-RO')} lei` : ''], ...(context.is_owner ? [['Client', context.customer_name], ['Telefon', context.customer_phone], ['Email', context.customer_email]] : [])]) {
+            for (const [label, value] of [['Baza sportivă', context.base_name], ['Teren', context.court_name], ['Sport', context.sport], ['Data', context.day], ['Interval orar', end ? `${hours[0]}–${end}` : hours.join(', ')], ['Total de achitat la locație', Number.isFinite(Number(context.total)) ? `${Number(context.total).toLocaleString('ro-RO')} lei` : ''], ...(context.is_owner ? [['Client', context.customer_name], ['Telefon', context.customer_phone], ['Email', context.customer_email]] : [])]) {
                 if (value == null || value === '') continue;
                 const row = document.createElement('p'); row.style.cssText = 'margin:8px 0;overflow-wrap:anywhere';
                 const strong = document.createElement('strong'); strong.textContent = `${label}: `;
