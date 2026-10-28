@@ -1,6 +1,14 @@
-# Publicarea site-ului pe Netlify
+# Publicarea sigură a site-ului
+
+Publicarea Netlify este oprită la cererea proprietarului, pentru economisirea creditelor. Actualizările se trimit în Git cu `[skip netlify]` în mesajul commitului; nu se apelează API-uri de deploy sau build hooks. Instrucțiunile Netlify de mai jos descriu configurația pregătită pentru o publicare ulterioară.
 
 HTML, CSS și JavaScript se descarcă în browser și rămân vizibile prin F12. Minificarea și blocarea tastelor nu protejează datele. Autorizarea se face în Supabase, cu identitatea verificată și permisiunile curente, inclusiv pentru cereri directe către API.
+
+Pagina include politica CSP și `no-referrer` înainte de încărcarea resurselor, astfel încât protecțiile aplicabile prin metadate funcționează și pe GitHub Pages. Scripturile și conexiunile neaprobate, handler-ele inline, obiectele și baza URL injectată sunt refuzate. `frame-ancestors`, HSTS și celelalte antete HTTP din configurația Netlify necesită suportul gazdei; o etichetă meta nu le înlocuiește.
+
+Linkurile salvate se afișează numai prin HTTPS, fără credențiale în URL sau caractere de control. Câmpurile istorice sunt escapate înainte de inserarea în HTML, iar erorile brute ale chatului nu se scriu în consola clientului. Buildul refuză și URL-urile webhook private Make, secretele OAuth și tokenurile privilegiate recunoscute. Testele folosesc valori fictive; niciun scanner nu poate identifica toate formele posibile de secret.
+
+Migrarea `026_retired_court_identity.sql` este aplicată în Supabase pentru a împiedica transferul istoricului între terenuri prin reutilizarea unui nume sau ID. Registrele identităților sunt private; clienții își păstrează istoricul, iar permisiunile terenurilor existente și interdicția anulării rezervărilor finalizate sunt păstrate. Această aplicare SQL nu reprezintă un deployment Netlify.
 
 ## Ce se publică
 

@@ -82,7 +82,7 @@
                 .order('created_at', { ascending: true });
 
             if (state.user?.id !== owner || request !== chatMessageRequest) return;
-            if (error) { console.error("Eroare chat: ", error); return; }
+            if (error) return;
             chatClientMesajeToate = data || [];
 
             // Calculează câte mesaje necitite sunt (trimise de admin)

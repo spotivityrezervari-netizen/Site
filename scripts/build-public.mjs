@@ -25,8 +25,13 @@ async function readRegularFile(root, relative) {
 }
 
 function assertNoPrivateMaterial(relative, content) {
-  const privateValue = /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|\b(?:sb_secret_[A-Za-z0-9_-]{8,}|sbp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|gh[pousr]_[A-Za-z0-9]{20,}|sk_live_[A-Za-z0-9]{16,})\b/;
+  const privateValue = /-----BEGIN (?:RSA |EC |DSA |OPENSSH |ENCRYPTED )?PRIVATE KEY-----|\b(?:sb_secret_[A-Za-z0-9_-]{8,}|sbp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|gh[pousr]_[A-Za-z0-9]{20,}|nfp_[A-Za-z0-9_-]{20,}|GOCSPX-[A-Za-z0-9_-]{8,}|sk_(?:live|test)_[A-Za-z0-9]{16,})\b/;
   if (privateValue.test(content)) throw new Error(`Private credential pattern in public input: ${relative}`);
+  // A private Make webhook URL is itself an invocation credential. The browser
+  // must call authenticated application endpoints rather than these URLs.
+  if (/https?:\/\/hook\.(?:(?:eu|us)[0-9]+\.)?(?:make|integromat)\.com\/[A-Za-z0-9_-]{10,}/i.test(content)) {
+    throw new Error(`Private webhook URL in public input: ${relative}`);
+  }
   for (const match of content.matchAll(/\beyJ[A-Za-z0-9_-]+\.([A-Za-z0-9_-]+)\.[A-Za-z0-9_-]+\b/g)) {
     let payload;
     try { payload = JSON.parse(Buffer.from(match[1], 'base64url').toString('utf8')); }

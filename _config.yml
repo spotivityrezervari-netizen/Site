@@ -1,6 +1,7 @@
 # Keep the legacy GitHub Pages route from publishing development/server files.
 # Netlify uses the stricter reviewed dist/ artifact instead of Jekyll.
 exclude:
+  - AGENTS.md
   - scripts
   - deploy
   - dist

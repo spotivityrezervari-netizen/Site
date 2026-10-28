@@ -40,7 +40,7 @@ async function tree(root, prefix = '') {
 
 test('artifact contains only reviewed browser files and the exact deployment headers', async t => {
   const f = await fixture(t);
-  for (const relative of ['README.md', 'js/README.md', 'supabase/001_security.sql', 'supabase/tests/schema.sql', 'supabase/functions/app/index.ts', 'scripts/admin.js', '.env', '.git/config', 'js/new-debug.js', 'js/modules/private-helper.js', 'css/main.css.map', 'assets/imagini/private.json']) {
+  for (const relative of ['AGENTS.md', 'README.md', 'js/README.md', 'supabase/001_security.sql', 'supabase/tests/schema.sql', 'supabase/functions/app/index.ts', 'scripts/admin.js', '.env', '.git/config', 'js/new-debug.js', 'js/modules/private-helper.js', 'css/main.css.map', 'assets/imagini/private.json']) {
     await f.put(`Idee Site/${relative}`, 'excluded repository or development content');
   }
   const result = await f.build();
@@ -133,7 +133,7 @@ test('symlinked dist is never recursively replaced or followed', async t => {
 test('privileged or personal credentials refuse publication without printing their values', async t => {
   const f = await fixture(t);
   const jwt = role => 'eyJhbGciOiJIUzI1NiJ9.' + Buffer.from(JSON.stringify({ role })).toString('base64url') + '.fixtureSignature';
-  for (const content of ['-----BEGIN PRIVATE KEY-----', 'sb_secret_' + 'exampleNotARealSecret'.repeat(2), 'sbp_' + '0'.repeat(40), jwt('service_role'), jwt('authenticated')]) {
+  for (const content of ['-----BEGIN PRIVATE KEY-----', '-----BEGIN ENCRYPTED PRIVATE KEY-----', 'sb_secret_' + 'exampleNotARealSecret'.repeat(2), 'sbp_' + '0'.repeat(40), 'nfp_' + 'testValueNotReal'.repeat(2), 'GOCSPX-' + 'testValueNotReal'.repeat(2), jwt('service_role'), jwt('authenticated')]) {
     await f.put('Idee Site/js/main.js', content);
     await assert.rejects(f.build, error => {
       assert.match(error.message, /credential pattern|JWT/);
@@ -144,6 +144,19 @@ test('privileged or personal credentials refuse publication without printing the
   await f.put('Idee Site/js/main.js', jwt('anon'));
   await f.build();
   assert.equal(await readFile(f.output('js/main.js'), 'utf8'), jwt('anon'));
+});
+
+test('private automation webhook URLs cannot enter browser assets or errors', async t => {
+  const f = await fixture(t);
+  for (const origin of ['https://hook.eu1.make.com', 'https://hook.us2.make.com', 'https://hook.make.com', 'https://hook.integromat.com']) {
+    const secretURL = origin + '/' + 'notARealWebhook'.repeat(2);
+    await f.put('Idee Site/js/main.js', `const webhook = '${secretURL}';`);
+    await assert.rejects(f.build, error => {
+      assert.match(error.message, /Private webhook URL in public input: js\/main.js/);
+      assert.ok(!error.message.includes(secretURL));
+      return true;
+    });
+  }
 });
 
 test('known private credentials embedded in image metadata are refused as well', async t => {

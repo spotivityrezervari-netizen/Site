@@ -59,7 +59,7 @@ async function openProfile(page) {
     await pg.exec(readFileSync(join(__dirname,'../011_club_requests.sql'),'utf8'));
     await pg.exec(readFileSync(join(__dirname,'../012_club_approval.sql'),'utf8'));
     await pg.exec(readFileSync(join(__dirname,'../013_admin_integration.sql'),'utf8'));
-    for (const file of ['014_booking_groups.sql', '015_profile_contact.sql', '016_notification_outbox.sql', '017_base_avatars.sql', '018_google_profile_names.sql', '019_owner_court_creation.sql', '020_final_sport_backgrounds.sql', '021_account_welcome.sql', '022_email_booking_context.sql', '023_late_cancellations.sql']) {
+    for (const file of ['014_booking_groups.sql', '015_profile_contact.sql', '016_notification_outbox.sql', '017_base_avatars.sql', '018_google_profile_names.sql', '019_owner_court_creation.sql', '020_final_sport_backgrounds.sql', '021_account_welcome.sql', '022_email_booking_context.sql', '023_late_cancellations.sql', '024_client_chat_notifications.sql', '025_admin_late_cancellation_scope.sql', '026_retired_court_identity.sql']) {
       await pg.exec(readFileSync(join(__dirname, '..', file), 'utf8'));
     }
     await pg.exec("update public.terenuri set poza='assets/imagini/avatar2.png'");

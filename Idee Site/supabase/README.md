@@ -1,5 +1,13 @@
 # Instalarea protecțiilor Supabase și a rolurilor Spotivity
 
+## 026 — identitatea terenurilor și izolarea istoricului
+
+[026_retired_court_identity.sql](026_retired_court_identity.sql) este aplicată și verificată live. Numele și ID-urile terenurilor sunt rezervate permanent în două registre private, cu RLS și fără granturi pentru rolurile din browser sau `service_role`. Un teren nou nu poate prelua numele ori ID-ul unui teren șters. La crearea unui teren după ștergere trebuie ales un nume nou. Redenumirea și revenirea la un nume propriu anterior păstrează identitatea aceluiași teren; drepturile se rezolvă prin ID și alocarea curentă, inclusiv pentru aliasurile istorice.
+
+Ștergerea terenului elimină accesul personalului obișnuit la istoricul său, profilurile clienților și chat. Clienții își păstrează propriul istoric, iar superadminul păstrează accesul global. Regulile de creare a terenurilor, retragere a permisiunilor și anulare a orelor nefinalizate nu sunt lărgite; rezervările finalizate rămân protejate. Numele istorice ambigue sunt rezervate fără atribuirea unui proprietar presupus. Un conflict demonstrat între un nume curent și alt ID istoric oprește migrarea pentru verificare.
+
+Au trecut 20 de verificări pentru ID numeric și 20 pentru UUID, inclusiv reutilizarea numelui/ID-ului, aliasuri, istorice ambigue, accesul la rezervări/profiluri/chat, anulări și păstrarea obiectelor modificate de alte platforme. Proba cu rollback și aplicarea finală au verificat amprentele tuturor tabelelor de business existente, permisiunile celor 10 conturi asupra terenurilor curente și ACL-urile/politicile existente. Singurele date adăugate sunt registrele private ale identităților și versiunea 26 în registrul migrărilor. Nu au fost create conturi sau rezervări de test în proiectul real.
+
 ## 025 — anulări târzii pentru fiecare administrator
 
 [025_admin_late_cancellation_scope.sql](025_admin_late_cancellation_scope.sql) este aplicată și verificată live. Înlocuiește numai RPC-ul de citire `list_late_cancellations(integer)`, păstrând tabelele, regulile anulării, trigger-ele și alocările. Administratorul confirmat vede evenimentele pentru ID-urile terenurilor alocate în prezent; numărătorile și datele de contact sunt filtrate înainte de gruparea pe client. Superadminul păstrează istoricul tuturor terenurilor, inclusiv al celor șterse. Refolosirea numelui unui teren nu acordă acces la clienții terenului vechi. Un client obișnuit, un cont neconfirmat sau un utilizator fără rol nu poate accesa lista. Nu se introduc blocări automate.

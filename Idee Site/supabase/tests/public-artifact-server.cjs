@@ -26,10 +26,10 @@ const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=
   '.json':'application/json','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp',
   '.avif':'image/avif','.gif':'image/gif','.svg':'image/svg+xml','.ico':'image/x-icon','.woff2':'font/woff2'};
 
-async function servePublicArtifact({directory,port=0}={}){
+async function servePublicArtifact({directory,port=0,applyHeaders=true}={}){
   if(!directory)throw new Error('A built artifact directory is required');
   const root=await realpath(directory);
-  const rules=parseHeaders(await readFile(resolve(root,'_headers'),'utf8'));
+  const rules=applyHeaders?parseHeaders(await readFile(resolve(root,'_headers'),'utf8')):[];
   const server=createServer(async(req,res)=>{
     let pathname='/';
     try{

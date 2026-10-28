@@ -14,7 +14,7 @@ let checks=0;
 const pass=message=>{checks++;console.log('PASS',message);};
 
 (async()=>{
-  const site=await servePublicArtifact({directory});let fixture,browser;
+  const site=await servePublicArtifact({directory});let fixture,browser,legacySite;
   try{
     const response=await fetch(site.url),headers=response.headers,html=await response.text();
     assert.equal(response.status,200);assert.equal(html,readFileSync(join(directory,'index.html'),'utf8'));
@@ -32,7 +32,19 @@ const pass=message=>{checks++;console.log('PASS',message);};
     assert.doesNotMatch(html, /\son[a-z]+\s*=/i, 'Published HTML must not contain inline event attributes');
     pass('the built index is served with enforced CSP, anti-framing, no-referrer, MIME, permissions and HTTPS headers');
 
-    const privatePaths=['/README.md','/netlify.toml','/package.json','/admin.html','/.git/config','/_headers','/deploy/netlify/_headers',
+    legacySite=await servePublicArtifact({directory,applyHeaders:false});
+    const legacyResponse=await fetch(legacySite.url);
+    assert.equal(legacyResponse.headers.get('content-security-policy'),null);
+    assert.equal(legacyResponse.headers.get('referrer-policy'),null);
+    const metaPolicy=html.match(/<meta http-equiv="Content-Security-Policy" content="([^"]+)">/);
+    assert.ok(metaPolicy,'The document must protect hosts without custom response headers');
+    const supportedPolicy=policy.split(';').map(rule=>rule.trim()).filter(rule=>rule&&!rule.startsWith('frame-ancestors ')).join('; ');
+    assert.equal(metaPolicy[1],supportedPolicy,'Meta CSP must retain every directive supported in a document policy');
+    assert.ok(html.indexOf(metaPolicy[0])<html.search(/<(?:script|link|img)\b/i),'CSP must precede every resource');
+    assert.match(html,/<meta name="referrer" content="no-referrer">/);
+    pass('the document carries the strict supported CSP and no-referrer policy before resources, even without hosting headers');
+
+    const privatePaths=['/AGENTS.md','/README.md','/netlify.toml','/package.json','/admin.html','/.git/config','/_headers','/deploy/netlify/_headers',
       '/scripts/build-public.mjs','/scripts/start-site.sh','/supabase/001_security.sql','/supabase/020_booking_groups.sql',
       '/supabase/tests/schema.sql','/supabase/tests/club-request-fixture.cjs','/supabase/functions/club-applications/handler.ts',
       '/supabase/functions/booking-workflow/handler.ts'];
@@ -53,14 +65,17 @@ const pass=message=>{checks++;console.log('PASS',message);};
     const proxy=process.env.HTTPS_PROXY||process.env.https_proxy;if(proxy){const url=new URL(proxy);launch.proxy={server:url.origin,bypass:'127.0.0.1,localhost'};}
     browser=await chromium.launch(launch);
     const context=await browser.newContext({timezoneId:'Europe/Bucharest',viewport:{width:390,height:844}});
-    const errors=[],resourceFailures=[],forbiddenRequests=[];
+    const errors=[],resourceFailures=[],forbiddenRequests=[],referrerProbes=[];
     await context.addInitScript(()=>{
       window.__deploymentCSP=[];
       document.addEventListener('securitypolicyviolation',event=>window.__deploymentCSP.push({directive:event.effectiveDirective,blocked:event.blockedURI,disposition:event.disposition}));
     });
     await context.route('**/*',async route=>{
       const req=route.request(),url=new URL(req.url());
-      if(url.origin===new URL(site.url).origin)return route.continue();
+      if([site.url,legacySite.url].some(local=>url.origin===new URL(local).origin)){
+        if(url.searchParams.has('referrer-probe'))referrerProbes.push(req.headers().referer??null);
+        return route.continue();
+      }
       if(req.url()===sdkTag[1])return route.fulfill({status:200,contentType:'application/javascript',body:sdk,headers:{'access-control-allow-origin':'*'}});
       if(url.hostname===host){
         if(url.pathname==='/auth/v1/settings')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({external:{google:false}}),headers:{'access-control-allow-origin':'*'}});
@@ -113,6 +128,22 @@ const pass=message=>{checks++;console.log('PASS',message);};
     assert.ok(attacks.violations.some(event=>event.blocked.startsWith('https://cdn.jsdelivr.net/npm/unapproved-package')));
     assert.deepEqual(forbiddenRequests,[],'CSP must reject unapproved scripts before the network adapter');
     pass('enforced browser CSP blocks injected inline scripts and event attributes, unapproved external hosts and other packages on the approved CDN');
+
+    await page.goto(legacySite.url+'?source=referrer-check#private-link-context',{waitUntil:'networkidle'});
+    await page.waitForFunction(()=>typeof window.SpotivityModules?.publicAuth==='function'&&typeof window.SpotivityBooking?.create==='function');
+    assert.deepEqual(await page.evaluate(()=>window.__deploymentCSP),[],'Startup must also work with only the document policy');
+    await page.evaluate(async()=>{
+      const image=new Image();image.src='assets/imagini/avatar2.png?referrer-probe=1';document.body.append(image);await image.decode();image.remove();
+      const inline=document.createElement('script');inline.textContent='window.__legacyInlineExecuted = true';document.head.append(inline);
+      const attribute=document.createElement('button');attribute.setAttribute('onclick','window.__legacyAttributeExecuted = true');document.body.append(attribute);attribute.click();attribute.remove();
+      fetch('https://unapproved-network.example.invalid/private-context').catch(()=>{});
+    });
+    await page.waitForFunction(()=>window.__deploymentCSP.some(event=>event.directive==='script-src-elem')&&window.__deploymentCSP.some(event=>event.directive==='script-src-attr')&&window.__deploymentCSP.some(event=>event.directive==='connect-src'));
+    assert.deepEqual(referrerProbes,[null],'The document policy must omit even a same-origin request referrer');
+    assert.deepEqual(await page.evaluate(()=>({inline:window.__legacyInlineExecuted,attribute:window.__legacyAttributeExecuted})),{inline:undefined,attribute:undefined});
+    assert.deepEqual(forbiddenRequests,[],'The document policy must block disallowed connections before the network adapter');
+    assert.deepEqual(errors,[]);assert.deepEqual(resourceFailures,[]);
+    pass('without custom hosting headers, the real app still initializes while meta CSP blocks script/event injection and unapproved connections, and no-referrer omits the URL');
     console.log(`${checks} public deployment browser checks passed.`);
-  }finally{if(browser)await browser.close();if(fixture)await fixture.close();await site.close();}
+  }finally{if(browser)await browser.close();if(fixture)await fixture.close();if(legacySite)await legacySite.close();await site.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -81,7 +81,7 @@
                     <div class="admin-history-card" style="background: rgba(255,255,255,0.1); border: 1px solid ${culoareBorder}; padding: 15px; margin: 0; border-radius: 8px; color: white; opacity: ${opacitate}; display: flex; flex-direction: column; justify-content: space-between;">
                         <div>
                             <h4 style="margin: 0 0 10px 0; color: ${culoareTitlu};">${window.escapeHtml(r.sport)} - ${window.escapeHtml(r.teren)} ${textStare}</h4>
-                            <p style="margin: 5px 0;"><strong>${txtCand}:</strong> ${dataTradusa} ( ${r.ora} )</p>
+                            <p style="margin: 5px 0;"><strong>${txtCand}:</strong> ${window.escapeHtml(dataTradusa)} ( ${window.escapeHtml(r.ora)} )</p>
                             <p style="margin: 5px 0; font-size: 13px;"><strong>Client:</strong> ${textClientAfisat}</p>
                             <p style="margin: 5px 0;"><strong>${txtPret}:</strong> ${window.escapeHtml(r.pret_total)}</p>
                         </div>

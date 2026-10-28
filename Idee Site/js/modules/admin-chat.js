@@ -71,7 +71,7 @@
 
             const { data, error } = await query;
             if (authRequest !== state.authGeneration) return;
-            if (error) { console.error("Eroare chat admin: ", error); return; }
+            if (error) return;
 
             chatAdminMesajeToate = data || [];
 

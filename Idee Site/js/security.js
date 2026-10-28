@@ -5,9 +5,10 @@ window.escapeJs = value => window.escapeHtml(JSON.stringify(String(value ?? ''))
 window.safeUrl = (value, allowAssets = false) => {
     const text = String(value ?? '');
     if (allowAssets && /^assets\/[a-zA-Z0-9_./-]+$/.test(text) && !text.includes('..')) return text;
+    if (/[\u0000-\u001f\u007f]/.test(text)) return '';
     try {
         const parsed = new URL(text);
-        return ['https:','http:'].includes(parsed.protocol) ? parsed.href : '';
+        return parsed.protocol === 'https:' && !parsed.username && !parsed.password ? parsed.href : '';
     } catch { return ''; }
 };
 window.siteDate = (date = new Date()) => {

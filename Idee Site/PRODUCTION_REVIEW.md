@@ -1,4 +1,18 @@
-# Verificare pentru producție — actualizare 27 octombrie 2026
+# Verificare pentru producție
+
+## Protecția browserului și a publicării statice
+
+Politica CSP strictă și `no-referrer` sunt incluse acum în antetul HTML, înainte de resurse. Aceste restricții funcționează și pe GitHub Pages, unde antetele Netlify nu se aplică. Verificarea browser pe buildul public a acoperit separat răspunsuri cu și fără antete de hosting: scripturile și conexiunile injectate au fost refuzate, iar refererul nu a fost transmis. Protecțiile care necesită antete HTTP, precum `frame-ancestors`, nu sunt prezentate drept active prin meta.
+
+Linkurile HTTP, URL-urile cu userinfo și caractere de control sunt respinse, păstrând imaginile locale și HTTPS. Istoricul administrativ escapează și câmpurile vechi de dată/oră; chatul nu mai afișează obiectele brute de eroare în consolă. Lista explicită de fișiere publice și verificările suplimentare pentru credențiale păstrează sursele server, SQL, testele, documentația internă și source maps în afara artefactului static. `AGENTS.md` este exclus și din publicarea Jekyll.
+
+Auditul Supabase live a fost numai de citire a metadatelor: cele 16 tabele ale aplicației au RLS, rolul anonim nu primește datele clienților, rezervările private, chatul sau rolurile, iar RPC-urile sensibile de serviciu nu pot fi executate de rolurile browserului. Fixture-urile de autorizare și browser nu creează conturi sau rezervări în proiectul real.
+
+Auditul a reprodus izolat un acces neconform după ștergerea unui teren și reutilizarea numelui său pentru alt administrator. Migrarea [026_retired_court_identity.sql](supabase/026_retired_court_identity.sql) a fost aplicată separat, după o probă reală închisă cu rollback. Cele două registre private noi păstrează numele și ID-urile terenurilor, iar alocarea curentă se rezolvă prin identitatea stabilă. Numele/ID-ul unui teren șters nu pot fi adoptate de un teren nou; administratorul obișnuit nu moștenește clienții, rezervările sau chatul terenului șters. Aliasurile aceluiași teren și istoricul propriu al clientului rămân accesibile conform rolului.
+
+Aplicarea a verificat păstrarea amprentelor tuturor tabelelor de business existente, a celor 80 de combinații cont/teren curent și a ACL-urilor și politicilor existente. Registrele au RLS și nu sunt accesibile rolurilor din browser. Nu au fost trimise emailuri sau create conturi/rezervări reale de test. Verificările finale au trecut: 40 pentru identitatea terenurilor, 69 pentru scenariile backend existente, 5 pentru URL-uri/istoric în browser, 13 pentru build, 8 pentru artefactul public cu și fără antete, 84 pentru fluxurile complete sub CSP cu migrările până la 026, 17 pentru Google OAuth, 17 pentru rezervări fără cont și 12 pentru legăturile din email. Verificările HTTP anonime au primit 200 pentru catalog/disponibilitate și 401 pentru clienți, roluri, rezervări private, chat, configurația notificărilor și contextul privat din email. Scanarea a 156 de fișiere text curente și 383 de versiuni istorice fără fixture-uri nu a găsit credențiale privilegiate recunoscute; singura potrivire din fișierele curente era o valoare fictivă din testul de refuz al cheilor private.
+
+Codul trimis browserului și cheia publică Supabase rămân inspectabile. Repository-ul GitHub este public, deci sursele și istoricul său sunt accesibile separat de site; vizibilitatea repository-ului nu a fost schimbată. Nicio protecție bazată pe blocarea F12 sau a meniului contextual nu a fost adăugată. Proprietarul a cerut push Git fără Netlify; commiturile folosesc `[skip netlify]` și nu se lansează builduri sau deploy-uri Netlify.
 
 ## 27 octombrie 2026 — emailuri Spotivity și monitorizarea anulărilor târzii
 
