@@ -20,6 +20,8 @@ Rendererul comun produce HTML și text pentru confirmarea clientului, rezervarea
 
 În confirmările și anulările către client și proprietar, câmpul „Locație” afișează „Vezi terenul în Google Maps” când terenul rezervat are un link Maps valid în `terenuri.locatie`. Linkul este ales după ID-ul terenului rezervat; o locație absentă sau invalidă afișează „—”, fără înlocuire cu locația altui teren. Linkurile completate ulterior sunt folosite automat în emailurile noi.
 
+Această ajustare este activă în workerul `booking-notifications`, versiunea 6. Cele patru fișiere sursă din pachetul Edge au fost comparate cu codul revizuit; verificarea de serviciu și secretele existente au fost păstrate. Activarea nu a apelat workerul, nu a trimis emailuri de test și nu a folosit Netlify.
+
 Aplică în ordine `021_account_welcome.sql`, `022_email_booking_context.sql` și `023_late_cancellations.sql`. Evenimentul nou `account_welcome` folosește webhookul rezervărilor și același câmp `to.email`. Este generat o singură dată după confirmarea unui cont înregistrat după activarea migrării, inclusiv la autentificarea Google. Nu se trimit mesaje de bun venit retroactiv conturilor existente.
 
 Butoanele din email deschid rezervarea, chatul, administrarea sau contul în `index.html`. Referința din URL nu acordă acces: RPC-ul verifică din nou contul confirmat și proprietatea rezervării ori alocarea terenului. Pentru rezervările fără cont, vizualizarea folosește capabilitatea privată existentă; chatul necesită o rezervare asociată contului autentificat. Intentul reluat după Google conține numai acțiunea și UUID-ul, fără capabilități, date de contact sau tokenuri Auth.
