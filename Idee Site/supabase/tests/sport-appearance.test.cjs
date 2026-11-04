@@ -74,7 +74,8 @@ let passed = 0;
         assert.ok(existsSync(join(__dirname, '..', '..', row.icona_url)), row.icona_url);
       }
       // Migration 005's historical backgrounds are superseded by migration
-      // 020; its final-sport-backgrounds test checks all current image paths.
+      // 020 and the browser's retired-default aliases. Their tests check the
+      // current image paths without rewriting this historical SQL fixture.
     });
     await check('clients and ordinary admins retain public visual reads', async () => {
       for (const person of [1, 2, 3]) assert.deepEqual((await read('authenticated', person)).rows, expected);

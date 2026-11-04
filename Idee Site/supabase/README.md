@@ -1,5 +1,11 @@
 # Instalarea protecțiilor Supabase și a rolurilor Spotivity
 
+## 029 — anunțuri manuale Make, cu grupuri exclusive
+
+[029_manual_announcement_campaigns.sql](029_manual_announcement_campaigns.sql) adaugă registrul privat al campaniilor și patru RPC-uri protejate prin chei distincte pentru clienți/admini. A fost aplicată cu aprobarea explicită a proprietarului și verificări de păstrare a datelor și permisiunilor existente. Numărul 028 era deja ocupat în baza live; nu reaplica o altă migrare sub acel număr.
+
+Configurarea și cele nouă tipuri de email sunt descrise în [ANUNTURI_MAKE.md](ANUNTURI_MAKE.md). Cheile brute sunt păstrate numai în conexiunile private Make; migrarea nu conține valori secrete și nu trimite emailuri. La restaurarea într-un proiect nou, cheile se provizionează separat; funcțiile refuză accesul până la existența hashurilor autorizate.
+
 ## 027 — reconciliere versionată și integritatea rezervărilor
 
 [027_booking_integrity_and_rate_limits.sql](027_booking_integrity_and_rate_limits.sql) este pregătită în Git și testată izolat; **nu este aplicată în producție prin acest commit**. Se aplică după 026, la viitoarea lansare autorizată, înaintea funcțiilor Edge și frontendului. Păstrează datele de business și contoarele rate-limit deja existente. Guardurile refuză o definiție SQL necunoscută; nu ocoli verificarea și nu reaplica 014/023/025 peste live.
@@ -70,11 +76,13 @@ Pagina principală folosește secțiuni mari pentru fiecare sport, navigare pe d
 | --- | --- | --- |
 | Fotbal | `fotbalrealist.png` | `FotbalFinal.jpeg` |
 | Baschet | `baschetrealist.png` | `BaschetFinal.jpeg` |
-| Tenis | `tenisrealist.png` | `TenisFINAL.jpeg` |
-| Volei | `voleirealist.png` | `RealistVolei.png` |
+| Tenis | `tenisrealist.png` | `TenisVFinal.jpg` |
+| Volei | `voleirealist.png` | `VoleiVFinal.jpg` |
 | Tenis de picior | `fotbalrealist.png` | `RealistTenispicior.png` |
 
 Căile sunt relative la `assets/imagini/`, iar numele respectă exact literele mari și mici ale fișierelor din GitHub. Configurația curentă include cele cinci categorii, cu ordinea între 1 și 5. `sport` folosește cheia canonică `Tenis Picior` pentru tenisul de picior; `icona_url` și `fundal_url` stabilesc imaginile. Vizitatorii și conturile autentificate pot citi configurația; numai superadminul poate scrie prin API. Proprietarul proiectului poate edita valorile și din Table Editor/SQL Editor. Sunt acceptate imagini locale și URL-uri HTTPS valide. La indisponibilitatea configurației, site-ul folosește imaginile locale incluse. Fundalurile actuale pentru fotbal, baschet și tenis sunt stabilite prin [020_final_sport_backgrounds.sql](020_final_sport_backgrounds.sql), păstrând pictogramele, ordinea și celelalte categorii. Reaplicarea migrării păstrează personalizările ulterioare.
+
+Actualizarea imaginilor de tenis și volei din 4 noiembrie 2026 folosește fotografiile noi din Git. Frontend-ul înlocuiește doar căile implicite retrase (`RealistTenis.png`, `TenisFINAL.jpeg`, `RealistVolei.png`) pentru sportul corespunzător, inclusiv URL-urile lor exacte de GitHub Pages. URL-urile personalizate rămân păstrate. Nu este necesară reaplicarea migrărilor vizuale sau modificarea bazei de date pentru această actualizare.
 
 Verificarea înainte/după aplicarea 005 a confirmat aceleași **8 conturi Auth, 5 profile, 2 admini, 5 terenuri, 48 rezervări, 22 mesaje și 24 sloturi**, precum și definiții/stări identice pentru trigger-ele, funcțiile private și politicile existente. La acea verificare erau instalate migrările **1, 3, 4 și 5**. Pozele specifice terenurilor sunt în continuare în `terenuri.poza`; noul tabel configurează imaginile categoriilor de sport.
 

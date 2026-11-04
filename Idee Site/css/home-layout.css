@@ -100,36 +100,7 @@ body.pagina-publica { background: #101a14; }
 }
 .pagina-publica .home-hero-fotbal { --home-art-position: 8% 55%; }
 .pagina-publica .home-hero-baschet { --home-art-position: 22% 55%; --home-edge-bottom: clamp(100px, 10vw, 170px); }
-.pagina-publica .home-hero-tenis { --home-art-height: clamp(800px, 70vw, 1120px); --home-art-position: 50% 50%; --home-edge-bottom: 100px; }
-/* Fit the full portrait over a softly blurred version of the same photograph. */
-.pagina-publica .home-sport-hero .home-hero-art .home-hero-ambient {
-    z-index: 0;
-    filter: blur(26px) brightness(.45) saturate(.75);
-    opacity: .8;
-    transform: scale(1.08);
-}
-.pagina-publica .home-hero-tenis .home-hero-art img[data-sport-background] {
-    inset: auto;
-    top: 0;
-    left: 50%;
-    width: auto;
-    max-width: 100%;
-    height: 100%;
-    object-fit: contain;
-    transform: translateX(-50%);
-    -webkit-mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent);
-    mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent);
-}
-@media (min-width: 768px) {
-    /* Use the desktop canvas instead of a narrow portrait column. Crop the
-       photograph to its frame without stretching the racket or tennis balls. */
-    .pagina-publica .home-hero-tenis .home-hero-art img[data-sport-background] {
-        width: min(90%, 1440px);
-        max-width: none;
-        object-fit: cover;
-        object-position: 50% 75%;
-    }
-}
+.pagina-publica .home-hero-volei { --home-art-position: 35% 50%; }
 .pagina-publica .home-sport-hero:not(:has(.home-hero-art)) { grid-template-rows: auto auto; }
 .pagina-publica .home-sport-hero:not(:has(.home-hero-art)) .home-hero-copy { padding-bottom: 44px; }
 .pagina-publica .home-courts-wrap {
@@ -194,7 +165,6 @@ body.pagina-publica { background: #101a14; }
         padding: 0 0 24px;
     }
     .pagina-publica .home-hero-copy { padding: 48px 18px 0; }
-    .pagina-publica .home-hero-tenis { --home-edge-bottom: 90px; }
     .pagina-publica .home-hero-baschet { --home-edge-bottom: 105px; }
     .pagina-publica .home-courts-wrap { padding: 0 18px; }
 }

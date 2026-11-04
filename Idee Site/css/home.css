@@ -375,9 +375,6 @@ body.pagina-publica {
     .pagina-publica .home-explore-button { padding: 11px 17px; font-size: 14px; }
     .pagina-publica .home-hero-art { aspect-ratio: 4 / 3; margin-top: 8px; }
     .pagina-publica .home-hero-art img { object-fit: cover; }
-    /* Keep the complete racket visible; its shape spans the original landscape image. */
-    .pagina-publica .home-hero-tenis .home-hero-art { aspect-ratio: 1672 / 941; }
-    .pagina-publica .home-hero-tenis .home-hero-art img { object-fit: contain; }
     .pagina-publica .home-footer { padding-inline: 20px; }
     .pagina-publica #container-ore { grid-template-columns: repeat(4,1fr); gap: 6px; }
 }

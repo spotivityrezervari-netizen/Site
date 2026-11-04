@@ -67,11 +67,13 @@ let checks=0;
       assert.deepEqual(await snapshot(),before);
     });
     await check('the current standard backgrounds and retained icons resolve to exact case-sensitive repository assets',async()=>{
+      // Keep 020's historical SQL assertions above intact. The browser now
+      // aliases its retired tennis background to the replacement in Git.
+      const currentBackgrounds={...replacements,Tenis:'assets/imagini/TenisVFinal.jpg',Volei:'assets/imagini/VoleiVFinal.jpg'};
       for(const row of beforeVisuals){
-        const background=replacements[row.sport]||row.fundal_url;
+        const background=currentBackgrounds[row.sport]||row.fundal_url;
         for(const path of [row.icona_url,background])if(path.startsWith('assets/'))assert.ok(existsSync(join(__dirname,'../..',path)),path);
       }
-      assert.ok(existsSync(join(__dirname,'../../assets/imagini/RealistVolei.png')));
       assert.ok(existsSync(join(__dirname,'../../assets/imagini/fotbalrealist.png')));
     });
     await root("update public.site_sporturi set fundal_url='https://cdn.example.test/later-football.webp' where sport='Fotbal'");

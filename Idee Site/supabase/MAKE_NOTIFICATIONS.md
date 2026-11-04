@@ -1,5 +1,9 @@
 # Activarea notificărilor Make
 
+## Anunțuri manuale — 5 noiembrie 2026
+
+Cele două scenarii tranzacționale sunt păstrate separat de noile anunțuri manuale pentru clienți/admini. [ANUNTURI_MAKE.md](ANUNTURI_MAKE.md) descrie scenariile 8377771/8377772, selecția exclusivă a grupurilor, modul PREVIZUALIZARE/TRIMITE, limita planului Make și inventarul complet al celor nouă tipuri de email. Backendul dedicat este versionat în migrarea 029, fără schimbarea rezervărilor sau a drepturilor existente. Nu folosi webhookurile rezervărilor ori chatului pentru anunțuri generale.
+
 Codul pune în coadă confirmările/anulările către client și proprietarul autorizat și mesajele noi ale clientului către proprietar. Trimiterea nu este activată automat: scenariile Make existente trebuie verificate înainte de a seta `ready=true`.
 
 1. În Make EU1, păstrează o copie a blueprinturilor scenariilor existente de rezervări/chat și conexiunile de email. Secretul API se configurează exclusiv în mediul securizat, pentru destinația `eu1.make.com`; nu se salvează în repository.

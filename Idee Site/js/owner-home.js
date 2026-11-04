@@ -14,8 +14,8 @@
     const sportImages = [
         { file: 'FotbalFinal.jpeg', width: 1600, height: 1020 },
         { file: 'BaschetFinal.jpeg', width: 1600, height: 1043 },
-        { file: 'TenisFINAL.jpeg', width: 1000, height: 1333 },
-        { file: 'RealistVolei.png', width: 1672, height: 941 },
+        { file: 'TenisVFinal.jpg', width: 1920, height: 1311 },
+        { file: 'VoleiVFinal.jpg', width: 1920, height: 1280 },
         { file: 'RealistTenispicior.png', width: 1672, height: 941 }
     ];
     const sportName = value => window.normalizeSportName?.(value) || String(value || 'Alte sporturi').trim();
@@ -349,13 +349,6 @@
                 image.alt = ''; image.dataset.sportBackground = sport; image.width = artwork.width; image.height = artwork.height;
                 image.loading = index === 0 ? 'eager' : 'lazy'; image.decoding = 'async';
                 if (index === 0) image.setAttribute('fetchpriority', 'high');
-                if (sport === 'Tenis') {
-                    const ambient = image.cloneNode(false);
-                    ambient.removeAttribute('data-sport-background');
-                    ambient.dataset.sportAmbient = sport;
-                    ambient.className = 'home-hero-ambient';
-                    art.append(ambient);
-                }
                 art.append(image); section.append(art);
             }
             const wrap = element('div', 'home-courts-wrap');

@@ -3,8 +3,8 @@
     const defaults = {
         Fotbal: { sport: 'Fotbal', icona_url: 'assets/imagini/fotbalrealist.png', fundal_url: 'assets/imagini/FotbalFinal.jpeg', ordine: 1 },
         Baschet: { sport: 'Baschet', icona_url: 'assets/imagini/baschetrealist.png', fundal_url: 'assets/imagini/BaschetFinal.jpeg', ordine: 2 },
-        Tenis: { sport: 'Tenis', icona_url: 'assets/imagini/tenisrealist.png', fundal_url: 'assets/imagini/TenisFINAL.jpeg', ordine: 3 },
-        Volei: { sport: 'Volei', icona_url: 'assets/imagini/voleirealist.png', fundal_url: 'assets/imagini/RealistVolei.png', ordine: 4 },
+        Tenis: { sport: 'Tenis', icona_url: 'assets/imagini/tenisrealist.png', fundal_url: 'assets/imagini/TenisVFinal.jpg', ordine: 3 },
+        Volei: { sport: 'Volei', icona_url: 'assets/imagini/voleirealist.png', fundal_url: 'assets/imagini/VoleiVFinal.jpg', ordine: 4 },
         'Tenis Picior': { sport: 'Tenis Picior', icona_url: 'assets/imagini/fotbalrealist.png', fundal_url: 'assets/imagini/RealistTenispicior.png', ordine: 5 }
     };
     const keys = new Map(Object.keys(defaults).map(sport => [sport.toLocaleLowerCase('ro-RO'), sport]));
@@ -15,6 +15,18 @@
         const safe = window.safeUrl(value, true);
         if (/^assets\/imagini\/[a-zA-Z0-9_.-]+$/.test(safe)) return safe;
         try { return new URL(safe).protocol === 'https:' ? safe : ''; } catch { return ''; }
+    };
+    // Older visual migrations/live settings still name the retired bundled
+    // photographs. Upgrade only those exact defaults; retain custom images.
+    const retiredBackgrounds = {
+        Tenis: ['assets/imagini/RealistTenis.png', 'assets/imagini/TenisFINAL.jpeg'],
+        Volei: ['assets/imagini/RealistVolei.png']
+    };
+    const pagesHome = 'https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/';
+    const backgroundImage = (sport, value) => {
+        const safe = safeImage(value);
+        return retiredBackgrounds[sport]?.some(path => safe === path || safe === new URL(path, pagesHome).href)
+            ? defaults[sport].fundal_url : safe || defaults[sport].fundal_url;
     };
     window.spotivitySportAppearance = { ...defaults };
     window.getSportAppearance = sport => window.spotivitySportAppearance[sportKey(sport)] || defaults.Fotbal;
@@ -48,7 +60,7 @@
                     window.spotivitySportAppearance[key] = {
                         ...defaults[key],
                         icona_url: safeImage(row.icona_url) || defaults[key].icona_url,
-                        fundal_url: safeImage(row.fundal_url) || defaults[key].fundal_url,
+                        fundal_url: backgroundImage(key, row.fundal_url),
                         ordine: Number.isInteger(row.ordine) ? row.ordine : defaults[key].ordine
                     };
                 }

@@ -1018,14 +1018,23 @@ async function openProfile(page) {
     });
     assert.equal(appearanceRows.length,sports.length);
     assert.deepEqual(appearanceRows.map(row=>row.sport),sports);
+    const currentSportBackgrounds={Tenis:'assets/imagini/TenisVFinal.jpg',Volei:'assets/imagini/VoleiVFinal.jpg'};
     for (const appearance of appearanceRows) {
       const hero=mobile.locator(`.home-sport-hero[data-home-sport="${appearance.sport}"]`);
       assert.equal(await hero.count(),1);
       await hero.scrollIntoViewIfNeeded();
-      assert.equal(await hero.locator(`[data-sport-background="${appearance.sport}"]`).getAttribute('src'),appearance.fundal_url);
+      assert.equal(await hero.locator(`[data-sport-background="${appearance.sport}"]`).getAttribute('src'),currentSportBackgrounds[appearance.sport]||appearance.fundal_url);
       assert.equal(await hero.locator('[data-sport-icon]').count(),0,'Sport headlines must be text only');
       await assertSportImageLoaded(hero.locator('[data-sport-background]'));
 
+    }
+    for (const width of viewportWidths) {
+      await mobile.setViewportSize({width,height:844});
+      for (const [sport,height] of [['Tenis',1311],['Volei',1280]]) {
+        const image=mobile.locator(`.home-sport-hero [data-sport-background="${sport}"]`);
+        const actual=await image.evaluate(img=>({width:img.naturalWidth,height:img.naturalHeight,fit:getComputedStyle(img).objectFit}));
+        assert.deepEqual(actual,{width:1920,height,fit:'cover'},`${sport} landscape at ${width}px`);
+      }
     }
     assert.ok(requests.some(request=>request.path==='/rest/v1/site_sporturi' && request.method==='GET' && !request.person));
     pass('all five sport sections have text-only headings and Supabase-configured realistic backgrounds with the avatar2 brand');
@@ -1223,16 +1232,16 @@ async function openProfile(page) {
     }
     await serial(async()=>{
       await pg.exec('reset role');
-      await pg.query("update public.site_sporturi set icona_url='assets/imagini/avatar2.png',fundal_url='assets/imagini/RealistVolei.png' where sport='Fotbal'");
+      await pg.query("update public.site_sporturi set icona_url='assets/imagini/avatar2.png',fundal_url='assets/imagini/VoleiVFinal.jpg' where sport='Fotbal'");
     });
     const configuredAppearance=await pageFor();
     await configuredAppearance.goto(base,{waitUntil:'networkidle'});
     await configuredAppearance.evaluate(()=>window.spotivitySportAppearanceReady);
     assert.equal(await configuredAppearance.locator('.home-sport-hero [data-sport-icon]').count(),0);
-    assert.equal(await configuredAppearance.locator('[data-sport-background="Fotbal"]').getAttribute('src'),'assets/imagini/RealistVolei.png');
+    assert.equal(await configuredAppearance.locator('[data-sport-background="Fotbal"]').getAttribute('src'),'assets/imagini/VoleiVFinal.jpg');
     await configuredAppearance.locator('.card-sport[data-sport="Fotbal"]').click();
     await configuredAppearance.locator('#modal-terenuri').waitFor({state:'visible'});
-    assert.match(await configuredAppearance.locator('#modal-terenuri .modal-continut').evaluate(node=>getComputedStyle(node).backgroundImage),/RealistVolei\.png/);
+    assert.match(await configuredAppearance.locator('#modal-terenuri .modal-continut').evaluate(node=>getComputedStyle(node).backgroundImage),/VoleiVFinal\.jpg/);
     assert.equal(await configuredAppearance.locator('#filtru-nume').isVisible(),true);
     pass('a configured sport appearance changes the homepage and its booking dialog through real public SDK reads');
     const unavailableAppearance=await pageFor();
@@ -1398,7 +1407,7 @@ async function openProfile(page) {
     await basesPage.locator('#container-zile .btn-zi').nth(1).click();
     await basesPage.locator('.btn-ora').filter({hasText:/^09:00$/}).waitFor();
     assert.equal(await basesPage.locator('.btn-ora').count(),3);
-    assert.match(await basesPage.locator('#modal-rezervare .modal-continut').evaluate(node=>getComputedStyle(node).backgroundImage),/TenisFINAL\.jpeg/);
+    assert.match(await basesPage.locator('#modal-rezervare .modal-continut').evaluate(node=>getComputedStyle(node).backgroundImage),/TenisVFinal\.jpg/);
     assert.ok(requests.some(item=>item.path==='/rest/v1/terenuri' && new URLSearchParams(item.search).get('id')===`eq.${baseCourts.a2}`));
     await basesPage.locator('.btn-ora').filter({hasText:/^09:00$/}).click();
     await basesPage.locator('#buton-confirma').click();
