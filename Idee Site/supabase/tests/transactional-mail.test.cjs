@@ -4,7 +4,8 @@ const { pathToFileURL } = require('node:url');
 const path = require('node:path');
 
 const template = import(pathToFileURL(path.join(__dirname, '../functions/_shared/transactional-mail.ts')).href);
-const SITE = 'https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/';
+const SITE = 'https://spotivity.ro/';
+const LEGACY = 'https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/';
 const CANCEL = `${SITE}?cancel_booking=opaque-test-token&source=email`;
 const booking = {
   id: 'booking-123', courtName: 'Terenul unu', sport: 'Fotbal', baseName: 'Baza Sportului',
@@ -293,4 +294,24 @@ test('all four client emails share the logo, palette and contact and contain no 
     assert.ok(mail.text.includes('spotivity.rezervari@gmail.com'));
     assert.ok(!/\p{Extended_Pictographic}/u.test(mail.subject + mail.text));
   }
+});
+
+
+test('new default emails use spotivity.ro while secure legacy cancellation links remain valid', async () => {
+  const {renderTransactionalMail,validateTransactionalURL,TRANSACTIONAL_SITE_URL}=await template;
+  assert.equal(TRANSACTIONAL_SITE_URL,SITE);
+  for(const origin of ['https://spotivity.ro/','https://www.spotivity.ro/']) {
+    assert.equal(validateTransactionalURL(origin),origin);
+    const mail=renderTransactionalMail(input('booking_created_client',{siteURL:origin,cancellationURL:`${origin}#anulare-rezervare=old-id&token=opaque`}));
+    assert.ok(mail.html.includes(`${origin}assets/imagini/avatar2.png`));
+  }
+  const cancel=`${LEGACY}#anulare-rezervare=old-id&token=opaque`;
+  assert.equal(validateTransactionalURL(cancel),cancel);
+  const mail=renderTransactionalMail(input('booking_created_client',{cancellationURL:cancel}));
+  assert.ok(links(mail.html).includes(cancel));
+  assert.ok(links(mail.html).includes(`${SITE}#spotivity-action=chat&booking=booking-123`));
+  const calendar=new URL(links(mail.html).find(url=>url.startsWith('https://calendar.google.com/')));
+  assert.ok(calendar.searchParams.get('details').endsWith(SITE));
+  assert.ok(!calendar.searchParams.get('details').includes('/Site/Idee'));
+  for(const bad of ['https://spotivity.ro.evil.test/','https://evilspotivity.ro/','https://spotivity.ro@evil.test/','https://evil.test@spotivity.ro/','http://spotivity.ro/','https://spotivity.ro:8443/','https://www.spotivity.ro.evil.test/',`${LEGACY}../other/`,`${SITE}%2e%2e/index.html`]) assert.throws(()=>validateTransactionalURL(bad),TypeError,bad);
 });

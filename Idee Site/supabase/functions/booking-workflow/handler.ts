@@ -1,4 +1,5 @@
 import { deriveBookingCancellationToken, hashCancellationToken } from '../_shared/booking-token.ts';
+import { publicRateSubject } from '../_shared/public-rate-limit.ts';
 
 type Json = Record<string, any>;
 type Config = { url: string; anonKey: string; serviceKey: string; cancelSecret?: string };
@@ -34,7 +35,10 @@ function createInput(input: Json): Json {
   const hours = [...input.hours].sort();
   if (hours.some((hour, index) => index > 0 && Number(hour.slice(0, 2)) !== Number(hours[index - 1].slice(0, 2)) + 1)) throw new ApiError(400, 'invalid_hours', 'Alege ore consecutive pentru același teren.');
   if (typeof input.with_ball !== 'boolean') throw invalid();
-  const result: Json = { p_request_id: requestId, p_court_id: UUID.test(courtId) ? courtId.toLowerCase() : courtId, p_day: day, p_hours: hours, p_with_ball: input.with_ball };
+  if (typeof input.expected_total !== 'number' || !Number.isFinite(input.expected_total) || input.expected_total < 0
+    || !Number.isSafeInteger(Math.round(input.expected_total * 100))
+    || Math.abs(input.expected_total * 100 - Math.round(input.expected_total * 100)) > 0.000001) throw invalid('Confirmă totalul rezervării.');
+  const result: Json = { p_request_id: requestId, p_court_id: UUID.test(courtId) ? courtId.toLowerCase() : courtId, p_day: day, p_hours: hours, p_with_ball: input.with_ball, p_expected_total: input.expected_total };
   if (input.action === 'create_guest') {
     result.p_contact_name = text(input.contact_name, 1, 200);
     result.p_email = text(input.email, 3, 254).toLowerCase();
@@ -84,10 +88,8 @@ function publicBooking(value: unknown): Json {
 
 export function createHandler(config: Config, dependencies: Dependencies = {}) {
   const transport = dependencies.fetch ?? fetch;
-  const now = dependencies.now ?? Date.now;
   const base = config.url.replace(/\/$/, '');
   const service = { apikey: config.serviceKey, Authorization: `Bearer ${config.serviceKey}` };
-  const limits = new Map<string, { start: number; count: number }>();
   async function call(path: string, headers: Record<string, string>, body?: unknown): Promise<{ response: Response; data: any }> {
     const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 10000);
     try {
@@ -102,6 +104,7 @@ export function createHandler(config: Config, dependencies: Dependencies = {}) {
     const message = String(data?.message ?? '');
     if (response.status === 429 || /quota|rate.limit|too many|daily limit/i.test(message)) return new ApiError(429, 'rate_limit', 'Ai trimis prea multe cereri. Reîncearcă mai târziu.');
     if (response.status >= 500) return unavailable();
+    if (/\bPRICE_CHANGED\b/i.test(message)) return new ApiError(409, 'price_changed', 'Prețul terenului s-a modificat. Verifică noul total și confirmă din nou rezervarea.');
     if (/one active booking per sport|one booking per sport/i.test(message)) return new ApiError(409, 'booking_limit', 'Poți avea o singură rezervare la același sport în aceeași zi, indiferent de teren sau oraș. Alege mai multe ore consecutive într-o singură rezervare.');
     if (/completed bookings cannot be cancelled|completed.*cancel/i.test(message)) return new ApiError(409, 'completed_booking', 'Rezervările finalizate nu pot fi anulate.');
     if (/invalid cancellation link/i.test(message)) return new ApiError(403, 'invalid_cancellation', 'Linkul de anulare nu este valid.');
@@ -125,13 +128,17 @@ export function createHandler(config: Config, dependencies: Dependencies = {}) {
     if (!auth.response.ok || !UUID.test(auth.data?.id ?? '')) throw new ApiError(401, 'unauthenticated', 'Sesiunea nu mai este validă. Autentifică-te din nou.');
     return headers;
   }
-  function rateLimit(request: Request, action: string): void {
-    const client = (request.headers.get('cf-connecting-ip') ?? request.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown').trim().slice(0, 128);
+  async function rateLimit(request: Request, action: string): Promise<void> {
     const category = action === 'create_guest' ? 'guest' : action === 'create' ? 'account' : 'cancellation';
-    const key = `${category}:${client}`; const current = now(); const period = limits.get(key);
-    const allowed = category === 'guest' ? 10 : category === 'account' ? 30 : 60;
-    if (period && current - period.start < 600000) { if (++period.count > allowed) throw new ApiError(429, 'rate_limit', 'Prea multe încercări. Reîncearcă mai târziu.'); }
-    else { if (limits.size > 10000) limits.clear(); limits.set(key, { start: current, count: 1 }); }
+    let allowed: unknown;
+    try {
+      allowed = await rpc('consume_public_rate_limit', service, {
+        p_scope: `booking_${category}`, p_subject_hash: await publicRateSubject(request),
+        p_limit: category === 'guest' ? 10 : category === 'account' ? 30 : 60, p_window_seconds: 600,
+      });
+    } catch { throw unavailable(); }
+    if (allowed === false) throw new ApiError(429, 'rate_limit', 'Prea multe încercări. Reîncearcă mai târziu.');
+    if (allowed !== true) throw unavailable();
   }
   async function dispatch(bookingId: string): Promise<string> {
     try {
@@ -166,13 +173,13 @@ export function createHandler(config: Config, dependencies: Dependencies = {}) {
       if (input.action === 'create' || input.action === 'create_guest') {
         const args = createInput(input);
         if (!config.cancelSecret) throw unavailable();
-        rateLimit(request, input.action);
-        let headers = service;
+        const headers = input.action === 'create' ? await requireUser(request) : service;
+        await rateLimit(request, input.action);
         if (input.action === 'create_guest') {
           let ready = false;
           try { const status = await rpc('booking_notification_status', service, {}); ready = status?.ready === true; } catch { /* Fail closed before creating a guest booking without an email path. */ }
           if (!ready) throw new ApiError(503, 'guest_unavailable', 'Rezervarea fără cont nu este disponibilă momentan. Folosește un cont sau reîncearcă mai târziu.');
-        } else headers = await requireUser(request);
+        }
         const result = publicBooking(await rpc(input.action === 'create_guest' ? 'create_guest_booking_group' : 'create_booking_group', headers, args));
         // Creation is already committed. Delivery failures are retried from the
         // outbox and must never turn a successful booking into an apparent error.
@@ -189,7 +196,7 @@ export function createHandler(config: Config, dependencies: Dependencies = {}) {
         if (typeof input.token !== 'string' || !/^[0-9a-f]{64}$/.test(input.token)) throw new ApiError(403, 'invalid_cancellation', 'Linkul de anulare nu este valid.');
         args = { ...args, p_token_hash: await hashCancellationToken(input.token) };
       }
-      rateLimit(request, input.action);
+      await rateLimit(request, input.action);
       const method = input.action === 'preview_cancel' ? 'preview_booking_cancellation' : input.action === 'cancel_owned' ? 'cancel_owned_booking_group' : 'cancel_booking_group_by_token';
       const result = publicBooking(await rpc(method, headers, args));
       if (input.action !== 'preview_cancel') result.notification_status = await dispatch(bookingId);

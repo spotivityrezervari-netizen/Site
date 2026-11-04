@@ -99,7 +99,9 @@
 
             const nrActiveSpan = document.getElementById('nr-active');
             if (nrActiveSpan) {
-                const { data } = await db.from('rezervari').select('id, booking_group_id, data_str, ora, stare, timestamp_start').eq('client_user_id', owner).neq('stare', 'anulata');
+                const { data, error } = await window.spotivityReadAllRows(() => db.from('rezervari')
+                    .select('id, booking_group_id, data_str, ora, stare, timestamp_start')
+                    .eq('client_user_id', owner).neq('stare', 'anulata').gte('data_str', window.siteDate()).order('id'));
                 if (!current()) return false;
                 const activeGroups = new Set();
                 if (data) {
@@ -107,7 +109,7 @@
                         if (!window.esteRezervareTrecuta(r.data_str, r.ora, r.timestamp_start)) activeGroups.add(r.booking_group_id || r.id);
                     });
                 }
-                nrActiveSpan.innerText = activeGroups.size;
+                nrActiveSpan.innerText = error ? '—' : activeGroups.size;
             }
             if (!current()) return false;
             document.getElementById('modal-profil').style.display = 'flex';

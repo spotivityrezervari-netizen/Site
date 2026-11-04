@@ -11,6 +11,35 @@ window.safeUrl = (value, allowAssets = false) => {
         return parsed.protocol === 'https:' && !parsed.username && !parsed.password ? parsed.href : '';
     } catch { return ''; }
 };
+// Read every authorized row, even when PostgREST caps a response below the
+// requested page size. Callers must use a fresh query with a stable ordering.
+// Never return an apparently complete partial list after a failed page.
+window.spotivityReadAllRows = async (queryFactory, { pageSize = 500 } = {}) => {
+    try {
+        if (typeof queryFactory !== 'function' || !Number.isInteger(pageSize) || pageSize < 1 || pageSize > 1000) {
+            throw new TypeError('Invalid pagination options');
+        }
+        const rows = [], pages = new Set();
+        let offset = 0;
+        for (;;) {
+            const result = await queryFactory().range(offset, offset + pageSize - 1);
+            if (result.error) return { data: null, error: result.error };
+            if (!Array.isArray(result.data)) throw new TypeError('Invalid list response');
+            if (!result.data.length) return { data: rows, error: null };
+            // A server/adapter ignoring Range must fail instead of looping or
+            // silently duplicating a page. Application rows have stable IDs.
+            if (result.data.every(row => row?.id !== undefined)) {
+                const key = JSON.stringify(result.data.map(row => row.id));
+                if (pages.has(key)) throw new Error('The server repeated a list page');
+                pages.add(key);
+            }
+            rows.push(...result.data);
+            offset += result.data.length;
+        }
+    } catch (error) {
+        return { data: null, error };
+    }
+};
 window.siteDate = (date = new Date()) => {
     const parts = new Intl.DateTimeFormat('en-CA', {
         timeZone: 'Europe/Bucharest', year:'numeric', month:'2-digit', day:'2-digit'

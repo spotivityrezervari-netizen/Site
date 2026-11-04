@@ -2,6 +2,7 @@
 // RPCs. Auth lookups and Make delivery stay local; no hosted request is allowed.
 const assert = require('node:assert/strict');
 const {join} = require('node:path');
+const {readFileSync,readdirSync} = require('node:fs');
 const {pathToFileURL} = require('node:url');
 
 const ident = value => { assert.match(value, /^[a-z_][a-z_0-9]*$/); return `"${value}"`; };
@@ -12,6 +13,14 @@ const makeURL = 'https://hook.eu2.make.com/fixturebookingmail12345';
 const reply = (status, data) => new Response(JSON.stringify(data), {status, headers: {'content-type': 'application/json'}});
 
 async function createBookingWorkflowFixture({pg, host, resolveUser, records = []}) {
+  // All transports exercise the latest SQL contract; never silently use an
+  // obsolete fixture RPC while the real Edge handler expects new guarantees.
+  await pg.exec("reset role; select set_config('request.jwt.claim.sub','',false); select set_config('request.jwt.claims','{}',false)");
+  await pg.exec("alter table auth.users add column if not exists created_at timestamptz not null default '2000-01-01'");
+  const installed=new Set((await pg.query('select version from spotivity_private.migrations')).rows.map(row=>row.version));
+  for(const file of readdirSync(join(__dirname,'..')).filter(file=>/^(001|00[3-9]|01[0-9]|02[0-7])_.*\.sql$/.test(file)).sort()){
+    if(!installed.has(Number(file.slice(0,3))))await pg.exec(readFileSync(join(__dirname,'..',file),'utf8'));
+  }
   const {createHandler} = await import(pathToFileURL(join(__dirname, '../functions/booking-workflow/handler.ts')).href);
   const signatures = new Map();
   const mail = [];
@@ -52,7 +61,7 @@ async function createBookingWorkflowFixture({pg, host, resolveUser, records = []
       assert.ok(['create_booking_group', 'create_guest_booking_group', 'attach_cancellation_token',
         'get_booking_notification_config', 'booking_notification_status', 'claim_booking_notifications',
         'finish_booking_notification', 'get_booking_group_delivery', 'preview_booking_cancellation',
-        'cancel_booking_group_by_token', 'cancel_owned_booking_group'].includes(name), name);
+        'cancel_booking_group_by_token', 'cancel_owned_booking_group', 'consume_public_rate_limit'].includes(name), name);
       if (!signatures.has(name)) {
         const signature = (await pg.query(`select p.proargnames names,p.proretset returns_set,
           array(select format_type(t,null) from unnest(p.proargtypes) t) types

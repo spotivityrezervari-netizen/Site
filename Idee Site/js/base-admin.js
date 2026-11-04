@@ -327,6 +327,7 @@
             nume_admin: access.nume_admin || profile?.nume || profile?.email || 'Administrator',
             is_super: access.is_super === true,
             terenuri: courts.map(court => court.nume).join(','),
+            draftCourtNames: access.courts.map(court => court.nume),
             selectedBaseId,
             baseAccess: access.is_super ? null : access.bases
         });

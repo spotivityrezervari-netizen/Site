@@ -49,7 +49,10 @@ test('administrator history renders hostile legacy date/hour values as readable 
                 email_client: 'Manual client', stare: 'activa', pret_total: '100 RON' };
             window.SpotivityModules.adminHistory({
                 state: { account: { is_super: true }, authGeneration: 1 },
-                db: { from: table => ({ select: async () => ({ data: table === 'rezervari' ? [row] : [], error: null }) }) }
+                db: { from: table => ({
+                    select() { return this; }, order() { return this; },
+                    range: async start => ({ data: table === 'rezervari' && start === 0 ? [row] : [], error: null })
+                }) }
             });
             await window.reincarcaIstoricAdmin();
         });

@@ -14,7 +14,7 @@
         let chatClientRealtime = null;
         let chatClientTerenCurent = null; // Stochează terenul selectat curent pentru conversație
         let chatClientMesajeToate = []; // Toate mesajele clientului
-        let chatRealtimeGeneration = 0, chatMessageRequest = 0, chatListRequest = 0;
+        let chatRealtimeGeneration = 0, chatMessageRequest = 0, chatListRequest = 0, conversationGeneration = 0;
         const avertismentChatClient = document.getElementById('chat-client-avertisment');
 
         // A confirmed email change keeps the same UUID. Refresh mutable identity
@@ -27,6 +27,7 @@
             services.bookings.invalidate();
             services.history.invalidate();
             chatRealtimeGeneration++;
+            conversationGeneration++;
             chatMessageRequest++;
             chatListRequest++;
             if (!user) return;
@@ -76,10 +77,9 @@
             if (!state.user) return;
             const owner = state.user.id, request = ++chatMessageRequest;
 
-            const { data, error } = await db.from('mesaje_chat')
-                .select('*')
-                .eq('client_user_id', owner)
-                .order('created_at', { ascending: true });
+            const { data, error } = await window.spotivityReadAllRows(() => db.from('mesaje_chat')
+                .select('*').eq('client_user_id', owner)
+                .order('created_at', { ascending: true }).order('id', { ascending: true }));
 
             if (state.user?.id !== owner || request !== chatMessageRequest) return;
             if (error) return;
@@ -106,15 +106,19 @@
             const terenuriCuMesaje = [...new Set(chatClientMesajeToate.map(m => m.teren))];
 
             // Obținem terenurile unde clientul are rezervare (pentru a-i permite să deschidă chat nou și acolo)
-            const { data: rezervari } = await db.from('rezervari').select('teren').eq('client_user_id', owner);
+            const { data: rezervari, error: bookingError } = await window.spotivityReadAllRows(() => db.from('rezervari')
+                .select('id,teren').eq('client_user_id', owner).order('id', { ascending: true }));
             if (state.user?.id !== owner || request !== chatListRequest) return;
+            if (bookingError) { listaSide.textContent = 'Conversațiile nu au putut fi încărcate. Încearcă din nou.'; return; }
             const terenuriRezervate = rezervari ? [...new Set(rezervari.map(r => r.teren))] : [];
 
             const toateTerenurileClient = [...new Set([...terenuriCuMesaje, ...terenuriRezervate])];
 
             // VERIFICARE: Aducem setările terenurilor ca să vedem unde e oprit chat-ul
-            const { data: infoTerenuri } = await db.from('terenuri').select('nume, are_chat');
+            const { data: infoTerenuri, error: courtError } = await window.spotivityReadAllRows(() => db.from('terenuri')
+                .select('id,nume,are_chat').order('id', { ascending: true }));
             if (state.user?.id !== owner || request !== chatListRequest) return;
+            if (courtError) { listaSide.textContent = 'Conversațiile nu au putut fi încărcate. Încearcă din nou.'; return; }
             const terenuriFaraChat = infoTerenuri ? infoTerenuri.filter(t => t.are_chat === false).map(t => t.nume) : [];
 
             // Eliminăm din listă terenurile unde chat-ul a fost oprit de admin
@@ -142,9 +146,8 @@
                 `;
 
                 card.addEventListener('click', () => {
-                    chatClientTerenCurent = teren;
+                    selectCourt(teren);
                     randeazaListaConversatiiClient(); // pt a updata stilul "selectat"
-                    deschideConversatiaClient(teren);
                 });
 
                 listaSide.appendChild(card);
@@ -160,7 +163,7 @@
             const owner = state.user?.id;
             const email = state.user?.email;
             if (!owner) return;
-            if (inputChatClient) inputChatClient.value = '';
+            const conversation = conversationGeneration;
             document.getElementById('chat-client-teren-titlu').style.display = 'block';
             document.getElementById('chat-client-teren-titlu').innerText = `Conversație cu Admin (${teren})`;
 
@@ -198,20 +201,23 @@
             container.scrollTop = container.scrollHeight;
 
             // Dacă sunt mesaje necitite de la admin, le marcăm ca citite
-            if (idUriDeMarcat.length > 0) {
-                await db.from('mesaje_chat').update({ citit: true }).in('id', idUriDeMarcat);
+            for (let start = 0; start < idUriDeMarcat.length; start += 100) {
+                if (state.user?.id !== owner || state.user.email !== email || chatClientTerenCurent !== teren || conversation !== conversationGeneration) return;
+                const { error } = await db.from('mesaje_chat').update({ citit: true }).in('id', idUriDeMarcat.slice(start, start + 100));
+                if (error) break;
                 // Bulina se va actualiza via Realtime sau la următorul refresh
             }
 
-            if (state.user?.id !== owner || state.user.email !== email || chatClientTerenCurent !== teren) return;
-            await actualizeazaDreptulChatClient(teren, owner, email);
+            if (state.user?.id !== owner || state.user.email !== email || chatClientTerenCurent !== teren || conversation !== conversationGeneration) return;
+            await actualizeazaDreptulChatClient(teren, owner, email, conversation);
         }
 
-        async function actualizeazaDreptulChatClient(teren, owner = state.user?.id, email = state.user?.email) {
+        async function actualizeazaDreptulChatClient(teren, owner = state.user?.id, email = state.user?.email, conversation = conversationGeneration) {
             if (!owner) return;
-            const {data: bookings, error} = await db.from('rezervari').select('*')
-                .eq('client_user_id', owner).eq('teren', teren).eq('stare','activa');
-            if (state.user?.id !== owner || state.user.email !== email || chatClientTerenCurent !== teren) return;
+            const {data: bookings, error} = await window.spotivityReadAllRows(() => db.from('rezervari').select('*')
+                .eq('client_user_id', owner).eq('teren', teren).eq('stare','activa')
+                .gte('starts_at', new Date(Date.now() - 60 * 60 * 1000).toISOString()).order('id', { ascending: true }));
+            if (state.user?.id !== owner || state.user.email !== email || chatClientTerenCurent !== teren || conversation !== conversationGeneration) return;
             const allowed = !error && bookings?.some(r => !window.esteRezervareTrecuta(r.data_str,r.ora,r.timestamp_start));
             inputChatClient.disabled = !allowed;
             btnTrimiteChatClient.disabled = !allowed;
@@ -226,13 +232,15 @@
             const owner = state.user.id;
             const email = state.user.email;
             const court = chatClientTerenCurent;
+            const conversation = conversationGeneration;
             const stillCurrent = () => state.user?.id === owner && state.user.email === email && chatClientTerenCurent === court
-                && document.getElementById('modal-chat-client').style.display !== 'none';
+                && conversation === conversationGeneration && document.getElementById('modal-chat-client').style.display !== 'none';
             inputChatClient.disabled = true;
             btnTrimiteChatClient.disabled = true;
             try {
-                const {data: bookings, error: bookingError} = await db.from('rezervari')
-                    .select('*').eq('client_user_id', owner).eq('teren', court).eq('stare', 'activa');
+                const {data: bookings, error: bookingError} = await window.spotivityReadAllRows(() => db.from('rezervari')
+                    .select('*').eq('client_user_id', owner).eq('teren', court).eq('stare', 'activa')
+                    .gte('starts_at', new Date(Date.now() - 60 * 60 * 1000).toISOString()).order('id', { ascending: true }));
                 if (!stillCurrent()) return;
                 if (bookingError) throw bookingError;
                 if (!bookings?.some(r => !window.esteRezervareTrecuta(r.data_str, r.ora, r.timestamp_start))) {
@@ -250,13 +258,22 @@
                 if (stillCurrent()) alert('Eroare la trimitere: ' + error.message);
             } finally {
                 if (stillCurrent()) {
-                    await actualizeazaDreptulChatClient(court, owner, email);
+                    await actualizeazaDreptulChatClient(court, owner, email, conversation);
                     if (stillCurrent() && !inputChatClient.disabled) inputChatClient.focus();
                 }
             }
         }
 
+        function selectCourt(teren) {
+            conversationGeneration++;
+            if (chatClientTerenCurent !== teren) inputChatClient.value = '';
+            chatClientTerenCurent = teren;
+            inputChatClient.disabled = true;
+            btnTrimiteChatClient.disabled = true;
+            return deschideConversatiaClient(teren);
+        }
         function clearIdentity({ deferChannelRemoval = false } = {}) {
+            conversationGeneration++;
             inputChatClient.value = '';
             inputChatClient.disabled = true;
             btnTrimiteChatClient.disabled = true;
@@ -281,7 +298,7 @@
             modalChatClient.style.display = 'flex';
             await incarcaMesajeClient(false);
             if (state.user?.id !== owner) return false;
-            chatClientTerenCurent = teren;
+            await selectCourt(teren);
             await randeazaListaConversatiiClient();
             return state.user?.id === owner && modalChatClient.style.display === 'flex';
         }
@@ -293,6 +310,7 @@
             });
 
             btnInchideChatClient?.addEventListener('click', () => {
+                conversationGeneration++;
                 modalChatClient.style.display = 'none';
                 document.getElementById('modal-profil').style.display = 'flex';
             });
@@ -302,6 +320,7 @@
             });
 
             document.getElementById('btn-inapoi-conversatie-client')?.addEventListener('click', () => {
+                conversationGeneration++;
                 chatClientTerenCurent = null;
                 const modalBox = document.querySelector('#modal-chat-client .modal-chat-box');
                 if (modalBox) modalBox.classList.remove('conversatie-activa');
@@ -333,7 +352,7 @@
             load: incarcaMesajeClient,
             clearIdentity,
             openCourt,
-            selectCourt: teren => { chatClientTerenCurent = teren; return deschideConversatiaClient(teren); }
+            selectCourt
         };
     };
 })();

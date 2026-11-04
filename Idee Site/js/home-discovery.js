@@ -171,15 +171,8 @@
             document.getElementById('inchide-cautare-terenuri').setAttribute('aria-label', t('close'));
         }
         async function readPublicRows(table, fields, activeColumn, signal) {
-            const rows = [];
-            const pageSize = 500;
-            for (let offset = 0; ; offset += pageSize) {
-                const result = await db.from(table).select(fields).eq(activeColumn, true)
-                    .order('nume').order('id').range(offset, offset + pageSize - 1).abortSignal(signal);
-                if (result.error || !Array.isArray(result.data)) return result;
-                rows.push(...result.data);
-                if (result.data.length < pageSize) return { data: rows, error: null };
-            }
+            return window.spotivityReadAllRows(() => db.from(table).select(fields).eq(activeColumn, true)
+                .order('nume').order('id').abortSignal(signal));
         }
         async function load({ quiet = false, isCurrent = null } = {}) {
             const token = ++loadGeneration;

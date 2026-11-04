@@ -8,7 +8,7 @@ const {createFixture,uid}=require('./club-request-fixture.cjs');
 const sql=name=>readFileSync(join(__dirname,'..',name),'utf8');
 
 test('email booking context preserves ownership, cancellation protection and trusted notification data',async t=>{
- const fixture=await createFixture(),{pg}=fixture;
+ const fixture=await createFixture({throughVersion:20}),{pg}=fixture;
  const as=async(role,person,query,params=[])=>fixture.serial(async()=>{
   await pg.exec('reset role');
   await pg.query("select set_config('request.jwt.claim.sub',$1,false)",[person?uid(person):'']);

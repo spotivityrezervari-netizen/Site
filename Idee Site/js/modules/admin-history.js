@@ -13,15 +13,14 @@
             container.innerHTML = "<p style='color: white; text-align: center;'>Se descarcă rezervările...</p>";
 
             // Preluăm clienții pentru a corela datele (nume, telefon) cu rezervările web
-            const { data: clientiDB } = await db.from('clienti').select('*');
+            const { data: clientiDB } = await window.spotivityReadAllRows(() => db.from('clienti').select('*').order('id'));
             if (authRequest !== state.authGeneration) return;
             const totiClientii = clientiDB || [];
 
-            const { data, error } = await db.from('rezervari').select('*');
+            const { data, error } = await window.spotivityReadAllRows(() => db.from('rezervari').select('*').order('created_at', { ascending: false }).order('id', { ascending: false }));
             if (authRequest !== state.authGeneration) return;
-            if (error || !data || data.length === 0) { container.innerHTML = "<p style='color: white;'>Nu există nicio rezervare în sistem.</p>"; return; }
-
-            data.sort((a, b) => b.id - a.id);
+            if (error) { container.innerHTML = "<p style='color: white;'>Rezervările nu pot fi încărcate. Încearcă din nou.</p>"; return; }
+            if (!data || data.length === 0) { container.innerHTML = "<p style='color: white;'>Nu există nicio rezervare în sistem.</p>"; return; }
             let html = ""; let rezervariGasite = 0;
             const cancellations = [];
 

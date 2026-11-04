@@ -244,13 +244,8 @@
             if (val === 'liber') {
                 window.anulareDublaAdmin(idRez, ora);
             } else if (val === 'blocat') {
-                if (!await adminHourIsAllowed(teren, ora)) { window.incarcaTabelProgram(); return; }
-                if(confirm('Transformi aceasta rezervare in BLOCAT?')) {
-                    await db.from('rezervari').update({ email_client: 'Teren Blocat' }).eq('id', idRez);
-                    window.incarcaTabelProgram();
-                } else {
-                    window.incarcaTabelProgram();
-                }
+                alert('Pentru a bloca o oră rezervată, anulează mai întâi rezervarea, apoi blochează ora liberă.');
+                window.incarcaTabelProgram();
             } else if (val === 'ocupat') {
                 alert('Pentru a rezerva un teren blocat, te rog trece-l pe LIBER mai intai!');
                 window.incarcaTabelProgram();

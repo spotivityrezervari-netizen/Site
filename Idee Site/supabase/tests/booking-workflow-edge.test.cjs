@@ -17,7 +17,7 @@ const HASH = createHash('sha256').update(RAW).digest('hex');
 const RESULT = { booking_id: BOOKING, reservation_ids: ['1', '2'], court_id: '10', court_name: 'Teren principal', sport: 'Fotbal', day: '2026-10-25', hours: ['14:00', '15:00'], total: 215, state: 'activa' };
 const ORIGIN = 'https://spotivityrezervari-netizen.github.io';
 function json(body, status = 200) { return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } }); }
-function createInput(overrides = {}) { return { action: 'create_guest', request_id: BOOKING, court_id: '10', day: '2026-10-25', hours: ['14:00', '15:00'], with_ball: true, contact_name: 'Ion Popescu', email: 'client@example.test', phone: '+40 721 123 456', ...overrides }; }
+function createInput(overrides = {}) { return { action: 'create_guest', request_id: BOOKING, court_id: '10', day: '2026-10-25', hours: ['14:00', '15:00'], with_ball: true, expected_total: 215, contact_name: 'Ion Popescu', email: 'client@example.test', phone: '+40 721 123 456', ...overrides }; }
 function request(input = createInput(), authorization, headers = {}) {
   return new Request('https://edge.test/booking-workflow', { method: 'POST', headers: { Origin: ORIGIN, 'Content-Type': 'application/json', ...(authorization ? { Authorization: `Bearer ${authorization}` } : {}), ...headers }, body: JSON.stringify(input) });
 }
@@ -29,6 +29,7 @@ async function fixture(overrides = {}) {
     const call = { path: endpoint.pathname, method: options.method ?? 'GET', headers, body, signal: options.signal };
     calls.push(call);
     if (overrides.fetch) { const response = await overrides.fetch(call, calls); if (response !== undefined) return response; }
+    if (call.path.endsWith('/consume_public_rate_limit')) return json(true);
     if (call.path === '/auth/v1/user') return json({ id: USER, email: 'authenticated@example.test' });
     if (call.path.endsWith('/booking_notification_status')) return json({ ready: true });
     if (call.path.endsWith('/create_booking_group') || call.path.endsWith('/create_guest_booking_group')) return json(RESULT);
@@ -59,12 +60,12 @@ test('guest booking never creates/signs into an Auth account and never returns c
   const response = await handler(request()); const body = await response.json();
   assert.equal(response.status, 201);
   assert.deepEqual(body, { ...RESULT, notification_status: 'submitted' });
-  assert.deepEqual(calls.map(call => call.path), ['/rest/v1/rpc/booking_notification_status', '/rest/v1/rpc/create_guest_booking_group', '/rest/v1/rpc/attach_cancellation_token', '/functions/v1/booking-notifications']);
-  const create = calls[1];
-  assert.deepEqual(create.body, { p_request_id: BOOKING, p_court_id: '10', p_day: '2026-10-25', p_hours: ['14:00', '15:00'], p_with_ball: true, p_contact_name: 'Ion Popescu', p_email: 'client@example.test', p_phone: '+40 721 123 456' });
+  assert.deepEqual(calls.map(call => call.path), ['/rest/v1/rpc/consume_public_rate_limit', '/rest/v1/rpc/booking_notification_status', '/rest/v1/rpc/create_guest_booking_group', '/rest/v1/rpc/attach_cancellation_token', '/functions/v1/booking-notifications']);
+  const create = calls[2];
+  assert.deepEqual(create.body, { p_request_id: BOOKING, p_court_id: '10', p_day: '2026-10-25', p_hours: ['14:00', '15:00'], p_with_ball: true, p_expected_total: 215, p_contact_name: 'Ion Popescu', p_email: 'client@example.test', p_phone: '+40 721 123 456' });
   assert.equal(create.headers.get('authorization'), `Bearer ${SECRET}`);
-  assert.deepEqual(calls[2].body, { p_booking_id: BOOKING, p_token_hash: HASH });
-  assert.deepEqual(calls[3].body, { action: 'dispatch', booking_id: BOOKING });
+  assert.deepEqual(calls[3].body, { p_booking_id: BOOKING, p_token_hash: HASH });
+  assert.deepEqual(calls[4].body, { action: 'dispatch', booking_id: BOOKING });
   const serialized = JSON.stringify(body);
   for (const privateValue of [SECRET, RAW, HASH, 'client@example.test', 'Ion Popescu', '+40 721 123 456']) assert.ok(!serialized.includes(privateValue));
   assert.ok(calls.every(call => call.signal instanceof AbortSignal));
@@ -81,7 +82,7 @@ test('authenticated creation verifies actual Auth user and preserves its JWT for
   const create = calls.find(call => call.path.endsWith('/create_booking_group'));
   assert.equal(create.headers.get('apikey'), 'anon-key-public');
   assert.equal(create.headers.get('authorization'), `Bearer ${TOKEN}`);
-  assert.deepEqual(create.body, { p_request_id: BOOKING, p_court_id: COURT, p_day: '2026-10-25', p_hours: ['14:00', '15:00'], p_with_ball: true });
+  assert.deepEqual(create.body, { p_request_id: BOOKING, p_court_id: COURT, p_day: '2026-10-25', p_hours: ['14:00', '15:00'], p_with_ball: true, p_expected_total: 215 });
   assert.ok(!calls.some(call => call.path.endsWith('/booking_notification_status')));
 });
 
@@ -101,7 +102,7 @@ test('missing notification configuration blocks guest creation before any mutati
     const { handler, calls } = await fixture({ fetch: call => call.path.endsWith('/booking_notification_status') ? cases[index] : undefined });
     const response = await handler(request());
     assert.equal(response.status, 503); assert.equal((await response.json()).code, 'guest_unavailable');
-    assert.deepEqual(calls.map(call => call.path), ['/rest/v1/rpc/booking_notification_status']);
+    assert.deepEqual(calls.map(call => call.path), ['/rest/v1/rpc/consume_public_rate_limit', '/rest/v1/rpc/booking_notification_status']);
   });
 });
 
@@ -109,7 +110,7 @@ test('missing independent cancellation secret blocks creation before writes, whi
   const { handler, calls } = await fixture({ config: { cancelSecret: '' } });
   assert.equal((await handler(request())).status, 503); assert.equal(calls.length, 0);
   const preview = await handler(request({ action: 'preview_cancel', booking_id: BOOKING, token: RAW }));
-  assert.equal(preview.status, 200); assert.equal(calls.length, 1);
+  assert.equal(preview.status, 200); assert.equal(calls.length, 2);
 });
 
 test('service-role credential rotation does not change the cancellation token digest', async () => {
@@ -133,6 +134,7 @@ test('invalid guest fields, invalid calendar dates, password and nonconsecutive 
     ['court number type', { court_id: 10 }, 'invalid_input'],
     ['request UUID', { request_id: 'random' }, 'invalid_input'],
     ['invalid date', { day: '2026-02-30' }, 'invalid_input'],
+    ...[undefined, null, '215', -1, 1.001, 1e30].map(expected_total => ['invalid expected total', {expected_total}, 'invalid_input']),
     ['boolean required', { with_ball: 'false' }, 'invalid_input'],
     ['hour gaps', { hours: ['14:00', '16:00'] }, 'invalid_hours'],
     ['hour duplicates', { hours: ['14:00', '14:00'] }, 'invalid_hours'],
@@ -161,16 +163,40 @@ test('malformed JSON, arrays and non-JSON requests cause no writes', async () =>
   assert.equal(calls.length, 0);
 });
 
-test('IP throttling blocks the eleventh guest attempt, with SQL still enforcing durable per-contact quota', async () => {
-  const { handler, calls } = await fixture();
-  for (let index = 0; index < 10; index++) assert.equal((await handler(request())).status, 201);
-  const count = calls.length; const response = await handler(request());
-  assert.equal(response.status, 429); assert.equal((await response.json()).code, 'rate_limit'); assert.equal(calls.length, count);
+test('persistent IP throttling is shared across handler instances and stores no raw contact or IP', async () => {
+  let count = 0;
+  const fetch = call => call.path.endsWith('/consume_public_rate_limit') ? json(++count <= 10) : undefined;
+  for (let index = 0; index < 10; index++) {
+    const { handler, calls } = await fixture({ fetch });
+    assert.equal((await handler(request(createInput(), undefined, {'cf-connecting-ip':'203.0.113.10'}))).status, 201);
+    const limited = calls[0];
+    assert.equal(limited.headers.get('authorization'), `Bearer ${SECRET}`);
+    assert.deepEqual(Object.keys(limited.body).sort(), ['p_limit','p_scope','p_subject_hash','p_window_seconds']);
+    assert.match(limited.body.p_subject_hash, /^[0-9a-f]{64}$/);
+    assert.equal(limited.body.p_scope, 'booking_guest'); assert.equal(limited.body.p_limit, 10); assert.equal(limited.body.p_window_seconds, 600);
+    for (const value of ['203.0.113.10','client@example.test','Ion Popescu']) assert.ok(!JSON.stringify(limited.body).includes(value));
+  }
+  const { handler, calls } = await fixture({ fetch });
+  const response = await handler(request());
+  assert.equal(response.status, 429); assert.equal((await response.json()).code, 'rate_limit');
+  assert.deepEqual(calls.map(call => call.path), ['/rest/v1/rpc/consume_public_rate_limit']);
+});
+
+test('limiter errors and malformed responses fail closed before creating or cancelling', async () => {
+  for (const result of [() => json({message:'private limiter failure'},503), () => {throw new Error('unreachable');}, () => json(null)]) {
+    for (const input of [createInput(), {action:'cancel',booking_id:BOOKING,token:RAW}]) {
+      const {handler,calls}=await fixture({fetch:call=>call.path.endsWith('/consume_public_rate_limit')?result():undefined});
+      const response=await handler(request(input));
+      assert.equal(response.status,503); assert.equal((await response.json()).code,'service_unavailable');
+      assert.deepEqual(calls.map(call=>call.path),['/rest/v1/rpc/consume_public_rate_limit']);
+    }
+  }
 });
 
 test('SQL errors map to stable safe codes without exposing constraints, contact details or SQL text', async t => {
   const cases = [
     ['23505', 'Only one active booking per sport and day is allowed, in all cities.', 'booking_limit', 409],
+    ['P0001', 'PRICE_CHANGED', 'price_changed', 409],
     ['23505', 'Booking request identifier was already used.', 'conflict', 409],
     ['23505', 'duplicate key value violates unique constraint rezervari_teren_ora', 'slot_unavailable', 409],
     ['22023', 'Court, date, hours or ball option are unavailable.', 'slot_unavailable', 409],
@@ -219,8 +245,8 @@ test('cancellation preview hashes token, exposes only safe details and does not 
   const response = await handler(request({ action: 'preview_cancel', booking_id: BOOKING, token: RAW }));
   const body = await response.json();
   assert.equal(response.status, 200); assert.equal(body.can_cancel, true); assert.deepEqual(body.cancellable_hours, ['15:00']);
-  assert.deepEqual(calls.map(call => call.path), ['/rest/v1/rpc/preview_booking_cancellation']);
-  assert.deepEqual(calls[0].body, { p_booking_id: BOOKING, p_token_hash: HASH });
+  assert.deepEqual(calls.map(call => call.path), ['/rest/v1/rpc/consume_public_rate_limit', '/rest/v1/rpc/preview_booking_cancellation']);
+  assert.deepEqual(calls[1].body, { p_booking_id: BOOKING, p_token_hash: HASH });
   for (const key of ['email', 'phone', 'owner_auth_id', 'token_hash', 'token']) assert.equal(body[key], undefined);
 });
 
@@ -232,25 +258,25 @@ test('email cancellation needs explicit POST and valid opaque token; token-based
   assert.equal(invalid.status, 403); assert.equal(calls.length, 0);
   const response = await handler(request({ action: 'cancel', booking_id: BOOKING, token: RAW }));
   assert.equal(response.status, 200); assert.equal((await response.json()).state, 'anulata');
-  assert.equal(calls[0].path, '/rest/v1/rpc/cancel_booking_group_by_token');
-  assert.equal(calls[0].headers.get('authorization'), `Bearer ${SECRET}`);
-  assert.deepEqual(calls[0].body, { p_booking_id: BOOKING, p_token_hash: HASH });
-  assert.equal(calls[1].path, '/functions/v1/booking-notifications');
+  assert.equal(calls[1].path, '/rest/v1/rpc/cancel_booking_group_by_token');
+  assert.equal(calls[1].headers.get('authorization'), `Bearer ${SECRET}`);
+  assert.deepEqual(calls[1].body, { p_booking_id: BOOKING, p_token_hash: HASH });
+  assert.equal(calls[2].path, '/functions/v1/booking-notifications');
 });
 
 test('owned cancellation checks actual user JWT and never substitutes service-role ownership', async () => {
   const { handler, calls } = await fixture();
   const response = await handler(request({ action: 'cancel_owned', booking_id: BOOKING }, TOKEN));
   assert.equal(response.status, 200);
-  assert.deepEqual(calls.slice(0, 2).map(call => call.path), ['/auth/v1/user', '/rest/v1/rpc/cancel_owned_booking_group']);
-  assert.equal(calls[1].headers.get('authorization'), `Bearer ${TOKEN}`);
-  assert.deepEqual(calls[1].body, { p_booking_id: BOOKING });
+  assert.deepEqual(calls.slice(0, 3).map(call => call.path), ['/auth/v1/user', '/rest/v1/rpc/consume_public_rate_limit', '/rest/v1/rpc/cancel_owned_booking_group']);
+  assert.equal(calls[2].headers.get('authorization'), `Bearer ${TOKEN}`);
+  assert.deepEqual(calls[2].body, { p_booking_id: BOOKING });
 });
 
 test('completed cancellation is rejected and does not enqueue another notification', async () => {
   const { handler, calls } = await fixture({ fetch: call => call.path.endsWith('/cancel_booking_group_by_token') ? json({ code: '42501', message: 'Completed bookings cannot be cancelled.' }, 403) : undefined });
   const response = await handler(request({ action: 'cancel', booking_id: BOOKING, token: RAW }));
-  assert.equal(response.status, 409); assert.equal((await response.json()).code, 'completed_booking'); assert.equal(calls.length, 1);
+  assert.equal(response.status, 409); assert.equal((await response.json()).code, 'completed_booking'); assert.equal(calls.length, 2);
 });
 
 test('CORS permits only production and local development; preflight never touches upstream', async () => {
@@ -298,4 +324,29 @@ test('Spotivity production CORS permits guest and account bookings without weake
     assert.equal((await revoked.handler(request(createInput({ action: 'create' }), TOKEN, { Origin: origin }))).status, 401);
     assert.deepEqual(revoked.calls.map(call => call.path), ['/auth/v1/user']);
   }
+});
+
+
+test('confirmed totals keep numeric zero and decimal cents and scope account/cancellation limits correctly', async () => {
+  for(const expected_total of [0,0.29,215.25]) {
+    const {handler,calls}=await fixture();
+    assert.equal((await handler(request(createInput({expected_total})))).status,201);
+    assert.equal(calls.find(call=>call.path.endsWith('/create_guest_booking_group')).body.p_expected_total,expected_total);
+  }
+  for(const [input,scope,limit] of [[createInput({action:'create'}),'booking_account',30],[{action:'cancel_owned',booking_id:BOOKING},'booking_cancellation',60]]) {
+    const {handler,calls}=await fixture(); assert.equal((await handler(request(input,TOKEN))).status,input.action==='create'?201:200);
+    const limited=calls.find(call=>call.path.endsWith('/consume_public_rate_limit'));
+    assert.equal(limited.body.p_scope,scope); assert.equal(limited.body.p_limit,limit);
+    assert.equal(limited.headers.get('authorization'),`Bearer ${SECRET}`);
+  }
+});
+
+test('network bucket canonicalization ignores forged leading proxies and invalid arbitrary header text', async () => {
+  const {publicRateSubject}=await import(pathToFileURL(path.join(__dirname,'../functions/_shared/public-rate-limit.ts')).href);
+  const hash=headers=>publicRateSubject(new Request('https://edge.test',{headers}));
+  assert.equal(await hash({'x-forwarded-for':'attacker-controlled, 203.0.113.1'}),await hash({'cf-connecting-ip':'203.0.113.1'}));
+  assert.equal(await hash({'cf-connecting-ip':'2001:0db8:0:0::1'}),await hash({'cf-connecting-ip':'2001:db8::1'}));
+  assert.equal(await hash({'cf-connecting-ip':'not-an-ip-a'}),await hash({'cf-connecting-ip':'not-an-ip-b'}));
+  assert.equal(await hash({'cf-connecting-ip':'999.1.1.1'}),await hash({}));
+  assert.notEqual(await hash({'cf-connecting-ip':'203.0.113.1'}),await hash({'cf-connecting-ip':'203.0.113.2'}));
 });

@@ -8,7 +8,7 @@ const sql=name=>readFileSync(join(__dirname,'..',name),'utf8');
 const denied=error=>error.code==='42501'||/permission denied/.test(error.message);
 
 test('client chat email outbox preserves ownership and cuts over legacy staff replies atomically',async t=>{
- const fixture=await createFixture(),{pg}=fixture;
+ const fixture=await createFixture({throughVersion:20}),{pg}=fixture;
  const as=(role,person,query,params=[])=>fixture.serial(async()=>{
   await pg.exec('reset role');
   await pg.query("select set_config('request.jwt.claim.sub',$1,false)",[person?uid(person):'']);

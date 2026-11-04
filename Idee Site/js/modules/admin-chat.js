@@ -8,11 +8,28 @@
         let chatAdminRealtimeGeneration = 0;
         let chatAdminMesajeToate = [];
         let chatAdminConversatieCurenta = null; // Un obiect { email_client, teren }
+        let messageRequest = 0;
+        let listRequest = 0;
+        let draftSession = 0;
+        const drafts = new Map();
+        const sending = new Set();
+        const conversationKey = conversation => conversation ? JSON.stringify([conversation.email, conversation.teren]) : null;
 
         const btnVeziChatAdmin = document.getElementById('btn-vezi-chat-admin');
         const modalChatAdmin = document.getElementById('modal-chat-admin');
         const inputChatAdmin = document.getElementById('chat-admin-input');
         const btnTrimiteChatAdmin = document.getElementById('chat-admin-btn-trimite');
+
+        function rememberDraft() {
+            const key = conversationKey(chatAdminConversatieCurenta);
+            if (key) drafts.set(key, inputChatAdmin.value);
+        }
+        function selectConversation(conversation) {
+            rememberDraft();
+            chatAdminConversatieCurenta = conversation;
+            inputChatAdmin.value = drafts.get(conversationKey(conversation)) || '';
+        }
+        inputChatAdmin?.addEventListener('input', rememberDraft);
 
         btnVeziChatAdmin?.addEventListener('click', () => {
             modalChatAdmin.style.display = 'flex';
@@ -61,16 +78,17 @@
         async function incarcaMesajeAdmin(randeaza = true) {
             if (!state.account) return;
             const authRequest = state.authGeneration;
-
-            let query = db.from('mesaje_chat').select('*').order('created_at', { ascending: true });
-
-            if (!state.account.is_super) {
-                const terenurileAdmin = state.account.terenuri ? state.account.terenuri.split(',').map(n => n.trim()).filter(Boolean) : [];
-                query = query.in('teren', terenurileAdmin);
-            }
-
-            const { data, error } = await query;
-            if (authRequest !== state.authGeneration) return;
+            const request = ++messageRequest;
+            const account = state.account;
+            const { data, error } = await window.spotivityReadAllRows(() => {
+                let query = db.from('mesaje_chat').select('*').order('created_at', { ascending: true }).order('id');
+                if (!account.is_super) {
+                    const courts = account.terenuri ? account.terenuri.split(',').map(name => name.trim()).filter(Boolean) : [];
+                    query = query.in('teren', courts);
+                }
+                return query;
+            });
+            if (authRequest !== state.authGeneration || request !== messageRequest) return;
             if (error) return;
 
             chatAdminMesajeToate = data || [];
@@ -88,6 +106,7 @@
         async function randeazaListaConversatiiAdmin() {
             if (!state.account) return;
             const authRequest = state.authGeneration;
+            const request = ++listRequest;
             const listaSide = document.getElementById('chat-admin-lista-conversații');
             if (!listaSide) return;
 
@@ -122,8 +141,8 @@
             }
 
             // Preluăm clienții pentru a le afișa numele real
-            const { data: clientiDB } = await db.from('clienti').select('email, nume');
-            if (authRequest !== state.authGeneration) return;
+            const { data: clientiDB } = await window.spotivityReadAllRows(() => db.from('clienti').select('email, nume').order('email'));
+            if (authRequest !== state.authGeneration || request !== listRequest) return;
             const clienti = clientiDB || [];
 
             listaSide.innerHTML = '';
@@ -147,9 +166,8 @@
                 `;
 
                 card.addEventListener('click', () => {
-                    chatAdminConversatieCurenta = { email: conv.email, teren: conv.teren, nume: numeAfisat };
+                    selectConversation({ email: conv.email, teren: conv.teren, nume: numeAfisat });
                     randeazaListaConversatiiAdmin();
-                    deschideConversatiaAdmin();
                 });
 
                 listaSide.appendChild(card);
@@ -164,12 +182,11 @@
             // 1. Închide modalul de tabel și setări (dacă e deschis vreunul)
             context.modalNodes().forEach(m => {
                 if (m.id !== 'modal-chat-admin') m.style.display = 'none';
-                    if (m.id === 'modal-chat-admin') { const inp = document.getElementById('chat-admin-input'); if (inp) inp.value = ''; }
                     if (m.id === 'modal-adauga-teren') { window.deschideModalAdaugaTeren(); m.style.display = 'none'; }
             });
 
             // 2. Setează starea conversației curente
-            chatAdminConversatieCurenta = { email: email, teren: teren, nume: nume };
+            selectConversation({ email: email, teren: teren, nume: nume });
 
             // 3. Deschide modalul de chat
             const modalChat = document.getElementById('modal-chat-admin');
@@ -188,8 +205,9 @@
 
         async function deschideConversatiaAdmin() {
             const authRequest = state.authGeneration;
-            const inp = document.getElementById('chat-admin-input'); if (inp) inp.value = '';
             if (!chatAdminConversatieCurenta) return;
+            const conversation = chatAdminConversatieCurenta;
+            const key = conversationKey(conversation);
 
             document.getElementById('chat-admin-conversație-titlu').style.display = 'block';
             document.getElementById('chat-admin-conversație-titlu').innerText = `Chat cu ${chatAdminConversatieCurenta.nume} (${chatAdminConversatieCurenta.teren})`;
@@ -222,31 +240,36 @@
 
             container.scrollTop = container.scrollHeight;
 
-            if (idUriDeMarcat.length > 0) {
-                await db.from('mesaje_chat').update({ citit: true }).in('id', idUriDeMarcat);
+            // Keep the REST URL bounded for conversations larger than one page.
+            for (let start = 0; start < idUriDeMarcat.length; start += 100) {
+                if (!state.account || authRequest !== state.authGeneration || conversationKey(chatAdminConversatieCurenta) !== key) return;
+                const { error } = await db.from('mesaje_chat').update({ citit: true }).in('id', idUriDeMarcat.slice(start, start + 100));
+                if (error) break;
             }
             if (!state.account || authRequest !== state.authGeneration) return;
 
-            inputChatAdmin.disabled = false;
-            btnTrimiteChatAdmin.disabled = false;
+            if (conversationKey(chatAdminConversatieCurenta) !== key) return;
+            inputChatAdmin.disabled = sending.has(key);
+            btnTrimiteChatAdmin.disabled = sending.has(key);
 
             const btnStergeChat = document.getElementById('chat-admin-btn-sterge');
             if (btnStergeChat) {
                 btnStergeChat.style.display = 'block';
                 btnStergeChat.onclick = async () => {
-                    const conf = confirm(`Ești sigur că vrei să ștergi TOATE mesajele din conversația cu ${chatAdminConversatieCurenta.nume} (${chatAdminConversatieCurenta.teren})?\n\nAcest lucru va șterge mesajele și pentru client!`);
+                    const conf = confirm(`Ești sigur că vrei să ștergi TOATE mesajele din conversația cu ${conversation.nume} (${conversation.teren})?\n\nAcest lucru va șterge mesajele și pentru client!`);
                     if (conf) {
                         btnStergeChat.disabled = true;
                         btnStergeChat.style.opacity = '0.5';
                         const { error } = await db.from('mesaje_chat')
                             .delete()
-                            .eq('email_client', chatAdminConversatieCurenta.email)
-                            .eq('teren', chatAdminConversatieCurenta.teren);
+                            .eq('email_client', conversation.email)
+                            .eq('teren', conversation.teren);
+                        if (authRequest !== state.authGeneration || conversationKey(chatAdminConversatieCurenta) !== key) return;
 
                         if (error) {
                             alert("Eroare la ștergere: " + error.message);
                         } else {
-                            chatAdminConversatieCurenta = null;
+                            selectConversation(null);
                             document.getElementById('chat-admin-conversație-titlu').style.display = 'none';
                             container.innerHTML = '<p style="color: #ccc; text-align: center; margin-top: auto; margin-bottom: auto;">Conversație ștearsă.</p>';
                             inputChatAdmin.disabled = true;
@@ -263,25 +286,30 @@
 
         async function trimiteMesajAdmin() {
             if (!chatAdminConversatieCurenta || inputChatAdmin.disabled) return;
-            const authRequest = state.authGeneration;
-            const text = inputChatAdmin.value.trim().replace(/\.$/, '');
+            const session = draftSession;
+            const userId = state.account?.user_id;
+            const conversation = { ...chatAdminConversatieCurenta };
+            const key = conversationKey(conversation);
+            const text = inputChatAdmin.value.trim();
             if (!text) return;
-
+            rememberDraft();
+            sending.add(key);
             inputChatAdmin.disabled = true;
             btnTrimiteChatAdmin.disabled = true;
 
             const { error } = await db.from('mesaje_chat').insert([{
-                email_client: chatAdminConversatieCurenta.email,
-                teren: chatAdminConversatieCurenta.teren,
+                email_client: conversation.email,
+                teren: conversation.teren,
                 expeditor: 'admin',
                 mesaj: text,
                 citit: false
             }]);
-            if (authRequest !== state.authGeneration) return;
-
+            if (session !== draftSession || !state.account || state.account.user_id !== userId) return;
+            sending.delete(key);
             if (error) alert("Eroare la trimitere: " + error.message);
-            else inputChatAdmin.value = '';
-
+            else drafts.delete(key);
+            if (conversationKey(chatAdminConversatieCurenta) !== key) return;
+            if (!error) inputChatAdmin.value = '';
             inputChatAdmin.disabled = false;
             btnTrimiteChatAdmin.disabled = false;
             inputChatAdmin.focus();
@@ -293,7 +321,7 @@
         });
 
         document.getElementById('btn-inapoi-conversatie-admin')?.addEventListener('click', () => {
-            chatAdminConversatieCurenta = null;
+            selectConversation(null);
             const modalBox = document.querySelector('#modal-chat-admin .modal-chat-box');
             if (modalBox) modalBox.classList.remove('conversatie-activa');
             randeazaListaConversatiiAdmin();
@@ -301,7 +329,7 @@
             document.getElementById('chat-admin-conversație-titlu').style.display = 'none';
             const container = document.getElementById('chat-admin-mesaje');
             container.innerHTML = '<p style="color: #ccc; text-align: center; margin-top: auto; margin-bottom: auto;">Selectează un client din stânga pentru a vedea mesajele.</p>';
-            const btnSterge = document.getElementById('btn-sterge-chat-admin');
+            const btnSterge = document.getElementById('chat-admin-btn-sterge');
             if (btnSterge) btnSterge.style.display = 'none';
             if (inputChatAdmin) { inputChatAdmin.value = ''; inputChatAdmin.disabled = true; }
             if (btnTrimiteChatAdmin) btnTrimiteChatAdmin.disabled = true;
@@ -309,7 +337,20 @@
         return {
             initializeRealtime,
             invalidateRealtime() { chatAdminRealtimeGeneration++; },
-            clearState() {
+            clearState({ preserveDrafts = false, retainedCourts = null } = {}) {
+                if (preserveDrafts) {
+                    rememberDraft();
+                    if (Array.isArray(retainedCourts)) {
+                        for (const key of drafts.keys()) if (!retainedCourts.includes(JSON.parse(key)[1])) drafts.delete(key);
+                        for (const key of sending) if (!retainedCourts.includes(JSON.parse(key)[1])) sending.delete(key);
+                    }
+                } else {
+                    drafts.clear();
+                    sending.clear();
+                    draftSession++;
+                }
+                messageRequest++;
+                listRequest++;
                 chatAdminMesajeToate = [];
                 chatAdminConversatieCurenta = null;
             },

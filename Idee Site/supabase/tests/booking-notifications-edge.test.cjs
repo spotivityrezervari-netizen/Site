@@ -173,3 +173,29 @@ test('client chat notification uses the chat transport, current authorized recip
   assert.ok(!calls.some(call=>call.path.endsWith('/attach_cancellation_token')));
   for(const secret of [SERVICE,CANCEL_SECRET,'#anulare-rezervare='])assert.ok(!JSON.stringify(send.body).includes(secret));
 });
+
+
+test('database pause remains authoritative with environment webhooks or an explicit true override', async () => {
+  for(const config of [{bookingMakeWebhookURL:BOOKING_HOOK},{chatMakeWebhookURL:CHAT_HOOK},{makeWebhookURL:BOOKING_HOOK,notificationsReady:true}]) {
+    const {handler,calls}=await fixture({settings:{ready:false,booking_webhook_url:BOOKING_HOOK,chat_webhook_url:CHAT_HOOK},config});
+    const result=await(await handler(request())).json();
+    assert.equal(result.status,'pending_configuration');
+    assert.deepEqual(calls.map(call=>call.path),['/rest/v1/rpc/get_booking_notification_config']);
+  }
+});
+
+test('environment destinations preserve the other stored scenario and default mail links use the canonical site', async () => {
+  const {handler,calls}=await fixture({config:{bookingMakeWebhookURL:BOOKING_HOOK},settings:{ready:true,booking_webhook_url:null,chat_webhook_url:CHAT_HOOK}});
+  assert.equal((await(await handler(request())).json()).submitted,1);
+  const claim=calls.find(call=>call.path.endsWith('/claim_booking_notifications'));
+  assert.ok(claim.body.p_kinds.includes('chat_client'));
+  const send=calls.find(call=>call.url===BOOKING_HOOK);
+  assert.ok(send.body.html.includes('https://spotivity.ro/#anulare-rezervare='));
+  assert.ok(!send.body.html.includes('spotivityrezervari-netizen.github.io'));
+});
+
+test('configuration lookup failure never falls back to unpaused environment delivery', async () => {
+  const {handler,calls}=await fixture({config:{bookingMakeWebhookURL:BOOKING_HOOK},fetch:call=>call.path.endsWith('/get_booking_notification_config')?json({message:'unavailable'},503):undefined});
+  assert.equal((await handler(request())).status,503);
+  assert.deepEqual(calls.map(call=>call.path),['/rest/v1/rpc/get_booking_notification_config']);
+});

@@ -1,5 +1,15 @@
 # Instalarea protecțiilor Supabase și a rolurilor Spotivity
 
+## 027 — reconciliere versionată și integritatea rezervărilor
+
+[027_booking_integrity_and_rate_limits.sql](027_booking_integrity_and_rate_limits.sql) este pregătită în Git și testată izolat; **nu este aplicată în producție prin acest commit**. Se aplică după 026, la viitoarea lansare autorizată, înaintea funcțiilor Edge și frontendului. Păstrează datele de business și contoarele rate-limit deja existente. Guardurile refuză o definiție SQL necunoscută; nu ocoli verificarea și nu reaplica 014/023/025 peste live.
+
+Versionează verificarea opțională a totalului acceptat (`p_expected_total` / `PRICE_CHANGED`), separarea cotelor pentru UUID-uri autentificate și contacte de oaspete, înregistrarea anulărilor directe ale clientului și agregarea anulărilor după identitatea corectă. Înlocuiește numai semnăturile vechi ale RPC-urilor de creare, fără overloaduri ambigue. O cerere deja comisă, cu aceeași identitate și aceleași date, returnează rezultatul original chiar dacă tariful s-a schimbat între timp.
+
+`consume_public_rate_limit` folosește contoare persistente, accesibile numai prin RPC-ul de serviciu. Browserul nu primește granturi sau acces la tabel; Edge transmite un hash al identității de rețea, nu IP-ul brut. Limitele per categorie și plafonul global sunt impuse în SQL, iar indisponibilitatea verificării oprește operația. Setarea DB `ready=false` oprește și workerul cu URL webhook configurat prin mediul Edge.
+
+Linkurile noi din email folosesc `https://spotivity.ro/`; linkurile legacy validate rămân compatibile. Auth Site URL și publicarea celor trei funcții se aliniază separat la lansare. Un push Git nu schimbă schema, Auth, Make sau versiunile Edge live.
+
 ## 026 — identitatea terenurilor și izolarea istoricului
 
 [026_retired_court_identity.sql](026_retired_court_identity.sql) este aplicată și verificată live. Numele și ID-urile terenurilor sunt rezervate permanent în două registre private, cu RLS și fără granturi pentru rolurile din browser sau `service_role`. Un teren nou nu poate prelua numele ori ID-ul unui teren șters. La crearea unui teren după ștergere trebuie ales un nume nou. Redenumirea și revenirea la un nume propriu anterior păstrează identitatea aceluiași teren; drepturile se rezolvă prin ID și alocarea curentă, inclusiv pentru aliasurile istorice.

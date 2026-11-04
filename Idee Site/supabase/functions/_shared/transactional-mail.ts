@@ -1,5 +1,5 @@
 /** Romanian transactional email templates. Rendering never sends mail or creates credentials. */
-export const TRANSACTIONAL_SITE_URL = 'https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/';
+export const TRANSACTIONAL_SITE_URL = 'https://spotivity.ro/';
 export const TRANSACTIONAL_SUPPORT_EMAIL = 'spotivity.rezervari@gmail.com';
 export type MailRecipient = { email: string; name?: string };
 export type BookingMailDetails = {
@@ -20,8 +20,9 @@ export type RenderedTransactionalMail = { to: MailRecipient; subject: string; ht
 type Row = { label: string; value: string; href?: string };
 type Action = { label: string; href: string; secondary?: boolean };
 const BRAND = 'Spotivity';
-const PRODUCTION_ORIGIN = 'https://spotivityrezervari-netizen.github.io';
-const PRODUCTION_PATH = '/Site/Idee Site/';
+const PRODUCTION_ORIGINS = new Set(['https://spotivity.ro', 'https://www.spotivity.ro']);
+const LEGACY_ORIGIN = 'https://spotivityrezervari-netizen.github.io';
+const LEGACY_PATH = '/Site/Idee Site/';
 const CONTROL = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g;
 const escapeHTML = (value: unknown): string => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]!));
 const line = (value: unknown): string => String(value ?? '').replace(CONTROL, ' ').replace(/\s+/g, ' ').trim();
@@ -29,10 +30,11 @@ const emailValid = (email: unknown): email is string => typeof email === 'string
 /** App links stay on the production origin/path, including client-only opaque capabilities. */
 export function validateTransactionalURL(value: string): string {
   if (typeof value !== 'string' || value.length > 4096 || /[\s\u0000-\u001f\u007f]/.test(value)) throw new TypeError('Invalid transactional email URL');
-  let url: URL, decodedPath: string;
-  try { url = new URL(value); decodedPath = decodeURIComponent(url.pathname); }
+  let url: URL, decodedPath: string, rawPath: string;
+  try { url = new URL(value); decodedPath = decodeURIComponent(url.pathname); rawPath = decodeURIComponent(value.match(/^[a-z]+:\/\/[^/?#]+([^?#]*)/i)?.[1] ?? ''); }
   catch { throw new TypeError('Invalid transactional email URL'); }
-  if (url.protocol !== 'https:' || url.origin !== PRODUCTION_ORIGIN || url.username || url.password || !decodedPath.startsWith(PRODUCTION_PATH) || /[\\\u0000-\u001f\u007f]/.test(decodedPath) || decodedPath.split('/').some(part => part === '.' || part === '..')) throw new TypeError('Transactional email links must stay inside the production app');
+  const approvedApp = PRODUCTION_ORIGINS.has(url.origin) || (url.origin === LEGACY_ORIGIN && decodedPath.startsWith(LEGACY_PATH));
+  if (url.protocol !== 'https:' || !approvedApp || url.username || url.password || /[\\\u0000-\u001f\u007f]/.test(rawPath) || rawPath.split('/').some(part => part === '.' || part === '..') || decodedPath.split('/').some(part => part === '.' || part === '..')) throw new TypeError('Transactional email links must stay inside the production app');
   return url.href;
 }
 function recipient(value: MailRecipient): MailRecipient {
@@ -114,7 +116,7 @@ function calendarLink(booking: BookingMailDetails, siteURL: string): string | un
   }
   const end = `${endDay.replace(/-/g, '')}T${hourLabel(endMinutes).replace(':', '')}00`;
   const url = new URL('https://calendar.google.com/calendar/render');
-  url.search = new URLSearchParams({ action: 'TEMPLATE', text: `${booking.sport} · ${booking.courtName}`, dates: `${start}/${end}`, ctz: 'Europe/Bucharest', location: [booking.baseName, booking.city].map(line).filter(Boolean).join(', '), details: `Rezervare Spotivity. Plata se face la locație.\n${new URL(siteURL).origin}${PRODUCTION_PATH}` }).toString();
+  url.search = new URLSearchParams({ action: 'TEMPLATE', text: `${booking.sport} · ${booking.courtName}`, dates: `${start}/${end}`, ctz: 'Europe/Bucharest', location: [booking.baseName, booking.city].map(line).filter(Boolean).join(', '), details: `Rezervare Spotivity. Plata se face la locație.\n${new URL(siteURL).origin}${new URL(siteURL).pathname}` }).toString();
   return url.href;
 }
 function rowsHTML(rows: Row[]): string {

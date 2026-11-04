@@ -19,7 +19,7 @@ const pass = text => { checks++; console.log('PASS', text); };
     try {
         const seeded = await fixture.root(async () => {
             await fixture.pg.exec("alter table auth.users add column if not exists created_at timestamptz not null default '2026-01-01T00:00:00Z'");
-            for (const file of ['021_account_welcome.sql', '022_email_booking_context.sql', '023_late_cancellations.sql', '024_client_chat_notifications.sql']) await fixture.pg.exec(readFileSync(join(__dirname, '..', file), 'utf8'));
+            assert.equal((await fixture.pg.query('select count(*)::integer n from spotivity_private.migrations where version=27')).rows[0].n,1,'Shared fixture must include the current SQL contract');
             await fixture.pg.query("update public.clienti set telefon='0721123456' where user_id=$1", [uid(1)]);
             const day = (await fixture.pg.query("select ((now() at time zone 'Europe/Bucharest')::date+1)::text value")).rows[0].value;
             const court = String((await fixture.pg.query("select id from public.terenuri where nume='Court A'")).rows[0].id);

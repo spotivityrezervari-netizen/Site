@@ -282,10 +282,10 @@
             const timeout = window.setTimeout(() => requestController.abort(), 15000);
             try {
                 const [baseResult, courtResult] = await Promise.all([
-                    window.readSportsBasePresentation(fields => db.from('baze_sportive').select(fields).eq('este_activa', true)
-                        .order('nume').abortSignal(requestController.signal)),
-                    db.from('terenuri').select('id,nume,sport,oras,pret,poza,baza_sportiva_id,este_activ').eq('este_activ', true)
-                        .order('nume').abortSignal(requestController.signal)
+                    window.readSportsBasePresentation(fields => window.spotivityReadAllRows(() => db.from('baze_sportive').select(fields).eq('este_activa', true)
+                        .order('nume').order('id').abortSignal(requestController.signal))),
+                    window.spotivityReadAllRows(() => db.from('terenuri').select('id,nume,sport,oras,pret,poza,baza_sportiva_id,este_activ').eq('este_activ', true)
+                        .order('nume').order('id').abortSignal(requestController.signal))
                 ]);
                 if (!isCurrent(token)) return false;
                 if (baseResult.error || courtResult.error || !Array.isArray(baseResult.data) || !Array.isArray(courtResult.data)) {

@@ -43,6 +43,8 @@ Contextul public conține conexiunea Supabase, `state` și `services`. Identitat
 
 `db.js`, `security.js` și `sport-appearance.js` rămân dependențele comune. `profile-editor.js`, `guest-booking.js`, `base-admin.js`, `admin-baze.js`, `admin-club-requests.js`, `club-registration.js` și fișierele pentru pagina principală își păstrează responsabilitățile existente.
 
+`security.js` oferă `spotivityReadAllRows(queryFactory, {pageSize})`. Fabrica produce o cerere nouă cu ordine deterministă și filtrele de autorizare/date pentru fiecare pagină. Citirea continuă până la pagina goală, inclusiv dacă limita serverului este mai mică decât pagina cerută; o eroare pe orice pagină returnează `data:null`, fără a prezenta lista parțială drept completă. Verificările generației Auth rămân responsabilitatea apelantului înainte de a afișa rezultatul.
+
 `base-media.js` trebuie încărcat înaintea fișierelor `home.js`, `baze.js` și `home-discovery.js`. Oferă renderer-ele comune pentru copertă și fotografie rotundă, plus citirea compatibilă cu schema anterioară migrării 017. Doar lipsa explicită a coloanei `poza_profil` permite repetarea citirii fără ea; alte erori sunt păstrate. Fotografia de profil folosește exclusiv `poza_profil`, cu inițiale când lipsește sau imaginea nu poate fi încărcată.
 
 `base-avatar-editor.js` se încarcă înainte de `admin-baze.js`. Controllerul comun gestionează independent câmpurile `poza` și `poza_profil`, validează imaginile și oprește operațiile după schimbarea contului, rolului sau bazei. Înainte de orice curățare Storage, recitește ambele referințe din baza autorizată. Operațiile de copertă și profil sunt serializate; un răspuns incert la salvare păstrează fișierul. Editorul profilului este activ numai dacă rândul citit conține coloana nouă.

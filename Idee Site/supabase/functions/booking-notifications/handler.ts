@@ -50,15 +50,12 @@ export function createHandler(config: NotificationWorkerConfig, dependencies: De
   async function settings(): Promise<{ ready: boolean; bookingURL: string | null; chatURL: string | null }> {
     const suppliedBooking = config.bookingMakeWebhookURL ?? config.makeWebhookURL;
     const suppliedChat = config.chatMakeWebhookURL ?? config.makeWebhookURL;
-    let ready: boolean; let bookingURL: unknown; let chatURL: unknown;
-    if (suppliedBooking || suppliedChat || config.notificationsReady !== undefined) {
-      ready = config.notificationsReady !== false;
-      bookingURL = suppliedBooking; chatURL = suppliedChat;
-    } else {
-      const stored = await rpc('get_booking_notification_config');
-      ready = object(stored) && stored.ready === true;
-      bookingURL = stored?.booking_webhook_url; chatURL = stored?.chat_webhook_url;
-    }
+    // Stored readiness is the shared pause switch, including when a webhook
+    // destination is supplied by the function environment.
+    const stored = await rpc('get_booking_notification_config');
+    const ready = object(stored) && stored.ready === true && config.notificationsReady !== false;
+    const bookingURL = suppliedBooking ?? stored?.booking_webhook_url;
+    const chatURL = suppliedChat ?? stored?.chat_webhook_url;
     return {
       ready,
       bookingURL: typeof bookingURL === 'string' && MAKE.test(bookingURL) ? bookingURL : null,

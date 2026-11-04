@@ -1,5 +1,17 @@
 # Dezvoltare locală
 
+## Corecții pregătite pentru lansarea finală — 3 noiembrie 2026
+
+Corecțiile auditului sunt versionate în Git; această actualizare nu publică site-ul și nu aplică SQL sau funcții Edge în proiectul real. Publicarea Netlify rămâne oprită până la cererea explicită a proprietarului. Folosește `[skip netlify]` în mesajele commiturilor trimise între timp.
+
+Migrarea nouă `supabase/027_booking_integrity_and_rate_limits.sql` reconciliază corecțiile SQL existente live cu instalările noi: identități separate pentru conturi/oaspeți, total acceptat, anulări și limite persistente de trafic. Nu reaplica migrările vechi peste schema curentă. La lansarea autorizată, ordinea necesară este **027 → cele trei funcții Edge → frontendul din `dist`**. Verifică înainte definițiile și protecțiile existente; 027 refuză implementări necunoscute în loc să le suprascrie.
+
+Noul frontend trimite `expected_total` către backend. Un tarif schimbat cere o nouă confirmare; o cerere cu răspuns incert păstrează UUID-ul și totalul original până la clarificare. Istoricul arată separat orele/sumele anulate, iar listele paginate nu se opresc la limita REST. Chatul admin păstrează draftul la actualizări și îl curăță la pierderea accesului. Blocarea unei ore libere rămâne disponibilă; o rezervare ocupată trebuie anulată explicit înainte de blocare.
+
+Emailurile noi folosesc `https://spotivity.ro/`; linkurile GitHub Pages deja trimise rămân acceptate. La lansare trebuie aliniat și **Auth → Site URL** la `https://spotivity.ro/`, păstrând rutele de callback aprobate și linkurile legacy. Această setare live nu este modificată de un push Git. Pentru orice webhook configurat prin variabilele Edge, `ready=false` din SQL rămâne comutatorul de oprire. Funcțiile publice folosesc RPC-ul de limitare persistentă; păstrează `verify_jwt=false` unde handlerul verifică explicit identitatea și rolul.
+
+Verificările locale de regresie sunt în `supabase/tests/pagination.test.cjs`, `audit-public-browser.test.cjs`, `audit-public-history-browser.test.cjs`, `admin-client-regressions.test.cjs` și testul migrării 027. Rulează și suitele existente relevante. După viitoarea lansare, verifică CORS cu `Origin: https://spotivity.ro` și `https://www.spotivity.ro` pentru `booking-workflow` și `club-applications`, apoi confirmă fluxurile reale folosind conturi de test aprobate. Publicarea Netlify singură nu actualizează funcțiile Supabase.
+
 ## Publicarea sigură pe Netlify
 
 Domeniul curent indicat de proprietar este **https://spotivity.ro**. Netlify construiește din rădăcina repository-ului cu `node scripts/build-public.mjs` și publică numai `dist/`. Lista explicită `scripts/public-files.json` include doar pagina, JavaScript, CSS și imagini; SQL, testele, documentația și funcțiile Edge nu ajung în pachetul public. Antetele din `deploy/netlify/_headers` limitează scripturile și conexiunile și blochează încadrarea în iframe. Codul frontend rămâne vizibil în browser.

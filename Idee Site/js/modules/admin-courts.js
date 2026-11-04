@@ -10,8 +10,9 @@
             if (!container) return;
             container.innerHTML = "<p style='color: white;'>Se descarcă terenurile din cloud...</p>";
 
-            const { data } = await db.from('terenuri').select('*');
+            const { data, error } = await window.spotivityReadAllRows(() => db.from('terenuri').select('*').order('id'));
             if (authRequest !== state.authGeneration) return;
+            if (error) { container.innerHTML = "<p style='color: #ccc;'>Terenurile nu pot fi încărcate. Încearcă din nou.</p>"; return; }
             if (!data || data.length === 0) { container.innerHTML = "<p style='color: #ccc;'>Niciun teren adăugat.</p>"; return; }
 
             let html = "";

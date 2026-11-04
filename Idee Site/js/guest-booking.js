@@ -27,6 +27,8 @@
         booking_limit: 'Ai deja o rezervare la acest sport în ziua aleasă, indiferent de teren sau oraș. Poți selecta mai multe ore consecutive într-o singură rezervare.',
         slot_unavailable: 'Una dintre ore nu mai este disponibilă. Alege alte ore.',
         invalid_hours: 'Selectează numai ore consecutive, pe același teren.',
+        price_changed: 'Prețul terenului s-a modificat. Verifică noul total și confirmă din nou rezervarea.',
+        invalid_quote: 'Prețul nu poate fi confirmat. Revino la ore și reîncarcă terenul.',
         invalid_contact: 'Verifică numele, adresa de email și numărul de telefon.',
         invalid_token: 'Linkul de anulare este invalid sau a expirat.',
         booking_ended: 'O rezervare finalizată nu mai poate fi anulată.',
@@ -71,8 +73,13 @@
             || (i > 0 && Number(hour.slice(0, 2)) !== Number(hours[i - 1].slice(0, 2)) + 1))) {
             throw new WorkflowError(errors.invalid_hours, 'invalid_hours');
         }
+        const total = selection.expected_total;
+        if (typeof total !== 'number' || !Number.isFinite(total) || !Number.isSafeInteger(Math.round(total * 100)) || total < 0
+            || Math.abs(Math.round(total * 100) - total * 100) > 0.000001) {
+            throw new WorkflowError(errors.invalid_quote, 'invalid_quote');
+        }
         return { court_id: String(selection.court_id), day: String(selection.day), hours,
-            with_ball: selection.with_ball === true };
+            with_ball: selection.with_ball === true, expected_total: total };
     }
     function summaryText(selection) {
         const hours = selection.hours || [];
@@ -131,7 +138,7 @@
         const dialog = mountDialog('modal-rezervare-vizitator', 'Rezervă fără cont');
         guestDialog = dialog;
         const summary = document.createElement('p'); summary.className = 'workflow-summary';
-        summary.textContent = summaryText({ ...attempt.selection, ...attempt.display });
+        summary.textContent = `${summaryText({ ...attempt.selection, ...attempt.display })} · Total: ${attempt.selection.expected_total.toLocaleString('ro-RO')} lei`;
         const intro = document.createElement('p'); intro.className = 'workflow-copy';
         intro.textContent = 'Nu se creează un cont. Primești pe email datele rezervării și un link pentru anulare.';
         const form = document.createElement('form'); form.className = 'workflow-form';
@@ -163,12 +170,12 @@
         };
         if (attempt.payload) status.textContent = 'Verificăm rezervarea trimisă anterior, cu aceleași date și ore. Nu se creează o dublură.';
         freeze();
-        return new Promise(resolve => {
-            const finish = result => {
+        return new Promise((resolve, reject) => {
+            const finish = (result, error) => {
                 dialog.remove(); guestDialog = null;
                 // Contact details survive only an uncertain response, for an idempotent retry.
                 if (result || !attempt.payload) guestAttempt = null;
-                resolve(result);
+                if (error) reject(error); else resolve(result);
             };
             dialog.onDismiss(() => { if (!busy) finish(null); }); back.onclick = () => { if (!busy) finish(null); };
             signin.onclick = () => {
@@ -194,6 +201,12 @@
                     busy = false; finish(result);
                 } catch (error) {
                     busy = false;
+                    // PRICE_CHANGED is returned only after ruling out an existing
+                    // request UUID. Return to a fresh displayed quote; never retry it silently.
+                    if (error.code === 'price_changed') {
+                        attempt.payload = null; attempt.uncertain = false;
+                        finish(null, error); return;
+                    }
                     attempt.uncertain = priorUncertain || error.unknown;
                     if (!attempt.uncertain) attempt.payload = null;
                     const message = attempt.uncertain && error.code === 'guest_unavailable'
@@ -223,7 +236,7 @@
             const result = await post(pending.payload, data.session.access_token);
             pendingOwn.delete(user.id); return result;
         } catch (error) {
-            pending.uncertain = priorUncertain || error.unknown;
+            pending.uncertain = error.code !== 'price_changed' && (priorUncertain || error.unknown);
             if (!pending.uncertain) pendingOwn.delete(user.id);
             throw error;
         }

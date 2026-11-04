@@ -37,6 +37,7 @@ async function fixture(overrides = {}) {
     const call = { path: endpoint.pathname, search: endpoint.search, method, headers, body };
     calls.push(call);
     if (overrides.fetch) { const response = await overrides.fetch(call, calls); if (response !== undefined) return response; }
+    if (endpoint.pathname.endsWith('/consume_public_rate_limit')) return json(true);
     if (endpoint.pathname === '/auth/v1/token') return json({ user, access_token: 'never-return-this-token', refresh_token: 'never-return-refresh' });
     if (endpoint.pathname === '/auth/v1/signup') return json({ user });
     if (endpoint.pathname === `/auth/v1/admin/users/${USER}`) return json(user);
@@ -61,7 +62,8 @@ test('anonymous submit proves existing credentials, stores only explicit applica
   const { handler, calls } = await fixture();
   const response = await handler(submission()); const body = await response.json();
   assert.equal(response.status, 201); assert.deepEqual(body, { request_id: APP, status: 'noua', email_confirmation_required: false });
-  assert.equal(calls[0].path, '/auth/v1/token'); assert.equal(calls[0].body.password, PASSWORD);
+  assert.equal(calls[0].path, '/rest/v1/rpc/consume_public_rate_limit');
+  assert.equal(calls[1].path, '/auth/v1/token'); assert.equal(calls[1].body.password, PASSWORD);
   assert.equal(calls.filter(c => c.path === '/auth/v1/signup').length, 0);
   assert.ok(!calls.some(c => c.path === '/auth/v1/user' || c.method === 'PUT' || c.method === 'PATCH'), 'Applying with an existing account must not overwrite its profile or Auth metadata');
   const rpc = calls.find(c => c.path.endsWith('submit_club_application'));
@@ -100,7 +102,7 @@ test('obfuscated existing signup cannot attach an application without knowing ex
     if (c.path === '/auth/v1/signup') return json({ id: USER, email: 'owner@example.test', identities: [] });
   } });
   const response = await handler(submission()); assert.equal(response.status, 401); assert.equal((await response.json()).code, 'invalid_credentials');
-  assert.ok(!calls.some(c => c.path.startsWith('/storage/') || c.path.startsWith('/rest/')));
+  assert.ok(!calls.some(c => c.path.startsWith('/storage/') || (c.path.startsWith('/rest/') && !c.path.endsWith('/consume_public_rate_limit'))));
 });
 
 test('even a plausible signup object is rejected if authoritative Auth row was not freshly created', async () => {
@@ -108,13 +110,13 @@ test('even a plausible signup object is rejected if authoritative Auth row was n
     if (c.path === '/auth/v1/token') return json({ code: 'invalid_credentials' }, 400);
     if (c.path.startsWith('/auth/v1/admin/users/')) return json({ id: USER, email: 'owner@example.test', created_at: '2025-01-01T00:00:00Z', identities: [{ user_id: USER }] });
   } });
-  const response = await handler(submission()); assert.equal(response.status, 401); assert.ok(!calls.some(c => c.path.startsWith('/rest/')));
+  const response = await handler(submission()); assert.equal(response.status, 401); assert.ok(!calls.some(c => c.path.startsWith('/rest/') && !c.path.endsWith('/consume_public_rate_limit')));
 });
 
 test('existing unconfirmed email does not trigger signup retry or password replacement', async () => {
   const { handler, calls } = await fixture({ fetch: c => c.path === '/auth/v1/token' ? json({ code: 'email_not_confirmed' }, 400) : undefined });
   const response = await handler(submission()); assert.equal(response.status, 409); assert.equal((await response.json()).code, 'email_confirmation_required');
-  assert.equal(calls.length, 1);
+  assert.equal(calls.length, 2);
 });
 
 test('untrusted image, password byte limits, wrong sport and missing court prices fail before Auth', async t => {
@@ -330,5 +332,22 @@ test('Spotivity production origins permit submissions while approval still verif
     const approved = await fixture({ row: { poza_path: null } });
     assert.equal((await approved.handler(review('approve', {}, TOKEN, origin))).status, 200);
     assert.equal(approved.calls.find(call => call.path.endsWith('/approve_club_request')).headers.get('Authorization'), `Bearer ${TOKEN}`);
+  }
+});
+
+
+test('club submission limiter is persistent, private and fails closed before Auth or photo upload', async () => {
+  for (const [result, status] of [[false,429],[null,503],[{message:'private failure'},503]]) {
+    const {handler,calls}=await fixture({fetch:c=>c.path.endsWith('/consume_public_rate_limit')?json(result,result && typeof result==='object'?503:200):undefined});
+    const incoming=submission(input(),new File([PNG],'photo.png',{type:'image/png'}));
+    incoming.headers.set('cf-connecting-ip','203.0.113.20');
+    const response=await handler(incoming);
+    assert.equal(response.status,status); assert.equal(calls.length,1);
+    const limited=calls[0];
+    assert.equal(limited.headers.get('authorization'),`Bearer ${SECRET}`);
+    assert.equal(limited.body.p_scope,'club_application'); assert.equal(limited.body.p_limit,20); assert.equal(limited.body.p_window_seconds,600);
+    assert.match(limited.body.p_subject_hash,/^[0-9a-f]{64}$/);
+    for(const value of ['203.0.113.20','owner@example.test',PASSWORD])assert.ok(!JSON.stringify(limited.body).includes(value));
+    assert.ok(!JSON.stringify(await response.json()).includes('private failure'));
   }
 });

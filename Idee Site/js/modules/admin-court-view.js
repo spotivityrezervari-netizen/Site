@@ -5,7 +5,10 @@
     modules.adminCourtView = function(context) {
         const { db, state } = context;
         window.renderSpotivityAdmin = async function(data) {
-            context.clearSessionView();
+            context.clearSessionView({
+                preserveChatDrafts: !!state.account && state.account.user_id === data.user_id,
+                retainedChatCourts: data.is_super ? null : (data.draftCourtNames || data.terenuri?.split(',').map(name => name.trim()) || [])
+            });
                 state.account = { ...data };
                 const authRequest = state.authGeneration;
                 window.dispatchEvent(new CustomEvent('spotivity:admin-role', { detail: { userId: data.user_id, isSuper: data.is_super === true, generation: state.authGeneration, selectedBaseId: data.selectedBaseId || null, baseAccess: data.baseAccess || null } }));
@@ -24,7 +27,7 @@
                     window.incarcaTerenuriAdmin();
                     window.actualizeazaBifeTerenuri();
 
-                    const { data: toate } = await db.from('terenuri').select('nume');
+                    const { data: toate } = await window.spotivityReadAllRows(() => db.from('terenuri').select('nume').order('nume'));
                     if (authRequest !== state.authGeneration) return;
                     if (toate) {
                         terenuriPtTabel = toate.map(t => t.nume);

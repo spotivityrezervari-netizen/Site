@@ -33,7 +33,14 @@ let passed=0;
    await context.route(url=>url.hostname===host,async route=>{
     const r=route.request(),u=new URL(r.url());const bearer=(r.headers().authorization||'').replace(/^Bearer /,'');
     const n=bearer===token(3)?3:bearer===token(1)?1:null;
-    const reply=(status,data)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(data)});
+    const reply=(status,data)=>{
+     // Match PostgREST ranges so paginated production reads see an empty last page.
+     if(r.method()==='GET'&&u.pathname.startsWith('/rest/v1/')&&Array.isArray(data)){
+      const offset=Number(u.searchParams.get('offset')||0),limit=Number(u.searchParams.get('limit')||1000);
+      data=data.slice(offset,offset+limit);
+     }
+     return route.fulfill({status,contentType:'application/json',body:JSON.stringify(data)});
+    };
     if(u.pathname==='/auth/v1/token'){
      if(r.postDataJSON().email==='rejected@example.test')return reply(400,{code:'invalid_credentials',msg:'Invalid login credentials'});
      const who=r.postDataJSON().email==='admin@example.test'?3:1;

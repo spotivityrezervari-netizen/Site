@@ -63,11 +63,11 @@
 
             const dataFormata = dataInput;
 
-            const { data: rezervari, error } = await db.from('rezervari')
+            const { data: rezervari, error } = await window.spotivityReadAllRows(() => db.from('rezervari')
                 .select('*')
                 .eq('teren', terenAles)
                 .eq('data_str', dataFormata)
-                .neq('stare', 'anulata');
+                .neq('stare', 'anulata').order('id'));
 
             if (request !== state.programGeneration) return;
             if (error) {
@@ -79,7 +79,7 @@
             if (rezervari && rezervari.length > 0) {
                 const emails = rezervari.filter(r => !r.guest_name && !r.guest_phone).map(r => r.email_client).filter(e => e !== 'Teren Blocat');
                 if(emails.length > 0) {
-                    const { data: clientiDB } = await db.from('clienti').select('*').in('email', emails);
+                    const { data: clientiDB } = await window.spotivityReadAllRows(() => db.from('clienti').select('*').in('email', emails).order('id'));
                     if (clientiDB) clientiAsociati = clientiDB;
                 }
             }
@@ -121,7 +121,7 @@
                         <select ${action('change', event => window.schimbaStareExistenta(event.currentTarget, rGasita.id, ora, terenAles, dataFormata))} style="background: #1f2937; color: white; border: 1px solid ${eBlocat ? '#ef4444' : '#f59e0b'}; border-radius: 5px; padding: 6px; font-weight: bold; cursor: pointer; width: 100%;">
                             <option value="liber">LIBER</option>
                             <option value="ocupat" ${!eBlocat ? 'selected' : ''}>OCUPAT</option>
-                            <option value="blocat" ${eBlocat ? 'selected' : ''}>BLOCAT</option>
+                            ${eBlocat ? '<option value="blocat" selected>BLOCAT</option>' : ''}
                         </select>
                     `;
                     if (window.bookingEnded(rGasita.data_str, rGasita.ora)) {

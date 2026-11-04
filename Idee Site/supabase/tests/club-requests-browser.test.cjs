@@ -60,11 +60,23 @@ let checks=0;
       await page.locator('#login-email').fill(email);await page.locator('#login-parola').fill(secret);await page.locator('#btn-executa-login').click();
       await page.locator('#modal-auth').waitFor({state:'hidden'});await page.waitForLoadState('networkidle');
       const access=await page.evaluate(async()=>(await db.rpc('get_admin_access')).data);
-      if(access?.can_manage&&!access.is_super){await page.locator('body.base-admin-owner').waitFor();await page.locator('#base-admin-workspace').waitFor({state:'visible'});assert.equal(await page.locator('#spotivity-top').isVisible(),false);assert.equal(await page.locator('#spotivity-top').evaluate(node=>node.inert),true);}await profile(page);await page.locator('#modal-profil').waitFor({state:'visible'});await page.waitForLoadState('networkidle');
+      if(access?.can_manage&&!access.is_super){
+        await page.locator('body.base-admin-owner').waitFor();await page.locator('#owner-home').waitFor({state:'visible'});
+        assert.equal(await page.locator('#base-admin-workspace').isVisible(),false);
+        assert.equal(await page.locator('#spotivity-top').isVisible(),false);assert.equal(await page.locator('#spotivity-top').evaluate(node=>node.inert),true);
+        assert.equal(await page.locator('#modal-profil').isVisible(),false);return;
+      }
+      await profile(page);await page.locator('#modal-profil').waitFor({state:'visible'});await page.waitForLoadState('networkidle');
     };
     const openManagement=async page=>{
       const currentURL=page.url(),pages=page.context().pages().length;
-      await page.locator('#btn-administreaza-baza').click();await page.locator('#base-admin-workspace').waitFor({state:'visible'});await page.waitForLoadState('networkidle');
+      if(await page.locator('#owner-home').isVisible()){
+        await page.locator('#owner-home-menu-toggle').click();await page.locator('#owner-home-menu [data-owner-action="administration"]').click();
+        await page.locator('#owner-home').waitFor({state:'visible'});assert.equal(await page.locator('#base-admin-workspace').isVisible(),false);
+      }else{
+        await page.locator('#btn-administreaza-baza').click();await page.locator('#base-admin-workspace').waitFor({state:'visible'});
+      }
+      await page.waitForLoadState('networkidle');
       assert.equal(page.url(),currentURL);assert.equal(page.context().pages().length,pages);assert.equal(await page.locator('iframe').count(),0);
     };
     const fill=async(page,{name='Club nou',email='owner@example.test',secret=password}={})=>{
@@ -165,7 +177,7 @@ let checks=0;
     assert.equal(pendingAccess.access.data.can_manage,false);assert.equal(pendingAccess.courts.data?.length||0,0);
     pass('even a confirmed applicant with the chosen password cannot enter admin before superadmin acceptance');
     const ordinary=await pageFor();await login(ordinary,'admin@example.test');await openManagement(ordinary);
-    assert.equal(await ordinary.locator('#sectiune-dashboard').isVisible(),true);assert.equal(await ordinary.locator('#base-admin-workspace').evaluate(node=>node.classList.contains('base-admin-super')),false);
+    assert.equal(await ordinary.locator('#owner-home').isVisible(),true);assert.equal(await ordinary.locator('#base-admin-workspace').isVisible(),false);assert.equal(await ordinary.locator('#base-admin-workspace').evaluate(node=>node.classList.contains('base-admin-super')),false);
     assert.equal(await ordinary.locator('#sectiune-dashboard .super-admin-only:visible').count(),0);
     assert.equal(await ordinary.locator('#btn-cereri-baze-admin').isVisible(),false);const denied=await ordinary.evaluate(async path=>({rows:(await db.from('cereri_baze_sportive').select('*')).data,photo:(await db.storage.from('cereri_baze_sportive').createSignedUrl(path,60)).data}),first.poza_path);assert.equal(denied.rows?.length||0,0);assert.equal(denied.photo,null);
     pass('ordinary administrators cannot enter the superadmin dashboard or read applications or their private photos');
@@ -191,14 +203,15 @@ let checks=0;
     // Approval refreshes the existing index session and unlocks only its new scope.
     const applicantToken=await applicant.evaluate(async()=>(await db.auth.getSession()).data.session.access_token);
     const previousLogins=requests.filter(r=>r.source==='browser'&&r.path==='/auth/v1/token').length;
-    await applicant.evaluate(()=>window.dispatchEvent(new Event('focus')));await applicant.locator('body.base-admin-owner').waitFor();await applicant.locator('#base-admin-workspace').waitFor({state:'visible'});await applicant.waitForLoadState('networkidle');
+    await applicant.evaluate(()=>window.dispatchEvent(new Event('focus')));await applicant.locator('body.base-admin-owner').waitFor();await applicant.locator('#owner-home').waitFor({state:'visible'});await applicant.waitForLoadState('networkidle');
     assert.equal(await applicant.locator('#spotivity-top').isVisible(),false);assert.equal(await applicant.locator('#spotivity-top').evaluate(node=>node.inert),true);assert.equal(await applicant.locator('#modal-profil').isVisible(),false);
-    await applicant.waitForFunction(count=>document.querySelectorAll('#container-meniu-terenuri .base-admin-court-copy h4').length===count,created.courts.length);
-    assert.deepEqual((await applicant.locator('#container-meniu-terenuri .base-admin-court-copy h4').allTextContents()).sort(),created.courts.map(court=>court.nume).sort());
+    await applicant.waitForFunction(count=>document.querySelectorAll('#owner-home-sports .owner-court-card .home-court-name').length===count,created.courts.length);
+    assert.deepEqual((await applicant.locator('#owner-home-sports .owner-court-card .home-court-name').allTextContents()).sort(),created.courts.map(court=>court.nume).sort());
+    assert.deepEqual((await applicant.locator('#owner-home-sports .owner-court-card').evaluateAll(cards=>cards.map(card=>card.dataset.ownerCourtId))).sort(),created.courts.map(court=>String(court.id)).sort());
     assert.equal(await applicant.evaluate(async()=>(await db.auth.getSession()).data.session.access_token),applicantToken);
     assert.equal(requests.filter(r=>r.source==='browser'&&r.path==='/auth/v1/token').length,previousLogins);
-    await applicant.locator('#base-admin-workspace').waitFor({state:'visible'});assert.equal(await applicant.locator('#btn-cereri-baze-admin').isVisible(),false);
-    await applicant.locator('#base-admin-edit-base').waitFor({state:'visible'});await applicant.locator('#base-admin-edit-base').click();await applicant.locator('#admin-baza-form').waitFor({state:'visible'});
+    assert.equal(await applicant.locator('#base-admin-workspace').isVisible(),false);assert.equal(await applicant.locator('#btn-cereri-baze-admin').isVisible(),false);
+    await applicant.locator('#owner-home-menu-toggle').click();await applicant.locator(`#owner-home-menu [data-owner-action="base"][data-owner-base-id="${created.base.id}"]`).click();await applicant.locator('#admin-baza-form').waitFor({state:'visible'});
     assert.equal(await applicant.locator('#baza-nume').inputValue(),'Club nou');assert.equal(await applicant.locator('#baza-nume').isDisabled(),true);
     await applicant.locator('#btn-inchide-baze-admin').click();
     const scoped=await applicant.evaluate(async({baseId,priorBase})=>({own:await db.from('baze_sportive').update({descriere:'Actualizat de proprietar'}).eq('id',baseId).select('id'),other:await db.from('baze_sportive').update({descriere:'Intrus'}).eq('id',priorBase).select('id'),court:await db.from('terenuri').update({pret:1}).eq('nume','Court A').select('id'),requests:await db.from('cereri_baze_sportive').select('*')}),{baseId:created.base.id,priorBase});

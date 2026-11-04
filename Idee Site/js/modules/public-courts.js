@@ -7,8 +7,9 @@
         const { db, state, services } = context;
         let filterRequest = 0, baseCourtRequest = 0, catalogRefresh = 0;
         async function incarcaTerenuri() {
-            const { data, error } = await db.from('terenuri').select('*');
-            if (error || !data) return false;
+            const generation = state.authGeneration, identity = state.user?.id || null;
+            const { data, error } = await window.spotivityReadAllRows(() => db.from('terenuri').select('*').order('id'));
+            if (error || !data || generation !== state.authGeneration || identity !== (state.user?.id || null)) return false;
             state.courts = data;
             return true;
         }
@@ -38,7 +39,7 @@
                 const authenticatedIdentity = initialAuth.data?.session?.user?.id || null;
                 // Keep the current page intact until the refreshed catalog is
                 // ready. This operation never opens or changes a booking form.
-                const { data, error } = await db.from('terenuri').select('*');
+                const { data, error } = await window.spotivityReadAllRows(() => db.from('terenuri').select('*').order('id'));
                 const latestAuth = await db.auth.getSession();
                 if (!current() || latestAuth.error || error || !Array.isArray(data)
                     || authenticatedIdentity !== (latestAuth.data?.session?.user?.id || null)) return false;
@@ -99,8 +100,8 @@
                 return hours.length > 0 && (oraAleasa === 'ALL' || hours.includes(oraAleasa));
             });
             if (oraAleasa !== 'ALL') {
-                const {data: rezervari, error} = await db.from('rezervari_disponibilitate').select('teren,ora')
-                    .eq('data_str', dataSelectataDinFiltru).eq('ora', oraAleasa);
+                const {data: rezervari, error} = await window.spotivityReadAllRows(() => db.from('rezervari_disponibilitate').select('id,teren,ora')
+                    .eq('data_str', dataSelectataDinFiltru).eq('ora', oraAleasa).order('id'));
                 if (request !== filterRequest) return;
                 if (error || !rezervari) { containerDinamicTerenuri.textContent = services.ui.availabilityText(true); return; }
                 terenuriDisponibile = terenuriDisponibile.filter(court => !rezervari.some(rez => rez.teren === court.nume));

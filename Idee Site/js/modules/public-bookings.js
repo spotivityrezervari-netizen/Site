@@ -9,18 +9,26 @@
         let bookingInFlight = false, hoursLoading = false;
         let terenCurent = '', terenCurentId = '', pretTerenCurent = 0, pretMingeCurent = 15;
         let mingeBifata = false, oraSelectata = [], dataSelectataStr = '';
+        const quoteTotal = () => Math.round((pretTerenCurent * oraSelectata.length + (mingeBifata ? pretMingeCurent : 0)) * 100) / 100;
+        function applyCourtSettings(court) {
+            terenCurent = court.nume; terenCurentId = String(court.id);
+            pretTerenCurent = Number(court.pret); pretMingeCurent = Number(court.pret_minge ?? 15);
+            document.getElementById('rezervare-teren-selectat').textContent = court.nume;
+            document.getElementById('buton-vezi-locatia').onclick = () => {
+                const url = window.safeUrl(court.locatie);
+                if (url) window.open(url, '_blank', 'noopener,noreferrer');
+                else alert('Locația terenului nu este disponibilă momentan.');
+            };
+            if (!court.optiune_minge) mingeBifata = false;
+            document.getElementById('checkbox-minge').checked = mingeBifata;
+            document.getElementById('container-minge').style.display = court.optiune_minge ? 'flex' : 'none';
+            document.getElementById('text-label-minge').innerText = `${window.dict[window.lang]['nevoie_minge']} (+${pretMingeCurent})`;
+        }
         const numeZileT_DB = ["Dum", "Lun", "Mar", "Mie", "Joi", "Vin", "Sâm"];
         function incarcaInterfataRezervare(terenDinDB) {
             bookingContextGeneration++;
-            document.getElementById('rezervare-teren-selectat').textContent = terenDinDB.nume;
-            terenCurent = terenDinDB.nume; terenCurentId = String(terenDinDB.id); pretTerenCurent = terenDinDB.pret; pretMingeCurent = terenDinDB.pret_minge !== null ? terenDinDB.pret_minge : 15;
-            document.getElementById('buton-vezi-locatia').onclick = () => window.open(window.safeUrl(terenDinDB.locatie), '_blank', 'noopener,noreferrer');
-
-            mingeBifata = false; document.getElementById('checkbox-minge').checked = false;
-            if (terenDinDB.optiune_minge) {
-                document.getElementById('container-minge').style.display = 'flex';
-                document.getElementById('text-label-minge').innerText = `${window.dict[window.lang]['nevoie_minge']} (+${pretMingeCurent})`;
-            } else document.getElementById('container-minge').style.display = 'none';
+            mingeBifata = false;
+            applyCourtSettings(terenDinDB);
 
             document.getElementById('modal-terenuri').style.display = 'none';
             document.getElementById('modal-rezervare').style.display = 'flex';
@@ -77,6 +85,7 @@
         async function incarcaOreDinSupabase() {
             if (bookingInFlight || pendingBooking()) { actualizeazaButonFinal(); return; }
             const selection = [...oraSelectata];
+            const previousQuote = quoteTotal();
             hoursLoading = true; actualizeazaButonFinal();
             const containerOre = document.getElementById('container-ore');
             containerOre.innerHTML = '<p style="grid-column: span 4; text-align:center;">⏳...</p>';
@@ -85,7 +94,7 @@
             const requestDay = dataSelectataStr, requestCourt = terenCurent;
             const [availability, settings] = await Promise.all([
                 db.from('rezervari_disponibilitate').select('ora').eq('teren', requestCourt).eq('data_str', requestDay),
-                db.from('terenuri').select('*').eq('nume', requestCourt).maybeSingle()
+                db.from('terenuri').select('*').eq('id', terenCurentId).maybeSingle()
             ]);
             if (request !== hoursRequest || requestDay !== dataSelectataStr || requestCourt !== terenCurent) return;
             hoursLoading = false;
@@ -96,6 +105,12 @@
                 containerOre.textContent = services.ui.availabilityText(true);
                 return;
             }
+            applyCourtSettings(settings.data);
+            if (!Number.isFinite(pretTerenCurent) || pretTerenCurent < 0 || !Number.isFinite(pretMingeCurent) || pretMingeCurent < 0) {
+                containerOre.textContent = services.ui.availabilityText(true); return;
+            }
+            // A rename changes the public availability key. Re-read the new key.
+            if (terenCurent !== requestCourt) { oraSelectata = selection; return incarcaOreDinSupabase(); }
             const oreTeren = window.getCourtBookingHours(settings.data);
             if (!oreTeren.length) { containerOre.textContent = services.ui.availabilityText(); return; }
 
@@ -155,7 +170,8 @@
                 containerOre.appendChild(btnOra);
             }
 
-            actualizeazaButonFinal(); // Reactualizăm butonul de rezervare ca să fie verde și gata de plată
+            actualizeazaButonFinal();
+            if (selection.length && quoteTotal() !== previousQuote) bookingNote().textContent = 'Prețul s-a actualizat. Verifică noul total înainte de confirmare.'; // Reactualizăm butonul de rezervare ca să fie verde și gata de plată
         }
 
         function pendingBooking() {
@@ -206,8 +222,7 @@
                 butonConfirma.disabled = true;
             } else {
                 bookingNote().textContent = 'O singură rezervare pe zi la același sport, cu una sau mai multe ore consecutive, indiferent de oraș.';
-                let pretTotal = (pretTerenCurent * oraSelectata.length);
-                if (mingeBifata) pretTotal += pretMingeCurent;
+                const pretTotal = quoteTotal();
                 butonConfirma.innerText = `${window.dict[window.lang]['rezerva']} (${pretTotal})`; butonConfirma.disabled = false; butonConfirma.style.opacity = '1';
             }
         }
@@ -234,7 +249,7 @@
                 const ownerId = state.user?.id || null;
                 const identity = state.user ? { ...state.user } : null;
                 const selected = pendingBooking() || {
-                    court_id: terenCurentId, day: dataSelectataStr, hours: [...oraSelectata].sort(), with_ball: mingeBifata
+                    court_id: terenCurentId, day: dataSelectataStr, hours: [...oraSelectata].sort(), with_ball: mingeBifata, expected_total: quoteTotal()
                 };
                 if (!consecutiveHours(selected.hours)) { bookingNote().textContent = 'Selectează numai ore consecutive.'; return; }
                 if (!window.SpotivityBooking) { alert('Serviciul de rezervări nu s-a încărcat. Reîncarcă pagina.'); return; }

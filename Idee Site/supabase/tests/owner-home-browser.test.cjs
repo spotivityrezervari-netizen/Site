@@ -120,8 +120,7 @@ async function ownerTouchScrolling(page){
   const contexts=[],errors=[],navigations=[];
   try{
     await root(async()=>{
-      for(const name of ['023_late_cancellations.sql','025_admin_late_cancellation_scope.sql'])
-        await pg.exec(readFileSync(join(__dirname,'..',name),'utf8'));
+      assert.equal((await pg.query('select count(*)::integer n from spotivity_private.migrations where version=27')).rows[0].n,1,'Shared fixture must include the current SQL contract');
     });
     const seeded=await root(async()=>{
       for(const [id,name]of [[ids.first,'Baza Nord'],[ids.second,'Baza Sud'],[ids.other,'Baza Străină']])await pg.query("insert into public.baze_sportive(id,nume,oras,descriere) values($1,$2,'Cluj-Napoca','Descriere existentă')",[id,name]);

@@ -108,7 +108,7 @@
                 reader.onerror = error => reject(error);
             });
         };
-        function clearAdminSessionView() {
+        function clearAdminSessionView({ preserveChatDrafts = false, retainedChatCourts = null } = {}) {
             context.chat.invalidateRealtime();
             state.authGeneration++;
             window.dispatchEvent(new Event('spotivity:admin-clear'));
@@ -117,7 +117,7 @@
             state.account = null;
             document.querySelectorAll('.super-admin-only').forEach(node => { node.style.display = 'none'; });
             state.managedCourts = [];
-            context.chat.clearState();
+            context.chat.clearState({ preserveDrafts: preserveChatDrafts, retainedCourts: retainedChatCourts });
             localStorage.removeItem('admin_session');
             context.modalNodes().forEach(modal => { modal.style.display = 'none'; });
             document.querySelectorAll('#base-admin-workspace .modal input, #base-admin-workspace .modal textarea').forEach(input => {
@@ -151,7 +151,6 @@
                     window.inchideSubPaginaOras?.();
                     context.modalNodes().forEach(m => {
                         m.style.display = 'none';
-                        if (m.id === 'modal-chat-admin') { const inp = document.getElementById('chat-admin-input'); if (inp) inp.value = ''; }
                         if (m.id === 'modal-adauga-teren') { window.deschideModalAdaugaTeren(); m.style.display = 'none'; }
                     });
                 }

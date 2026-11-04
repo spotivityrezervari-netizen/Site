@@ -1,5 +1,15 @@
 # Verificare pentru producție
 
+## 4 noiembrie 2026 — corecții de audit pregătite în Git, fără publicare
+
+Au fost corectate reconfirmarea tarifelor schimbate, păstrarea cererilor cu răspuns incert, istoricul anulărilor parțiale, paginarea listelor și cataloagelor, drafturile chatului și blocarea orelor deja rezervate. Citirea conversațiilor mari și marcarea mesajelor ca citite folosesc cereri paginate/loturi limitate, cu verificări de identitate după operațiile asincrone. Cazurile reproduse în audit au teste de regresie dedicate.
+
+Migrarea nouă 027 păstrează și versionează protecțiile SQL revizuite din producție, fără overloaduri ambigue, cu validarea totalului și reîncercări idempotente. Limitarea traficului este persistentă și comună funcțiilor Edge, iar `ready=false` din SQL rămâne autoritar pentru notificări inclusiv cu URL-uri webhook din mediul procesului. Emailurile noi au destinația `https://spotivity.ro/`, păstrând validarea linkurilor legacy.
+
+Validarea locală finală: toate cele 51 de fișiere de teste SQL/Edge/browser au trecut, inclusiv reluarea testului avatar după înlocuirea presupunerilor vechi despre pagina administratorului. Au trecut și 13 teste de build, verificarea sintaxei și buildul public cu 68 de fișiere. Au fost verificate instalarea nouă, actualizarea din definiția SQL pre-027 revizuită, reaplicarea migrării și păstrarea datelor/RLS/contoarelor în fixture-uri izolate. Nu au fost folosite conturi sau rezervări reale pentru teste.
+
+Aceste corecții sunt numai în Git. Nu au fost aplicate migrări, schimbări Auth, publicări Edge sau Netlify. La lansarea finală autorizată se urmează ordinea **027 → funcții Edge → frontend**, apoi se aliniază Auth Site URL și se verifică domeniile CORS reale. Politica Netlify rămâne oprită prin instrucțiunea proprietarului și mesajele `[skip netlify]` ale commiturilor.
+
 ## Protecția browserului și a publicării statice
 
 Politica CSP strictă și `no-referrer` sunt incluse acum în antetul HTML, înainte de resurse. Aceste restricții funcționează și pe GitHub Pages, unde antetele Netlify nu se aplică. Verificarea browser pe buildul public a acoperit separat răspunsuri cu și fără antete de hosting: scripturile și conexiunile injectate au fost refuzate, iar refererul nu a fost transmis. Protecțiile care necesită antete HTTP, precum `frame-ancestors`, nu sunt prezentate drept active prin meta.

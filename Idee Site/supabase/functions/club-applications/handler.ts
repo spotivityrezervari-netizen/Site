@@ -1,3 +1,5 @@
+import { publicRateSubject } from '../_shared/public-rate-limit.ts';
+
 // This module has no runtime dependencies. Auth remains Supabase Auth; passwords
 // are only sent to its normal signup/password endpoints and are never persisted.
 type Config = { url: string; anonKey: string; serviceKey: string };
@@ -82,7 +84,6 @@ export function createHandler(config: Config, dependencies: Dependencies = {}) {
   const transport = dependencies.fetch ?? fetch;
   const now = dependencies.now ?? Date.now;
   const base = config.url.replace(/\/$/, '');
-  const limits = new Map<string, { start: number; count: number }>();
   const service = { apikey: config.serviceKey, Authorization: `Bearer ${config.serviceKey}` };
   const anon = { apikey: config.anonKey, Authorization: `Bearer ${config.anonKey}` };
   async function call(path: string, headers: Record<string,string>, options: RequestInit = {}): Promise<Response> {
@@ -209,10 +210,17 @@ export function createHandler(config: Config, dependencies: Dependencies = {}) {
         const data = submitInput(input);
         let photoBytes: Uint8Array | null = null; let format: { mime: string; ext: string } | null = null;
         if (photo) { if (photo.size > MAX_PHOTO) throw invalid('Fotografia poate avea cel mult 5 MB.'); photoBytes = new Uint8Array(await photo.arrayBuffer()); format = imageType(photoBytes, photo.type); }
-        const client = (request.headers.get('cf-connecting-ip') ?? request.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown').trim().slice(0,128);
-        const period = limits.get(client); const current = now();
-        if (period && current - period.start < 600000) { if (++period.count > 20) throw new ApiError(429, 'rate_limit', 'Prea multe încercări. Reîncearcă mai târziu.'); }
-        else { if (limits.size > 10000) limits.clear(); limits.set(client, { start: current, count: 1 }); }
+        let allowed: unknown;
+        try {
+          const limited = await jsonCall('/rest/v1/rpc/consume_public_rate_limit', service, {
+            p_scope: 'club_application', p_subject_hash: await publicRateSubject(request),
+            p_limit: 20, p_window_seconds: 600,
+          });
+          if (!limited.response.ok) throw unavailable();
+          allowed = limited.data;
+        } catch { throw unavailable(); }
+        if (allowed === false) throw new ApiError(429, 'rate_limit', 'Prea multe încercări. Reîncearcă mai târziu.');
+        if (allowed !== true) throw unavailable();
         const user = await applicant(data.email, data.password, { nume: data.nume_contact, telefon: data.telefon });
         const photoPath = photoBytes && format ? `${user.id}/${data.request_id}/${data.request_id}.${format.ext}` : null;
         if (photoPath && photoBytes && format) await uploadPrivate(photoPath, photoBytes, format.mime);

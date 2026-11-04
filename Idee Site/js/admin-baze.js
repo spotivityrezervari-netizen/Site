@@ -111,12 +111,12 @@
         const request = ++requestGeneration;
         try {
             const reads = [
-                db.from('baze_sportive').select('*').order('nume'),
-                db.from('baze_sportive_admini').select('baza_id,user_id')
+                window.spotivityReadAllRows(() => db.from('baze_sportive').select('*').order('nume').order('id')),
+                window.spotivityReadAllRows(() => db.from('baze_sportive_admini').select('baza_id,user_id').order('baza_id').order('user_id'))
             ];
             if (role.isSuper) {
-                reads.push(db.from('terenuri').select('id,nume,sport,oras,baza_sportiva_id').order('nume'));
-                reads.push(db.from('users_admin').select('user_id,nume_admin,is_super').order('nume_admin'));
+                reads.push(window.spotivityReadAllRows(() => db.from('terenuri').select('id,nume,sport,oras,baza_sportiva_id').order('nume').order('id')));
+                reads.push(window.spotivityReadAllRows(() => db.from('users_admin').select('user_id,nume_admin,is_super').order('nume_admin').order('user_id')));
             }
             const results = await Promise.all(reads);
             if (!sameRole(captured) || request !== requestGeneration) return false;

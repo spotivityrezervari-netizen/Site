@@ -12,7 +12,7 @@
                 <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;"><input type="checkbox" id="check-super-admin" value="ALL" style="margin-right: 5px; width: 20px; height: 20px; flex-shrink: 0;"> SUPER ADMIN (Acces Total)</label>
                 <hr style="border-color: rgba(255,255,255,0.1); width: 100%; margin: 5px 0;">
             `;
-            const { data } = await db.from('terenuri').select('nume, sport');
+            const { data } = await window.spotivityReadAllRows(() => db.from('terenuri').select('nume, sport').order('nume'));
             if (authRequest !== state.authGeneration) return;
             if (data) {
                 data.forEach(t => { container.innerHTML += `<label style="display: flex; align-items: center; gap: 10px; cursor: pointer;"><input type="checkbox" class="check-teren-alocat" value="${window.escapeHtml(t.nume)}" style="margin-right: 5px; width: 20px; height: 20px; flex-shrink: 0;">${window.escapeHtml(t.nume)} (${window.escapeHtml(t.sport)})</label>`; });

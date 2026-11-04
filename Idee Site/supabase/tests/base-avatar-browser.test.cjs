@@ -29,10 +29,11 @@ async function login(page,email){
   await page.locator('#btn-executa-login').click();await page.locator('#modal-auth').waitFor({state:'hidden'});await page.waitForLoadState('networkidle');
 }
 async function editor(page){
-  if(await page.locator('#modal-profil').isVisible())await page.locator('#btn-administreaza-baza').click();
-  else if(!await page.locator('#base-admin-workspace').isVisible()&&await page.locator('#btn-return-to-administration').isVisible())await page.locator('#btn-return-to-administration').click();
-  await page.locator('#base-admin-workspace').waitFor({state:'visible'});
-  await page.locator('#base-admin-edit-base').click();await page.locator('#admin-baza-form').waitFor({state:'visible'});
+  if(await page.locator('#admin-baza-form').isVisible())return;
+  await page.locator('#owner-home').waitFor({state:'visible'});
+  const baseEditor=page.locator('#owner-home-bases [data-owner-action="base"]').first();
+  await baseEditor.waitFor({state:'visible'});await baseEditor.click();
+  await page.locator('#admin-baza-form').waitFor({state:'visible'});
 }
 async function choose(page,prefix,buffer,name='profile.png',mimeType='image/png'){
   await page.locator(`#${prefix}-file`).setInputFiles({name,mimeType,buffer});
@@ -127,16 +128,18 @@ async function fits(page,selector,label){
       assert.ok(avatar.radius.includes('%')?parseFloat(avatar.radius)>=50:parseFloat(avatar.radius)>=avatar.width/2-1,JSON.stringify(avatar));
     }
     await card.click();await publicPage.locator('#modal-baze-sportive').waitFor({state:'visible'});
+    await publicPage.locator(`#baze-sportive-continut img[src$="/${paths.cover}"]`).waitFor({state:'visible'});
     assert.equal(await publicPage.locator(`#baze-sportive-continut img[src$="/${paths.cover}"]`).count(),1);
     assert.equal(await publicPage.locator(`#baze-sportive-continut img[src$="/${paths.avatar}"]`).count(),1);
     await fits(publicPage,'#modal-baze-sportive .sports-bases-panel','public-profile');await publicPage.keyboard.press('Escape');
     pass('public base cards and detail keep the cover plus a separate small round avatar at phone and desktop widths');
 
     const admin=await pageFor();await admin.goto(base,{waitUntil:'networkidle'});await login(admin,'admin@example.test');
-    await admin.locator('#base-admin-workspace').waitFor({state:'visible'});
+    await admin.locator('#owner-home').waitFor({state:'visible'});
+    assert.equal(await admin.locator('#base-admin-workspace').isVisible(),false);
     assert.equal(await admin.locator('#spotivity-top').isVisible(),false);
-    assert.equal(await admin.locator('#base-admin-base-avatar img').count(),1);
-    assert.equal(await admin.locator('#container-meniu-terenuri [data-admin-court]').count(),1);
+    assert.equal(await admin.locator(`#owner-home-bases [data-owner-base-id="${ids.own}"] .owner-base-avatar img`).count(),1);
+    assert.deepEqual(await admin.locator('#owner-home-sports .owner-court-card .home-court-name').allTextContents(),['Court A']);
     await editor(admin);await fits(admin,'#modal-baze-admin .modal-continut','editor');
     assert.equal(await admin.locator('#baza-avatar-file').isEnabled(),true);
     assert.equal(await admin.locator('#baza-poza-preview').getAttribute('src').then(x=>x.endsWith('/'+paths.cover)),true);
@@ -157,7 +160,7 @@ async function fits(page,selector,label){
     await choose(admin,'baza-avatar',png);await saved(admin,'baza-avatar','admin-baza-avatar-status');
     const firstSaved=await row(ids.own);assert.equal(firstSaved.poza,paths.cover);assert.notEqual(firstSaved.poza_profil,paths.avatar);assert.match(firstSaved.poza_profil,new RegExp('^'+ids.own+'/'));
     assert.ok(objects.get(bucket+'/'+firstSaved.poza_profil)?.body.equals(png));assert.ok(objects.has(bucket+'/'+paths.cover));assert.equal(objects.has(bucket+'/'+paths.avatar),false);
-    await admin.reload({waitUntil:'networkidle'});await admin.locator('#base-admin-workspace').waitFor({state:'visible'});await editor(admin);
+    await admin.reload({waitUntil:'networkidle'});await admin.locator('#owner-home').waitFor({state:'visible'});await editor(admin);
     assert.ok((await admin.locator('#baza-avatar-preview').getAttribute('src')).endsWith('/'+firstSaved.poza_profil));
     assert.ok((await admin.locator('#baza-poza-preview').getAttribute('src')).endsWith('/'+paths.cover));
     pass('saving and restoring an avatar changes only poza_profil and cleans only the old unreferenced avatar');
@@ -188,8 +191,8 @@ async function fits(page,selector,label){
     const foreignBefore=await row(ids.other);
     const foreign=await admin.evaluate(async({id,path})=>db.from('baze_sportive').update({poza_profil:path}).eq('id',id).select('id'),{id:ids.other,path:paths.otherAvatar});
     assert.equal(foreign.data?.length||0,0);assert.deepEqual(await row(ids.other),foreignBefore);
-    const courtOnly=await pageFor();await courtOnly.goto(base,{waitUntil:'networkidle'});await login(courtOnly,'bob@example.test');await courtOnly.locator('#base-admin-workspace').waitFor({state:'visible'});
-    assert.equal(await courtOnly.locator('#base-admin-edit-base').isVisible(),false);
+    const courtOnly=await pageFor();await courtOnly.goto(base,{waitUntil:'networkidle'});await login(courtOnly,'bob@example.test');await courtOnly.locator('#owner-home').waitFor({state:'visible'});
+    assert.equal(await courtOnly.locator('#owner-home [data-owner-action="base"]').count(),0);
     const denied=await courtOnly.evaluate(async({id,path,bytes})=>({
       update:await db.from('baze_sportive').update({poza_profil:path}).eq('id',id).select('id'),
       upload:await db.storage.from('poze_baze_sportive').upload(path,new Blob([new Uint8Array(bytes)],{type:'image/png'}),{contentType:'image/png'})
@@ -207,7 +210,7 @@ async function fits(page,selector,label){
     const revokeGate=fixture.pauseNext('/auth/v1/user','GET');await admin.locator('#btn-baza-avatar-save').click();await revokeGate.entered;
     await root(()=>pg.query('delete from public.baze_sportive_admini where baza_id=$1 and user_id=$2',[ids.own,uid(3)]));
     await admin.evaluate(()=>window.dispatchEvent(new Event('focus')));await admin.locator('#modal-baze-admin').waitFor({state:'hidden'});
-    assert.equal(await admin.locator('#base-admin-edit-base').isVisible(),false);revokeGate.release();await admin.waitForLoadState('networkidle');
+    assert.equal(await admin.locator('#owner-home [data-owner-action="base"]').count(),0);revokeGate.release();await admin.waitForLoadState('networkidle');
     assert.equal(writes().length,beforeRevocation);assert.equal((await row(ids.own)).poza_profil,unknown.poza_profil);
     pass('revoking only the base-presentation grant aborts the pending avatar save while the court-management scope remains separate');
 
