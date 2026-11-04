@@ -166,6 +166,24 @@ body.pagina-publica { background: #101a14; }
     }
     .pagina-publica .home-hero-copy { padding: 48px 18px 0; }
     .pagina-publica .home-hero-baschet { --home-edge-bottom: 105px; }
+    /* Keep the landscape ball photographs compact on narrow screens. */
+    .pagina-publica :is(.home-hero-tenis, .home-hero-volei) {
+        --home-art-height: clamp(340px, 100vw, 460px);
+        --home-edge-top: 125px;
+        --home-edge-bottom: 85px;
+    }
+    .pagina-publica :is(.home-hero-tenis, .home-hero-volei) .home-hero-copy {
+        padding: 20px 18px 0;
+    }
+    .pagina-publica :is(.home-hero-tenis, .home-hero-volei) .home-sport-heading :is(h1, h2) {
+        font-size: 36px;
+    }
+    .pagina-publica :is(.home-hero-tenis, .home-hero-volei) .home-hero-actions {
+        margin-top: 14px;
+    }
+    .pagina-publica :is(.home-hero-tenis, .home-hero-volei) .home-hero-art img {
+        transform: none;
+    }
     .pagina-publica .home-courts-wrap { padding: 0 18px; }
 }
 
