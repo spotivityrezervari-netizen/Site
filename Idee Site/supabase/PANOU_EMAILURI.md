@@ -1,6 +1,6 @@
 # Emailuri din panoul superadminului
 
-Cod pregătit și testat pe 6 noiembrie 2026. **Activarea live necesită aprobarea explicită pentru migrarea 030 și actualizarea scenariilor Make.** Verificarea automată a respins inclusiv proba SQL cu rollback; nu este prezentată drept migrare aplicată. Nu au fost trimise emailuri reale în timpul testelor.
+**Panou activ din 6 noiembrie 2026**, după aprobarea explicită a proprietarului. Migrarea 030 este aplicată în Supabase live, cele două scenarii Make sunt actualizate, iar `announcement_panel_config.ready=true`. La verificare: 7 clienți și 3 administratori eligibili, zero campanii aprobate și zero destinatari trimiși în timpul activării.
 
 ## Utilizare
 
@@ -18,7 +18,7 @@ Modificarea textului, grupului sau imaginii invalidează confirmarea. Un dublu c
 
 Se păstrează **două scenarii active**, fără schimbarea abonamentului:
 
-- **7938404 — Rezervări, anulări și bun venit**: ruta tranzacțională actuală plus două rute distincte pentru campanii, cu acreditări separate pentru clienți/admini.
+- **7938404 — Rezervări, anulări, bun venit și anunțuri**: ruta tranzacțională actuală plus două rute distincte pentru campanii, cu acreditări separate pentru clienți/admini.
 - **7938798 — Chat pentru clienți și administratori**: ruta normalizată actuală de chat.
 
 Cele două scenarii manuale 8377771/8377772 rămân inactive, disponibile pentru compatibilitate; utilizatorul nu mai trebuie să deschidă Make pentru compunerea unui anunț din panou. Nu se activează un al treilea scenariu.
@@ -44,7 +44,7 @@ Fișier: `030_superadmin_announcement_panel.sql`.
 - Adaugă recuperarea cozii prin pg_cron. Configurația privată `announcement_panel_config.ready` pornește **false**.
 - Retrage cele două webhookuri raw-row de mai sus. Nu modifică profiluri, roluri, alocări sau rezervări existente.
 
-După aprobarea proprietarului, ordinea este: verificare SQL cu rollback și comparații ale datelor/politicilor existente; aplicarea 030; citirea blueprinturilor și verificarea versiunilor curente; actualizarea celor două scenarii cu `baseVersion`; recitire/verificare a rutelor și a stării active; probe Make cu UUID-uri fără campanii aprobate, care trebuie să se oprească înainte de Gmail; activarea flagului privat `ready` numai după verificare. O actualizare Make incompletă lasă panoul în mod de previzualizare.
+Ordinea folosită la activare a fost: verificare SQL cu rollback și comparații ale datelor/politicilor existente; aplicarea 030; citirea blueprinturilor și verificarea versiunilor curente; actualizarea celor două scenarii cu `baseVersion`; recitire/verificare a rutelor și a stării active; probe Make cu UUID-uri fără campanii aprobate, care trebuie să se oprească înainte de Gmail; activarea flagului privat `ready` numai după verificare. Proba și aplicarea au confirmat păstrarea datelor din tabelele publice, a funcțiilor existente (exceptând randarea aprobată din claim) și a politicilor RLS existente. Scenariile active au acum versiunile 14 (rezervări/anunțuri) și 8 (chat). Ambele probe live au returnat HTTP200, modulele SQL202/302 au reușit, iar modulele Gmail12/206/306 nu au fost atinse. O actualizare Make incompletă trebuie să lase panoul în mod de previzualizare.
 
 La o revenire, păstrează coada și registrul. Dezactivează numai `announcement_panel_config.ready`; nu reactiva webhookurile vechi în paralel cu outboxul și nu reseta destinatarii `sending`/`sent`.
 
