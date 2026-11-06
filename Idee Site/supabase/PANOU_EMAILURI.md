@@ -2,6 +2,8 @@
 
 **Panou activ din 6 noiembrie 2026**, după aprobarea explicită a proprietarului. Migrarea 030 este aplicată în Supabase live, cele două scenarii Make sunt actualizate, iar `announcement_panel_config.ready=true`. La verificare: 7 clienți și 3 administratori eligibili, zero campanii aprobate și zero destinatari trimiși în timpul activării.
 
+Pentru lansarea pe domeniul final, migrarea031 este pregătită separat în Git pentru linkurile `spotivity.ro`; nu este încă aplicată. Vezi [raportul de lansare](../RELEASE_READY.md).
+
 ## Utilizare
 
 În contul superadminului: **Administrare → Setări emailuri**.

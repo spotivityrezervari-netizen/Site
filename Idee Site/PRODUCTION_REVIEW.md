@@ -1,5 +1,13 @@
 # Verificare pentru producție
 
+## 6 noiembrie 2026 — verificarea completă a versiunii Git pentru lansare
+
+Au trecut 54/54 fișiere SQL/Edge/browser, testul nou al migrării031, 13 teste de build și 11 verificări Make/imagini. Artefactul Netlify are 70 de fișiere aprobate și a fost verificat cu antetele reale în serverul izolat. Migrarea031 este pregătită în Git pentru schimbarea linkurilor anunțurilor către domeniul final, fără modificarea migrărilor deja aplicate. Nu a fost aplicată live.
+
+Migrările până la 030 sunt instalate, iar panoul de emailuri și cele două scenarii Make sunt active conform raportului din `supabase/PANOU_EMAILURI.md`. Secțiunile istorice de mai jos consemnează starea de la data lor; nu se reaplică migrările instalate.
+
+Backendul activ este încă mai vechi decât sursele din Git: preflightul pe `spotivity.ro` este 403 la rezervări și înscrierea bazelor. Un deploy Netlify nu actualizează funcțiile Supabase sau Auth. Ordinea și setările necesare lansării, separate de corectitudinea codului Git, sunt în [RELEASE_READY.md](RELEASE_READY.md). Nu au fost pornite publicări Netlify/Edge și nu au fost trimise emailuri reale în această verificare.
+
 ## 4 noiembrie 2026 — corecții de audit pregătite în Git, fără publicare
 
 Au fost corectate reconfirmarea tarifelor schimbate, păstrarea cererilor cu răspuns incert, istoricul anulărilor parțiale, paginarea listelor și cataloagelor, drafturile chatului și blocarea orelor deja rezervate. Citirea conversațiilor mari și marcarea mesajelor ca citite folosesc cereri paginate/loturi limitate, cu verificări de identitate după operațiile asincrone. Cazurile reproduse în audit au teste de regresie dedicate.
