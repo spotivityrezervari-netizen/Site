@@ -1,5 +1,7 @@
 # Anunțuri și inventarul emailurilor Spotivity
 
+Actualizare 6 noiembrie: panoul superadminului este pregătit în cod, iar activarea live a migrării 030 și a rutelor Make așteaptă aprobare. Vezi [PANOU_EMAILURI.md](PANOU_EMAILURI.md). Instrucțiunile de mai jos descriu scenariile manuale verificate anterior.
+
 Configurare verificată pe 5 noiembrie 2026. Niciun email real nu a fost trimis în timpul configurării.
 
 ## Cele două scenarii manuale
