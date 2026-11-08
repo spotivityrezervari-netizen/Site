@@ -227,7 +227,10 @@ async function openProfile(page) {
     await page.evaluate(() => window.spotivityDiscoveryReady);
     assert.equal(await page.locator('.home-nav [data-bases-target]').count(), 0);
     assert.equal(await page.locator('.home-explore-button').count(), 0);
-    assert.equal(await page.locator('.home-hero-actions button').count(), 5);
+    assert.equal(await page.locator('.home-hero-actions a').count(), 5);
+    for (const [sport, slug] of Object.entries(sportSlugs)) {
+      assert.equal(await page.locator(`.home-hero-actions a[data-sport="${sport}"]`).getAttribute('href'), `terenuri/${slug}/`);
+    }
     assert.ok(await page.locator('#home-bases-section').isVisible());
     await page.locator('#btn-home-search').click();
     await page.locator('#modal-cautare-terenuri').waitFor({state:'visible'});
