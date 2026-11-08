@@ -319,7 +319,7 @@
             const status = byId('admin-cerere-decision-status');
             status.classList.remove('is-error');
             const link = element('a', 'Vezi baza publicată');
-            const url = new URL('index.html', window.location.href);
+            const url = new URL(window.siteHomeUrl());
             url.searchParams.set('baza', record.approved_base_id);
             link.href = url.href;
             link.target = '_blank';

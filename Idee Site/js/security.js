@@ -11,6 +11,23 @@ window.safeUrl = (value, allowAssets = false) => {
         return parsed.protocol === 'https:' && !parsed.username && !parsed.password ? parsed.href : '';
     } catch { return ''; }
 };
+// The shared script lives one level below the application root on both
+// GitHub Pages and Netlify. Category pages must not make assets or Auth
+// callbacks relative to their own /terenuri/<sport>/ directory.
+const spotivityAppRoot = (() => {
+    const source = document.currentScript?.src;
+    if (!source) return null;
+    try { return new URL('../', source).href; } catch { return null; }
+})();
+window.appAssetUrl = value => {
+    const safe = window.safeUrl(value, true);
+    if (!safe || !safe.startsWith('assets/') || !spotivityAppRoot) return safe;
+    // Preserve existing root-page markup; nested pages use the shared root.
+    try {
+        if (new URL('./', window.location.href).href === spotivityAppRoot) return safe;
+    } catch { /* Embedded helper tests may not provide a page location. */ }
+    return new URL(safe, spotivityAppRoot).href;
+};
 // Read every authorized row, even when PostgREST caps a response below the
 // requested page size. Callers must use a fresh query with a stable ordering.
 // Never return an apparently complete partial list after a failed page.
@@ -68,7 +85,7 @@ window.getCourtBookingHours = court => {
     return window.bookingHourOptions.filter(hour => court.ore_rezervabile.includes(hour));
 };
 // Preserve hosting subdirectories for Auth confirmation and password recovery.
-window.siteHomeUrl = () => new URL('./', window.location.href).href;
+window.siteHomeUrl = () => spotivityAppRoot || new URL('./', window.location.href).href;
 
 // Hide old rows only in default history lists; the dated staff calendar keeps
 // the full stored history. The boundary is 30 days after the hourly slot ends.

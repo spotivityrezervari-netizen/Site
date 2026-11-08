@@ -37,7 +37,7 @@
         function seteazaFundalSport(element, sport, suprapunere = false) {
             if (!element) return;
             const appearance = window.getSportAppearance(sport);
-            const background = `url(${JSON.stringify(new URL(appearance.fundal_url, document.baseURI).href)})`;
+            const background = `url(${JSON.stringify(new URL(appearance.fundal_url, window.siteHomeUrl()).href)})`;
             element.style.setProperty('--fundal-desktop', background);
             element.style.setProperty('--fundal-mobil', background);
             const stratGri = 'linear-gradient(rgba(60, 60, 64, 0.7), rgba(60, 60, 64, 0.7)), ';

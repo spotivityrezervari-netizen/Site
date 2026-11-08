@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "refreshedAt": "2026-11-08T09:34:20.137Z",
+  "courts": [
+    {
+      "id": 9,
+      "nume": "Exemplu",
+      "sport": "Fotbal",
+      "oras": "Reghin",
+      "pret": 194
+    },
+    {
+      "id": 10,
+      "nume": "Exemplu2",
+      "sport": "Tenis",
+      "oras": "Reghin",
+      "pret": 19
+    },
+    {
+      "id": 11,
+      "nume": "Exemplu3",
+      "sport": "Tenis",
+      "oras": "Târgu Mureș.",
+      "pret": 23
+    },
+    {
+      "id": 12,
+      "nume": "Exemplu4",
+      "sport": "Baschet",
+      "oras": "Târgu Mureș.",
+      "pret": 221
+    },
+    {
+      "id": 13,
+      "nume": "Bernabeu",
+      "sport": "Fotbal",
+      "oras": "Suceava",
+      "pret": 10
+    },
+    {
+      "id": 18,
+      "nume": "siefei[ep[edopkf — transil [199b041b-1]",
+      "sport": "Fotbal",
+      "oras": "Târgu Mureș",
+      "pret": 150
+    },
+    {
+      "id": 23,
+      "nume": "Tenis",
+      "sport": "Tenis",
+      "oras": "Reghin",
+      "pret": 25
+    },
+    {
+      "id": 24,
+      "nume": "Jj",
+      "sport": "Fotbal",
+      "oras": "Reghin",
+      "pret": 222
+    }
+  ]
+}

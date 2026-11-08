@@ -91,7 +91,7 @@
             card.disabled = bookingBusy;
             card.setAttribute('aria-label', `${t('reserve')} ${court.nume}, ${translatedSport(court)}, ${cityName(court.oras)}`);
             const image = node('img', 'home-court-photo');
-            image.src = window.safeUrl?.(court.poza, true) || 'assets/imagini/avatar2.png';
+            image.src = window.appAssetUrl?.(court.poza) || window.appAssetUrl('assets/imagini/avatar2.png');
             image.alt = '';
             image.width = 240; image.height = 160; image.loading = 'lazy';
             image.addEventListener('error', () => { image.remove(); }, { once: true });
@@ -109,6 +109,7 @@
                 const sport = window.normalizeSportName(strip.dataset.homeCourts);
                 strip.setAttribute('aria-label', `${window.dict?.[window.lang]?.[sport.toLowerCase()] || sport} — ${selectedCity()}`);
                 if (courtsState !== 'ready') {
+                    if (courtsState === 'loading' && strip.querySelector('[data-seo-court-id]')) continue;
                     message(strip, t(courtsState === 'loading' ? 'loading' : 'error'), courtsState === 'error');
                     continue;
                 }
@@ -218,6 +219,19 @@
             }
         }
         window.refreshSpotivityDiscovery = options => load({ ...options, quiet: true });
+        for (const button of document.querySelectorAll('[data-seo-court-id]')) {
+            button.dataset.discoveryCourt = button.dataset.seoCourtId;
+            button.addEventListener('click', () => {
+                const strip = button.closest('[data-home-courts]');
+                let feedback = strip?.parentElement.querySelector('.home-courts-status');
+                if (!feedback && strip) {
+                    feedback = node('p', 'home-courts-status');
+                    feedback.setAttribute('role', 'status');
+                    strip.after(feedback);
+                }
+                if (feedback) reserve({ id: button.dataset.seoCourtId }, feedback);
+            });
+        }
         window.closeCourtSearch = close;
         window.openCourtSearch = (query = '', trigger = null) => {
             previousFocus = trigger || document.activeElement;

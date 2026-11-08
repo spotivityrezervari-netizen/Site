@@ -57,7 +57,12 @@ async function footballPans(page, touch, label) {
 }
 
 async function openCourts(page) {
+    const navigation = await page.locator('#sport-fotbal .home-reserve-button').evaluate(node => node.tagName === 'A');
     await page.locator('#sport-fotbal .home-reserve-button').click();
+    if (navigation) {
+        await page.waitForURL(new URL('terenuri/fotbal/',base).href);
+        await page.locator('#sport-fotbal .home-reserve-button').click();
+    }
     await page.locator('#modal-terenuri').waitFor({state: 'visible'});
     await locked(page, true);
 }

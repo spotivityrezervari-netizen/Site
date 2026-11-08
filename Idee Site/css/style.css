@@ -967,7 +967,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 body.fara-scroll #selector-limba {
 
-    display: none !important;
+    visibility: hidden !important;
 
 }
 

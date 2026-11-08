@@ -6,6 +6,7 @@
     modules.publicCourts = function(context) {
         const { db, state, services } = context;
         let filterRequest = 0, baseCourtRequest = 0, catalogRefresh = 0;
+        let citiesInitialized = false;
         async function incarcaTerenuri() {
             const generation = state.authGeneration, identity = state.user?.id || null;
             const { data, error } = await window.spotivityReadAllRows(() => db.from('terenuri').select('*').order('id'));
@@ -16,6 +17,11 @@
         function populeazaFiltruOrase() {
             const selectOras = document.getElementById('filtru-oras-global');
             if (!selectOras) return;
+            let selectedCity = selectOras.value || 'ALL';
+            if (!citiesInitialized) {
+                try { selectedCity = window.sessionStorage.getItem('spotivity-city') || selectedCity; }
+                catch { /* The filter still works if browser storage is disabled. */ }
+            }
 
             const oraseUnice = [...new Set(state.courts.map(t => t.oras ? t.oras.trim().replace(/\.+$/, '') : '').filter(o => o !== ''))];
             oraseUnice.sort((a, b) => a.localeCompare(b));
@@ -26,6 +32,10 @@
             });
 
             selectOras.innerHTML = html;
+            selectOras.value = Array.from(selectOras.options).some(option => option.value === selectedCity)
+                ? selectedCity : 'ALL';
+            citiesInitialized = true;
+            selectOras.dispatchEvent(new Event('change'));
         }
         window.refreshSpotivityPublicCatalog = async function() {
             const refresh = ++catalogRefresh;
@@ -120,8 +130,8 @@
             terenuriDisponibile.forEach(teren => {
                 const divTeren = document.createElement('div');
                 divTeren.className = 'card-teren-poza btn-teren';
-                const fallbackPhoto = 'assets/imagini/avatar2.png';
-                divTeren.innerHTML = `<img src="${window.escapeHtml(window.safeUrl(teren.poza, true) || fallbackPhoto)}" alt="${window.escapeHtml(teren.nume)}"><div class="info-teren-poza"><h3>${window.escapeHtml(teren.nume)}</h3><p>${window.escapeHtml(teren.pret)} ${window.dict[window.lang]['lei_ora']}</p></div>`;
+                const fallbackPhoto = window.appAssetUrl('assets/imagini/avatar2.png');
+                divTeren.innerHTML = `<img src="${window.escapeHtml(window.appAssetUrl(teren.poza) || fallbackPhoto)}" alt="${window.escapeHtml(teren.nume)}"><div class="info-teren-poza"><h3>${window.escapeHtml(teren.nume)}</h3><p>${window.escapeHtml(teren.pret)} ${window.dict[window.lang]['lei_ora']}</p></div>`;
                 divTeren.querySelector('img').addEventListener('error', function () {
                     if (this.getAttribute('src') !== fallbackPhoto) this.src = fallbackPhoto;
                 });
@@ -165,7 +175,7 @@
 
         function mount() {
             // --- LOGICA TERENURI ---
-            document.querySelectorAll('.card-sport[data-sport]').forEach(card => {
+            document.querySelectorAll('button.card-sport[data-sport]').forEach(card => {
                 card.addEventListener('click', async () => {
                     state.sport = window.normalizeSportName(card.getAttribute('data-sport'));
                     const numeSportTradus = window.dict[window.lang][state.sport.toLowerCase()] || state.sport;
@@ -200,6 +210,10 @@
 
                     await aplicaFiltruSiDeseneazaTerenuri();
                 });
+            });
+            document.getElementById('filtru-oras-global')?.addEventListener('change', event => {
+                try { window.sessionStorage.setItem('spotivity-city', event.target.value); }
+                catch { /* Navigating by sport remains available without storage. */ }
             });
             document.getElementById('filtru-nume')?.addEventListener('input', () => {
                 clearTimeout(searchTimer);

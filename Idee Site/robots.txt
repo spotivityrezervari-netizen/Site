@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/sitemap.xml

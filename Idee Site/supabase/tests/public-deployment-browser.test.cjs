@@ -51,7 +51,9 @@ const pass=message=>{checks++;console.log('PASS',message);};
     for(const path of privatePaths){const result=await fetch(new URL(path,site.url));assert.equal(result.status,404,path);assert.ok(!(await result.text()).includes('create or replace function'),path);}
     pass('documentation, SQL migrations, test fixtures, Edge source, Git metadata and deployment configuration have no public URL');
 
-    const localTags=[...html.matchAll(/<(?:script|link)\b[^>]*(?:src|href)="([^"]+)"[^>]*>/g)].map(match=>match[1]).filter(value=>!/^https?:/.test(value));
+    const localTags=[...html.matchAll(/<(?:script|link)\b[^>]*>/g)]
+      .map(([tag])=>/^<script\b/i.test(tag)||/\brel="(?:stylesheet|icon)"/i.test(tag)?tag.match(/\b(?:src|href)="([^"]+)"/)?.[1]:null)
+      .filter(value=>value&&!/^https?:/.test(value));
     assert.ok(localTags.some(path=>path.startsWith('js/modules/public-auth.js')));assert.ok(localTags.some(path=>path.startsWith('js/modules/admin-core.js')));
     for(const path of localTags){const result=await fetch(new URL(path,site.url));assert.equal(result.status,200,path);assert.ok(result.headers.get('content-type')?.startsWith(/\.css(?:\?|$)/.test(path)?'text/css':/\.js(?:\?|$)/.test(path)?'text/javascript':'image/'),path);}
     const sdkTag=html.match(/<script src="(https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@[^\"]+)" integrity="(sha384-[^\"]+)"/);assert.ok(sdkTag);
@@ -93,7 +95,10 @@ const pass=message=>{checks++;console.log('PASS',message);};
     await page.locator('#btn-lang-en').click();await page.waitForFunction(()=>window.lang==='en');
     assert.equal(await page.locator('#home-nav-search-input').getAttribute('placeholder'),'Find a court');
     await page.locator('#btn-lang-ro').click();await page.waitForFunction(()=>window.lang==='ro');
-    await page.locator('#sport-fotbal .home-reserve-button').click();await page.locator('#modal-terenuri').waitFor({state:'visible'});
+    await page.locator('#sport-fotbal .home-reserve-button').click();
+    await page.waitForURL(new URL('terenuri/fotbal/',site.url).href);
+    await page.waitForLoadState('networkidle');
+    await page.locator('#sport-fotbal button.home-reserve-button').click();await page.locator('#modal-terenuri').waitFor({state:'visible'});
     await page.locator('.card-teren-poza').filter({hasText:'Court A'}).click();await page.locator('#modal-rezervare').waitFor({state:'visible'});
     await page.keyboard.press('Escape');await page.locator('#modal-rezervare').waitFor({state:'hidden'});
     pass('the real built modules and images initialize under CSP, language listeners work, and the court/booking dialogs still open');

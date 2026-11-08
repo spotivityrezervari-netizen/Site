@@ -23,25 +23,46 @@ function parseHeaders(source){
   return rules;
 }
 const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8',
-  '.json':'application/json','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp',
+  '.json':'application/json','.xml':'application/xml; charset=utf-8','.txt':'text/plain; charset=utf-8',
+  '.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp',
   '.avif':'image/avif','.gif':'image/gif','.svg':'image/svg+xml','.ico':'image/x-icon','.woff2':'font/woff2'};
 
-async function servePublicArtifact({directory,port=0,applyHeaders=true}={}){
+async function servePublicArtifact({directory,port=0,applyHeaders=true,mountPath='/',prefix=mountPath}={}){
   if(!directory)throw new Error('A built artifact directory is required');
+  // A second mounted server exercises GitHub Pages' subdirectory hosting while
+  // serving exactly the same reviewed artifact as the root Netlify fixture.
+  if(typeof prefix!=='string'||!prefix.startsWith('/')||/[?#\\\u0000-\u001f\u007f]/.test(prefix))throw new Error('Invalid public artifact prefix');
+  const mount=decodeURIComponent(prefix).replace(/\/?$/,'/');
+  if(mount.split('/').some(part=>part==='.'||part==='..')||/[\\\u0000-\u001f\u007f]/.test(mount))throw new Error('Invalid public artifact prefix');
+  const encodedMount=mount.split('/').map(encodeURIComponent).join('/');
   const root=await realpath(directory);
   const rules=applyHeaders?parseHeaders(await readFile(resolve(root,'_headers'),'utf8')):[];
   const server=createServer(async(req,res)=>{
     let pathname='/';
     try{
-      pathname=decodeURIComponent(new URL(req.url,'http://127.0.0.1').pathname);
+      const requested=new URL(req.url,'http://127.0.0.1');
+      pathname=decodeURIComponent(requested.pathname);
+      if(mount!=='/'&&pathname===mount.slice(0,-1)){
+        res.writeHead(301,{location:encodedMount+requested.search});res.end();return;
+      }
+      if(!pathname.startsWith(mount))throw new Error('Outside public artifact prefix');
+      pathname='/'+pathname.slice(mount.length);
       for(const rule of rules)if(rule.match.test(pathname))for(const [name,value]of Object.entries(rule.headers))res.setHeader(name,value);
       if(!['GET','HEAD'].includes(req.method)){res.writeHead(405);res.end();return;}
       const parts=pathname.split('/');
       // Netlify consumes _headers itself; it is not a published document.
-      if(parts.some(part=>part.startsWith('.')||part==='_headers'))throw new Error('Not public');
-      const target=resolve(root,'.'+(pathname==='/'?'/index.html':pathname));
-      const path=await realpath(target),rel=relative(root,path);
-      if(rel.startsWith('..'+sep)||rel==='..'||!await stat(path).then(info=>info.isFile()))throw new Error('Not a public file');
+      if(parts.some(part=>part.startsWith('.')||part==='_headers')||/[\\\u0000-\u001f\u007f]/.test(pathname))throw new Error('Not public');
+      const target=resolve(root,'.'+pathname);
+      let path=await realpath(target),rel=relative(root,path);
+      if(rel.startsWith('..'+sep)||rel==='..')throw new Error('Not a public file');
+      let info=await stat(path);
+      if(info.isDirectory()){
+        if(!pathname.endsWith('/')){
+          res.writeHead(301,{location:requested.pathname+'/'+requested.search});res.end();return;
+        }
+        path=await realpath(resolve(path,'index.html'));rel=relative(root,path);info=await stat(path);
+      }
+      if(rel.startsWith('..'+sep)||rel==='..'||!info.isFile())throw new Error('Not a public file');
       const bytes=await readFile(path);res.writeHead(200,{'content-type':types[extname(path).toLowerCase()]||'application/octet-stream','content-length':bytes.length});
       res.end(req.method==='HEAD'?undefined:bytes);
     }catch{
@@ -49,7 +70,7 @@ async function servePublicArtifact({directory,port=0,applyHeaders=true}={}){
     }
   });
   await new Promise((done,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',done);});
-  return {url:`http://127.0.0.1:${server.address().port}/`,server,close:()=>new Promise((done,reject)=>server.close(error=>error?reject(error):done()))};
+  return {url:`http://127.0.0.1:${server.address().port}${encodedMount}`,server,close:()=>new Promise((done,reject)=>server.close(error=>error?reject(error):done()))};
 }
 
 module.exports={servePublicArtifact,parseHeaders};

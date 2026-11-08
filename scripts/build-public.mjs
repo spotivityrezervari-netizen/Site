@@ -4,9 +4,11 @@ import { constants } from 'node:fs';
 import { lstat, open, mkdir, mkdtemp, rm, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { SEO_PATHS, generateSeoFiles, productionHome, PRODUCTION_BASE_URL } from './seo-pages.mjs';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const assetPath = /^(?:index\.html|css\/[A-Za-z0-9_-]+\.css|js\/(?:modules\/)?[A-Za-z0-9_-]+\.js|assets\/imagini\/[A-Za-z0-9_-]+\.(?:png|jpe?g|webp|avif|gif|ico))$/;
+const seoPaths = new Set(SEO_PATHS);
 
 async function readRegularFile(root, relative) {
   const parts = relative.split('/');
@@ -62,14 +64,31 @@ export async function buildPublic({ repoRoot = repositoryRoot } = {}) {
   }
   const files = new Set();
   for (const relative of manifest.files) {
-    if (typeof relative !== 'string' || !assetPath.test(relative) || files.has(relative)) {
+    if (typeof relative !== 'string' || !(assetPath.test(relative) || seoPaths.has(relative)) || files.has(relative)) {
       throw new Error(`Unsafe, unsupported, or duplicate public manifest entry: ${String(relative)}`);
     }
     files.add(relative);
   }
+  const includesSeo = SEO_PATHS.some(relative => files.has(relative));
+  let generated = new Map();
+  if (includesSeo) {
+    if (SEO_PATHS.some(relative => !files.has(relative))) throw new Error('Public manifest must include the complete reviewed SEO route set.');
+    const template = (await readRegularFile(repoRoot, 'Idee Site/index.html')).toString('utf8');
+    const catalogBytes = await readRegularFile(repoRoot, 'scripts/seo-public-catalog.json');
+    assertNoPrivateMaterial('scripts/seo-public-catalog.json', catalogBytes.toString('utf8'));
+    const catalog = JSON.parse(catalogBytes.toString('utf8'));
+    const pagesSource = generateSeoFiles({ template, catalog });
+    for (const [relative, expected] of pagesSource) {
+      const source = await readRegularFile(repoRoot, `Idee Site/${relative}`);
+      assertNoPrivateMaterial(relative, source.toString('utf8'));
+      if (source.toString('utf8') !== expected) throw new Error(`Generated SEO source is stale: ${relative}. Run node scripts/generate-seo-pages.mjs`);
+    }
+    generated = generateSeoFiles({ template, catalog, baseUrl: PRODUCTION_BASE_URL });
+  }
   const entries = [];
   for (const relative of files) {
-    const content = await readRegularFile(repoRoot, `Idee Site/${relative}`);
+    let content = generated.has(relative) ? Buffer.from(generated.get(relative)) : await readRegularFile(repoRoot, `Idee Site/${relative}`);
+    if (includesSeo && relative === 'index.html') content = Buffer.from(productionHome(content.toString('utf8')));
     // Scan every file, including readable image metadata. This is a secondary
     // guard for known credential formats, not an exhaustive secret detector.
     const text = content.toString('utf8');

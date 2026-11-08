@@ -69,6 +69,13 @@
     "js/owner-home.js",
     "js/profile-editor.js",
     "js/security.js",
-    "js/sport-appearance.js"
+    "js/sport-appearance.js",
+    "robots.txt",
+    "sitemap.xml",
+    "terenuri/baschet/index.html",
+    "terenuri/fotbal/index.html",
+    "terenuri/tenis-de-picior/index.html",
+    "terenuri/tenis/index.html",
+    "terenuri/volei/index.html"
   ]
 }

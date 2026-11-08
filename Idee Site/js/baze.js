@@ -161,7 +161,7 @@
         }
         function renderCourt(court) {
             const card = element('article', 'sports-base-court');
-            const src = window.safeUrl?.(court.poza, true);
+            const src = window.appAssetUrl?.(court.poza);
             if (src) {
                 const image = element('img', 'sports-base-court-photo');
                 image.src = src;

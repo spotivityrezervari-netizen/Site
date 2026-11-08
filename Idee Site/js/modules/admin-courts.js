@@ -21,7 +21,7 @@
                 html += `
                     <div class="admin-existing-court" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; color: white; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                         <div style="display: flex; gap: 15px; align-items: center;">
-                            <img src="${window.escapeHtml(window.safeUrl(t.poza || 'assets/imagini/avatar2.png', true))}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 5px;">
+                            <img src="${window.escapeHtml(window.appAssetUrl(t.poza) || window.appAssetUrl('assets/imagini/avatar2.png'))}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 5px;">
                             <div>
                                 <h4 style="margin: 0 0 5px 0; color: #f59e0b;">${window.escapeHtml(t.sport)} - ${window.escapeHtml(t.nume)}</h4>
                                 <p style="margin: 0; font-size: 13px; color: #ccc;">Preț: ${t.pret} Lei/oră | Minge: ${textMinge}</p>

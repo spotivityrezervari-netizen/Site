@@ -156,7 +156,7 @@
                                             <div class="grup-input" style="margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden; width: 100%; box-sizing: border-box;">
                                                 <label style="margin-bottom: 8px; display: block; color: #a1eafb;">Schimbă Poza Terenului</label>
                                                 <div style="display: flex; gap: 10px; align-items: center; width: 100%;">
-                                                    <img src="${window.escapeHtml(window.safeUrl(terenDB.poza || 'assets/imagini/avatar2.png', true))}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); flex-shrink: 0;">
+                                                    <img src="${window.escapeHtml(window.appAssetUrl(terenDB.poza) || window.appAssetUrl('assets/imagini/avatar2.png'))}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); flex-shrink: 0;">
                                                     <input type="file" id="poza-${courtId}" accept="image/*" style="background: rgba(0,0,0,0.5); color: white; padding: 8px; border-radius: 5px; flex: 1; min-width: 0; cursor: pointer; border: 1px dashed rgba(255,255,255,0.2);">
                                                 </div>
                                             </div>
@@ -222,7 +222,7 @@
                                     <button type="button" class="btn-cont base-admin-program" data-admin-program="${window.escapeHtml(sport)}">Program ${window.escapeHtml(label)}</button>
                                 </header>
                                 <div class="base-admin-courts">${courts.map(court => `<article class="base-admin-court">
-                                    <img class="base-admin-court-photo" src="${window.escapeHtml(window.safeUrl(court.poza, true) || 'assets/imagini/avatar2.png')}" alt="" loading="lazy">
+                                    <img class="base-admin-court-photo" src="${window.escapeHtml(window.appAssetUrl(court.poza) || window.appAssetUrl('assets/imagini/avatar2.png'))}" alt="" loading="lazy">
                                     <div class="base-admin-court-copy"><h4 class="admin-card-name">${window.escapeHtml(court.nume)}</h4>
                                         <p>${window.escapeHtml(court.oras || '')}</p><span>${window.escapeHtml(court.pret)} lei / oră · ${court.este_activ !== false ? 'Vizibil' : 'Ascuns'}</span>
                                     </div>

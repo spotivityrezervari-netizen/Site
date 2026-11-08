@@ -32,6 +32,13 @@
         const profile = document.getElementById('btn-top-cont');
         const search = document.getElementById('home-nav-search');
         if (!menu || !toggle || !profile) return;
+        const category = document.body.dataset.categorySport;
+        if (category) document.querySelectorAll('a[data-sport-target]').forEach(link => {
+            if (link.dataset.sportTarget === category) {
+                link.setAttribute('aria-current', 'page');
+                link.setAttribute('data-category-current', '');
+            }
+        });
         const desktop = window.matchMedia('(min-width: 768px)');
         const backgroundRegions = ['home-city-region', 'home-main', 'home-footer']
             .map(id => document.getElementById(id)).filter(Boolean);
@@ -68,7 +75,7 @@
             backgroundRegions.forEach(region => { region.inert = true; });
             profile.inert = true;
             if (search) search.inert = true;
-            menu.querySelector('button')?.focus({ preventScroll: true });
+            menu.querySelector('button, a[href]')?.focus({ preventScroll: true });
         }
 
         window.closeSpotivityHomeMenu = closeMenu;
@@ -76,8 +83,9 @@
         document.getElementById('home-brand')?.addEventListener('click', () => closeMenu(false));
         document.querySelectorAll('[data-sport-target]').forEach(button => {
             button.addEventListener('click', () => {
-                const sport = button.getAttribute('data-sport-target');
                 closeMenu(false);
+                if (button.matches('a[href]')) return;
+                const sport = button.getAttribute('data-sport-target');
                 const primary = [...document.querySelectorAll('.card-sport[data-sport]')]
                     .find(card => card.getAttribute('data-sport') === sport);
                 primary?.click();
@@ -114,7 +122,7 @@
                 return;
             }
             if (event.key !== 'Tab') return;
-            const items = [document.getElementById('home-brand'), toggle, ...menu.querySelectorAll('button')].filter(Boolean);
+            const items = [document.getElementById('home-brand'), toggle, ...menu.querySelectorAll('button, a[href]')].filter(Boolean);
             const first = items[0];
             const last = items[items.length - 1];
             if (event.shiftKey && document.activeElement === first) {

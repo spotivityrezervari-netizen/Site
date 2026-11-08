@@ -30,6 +30,40 @@ test('public URL helper preserves secure links and bundled assets, rejects crede
     assert.equal(window.safeUrl('assets/imagini/avatar2.png'), '');
 });
 
+test('nested category pages resolve assets and Auth callbacks to the mounted application root', () => {
+    for (const root of ['https://spotivity.ro/', 'https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/', 'http://127.0.0.1:8123/']) {
+        for (const page of [`${root}terenuri/tenis/`, `${root}terenuri/fotbal/index.html?code=private-code#private-token`]) {
+            const window = { location: { href: page } };
+            runInNewContext(source('security.js'), {
+                window, URL, Intl, Date,
+                document: { currentScript: { src: `${root}js/security.js?v=6` }, addEventListener() {} }
+            });
+            assert.equal(window.siteHomeUrl(), root, page);
+            assert.equal(window.appAssetUrl('assets/imagini/avatar2.png'), `${root}assets/imagini/avatar2.png`, page);
+            assert.equal(window.appAssetUrl('https://example.test/court.jpg'), 'https://example.test/court.jpg');
+            for (const invalid of ['../assets/imagini/avatar2.png', 'assets/../secret', '/private', 'http://example.test/court.jpg', 'javascript:alert(1)']) {
+                assert.equal(window.appAssetUrl(invalid), '', invalid);
+            }
+        }
+    }
+});
+
+test('root-page asset markup and embedded helper usage retain their relative asset contract', () => {
+    const root = 'https://example.test/Site/Idee%20Site/';
+    const window = { location: { href: `${root}index.html?code=private-code#private-token` } };
+    runInNewContext(source('security.js'), {
+        window, URL, Intl, Date,
+        document: { currentScript: { src: `${root}js/security.js?v=6` }, addEventListener() {} }
+    });
+    assert.equal(window.siteHomeUrl(), root);
+    assert.equal(window.appAssetUrl('assets/imagini/avatar2.png'), 'assets/imagini/avatar2.png');
+
+    const embedded = { location: { href: root } };
+    runInNewContext(source('security.js'), { window: embedded, URL, Intl, Date, document: { addEventListener() {} } });
+    assert.equal(embedded.siteHomeUrl(), root);
+    assert.equal(embedded.appAssetUrl('assets/imagini/avatar2.png'), 'assets/imagini/avatar2.png');
+});
+
 test('administrator history renders hostile legacy date/hour values as readable text, without creating executable elements', async () => {
     const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium', headless: true });
     try {

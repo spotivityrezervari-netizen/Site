@@ -133,7 +133,11 @@ async function openProfile(page) {
     assert.ok(await page.locator('#form-login').isVisible());
     await page.keyboard.press('Escape');
     await page.locator('#modal-auth').waitFor({state:'hidden'});
+    const sportSlugs = {Fotbal:'fotbal',Baschet:'baschet',Volei:'volei',Tenis:'tenis','Tenis Picior':'tenis-de-picior'};
     for (const sport of ['Fotbal','Baschet','Volei','Tenis','Tenis Picior']) {
+      await page.locator(`a.card-sport[data-sport="${sport}"]`).click();
+      await page.waitForURL(new URL(`terenuri/${sportSlugs[sport]}/`,siteBaseUrl).href);
+      await page.waitForLoadState('networkidle');
       const courtsResponse = page.waitForResponse(response => {
         const url = new URL(response.url());
         return response.request().method() === 'GET' && url.pathname.endsWith('/rest/v1/terenuri')
@@ -156,11 +160,18 @@ async function openProfile(page) {
       assert.deepEqual(courtImages, [], `Court images failed for ${sport}`);
       await page.locator('#inchide-terenuri').click();
       await page.locator('#modal-terenuri').waitFor({state:'hidden'});
+      await page.locator('#home-brand').click();
+      await page.waitForURL(siteBaseUrl.href);
+      await page.waitForLoadState('networkidle');
+    }
+    for (const image of await page.locator('.home-hero-art img').all()) {
+      await image.scrollIntoViewIfNeeded();
+      await image.evaluate(image => image.decode());
     }
     await page.waitForFunction(() => [...document.images].every(img => img.complete));
     const imageFailures = await page.locator('img').evaluateAll(imgs => imgs.filter(i => (i.getAttribute('src') || i.getClientRects().length) && i.naturalWidth === 0).map(i => i.getAttribute('src')));
     assert.deepEqual(imageFailures, []);
-    console.log('PASS homepage: SDK loaded, all five sport dialogs, login dialog, Escape, and images');
+    console.log('PASS homepage: SDK loaded, all five category links and sport dialogs, login dialog, Escape, and images');
     await page.setViewportSize({width:390,height:844});
     assert.equal(await page.locator('#home-nav-search').isVisible(),true);
     assert.equal(await page.locator('#btn-top-cont').isVisible(),true);

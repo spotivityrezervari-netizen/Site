@@ -35,12 +35,13 @@
             root.querySelectorAll(`img[${attribute}]`).forEach(img => {
                 const key = sportKey(img.getAttribute(attribute));
                 if (!key) return;
-                const source = window.spotivitySportAppearance[key][column];
+                const source = window.appAssetUrl(window.spotivitySportAppearance[key][column]);
                 if (img.getAttribute('src') !== source) img.src = source;
                 if (!img.dataset.appearanceFallbackBound) {
                     img.dataset.appearanceFallbackBound = 'true';
                     img.addEventListener('error', () => {
-                        if (img.getAttribute('src') !== defaults[key][column]) img.src = defaults[key][column];
+                        const fallback = window.appAssetUrl(defaults[key][column]);
+                        if (img.getAttribute('src') !== fallback) img.src = fallback;
                     });
                 }
             });

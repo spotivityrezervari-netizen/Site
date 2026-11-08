@@ -28,7 +28,7 @@
         if (text !== undefined) node.textContent = text;
         return node;
     };
-    const safeImage = value => window.safeUrl?.(value, true) || '';
+    const safeImage = value => window.appAssetUrl?.(value) || '';
     const editableBases = () => state.access?.bases?.filter(base => base.can_edit_details === true) || [];
     const ownBase = id => state.access?.bases?.find(base => String(base.id) === String(id));
 
@@ -212,7 +212,7 @@
         const brand = element('a', 'home-brand owner-home-brand');
         brand.href = '#owner-home'; brand.setAttribute('aria-label', 'Spotivity — pagina principală');
         const logo = element('img');
-        logo.src = 'assets/imagini/avatar2.png'; logo.alt = 'Spotivity'; logo.width = 30; logo.height = 30;
+        logo.src = window.appAssetUrl('assets/imagini/avatar2.png'); logo.alt = 'Spotivity'; logo.width = 30; logo.height = 30;
         brand.append(logo);
         const search = element('form', 'home-nav-search'); search.id = 'owner-home-nav-search';
         search.setAttribute('role', 'search'); search.setAttribute('aria-label', 'Caută în terenurile tale');
@@ -288,9 +288,10 @@
         const card = actionButton('', 'court', context, 'home-court-card owner-court-card');
         card.setAttribute('aria-label', `Editează ${court.nume || 'terenul'}, ${displaySport(sport)}, ${court.oras || base?.oras || ''}${court.este_activ === false ? ', ascuns clienților' : ''}`);
         const image = element('img', 'home-court-photo');
-        image.src = safeImage(court.poza) || 'assets/imagini/avatar2.png';
+        const fallbackPhoto = window.appAssetUrl('assets/imagini/avatar2.png');
+        image.src = safeImage(court.poza) || fallbackPhoto;
         image.alt = ''; image.width = 240; image.height = 160; image.loading = 'lazy'; image.decoding = 'async';
-        image.addEventListener('error', () => { if (image.getAttribute('src') !== 'assets/imagini/avatar2.png') image.src = 'assets/imagini/avatar2.png'; });
+        image.addEventListener('error', () => { if (image.getAttribute('src') !== fallbackPhoto) image.src = fallbackPhoto; });
         const details = element('span', 'home-court-details');
         details.append(element('strong', 'home-court-name', court.nume || 'Teren'), element('span', 'home-court-meta', [displaySport(sport), court.oras || base?.oras].filter(Boolean).join(' · ')));
         if (court.pret !== null && court.pret !== undefined && Number.isFinite(Number(court.pret))) {
@@ -345,7 +346,7 @@
                 const artwork = sportImages[knownIndex];
                 const art = element('div', 'home-hero-art'); art.setAttribute('aria-hidden', 'true');
                 const image = element('img');
-                image.src = safeImage(window.getSportAppearance?.(sport)?.fundal_url) || `assets/imagini/${artwork.file}`;
+                image.src = safeImage(window.getSportAppearance?.(sport)?.fundal_url) || window.appAssetUrl(`assets/imagini/${artwork.file}`);
                 image.alt = ''; image.dataset.sportBackground = sport; image.width = artwork.width; image.height = artwork.height;
                 image.loading = index === 0 ? 'eager' : 'lazy'; image.decoding = 'async';
                 if (index === 0) image.setAttribute('fetchpriority', 'high');

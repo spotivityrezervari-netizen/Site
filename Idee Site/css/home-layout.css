@@ -36,7 +36,7 @@ body.pagina-publica { background: #101a14; }
     padding: clamp(52px, 6vw, 92px) 24px 0;
     pointer-events: none;
 }
-.pagina-publica .home-hero-copy button { pointer-events: auto; }
+.pagina-publica .home-hero-copy :is(button, a) { pointer-events: auto; }
 .pagina-publica .home-sport-heading { text-shadow: 0 2px 18px rgba(0, 0, 0, .85), 0 1px 4px #000; }
 .pagina-publica .home-sport-heading,
 .pagina-publica .home-hero-actions { justify-content: center; }
@@ -189,4 +189,23 @@ body.pagina-publica { background: #101a14; }
 
 @media (max-width: 360px) {
     .pagina-publica .home-nav { gap: 4px; }
+}
+
+/* Category pages retain the booking controls alongside crawlable sport content. */
+.pagina-publica :is(.home-desktop-nav a, .home-mobile-links a, a.home-reserve-button) { text-decoration: none; }
+.pagina-publica :is(.home-desktop-nav, .home-mobile-links) a[data-category-current] { text-decoration: underline; text-underline-offset: 5px; }
+.pagina-publica .category-breadcrumb,
+.pagina-publica .category-intro,
+.pagina-publica .category-related { max-width: 760px; margin: 20px auto; padding-inline: 20px; color: #e7dcc5; line-height: 1.7; }
+.pagina-publica .category-breadcrumb a,
+.pagina-publica .category-related a { color: #f3d58e; text-underline-offset: 4px; }
+.pagina-publica .category-related { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 24px; }
+.pagina-publica .category-breadcrumb { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 16px; }
+.pagina-publica .category-catalog-note { color: #c5cdbf; font-size: 13px; line-height: 1.6; padding-inline: 20px; }
+.pagina-publica[data-category-sport] .home-sport-heading h1 { font-size: clamp(32px, 5vw, 58px); line-height: 1.15; overflow-wrap: anywhere; }
+.pagina-publica[data-category-sport] .home-hero-copy { padding-top: 32px; }
+.pagina-publica[data-category-sport] .category-intro { font-size: 17px; text-shadow: 0 1px 4px #000; }
+@media (max-width: 767px) {
+    .pagina-publica[data-category-sport] .home-hero-copy { padding-top: 24px; }
+    .pagina-publica[data-category-sport] .category-intro { font-size: 15px; margin-block: 14px; }
 }

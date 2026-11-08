@@ -29,17 +29,17 @@ body.admin-page { background-color: #100f0c; color: var(--spotivity-cream); }
     box-shadow: inset 0 -1px 0 var(--spotivity-gold-border);
 }
 .pagina-publica .home-brand img { filter: drop-shadow(0 0 8px rgba(216, 182, 106, .2)); }
-.pagina-publica .home-desktop-nav button,
+.pagina-publica .home-desktop-nav :is(button, a),
 .pagina-publica .home-profile-button,
 .pagina-publica .home-search-button { color: #e7dcc5; }
-.pagina-publica .home-desktop-nav button:hover,
+.pagina-publica .home-desktop-nav :is(button, a):hover,
 .pagina-publica .home-profile-button:hover,
 .pagina-publica .home-search-button:hover { color: var(--spotivity-gold-light); }
 .pagina-publica .home-search-button svg { stroke: var(--spotivity-gold); }
 .pagina-publica .home-menu-toggle span { background: var(--spotivity-gold-light); }
 .pagina-publica .home-mobile-menu:not([hidden]) { background: #19160f; }
-.pagina-publica .home-mobile-links button { color: var(--spotivity-gold); }
-.pagina-publica .home-mobile-links button:hover { color: var(--spotivity-gold-light); }
+.pagina-publica .home-mobile-links :is(button, a) { color: var(--spotivity-gold); }
+.pagina-publica .home-mobile-links :is(button, a):hover { color: var(--spotivity-gold-light); }
 
 .pagina-publica .home-sport-hero {
     background: radial-gradient(ellipse at 50% 0%, rgba(164, 116, 38, .15), transparent 50%), #000;
