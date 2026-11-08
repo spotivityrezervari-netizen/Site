@@ -1,12 +1,13 @@
 -- Final-domain announcement links. Apply during the production cutover,
 -- after 030; do not reapply older migrations or change the current staging site.
+-- Independent of later chat-only migrations; the exact renderer hash still guards replacement.
 -- Rendering only: no approvals, deliveries, recipient changes or account writes.
 begin;
 do $guard$ begin
  if not exists(select 1 from spotivity_private.migrations where version=30) then
   raise exception 'Apply 030 before 031.';
  end if;
- if exists(select 1 from spotivity_private.migrations where version>=31) then
+ if exists(select 1 from spotivity_private.migrations where version=31) then
   raise exception 'Migration 031 is already applied or superseded.';
  end if;
  if not exists(select 1 from pg_proc p where p.oid=to_regprocedure('spotivity_private.announcement_mail(text,text,text)')

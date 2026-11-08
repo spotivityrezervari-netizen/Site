@@ -30,23 +30,23 @@
     <script src="js/modules/public-bookings.js?v=2" defer></script>
     <script src="js/modules/public-history.js?v=2" defer></script>
     <script src="js/modules/public-chat.js?v=4" defer></script>
-    <script src="js/email-links.js?v=3" defer></script>
+    <script src="js/email-links.js?v=4" defer></script>
     <script src="js/app.js?v=33" defer></script>
     <!-- Administration uses its own live session context inside index. -->
-    <script src="js/modules/admin-core.js?v=3" defer></script>
-    <script src="js/modules/admin-schedule.js?v=2" defer></script>
+    <script src="js/modules/admin-core.js?v=4" defer></script>
+    <script src="js/modules/admin-schedule.js?v=3" defer></script>
     <script src="js/modules/admin-bookings.js?v=2" defer></script>
     <script src="js/modules/admin-courts.js?v=2" defer></script>
     <script src="js/modules/admin-allocations.js?v=2" defer></script>
     <script src="js/modules/admin-history.js?v=3" defer></script>
-    <script src="js/modules/admin-chat.js?v=3" defer></script>
-    <script src="js/modules/admin-court-view.js?v=3" defer></script>
+    <script src="js/modules/admin-chat.js?v=4" defer></script>
+    <script src="js/modules/admin-court-view.js?v=4" defer></script>
     <script src="js/admin.js?v=27" defer></script>
     <script src="js/base-avatar-editor.js?v=1" defer></script>
     <script src="js/admin-baze.js?v=9" defer></script>
     <script src="js/owner-home.js?v=7" defer></script>
     <script src="js/owner-court-create.js?v=2" defer></script>
-    <script src="js/base-admin.js?v=9" defer></script>
+    <script src="js/base-admin.js?v=10" defer></script>
     <script src="js/admin-club-requests.js?v=2" defer></script>
     <link rel="stylesheet" href="css/home.css?v=6">
     <link rel="stylesheet" href="css/theme.css?v=3">
@@ -636,7 +636,7 @@
 
                 <div class="admin-header-actions" style="display: flex; flex-direction: column; align-items: flex-end; gap: 10px;">
                     <div class="admin-header-buttons" style="display: flex; gap: 10px;">
-                        <button id="btn-vezi-chat-admin" class="btn-cont" style="padding: 6px 14px; position: relative;">
+                        <button id="btn-vezi-chat-admin" class="btn-cont" hidden style="padding: 6px 14px; position: relative;">
                              Chat
                             <span class="bulina-notificare" id="bulina-chat-admin" style="display: none;">0</span>
                         </button>

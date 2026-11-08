@@ -351,6 +351,7 @@
         const current = () => userId === owner && generation === captured && navigation === navigationRequest && ownerView;
         const verified = await window.refreshSpotivityAdminAccess({ force: action === 'retry' });
         if (!current() || !verified) return false;
+        if (action === 'chat' && access?.is_super) return false;
         if (action === 'retry') return true;
         const court = options.courtId == null ? null : ownerCourts.find(item => String(item.id) === String(options.courtId));
         if (options.courtId != null && !court) return false;

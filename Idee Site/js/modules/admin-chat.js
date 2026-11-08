@@ -19,6 +19,10 @@
         const modalChatAdmin = document.getElementById('modal-chat-admin');
         const inputChatAdmin = document.getElementById('chat-admin-input');
         const btnTrimiteChatAdmin = document.getElementById('chat-admin-btn-trimite');
+        const assignedCourts = () => state.account?.terenuri?.split(',').map(name => name.trim()).filter(Boolean) || [];
+        const canChat = court => !!state.account && state.account.is_super !== true
+            && (court ? assignedCourts().includes(court) : assignedCourts().length > 0);
+        window.canUseSpotivityAdminChat = canChat;
 
         function rememberDraft() {
             const key = conversationKey(chatAdminConversatieCurenta);
@@ -32,6 +36,7 @@
         inputChatAdmin?.addEventListener('input', rememberDraft);
 
         btnVeziChatAdmin?.addEventListener('click', () => {
+            if (!canChat()) return;
             modalChatAdmin.style.display = 'flex';
             incarcaMesajeAdmin();
         });
@@ -44,21 +49,18 @@
                 chatAdminRealtime = null;
                 await db.removeChannel(previous);
             }
-            if (!state.account) return;
+            if (!canChat()) return;
 
             await incarcaMesajeAdmin(false);
-            if (!state.account || authRequest !== state.authGeneration) return;
+            if (!canChat() || authRequest !== state.authGeneration) return;
 
             if (realtimeRequest !== chatAdminRealtimeGeneration) return;
             // Adminul primește notificări pentru orice mesaj legat de terenurile lui
             chatAdminRealtime = db.channel(`mesaje_chat_admin_${authRequest}_${realtimeRequest}`)
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'mesaje_chat' }, payload => {
-                    if (!state.account || authRequest !== state.authGeneration) return;
+                    if (!canChat() || authRequest !== state.authGeneration) return;
                     const terenMesaj = payload.new ? payload.new.teren : null;
-                    const terenurileAdmin = state.account.is_super ? [] : (state.account.terenuri ? state.account.terenuri.split(',').map(n => n.trim()).filter(Boolean) : []);
-
-                    // Dacă adminul e superadmin SAU are acces la terenul din mesaj
-                    if (state.account.is_super || terenurileAdmin.includes(terenMesaj)) {
+                    if (canChat(terenMesaj)) {
                         if (modalChatAdmin && modalChatAdmin.style.display === 'flex') {
                             incarcaMesajeAdmin();
                         } else {
@@ -76,19 +78,16 @@
         }
 
         async function incarcaMesajeAdmin(randeaza = true) {
-            if (!state.account) return;
+            if (!canChat()) return;
             const authRequest = state.authGeneration;
             const request = ++messageRequest;
-            const account = state.account;
+            const courts = assignedCourts();
             const { data, error } = await window.spotivityReadAllRows(() => {
                 let query = db.from('mesaje_chat').select('*').order('created_at', { ascending: true }).order('id');
-                if (!account.is_super) {
-                    const courts = account.terenuri ? account.terenuri.split(',').map(name => name.trim()).filter(Boolean) : [];
-                    query = query.in('teren', courts);
-                }
+                query = query.in('teren', courts);
                 return query;
             });
-            if (authRequest !== state.authGeneration || request !== messageRequest) return;
+            if (!canChat() || authRequest !== state.authGeneration || request !== messageRequest) return;
             if (error) return;
 
             chatAdminMesajeToate = data || [];
@@ -100,11 +99,13 @@
                 bulina.innerText = nrNecitite;
             }
 
-            if (randeaza) randeazaListaConversatiiAdmin();
+            // Initialization can finish after the user has opened the dialog.
+            // The latest read must populate that dialog as well as the badge.
+            if (randeaza || modalChatAdmin?.style.display === 'flex') randeazaListaConversatiiAdmin();
         }
 
         async function randeazaListaConversatiiAdmin() {
-            if (!state.account) return;
+            if (!canChat()) return;
             const authRequest = state.authGeneration;
             const request = ++listRequest;
             const listaSide = document.getElementById('chat-admin-lista-conversații');
@@ -142,7 +143,7 @@
 
             // Preluăm clienții pentru a le afișa numele real
             const { data: clientiDB } = await window.spotivityReadAllRows(() => db.from('clienti').select('email, nume').order('email'));
-            if (authRequest !== state.authGeneration || request !== listRequest) return;
+            if (!canChat() || authRequest !== state.authGeneration || request !== listRequest) return;
             const clienti = clientiDB || [];
 
             listaSide.innerHTML = '';
@@ -179,6 +180,7 @@
         }
 
         window.deschideChatDinTabel = function(email, teren, nume) {
+            if (!canChat(teren)) return false;
             // 1. Închide modalul de tabel și setări (dacă e deschis vreunul)
             context.modalNodes().forEach(m => {
                 if (m.id !== 'modal-chat-admin') m.style.display = 'none';
@@ -205,7 +207,7 @@
 
         async function deschideConversatiaAdmin() {
             const authRequest = state.authGeneration;
-            if (!chatAdminConversatieCurenta) return;
+            if (!chatAdminConversatieCurenta || !canChat(chatAdminConversatieCurenta.teren)) return;
             const conversation = chatAdminConversatieCurenta;
             const key = conversationKey(conversation);
 
@@ -242,11 +244,11 @@
 
             // Keep the REST URL bounded for conversations larger than one page.
             for (let start = 0; start < idUriDeMarcat.length; start += 100) {
-                if (!state.account || authRequest !== state.authGeneration || conversationKey(chatAdminConversatieCurenta) !== key) return;
+                if (!canChat(conversation.teren) || authRequest !== state.authGeneration || conversationKey(chatAdminConversatieCurenta) !== key) return;
                 const { error } = await db.from('mesaje_chat').update({ citit: true }).in('id', idUriDeMarcat.slice(start, start + 100));
                 if (error) break;
             }
-            if (!state.account || authRequest !== state.authGeneration) return;
+            if (!canChat(conversation.teren) || authRequest !== state.authGeneration) return;
 
             if (conversationKey(chatAdminConversatieCurenta) !== key) return;
             inputChatAdmin.disabled = sending.has(key);
@@ -256,6 +258,7 @@
             if (btnStergeChat) {
                 btnStergeChat.style.display = 'block';
                 btnStergeChat.onclick = async () => {
+                    if (!canChat(conversation.teren) || authRequest !== state.authGeneration) return;
                     const conf = confirm(`Ești sigur că vrei să ștergi TOATE mesajele din conversația cu ${conversation.nume} (${conversation.teren})?\n\nAcest lucru va șterge mesajele și pentru client!`);
                     if (conf) {
                         btnStergeChat.disabled = true;
@@ -285,7 +288,7 @@
         }
 
         async function trimiteMesajAdmin() {
-            if (!chatAdminConversatieCurenta || inputChatAdmin.disabled) return;
+            if (!chatAdminConversatieCurenta || !canChat(chatAdminConversatieCurenta.teren) || inputChatAdmin.disabled) return;
             const session = draftSession;
             const userId = state.account?.user_id;
             const conversation = { ...chatAdminConversatieCurenta };

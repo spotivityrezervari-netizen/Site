@@ -1,5 +1,11 @@
 # Verificare pentru producție
 
+## 8 noiembrie 2026 — chat administrativ exclus pentru superadmin
+
+Migrarea 032 este aplicată live, fără modificări ale datelor și ale politicilor existente. RLS, rutarea notificărilor și interfața exclud superadminul din chatul administrativ; administratorii alocați și clienții își păstrează conversațiile autorizate. Au trecut testele SQL cu ID-uri UUID/numerice, testul browser cu SDK real și regresiile relevante. Notificările de rezervare/anulare rămân neschimbate. Detalii și starea Make: [CHAT_ADMINISTRATORI.md](supabase/CHAT_ADMINISTRATORI.md).
+
+Migrarea 031 pentru domeniul final este independentă și rămâne neaplicată; poate fi aplicată după 032 fără să inverseze regula de chat. Nu au fost trimise mesaje/emailuri reale sau pornite deploy-uri Netlify/Edge.
+
 ## 6 noiembrie 2026 — verificarea completă a versiunii Git pentru lansare
 
 Au trecut 54/54 fișiere SQL/Edge/browser, testul nou al migrării031, 13 teste de build și 11 verificări Make/imagini. Artefactul Netlify are 70 de fișiere aprobate și a fost verificat cu antetele reale în serverul izolat. Migrarea031 este pregătită în Git pentru schimbarea linkurilor anunțurilor către domeniul final, fără modificarea migrărilor deja aplicate. Nu a fost aplicată live.

@@ -140,6 +140,8 @@
             title.textContent = ''; title.style.display = 'none';
             const badge = document.getElementById('bulina-chat-admin');
             badge.textContent = '0'; badge.style.display = 'none';
+            const chatButton = document.getElementById('btn-vezi-chat-admin');
+            chatButton.hidden = true; chatButton.style.display = 'none';
             document.querySelector('#modal-chat-admin .modal-chat-box')?.classList.remove('conversatie-activa');
             context.chat.removeRealtime();
         }

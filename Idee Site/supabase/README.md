@@ -1,5 +1,7 @@
 # Instalarea protecțiilor Supabase și a rolurilor Spotivity
 
+Actualizare 8 noiembrie: migrarea 032 este aplicată; chatul administrativ și notificările sale sunt numai pentru administratorii alocați, fără fallback către superadmin. Vezi [CHAT_ADMINISTRATORI.md](CHAT_ADMINISTRATORI.md).
+
 ## 029 — anunțuri manuale Make, cu grupuri exclusive
 
 [029_manual_announcement_campaigns.sql](029_manual_announcement_campaigns.sql) adaugă registrul privat al campaniilor și patru RPC-uri protejate prin chei distincte pentru clienți/admini. A fost aplicată cu aprobarea explicită a proprietarului și verificări de păstrare a datelor și permisiunilor existente. Numărul 028 era deja ocupat în baza live; nu reaplica o altă migrare sub acel număr.

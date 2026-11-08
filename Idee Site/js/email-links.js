@@ -93,7 +93,10 @@
                 return window.openSpotivityOwnerHomeAction?.(action, { courtId: context.court_id });
             }
             await window.openSpotivityAdminWorkspace?.();
-            if (action === 'chat') document.getElementById('btn-vezi-chat-admin')?.click();
+            if (action === 'chat') {
+                if (!window.canUseSpotivityAdminChat?.(context.court_name)) return false;
+                document.getElementById('btn-vezi-chat-admin')?.click();
+            }
             if (action === 'program') {
                 window.initializeazaTabel?.([context.court_name]);
                 document.getElementById('modal-tabel-program').style.display = 'flex';
@@ -125,7 +128,7 @@
             view.panel.insertBefore(detail, view.status);
             const actions = document.createElement('div'); actions.className = 'workflow-actions'; view.panel.append(actions);
             const current = () => state.user?.id === owner && generation === captured && view.modal.isConnected;
-            button(actions, context.is_owner ? 'Chat cu clientul' : 'Chat cu baza sportivă', async () => {
+            if (context.can_chat !== false) button(actions, context.is_owner ? 'Chat cu clientul' : 'Chat cu baza sportivă', async () => {
                 if (!current()) return;
                 if (await openChat(context) && current()) view.remove();
                 else if (current()) view.status.textContent = 'Chatul nu este disponibil pentru această rezervare.';

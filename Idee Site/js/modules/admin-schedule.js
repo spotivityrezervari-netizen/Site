@@ -152,7 +152,7 @@
                         }
 
                         let chatBtnStr = "";
-                        if (terenAreChatActivat && !isGuest) {
+                        if (terenAreChatActivat && !isGuest && !state.account?.is_super) {
                             const clientName = contClient ? (contClient.nume || contClient.email.split('@')[0]) : (rGasita.email_client.split('@')[0]);
                             const emailParam = contClient ? contClient.email : rGasita.email_client;
                             chatBtnStr = `<button class="btn-tabel-chat" ${action('click', () => window.deschideChatDinTabel(emailParam, terenAles, clientName))} style="background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.5); color: #3b82f6; border-radius: 8px; padding: 4px 10px; font-size: 11px; font-weight: bold; cursor: pointer; margin-left: 10px; transition: 0.3s; vertical-align: middle;">Chat</button>`;

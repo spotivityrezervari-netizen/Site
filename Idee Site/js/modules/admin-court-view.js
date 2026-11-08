@@ -6,8 +6,8 @@
         const { db, state } = context;
         window.renderSpotivityAdmin = async function(data) {
             context.clearSessionView({
-                preserveChatDrafts: !!state.account && state.account.user_id === data.user_id,
-                retainedChatCourts: data.is_super ? null : (data.draftCourtNames || data.terenuri?.split(',').map(name => name.trim()) || [])
+                preserveChatDrafts: !data.is_super && !!state.account && state.account.user_id === data.user_id,
+                retainedChatCourts: data.is_super ? [] : (data.draftCourtNames || data.terenuri?.split(',').map(name => name.trim()) || [])
             });
                 state.account = { ...data };
                 const authRequest = state.authGeneration;
@@ -274,13 +274,17 @@
                 if (selectM && terenuriPtTabel.length > 0) {
                     window.initializeazaTabel(terenuriPtTabel);
                 }
-                document.querySelectorAll('#base-admin-workspace .admin-comun, #base-admin-workspace #btn-vezi-chat-admin').forEach(node => { node.hidden = !terenuriPtTabel.length; node.style.display = terenuriPtTabel.length ? 'flex' : 'none'; });
+                document.querySelectorAll('#base-admin-workspace .admin-comun').forEach(node => { node.hidden = !terenuriPtTabel.length; node.style.display = terenuriPtTabel.length ? 'flex' : 'none'; });
+                const chatButton = document.getElementById('btn-vezi-chat-admin');
+                const hasStaffChat = !state.account.is_super && terenuriPtTabel.length > 0;
+                chatButton.hidden = !hasStaffChat;
+                chatButton.style.display = hasStaffChat ? 'flex' : 'none';
                 if (!terenuriPtTabel.length) document.getElementById('tabel-corp-program').replaceChildren();
                 await window.actualizeazaOreManualAdmin();
                 if (authRequest !== state.authGeneration) return;
 
                 // Chat real-time pentru admin
-                setTimeout(() => { if (authRequest === state.authGeneration) context.chat.initializeRealtime(); }, 0);
+                if (hasStaffChat) setTimeout(() => { if (authRequest === state.authGeneration) context.chat.initializeRealtime(); }, 0);
 
         };
 
