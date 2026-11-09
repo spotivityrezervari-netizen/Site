@@ -79,7 +79,7 @@
         return { title: document.title, values: selectors.map(selector => {
             const node = document.querySelector(selector);
             return [selector, node?.getAttribute(node.tagName === 'LINK' ? 'href' : 'content') ?? null];
-        }) };
+        }), structuredData: byId('spotivity-seo-data')?.textContent ?? null };
     }
     function restoreMetadata() {
         if (!sourceMetadata) return;
@@ -88,6 +88,8 @@
             const node = document.querySelector(selector);
             if (node && value !== null) node.setAttribute(node.tagName === 'LINK' ? 'href' : 'content', value);
         }
+        const structured = byId('spotivity-seo-data');
+        if (structured && sourceMetadata.structuredData !== null) structured.textContent = sourceMetadata.structuredData;
     }
     function updateMetadata(kind, row) {
         const id = paths.normalizedId(row?.id), name = String(row?.nume || '').slice(0, 200);
@@ -103,6 +105,20 @@
             ['meta[name="robots"]', indexed ? 'index,follow' : 'noindex,follow']]) {
             const node = document.querySelector(selector);
             if (node) node.setAttribute(node.tagName === 'LINK' ? 'href' : 'content', value);
+        }
+        const structured = byId('spotivity-seo-data'), seo = window.SpotivitySeoData;
+        if (structured && seo) {
+            const options = indexed ? {
+                baseUrl: canonicalRoot.href, kind, route: indexed, title,
+                ...(kind === 'court' ? { court: row, baseRoute: indexedPath('base', paths.normalizedId(row?.baza_sportiva_id)) } : { base: row })
+            } : { baseUrl: canonicalRoot.href, kind: 'home' };
+            try {
+                structured.textContent = seo.serialize(seo.graphFor(options));
+            } catch {
+                // Incomplete live catalog details must not prevent booking or
+                // leave the previous court advertised as the selected place.
+                structured.textContent = seo.serialize(seo.graphFor({ baseUrl: canonicalRoot.href, kind: 'home' }));
+            }
         }
     }
     function readView() {
@@ -200,7 +216,8 @@
     function opened(kind, row) {
         const id = paths.normalizedId(row?.id);
         if (!initialized || !id || protectedIntent()) return;
-        entityRecords.set(`${kind}:${id}`, { id, nume: row.nume, oras: row.oras });
+        entityRecords.set(`${kind}:${id}`, { id, nume: row.nume, oras: row.oras,
+            ...(kind === 'court' ? { sport: row.sport, baza_sportiva_id: row.baza_sportiva_id } : { descriere: row.descriere }) });
         if (goingBack) { queuedEntity = { kind, id }; return; }
         const item = { kind, id };
         if (restoring) { active = item; updateMetadata(kind, row); return; }

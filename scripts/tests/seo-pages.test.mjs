@@ -8,9 +8,9 @@ import { SPORTS, SEO_PATHS, PAGES_BASE_URL, PRODUCTION_BASE_URL, GENERATED_MARKE
 import { generateSourcePages } from '../generate-seo-pages.mjs';
 import { snapshotFromPublicRows, publicCredentials } from '../refresh-seo-catalog.mjs';
 import { buildPublic } from '../build-public.mjs';
-const require = createRequire(import.meta.url), paths = require('../../Idee Site/js/entity-paths.js');
+const require = createRequire(import.meta.url), paths = require('../../Idee Site/js/entity-paths.js'), seoData = require('../../Idee Site/js/seo-data.js');
 const baseId = '00000000-0000-0000-0000-000000000001';
-const template = `<!doctype html><html lang="ro"><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; script-src 'self'"><meta name="referrer" content="no-referrer"><title>Home</title><meta name="description" content="Home description"><meta property="og:title" content="Home"><meta property="og:description" content="Home description"><meta property="og:url" content="${PAGES_BASE_URL}"><meta property="og:image" content="${PAGES_BASE_URL}assets/imagini/logo.png"><link rel="canonical" href="${PAGES_BASE_URL}"><script src="js/main.js"></script></head><body><a id="home-brand" href="#top">Home</a><nav>${SPORTS.map(sport => `<a data-sport-target="${sport.sport}" href="terenuri/${sport.slug}/">${sport.sport}</a>`).join('')}</nav><main>${SPORTS.map((sport, index) => `<section data-home-sport="${sport.sport}"><div class="home-hero-copy"><div class="home-sport-heading"><h${index ? 2 : 1} id="sport-title-${sport.slug}" data-i18n="sport">${sport.sport}</h${index ? 2 : 1}></div><button type="button" class="card-sport home-reserve-button" data-sport="${sport.sport}">Rezervă</button></div><img src="assets/imagini/logo.png" loading="lazy"><div data-home-courts="${sport.sport}" aria-busy="true"></div></section>`).join('')}<section id="bases"><div id="home-bases-directory">Bases</div></section><section id="signup">Signup</section></main><div id="modal-terenuri">Existing booking modal</div></body></html>`;
+const template = `<!doctype html><html lang="ro"><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; script-src 'self'"><meta name="referrer" content="no-referrer"><title>Home</title><meta name="description" content="Home description"><meta property="og:title" content="Home"><meta property="og:description" content="Home description"><meta property="og:url" content="${PAGES_BASE_URL}"><meta property="og:image" content="${PAGES_BASE_URL}assets/imagini/logo.png"><link rel="canonical" href="${PAGES_BASE_URL}">${seoData.script(seoData.graphFor({ baseUrl: PAGES_BASE_URL, kind: 'home' }))}<script src="js/main.js"></script></head><body><a id="home-brand" href="#top">Home</a><nav>${SPORTS.map(sport => `<a data-sport-target="${sport.sport}" href="terenuri/${sport.slug}/">${sport.sport}</a>`).join('')}</nav><main><section data-home-intro><h1>Rezervări terenuri de sport</h1><p>Toate sporturile.</p></section>${SPORTS.map((sport, index) => `<section data-home-sport="${sport.sport}"><div class="home-hero-copy"><div class="home-sport-heading"><h2 id="sport-title-${sport.slug}" data-i18n="sport">${sport.sport}</h2></div><button type="button" class="card-sport home-reserve-button" data-sport="${sport.sport}">Rezervă</button></div><img src="assets/imagini/logo.png" loading="lazy"><div data-home-courts="${sport.sport}" aria-busy="true"></div></section>`).join('')}<section id="bases"><div id="home-bases-directory">Bases</div></section><section id="signup">Signup</section></main><div id="modal-terenuri">Existing booking modal</div></body></html>`;
 const catalog = { version: 2, refreshedAt: '2026-11-09T09:00:00.000Z', bases: [{ id: baseId, nume: 'Bază Ștefănești', oras: 'Reghin', descriere: 'Bază pentru sport și întâlniri cu prietenii.' }], courts: [{ id: 1, nume: 'Court & One', sport: 'Fotbal', oras: 'Reghin', pret: 150, baza_sportiva_id: baseId }] };
 const courtPath = input => paths.courtPath(input, catalog.bases[0]);
 async function fixture(t) {
@@ -46,7 +46,8 @@ test('five categories keep one static H1, original booking controls and real cra
     assert.ok(html.includes('class="category-intro"') && html.includes('<noscript>'));
     assert.ok(html.includes('aria-current="page"'));
     assert.ok(html.indexOf('Content-Security-Policy') < html.indexOf('<script'));
-    assert.doesNotMatch(html, /<base\b|<script[^>]*>[^<]+<\/script>|\son\w+=/i);
+    assert.doesNotMatch(html, /<base\b|<script(?![^>]*\btype="application\/ld\+json")[^>]*>[^<]+<\/script>|\son\w+=/i);
+    assert.doesNotMatch(html, /data-home-intro/);
     if (sport.sport === 'Fotbal') {
       assert.ok(html.includes('Court &amp; One'));
       assert.ok(html.includes(`href="../../${courtPath(catalog.courts[0])}"`));
@@ -159,6 +160,9 @@ test('replacement metacharacters in public names and descriptions remain literal
   }
   const html = generated.get(paths.courtPath(input.courts[0], input.bases[0]) + 'index.html');
   assert.ok(html.includes('<h1 id="entity-title">$&amp; $1 $` $&#39; &amp; &lt;name&gt; — Reghin</h1>'));
+  const graph = JSON.parse(html.match(/<script id="spotivity-seo-data" type="application\/ld\+json">([\s\S]*?)<\/script>/)[1]);
+  assert.equal(graph['@graph'].find(item => item['@type'] === 'Place').name, name);
+  assert.equal(graph['@graph'].find(item => item['@type'] === 'SportsActivityLocation').name, name);
   assert.ok(generated.get(paths.basePath(input.bases[0]) + 'index.html').includes('<p class="entity-description">$&amp; $1 $` $&#39; &amp; &lt;name&gt;</p>'));
 });
 

@@ -6,6 +6,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 const require = createRequire(import.meta.url);
 const paths = require('../Idee Site/js/entity-paths.js');
+const seoData = require('../Idee Site/js/seo-data.js');
 
 export const PAGES_BASE_URL = 'https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/';
 export const PRODUCTION_BASE_URL = 'https://spotivity.ro/';
@@ -74,7 +75,7 @@ export async function readReviewedFile(root, relative) {
   try { return await handle.readFile('utf8'); } finally { await handle.close(); }
 }
 
-// Only balanced, explicitly labelled sport sections may be changed. Keep the
+// Only balanced, explicitly labelled homepage sections may be changed. Keep the
 // shared app modals and auxiliary public directories required by its bootstrap.
 function sportSections(template) {
   const sections = [], stack = [];
@@ -84,10 +85,10 @@ function sportSections(template) {
     if (/^<\/section/i.test(match[0])) {
       const section = stack.pop();
       if (!section) throw new Error('Unbalanced section in SEO template.');
-      if (section.sport) sections.push({ ...section, end: expression.lastIndex });
-    } else stack.push({ start: match.index, sport: match[0].match(/\bdata-home-sport="([^"]+)"/)?.[1] });
+      if (section.sport || section.homeIntro) sections.push({ ...section, end: expression.lastIndex });
+    } else stack.push({ start: match.index, sport: match[0].match(/\bdata-home-sport="([^"]+)"/)?.[1], homeIntro: /\bdata-home-intro(?=[\s=>])/.test(match[0]) });
   }
-  if (stack.length || sections.length !== SPORTS.length || SPORTS.some(({ sport }) => sections.filter(section => section.sport === sport).length !== 1)) throw new Error('SEO template must contain exactly the five reviewed sport sections.');
+  if (stack.length || sections.filter(section => section.sport).length !== SPORTS.length || sections.filter(section => section.homeIntro).length > 1 || SPORTS.some(({ sport }) => sections.filter(section => section.sport === sport).length !== 1)) throw new Error('SEO template must contain exactly the five reviewed sport sections and at most one homepage introduction.');
   return sections;
 }
 function withoutSports(template, sections) {
@@ -107,7 +108,15 @@ function metadata(html, { baseUrl, title, description, route = '' }) {
   return html.replace(/<link rel="canonical" href="[^"]*"\s*\/?>/i, () => `<link rel="canonical" href="${escape(canonical)}">`);
 }
 export function productionHome(html) {
-  return html.replace(/(<link rel="canonical" href=")[^"]*(")/i, `$1${PRODUCTION_BASE_URL}$2`).replace(/(<meta property="og:url" content=")[^"]*(")/i, `$1${PRODUCTION_BASE_URL}$2`).replace(/(<meta property="og:image" content=")[^"]*(")/i, `$1${new URL('assets/imagini/avatar2.png', PRODUCTION_BASE_URL).href}$2`);
+  html = html.replace(/(<link rel="canonical" href=")[^"]*(")/i, `$1${PRODUCTION_BASE_URL}$2`).replace(/(<meta property="og:url" content=")[^"]*(")/i, `$1${PRODUCTION_BASE_URL}$2`).replace(/(<meta property="og:image" content=")[^"]*(")/i, `$1${new URL('assets/imagini/avatar2.png', PRODUCTION_BASE_URL).href}$2`);
+  return structuredData(html, { baseUrl: PRODUCTION_BASE_URL, kind: 'home' });
+}
+function structuredData(html, options) {
+  const expression = /<script\b(?=[^>]*\bid=["']spotivity-seo-data["'])[^>]*>[\s\S]*?<\/script\s*>/gi;
+  const blocks = [...html.matchAll(expression)];
+  const opening = blocks[0]?.[0].split('>')[0] || '';
+  if (blocks.length !== 1 || !/\btype=["']application\/ld\+json["']/i.test(opening) || /\bsrc\s*=/i.test(opening)) throw new Error('SEO template must contain exactly one inline application/ld+json block with id spotivity-seo-data.');
+  return html.replace(expression, () => seoData.script(seoData.graphFor(options)));
 }
 function link(relative, label, attributes = '') { return `<a href="${escape(relative)}"${attributes}>${escape(label)}</a>`; }
 function courtCards(courts, index) {
@@ -115,12 +124,13 @@ function courtCards(courts, index) {
 }
 function breadcrumb(items) { return `<nav class="category-breadcrumb" aria-label="Navigare">${items.map(({ route, label, attributes }) => route ? link(route, label, attributes) : `<span aria-current="page">${escape(label)}</span>`).join(' ')}</nav>`; }
 function snapshotNote(catalog) { return `<p class="category-catalog-note">Catalog public actualizat la ${escape(catalog.refreshedAt.slice(0, 10))}. Tariful și disponibilitatea se verifică în formularul de rezervare.</p>`; }
-function finish(html, { baseUrl, route, title, description, sport, bodyAttribute }) {
+function finish(html, { baseUrl, route, title, description, sport, bodyAttribute, kind, court, base }) {
   html = html.replace(/<body\b([^>]*)>/i, (_, attributes) => `<body${attributes}${sport ? ` data-category-sport="${escape(sport)}"` : ''}${bodyAttribute || ''}>`);
   html = html.replace(/(<a\b[^>]*\bid="home-brand"[^>]*\bhref=")[^"]*(")/i, '$1./$2');
   if (sport) html = html.replace(/<a\b[^>]*\bdata-sport-target="[^"]*"[^>]*>/gi, tag => tag.includes(`data-sport-target="${sport}"`) ? tag.replace(/\saria-current="[^"]*"/gi, '').replace(/>$/, ' aria-current="page">') : tag);
   html = html.replace('</main>', '<noscript><p class="category-catalog-note">Activează JavaScript pentru programul actualizat și rezervarea unui teren.</p></noscript>\n</main>');
   html = metadata(html, { baseUrl, title, description, route });
+  html = structuredData(html, { baseUrl, route, title, kind, sport, court, base });
   const prefix = '../'.repeat(route.split('/').filter(Boolean).length);
   html = html.replace(/\b(src|href)="([^"]*)"/gi, (attribute, name, value) => {
     if (/^(?:[A-Za-z][A-Za-z\d+.-]*:|\/\/|#|\/)/.test(value)) return attribute;
@@ -148,7 +158,7 @@ export function generateSeoFiles({ template, catalog: input, baseUrl = PAGES_BAS
     const intro = breadcrumb([{ route: './', label: 'Acasă' }, { label: `Terenuri de ${sport.label}` }]);
     const related = `<nav class="category-related" aria-label="Alte sporturi">${SPORTS.filter(other => other !== sport).map(other => link(`terenuri/${other.slug}/`, `Terenuri de ${other.label}`)).join(' ')}</nav>`;
     const html = stripped.replace(/(<main\b[^>]*>)/i, (_, opening) => `${opening}\n${intro}${section}${related}`);
-    files.set(`terenuri/${sport.slug}/index.html`, finish(html, { baseUrl, route: `terenuri/${sport.slug}/`, ...sport }));
+    files.set(`terenuri/${sport.slug}/index.html`, finish(html, { baseUrl, route: `terenuri/${sport.slug}/`, ...sport, kind: 'sport' }));
   }
   for (const court of catalog.courts) {
     const base = bases.get(court.baza_sportiva_id), sport = SPORTS.find(item => item.sport === court.sport), route = index.courts[String(court.id)];
@@ -159,7 +169,7 @@ export function generateSeoFiles({ template, catalog: input, baseUrl = PAGES_BAS
     crumbs.push({ label: court.nume });
     const detail = `${breadcrumb(crumbs)}<section class="entity-page" aria-labelledby="entity-title"><p class="entity-eyebrow">Teren de ${escape(sport.label)} · ${escape(court.oras)}</p><h1 id="entity-title">${escape(court.nume)} — ${escape(court.oras)}</h1><p class="entity-intro">Teren de ${escape(sport.label)} în ${escape(court.oras)}${base ? `, în baza sportivă ${link(index.bases[String(base.id)], base.nume, ` data-entity-base-id="${escape(base.id)}"`)}` : ''}.</p>${court.pret === null ? '' : `<p class="entity-price">Tarif publicat: ${escape(court.pret)} Lei/oră</p>`}<button type="button" class="home-reserve-button" data-entity-booking="${escape(court.id)}">Verifică programul și rezervă</button>${snapshotNote(catalog)}<nav class="category-related" aria-label="Terenuri de ${escape(sport.label)}">${link(`terenuri/${sport.slug}/`, `Vezi toate terenurile de ${sport.label}`)}</nav></section>`;
     const html = stripped.replace(/(<main\b[^>]*>)/i, (_, opening) => `${opening}\n${detail}`);
-    files.set(route + 'index.html', finish(html, { baseUrl, route, title, description, sport: court.sport, bodyAttribute: ` data-court-id="${escape(court.id)}"` }));
+    files.set(route + 'index.html', finish(html, { baseUrl, route, title, description, sport: court.sport, bodyAttribute: ` data-court-id="${escape(court.id)}"`, kind: 'court', court, base }));
   }
   for (const base of catalog.bases) {
     const route = index.bases[String(base.id)], courts = catalog.courts.filter(court => court.baza_sportiva_id === String(base.id));
@@ -167,7 +177,7 @@ export function generateSeoFiles({ template, catalog: input, baseUrl = PAGES_BAS
     const description = `${base.nume}, bază sportivă în ${base.oras}. Descoperă terenurile publicate și verifică programul de rezervări online pe Spotivity.`;
     const detail = `${breadcrumb([{ route: './', label: 'Acasă' }, { label: base.nume }])}<section class="entity-page" aria-labelledby="entity-title"><p class="entity-eyebrow">Bază sportivă · ${escape(base.oras)}</p><h1 id="entity-title">${escape(base.nume)} — ${escape(base.oras)}</h1><p class="entity-intro">Bază sportivă în ${escape(base.oras)}.</p>${base.descriere ? `<p class="entity-description">${escape(base.descriere)}</p>` : ''}<button type="button" class="home-reserve-button" data-entity-base="${escape(base.id)}">Vezi terenurile bazei</button><h2>Terenuri la ${escape(base.nume)}</h2><div class="entity-courts">${courts.length ? courtCards(courts, index) : '<p>Momentan nu sunt terenuri publicate la această bază sportivă.</p>'}</div>${snapshotNote(catalog)}</section>`;
     const html = stripped.replace(/(<main\b[^>]*>)/i, (_, opening) => `${opening}\n${detail}`);
-    files.set(route + 'index.html', finish(html, { baseUrl, route, title, description, bodyAttribute: ` data-base-id="${escape(base.id)}"` }));
+    files.set(route + 'index.html', finish(html, { baseUrl, route, title, description, bodyAttribute: ` data-base-id="${escape(base.id)}"`, kind: 'base', base }));
   }
   files.set('js/seo-route-index.js', `// Generated from the reviewed anonymous public catalog. No account data.\nwindow.spotivitySeoRoutes = ${JSON.stringify(index)};\n`);
   files.set('robots.txt', `User-agent: *\nAllow: /\n\nSitemap: ${new URL('sitemap.xml', baseUrl).href}\n`);

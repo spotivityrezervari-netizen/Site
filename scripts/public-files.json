@@ -74,6 +74,7 @@
     "js/profile-editor.js",
     "js/public-navigation.js",
     "js/security.js",
+    "js/seo-data.js",
     "js/seo-route-index.js",
     "js/sport-appearance.js",
     "robots.txt",

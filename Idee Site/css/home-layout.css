@@ -3,6 +3,9 @@ html,
 body.pagina-publica { background: #101a14; }
 .pagina-publica .home-shell,
 .pagina-publica .home-main { background: #101a14; }
+.pagina-publica .home-intro { max-width: 1080px; margin: 0 auto; padding: 32px 24px 10px; text-align: center; color: #f8edcf; }
+.pagina-publica .home-intro h1 { margin: 0 0 12px; font-size: clamp(26px, 3.5vw, 40px); line-height: 1.2; }
+.pagina-publica .home-intro p { max-width: 760px; margin: 0 auto; color: #d9dece; font-size: 16px; line-height: 1.65; }
 .pagina-publica .home-city-region { background: linear-gradient(110deg, #203226, #18271d); }
 .pagina-publica #filtru-oras-global,
 .pagina-publica #filtru-oras-global option { background: #1b2d20; }

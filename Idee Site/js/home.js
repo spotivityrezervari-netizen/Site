@@ -4,18 +4,21 @@
 
     const copy = {
         ro: {
+            home_intro_title: 'Rezervă terenuri de sport online', home_intro_description: 'Alege orașul și sportul, compară terenurile și verifică programul pentru următorul joc.',
             home_alege_oras: 'Alege orașul și găsește terenul potrivit.', home_profil: 'Profilul meu', home_vezi_baza: 'Vezi baza sportivă', home_inscrie_baza: 'Înscrie-ți baza',
             home_rezerva: 'Rezervă un teren', home_vezi_terenuri: 'Vezi terenurile',
             home_subtitlu_fotbal: 'Jocul începe aici.', home_subtitlu_baschet: 'Fiecare aruncare contează.',
             home_subtitlu_tenis: 'Următorul punct e al tău.', home_subtitlu_volei: 'Adună echipa. Intră în joc.'
         },
         hu: {
+            home_intro_title: 'Foglalj sportpályát online', home_intro_description: 'Válassz várost és sportot, hasonlítsd össze a pályákat, és nézd meg a szabad időpontokat a következő játékhoz.',
             home_alege_oras: 'Válassz várost, és találd meg a megfelelő pályát.', home_profil: 'Profilom', home_vezi_baza: 'Sportközpont megtekintése', home_inscrie_baza: 'Sportközpont regisztrálása',
             home_rezerva: 'Pálya foglalása', home_vezi_terenuri: 'Pályák megtekintése',
             home_subtitlu_fotbal: 'Itt kezdődik a játék.', home_subtitlu_baschet: 'Minden dobás számít.',
             home_subtitlu_tenis: 'Tiéd a következő pont.', home_subtitlu_volei: 'Hívd a csapatod. Játsszatok együtt.'
         },
         en: {
+            home_intro_title: 'Book sports courts online', home_intro_description: 'Choose your city and sport, compare courts and check the schedule for your next game.',
             home_alege_oras: 'Choose your city and find your next court.', home_profil: 'My profile', home_vezi_baza: 'View sports centre', home_inscrie_baza: 'Register your sports centre',
             home_rezerva: 'Book a court', home_vezi_terenuri: 'Explore courts',
             home_subtitlu_fotbal: 'The game starts here.', home_subtitlu_baschet: 'Make every shot count.',

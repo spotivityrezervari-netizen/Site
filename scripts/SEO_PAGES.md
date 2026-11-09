@@ -8,6 +8,26 @@ open the existing court chooser directly; sport navigation links still reach the
 category pages. JavaScript enhances the same pages with the existing live booking
 and base dialogs, while their names, locations and links remain readable without it.
 
+The homepage has one main heading for booking sports courts; its five sport
+headings follow at level two. Generated category, court and base pages remove
+that homepage introduction and each retain one page-specific main heading.
+
+`js/seo-data.js` shares the structured-data rules between static generation and
+browser navigation. Every page includes one `application/ld+json` block with
+Spotivity's public brand organization, website and page identity. Categories,
+courts and bases also describe their visible breadcrumbs. Bases use
+`SportsActivityLocation`; courts use `Place` and reference their actual base
+when public membership is known. Locations include only the published city in
+`PostalAddress.addressLocality`. The graph adds no legal company details,
+street address, coordinates, ratings, hours, search action or availability.
+Opening another published entity updates the block, and closing its dialog or
+returning through browser history restores the original page graph.
+
+JSON remains parseable data with literal quotation marks. The serializer escapes
+`<`, `&` and Unicode line separators so public names cannot close the script
+element. The block follows the existing strict CSP; it adds no executable inline
+script and needs no weaker script policy.
+
 URL rules live in the shared browser/CommonJS helper `js/entity-paths.js`:
 
 - Courts: `terenuri/{sport}/{city}-{base-name-if-present}-{court-name}-{full-id}/`.
@@ -73,7 +93,9 @@ snapshot nor development/backend scripts enter the public artifact.
 Checked-in documents and sitemap entries use the current GitHub Pages prefix:
 `https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/`.
 The safe Netlify build regenerates the same routes with `https://spotivity.ro/`
-canonical, Open Graph and sitemap URLs. Court pages resolve resources from three
+canonical, Open Graph, structured-data and sitemap URLs. Every structured-data
+identity and breadcrumb uses the same deployment root as its canonical URL,
+including the production homepage graph. Court pages resolve resources from three
 levels below the app root; bases and categories use two. No `<base>` element or
 client-only metadata is required for indexable pages. Strict CSP and no-referrer
 metadata precede resources in every generated document.
