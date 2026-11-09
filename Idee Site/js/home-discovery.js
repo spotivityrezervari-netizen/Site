@@ -14,6 +14,7 @@
     const t = key => (labels[window.lang] || labels.ro)[key];
     const normalize = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase().trim();
     const cityName = value => String(value || '').trim().replace(/\.+$/, '');
+    const ordinaryClick = event => event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey;
     const node = (tag, className, text) => {
         const result = document.createElement(tag);
         if (className) result.className = className;
@@ -55,7 +56,7 @@
             bookingController?.abort();
             bookingController = null;
             bookingBusy = false;
-            document.querySelectorAll('[data-discovery-court]').forEach(button => { button.disabled = false; });
+            document.querySelectorAll('[data-discovery-court]').forEach(button => { button.disabled = false; button.removeAttribute('aria-disabled'); });
         }
         function close(restoreFocus = true) {
             cancelBooking();
@@ -69,7 +70,7 @@
             bookingController = new AbortController();
             const controller = bookingController;
             const timeout = setTimeout(() => controller.abort(), 15000);
-            document.querySelectorAll('[data-discovery-court]').forEach(button => { button.disabled = true; });
+            document.querySelectorAll('[data-discovery-court]').forEach(button => { button.disabled = true; button.setAttribute('aria-disabled', 'true'); });
             feedback.textContent = t('booking');
             try {
                 const opened = await window.openCourtReservation?.(court.id, { signal: controller.signal });
@@ -86,9 +87,16 @@
             }
         }
         function courtCard(court, feedback) {
-            const card = action('', () => reserve(court, feedback), 'home-court-card');
+            const card = node('a', 'home-court-card');
+            card.href = window.SpotivityNavigation.courtUrl(court);
+            card.addEventListener('click', event => {
+                if (!ordinaryClick(event)) return;
+                event.preventDefault();
+                reserve(court, feedback);
+            });
             card.dataset.discoveryCourt = String(court.id);
             card.disabled = bookingBusy;
+            if (bookingBusy) card.setAttribute('aria-disabled', 'true');
             card.setAttribute('aria-label', `${t('reserve')} ${court.nume}, ${translatedSport(court)}, ${cityName(court.oras)}`);
             const image = node('img', 'home-court-photo');
             image.src = window.appAssetUrl?.(court.poza) || window.appAssetUrl('assets/imagini/avatar2.png');
@@ -130,7 +138,13 @@
             directory.replaceChildren();
             if (!visible.length) return message(directory, t('noBases'));
             for (const base of visible) {
-                const card = action('', () => window.openSportsBases?.(base.id), 'sports-base-card');
+                const card = node('a', 'sports-base-card');
+                card.href = window.SpotivityNavigation.baseUrl(base);
+                card.addEventListener('click', event => {
+                    if (!ordinaryClick(event)) return;
+                    event.preventDefault();
+                    window.openSportsBases?.(base.id);
+                });
                 card.dataset.homeBaseId = base.id;
                 const photo = window.createSportsBasePhoto?.(base, 'sports-base-photo');
                 card.classList.toggle('has-base-cover', !!photo);
@@ -221,13 +235,23 @@
         window.refreshSpotivityDiscovery = options => load({ ...options, quiet: true });
         for (const button of document.querySelectorAll('[data-seo-court-id]')) {
             button.dataset.discoveryCourt = button.dataset.seoCourtId;
-            button.addEventListener('click', () => {
+            button.addEventListener('click', event => {
+                if (button.matches('a[href]')) {
+                    if (!ordinaryClick(event)) return;
+                    event.preventDefault();
+                }
                 const strip = button.closest('[data-home-courts]');
                 let feedback = strip?.parentElement.querySelector('.home-courts-status');
                 if (!feedback && strip) {
                     feedback = node('p', 'home-courts-status');
                     feedback.setAttribute('role', 'status');
                     strip.after(feedback);
+                }
+                if (!feedback) {
+                    feedback = document.getElementById('entity-navigation-status') || node('p', 'home-courts-status');
+                    feedback.id = 'entity-navigation-status';
+                    feedback.setAttribute('role', 'status');
+                    if (!feedback.isConnected) button.parentElement.after(feedback);
                 }
                 if (feedback) reserve({ id: button.dataset.seoCourtId }, feedback);
             });

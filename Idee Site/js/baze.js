@@ -41,7 +41,6 @@
             for (const key of ['baze_vezi', 'baze_titlu', 'baze_toate']) window.dict[lang][key] = labels[key];
         }
     }
-    const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const t = key => (copy[window.lang] || copy.ro)[key];
     function element(tag, className, text) {
         const node = document.createElement(tag);
@@ -73,20 +72,19 @@
         let courts = [];
         let state = 'loading';
         let currentLanguage = window.lang;
-        let pendingDeepLink = new URL(window.location.href).searchParams.get('baza');
         let bookingBusy = false;
         const isOpen = () => modal.style.display === 'flex';
         const otherModalOpen = () => [...document.querySelectorAll('.modal')].some(node =>
             node !== modal && ['flex', 'block'].includes(node.style.display));
         const isCurrent = token => token === generation && isOpen();
-        const baseCourts = baseId => courts.filter(court => String(court.baza_sportiva_id) === baseId);
+        const baseCourts = baseId => courts.filter(court => String(court.baza_sportiva_id) === String(baseId));
 
         function updateChrome() {
             close.setAttribute('aria-label', t('close'));
             back.querySelector('span').textContent = t('baze_toate');
             back.hidden = selectedId === null;
             title.removeAttribute('data-i18n');
-            title.textContent = bases.find(base => base.id === selectedId)?.nume || t('baze_titlu');
+            title.textContent = bases.find(base => String(base.id) === selectedId)?.nume || t('baze_titlu');
         }
         function showMessage(key, retry = false) {
             content.replaceChildren(element('p', 'sports-bases-message', t(key)));
@@ -96,16 +94,14 @@
             const status = document.getElementById('baze-sportive-status');
             if (status) status.textContent = text;
         }
-        function shareUrl(baseId) {
+        function shareUrl(base) {
             // Deliberately discard every other query parameter and the hash,
             // including Auth recovery codes/tokens and unrelated tracking data.
-            const url = new URL(window.location.pathname, window.location.origin);
-            url.searchParams.set('baza', baseId);
-            return url.href;
+            return window.SpotivityNavigation.baseUrl(base);
         }
         async function share(base) {
             const token = generation;
-            const url = shareUrl(base.id);
+            const url = shareUrl(base);
             statusMessage('');
             document.getElementById('baze-sportive-copy-fallback')?.remove();
             if (typeof navigator.share === 'function') {
@@ -192,7 +188,7 @@
             if (state === 'loading') return showMessage('loading');
             if (state === 'error') return showMessage('error', true);
             if (selectedId !== null) {
-                const base = bases.find(item => item.id === selectedId);
+                const base = bases.find(item => String(item.id) === selectedId);
                 if (!base) return showMessage('missing');
                 const city = element('p', 'sports-base-city', base.oras);
                 const description = element('p', 'sports-base-description', base.descriere?.trim() ? base.descriere : t('descriptionEmpty'));
@@ -221,7 +217,13 @@
             if (!visible.length) return showMessage(selectedCity === 'ALL' ? 'empty' : 'emptyCity');
             const grid = element('div', 'sports-bases-grid');
             visible.forEach(base => {
-                const card = button('sports-base-card', '', () => open(base.id));
+                const card = element('a', 'sports-base-card');
+                card.href = window.SpotivityNavigation.baseUrl(base);
+                card.addEventListener('click', event => {
+                    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+                    event.preventDefault();
+                    open(base.id);
+                });
                 card.dataset.baseId = base.id;
                 const photo = window.createSportsBasePhoto?.(base, 'sports-base-photo');
                 card.classList.toggle('has-base-cover', !!photo);
@@ -242,11 +244,13 @@
             content.replaceChildren(grid);
         }
         function hide(restoreFocus = true) {
+            const hadSelection = selectedId !== null && isOpen();
             generation++;
             controller?.abort();
             controller = null;
             bookingBusy = false;
             modal.style.display = 'none';
+            delete modal.dataset.selectedBaseId;
             if (shell) shell.inert = false;
             if (!otherModalOpen()) document.body.classList.remove('fara-scroll');
             if (restoreFocus && !otherModalOpen()) {
@@ -254,15 +258,18 @@
                     ? previousFocus : document.getElementById('btn-home-baze');
                 target?.focus({ preventScroll: true });
             }
+            if (restoreFocus && hadSelection) window.dispatchEvent(new Event('spotivity:public-base-closed'));
         }
         async function open(baseId = null) {
-            pendingDeepLink = null;
             if (otherModalOpen()) return false;
+            window.dispatchEvent(new CustomEvent('spotivity:public-base-opening', { detail: { baseId } }));
+            const previousSelection = selectedId;
             const token = ++generation;
             controller?.abort();
             controller = new AbortController();
             const requestController = controller;
             selectedId = baseId === null || baseId === undefined ? null : String(baseId).toLowerCase();
+            delete modal.dataset.selectedBaseId;
             bookingBusy = false;
             if (!isOpen()) previousFocus = document.activeElement;
             modal.style.display = 'flex';
@@ -274,7 +281,7 @@
             courts = [];
             render();
             close.focus({ preventScroll: true });
-            if (selectedId !== null && !uuid.test(selectedId)) {
+            if (selectedId !== null && !window.SpotivityEntityPaths.validId(selectedId)) {
                 state = 'ready';
                 render();
                 return false;
@@ -295,7 +302,14 @@
                 bases = baseResult.data.filter(base => base.este_activa === true && baseCourts(base.id).length > 0);
                 state = 'ready';
                 render();
-                return selectedId === null || bases.some(base => base.id === selectedId);
+                const selectedBase = selectedId === null ? null : bases.find(base => String(base.id) === selectedId);
+                if (selectedBase) {
+                    modal.dataset.selectedBaseId = String(selectedBase.id);
+                    window.dispatchEvent(new CustomEvent('spotivity:public-base-opened', { detail: { base: selectedBase } }));
+                } else if (selectedId === null && previousSelection !== null) {
+                    window.dispatchEvent(new CustomEvent('spotivity:public-base-closed', { detail: { toList: true } }));
+                }
+                return selectedId === null || bases.some(base => String(base.id) === selectedId);
             } catch {
                 if (isCurrent(token)) { state = 'error'; render(); }
                 return false;
@@ -334,23 +348,6 @@
             if (isOpen()) render();
         }).observe(languageControls, { subtree: true, attributes: true, attributeFilter: ['style'] });
 
-        function openPendingLink() {
-            if (pendingDeepLink === null || typeof window.openCourtReservation !== 'function' || otherModalOpen()) return;
-            const id = pendingDeepLink;
-            pendingDeepLink = null;
-            open(id);
-        }
-        if (pendingDeepLink !== null) {
-            // Let the normal Auth restore/recovery UI finish first. A shared base
-            // must never cover the password-reset dialog or interrupt sign-in.
-            window.addEventListener('spotivity:booking-ready', openPendingLink, { once: true });
-            const authObserver = new MutationObserver(() => {
-                if (pendingDeepLink === null) { authObserver.disconnect(); return; }
-                openPendingLink();
-            });
-            document.querySelectorAll('.modal').forEach(node => authObserver.observe(node, { attributes: true, attributeFilter: ['style'] }));
-            openPendingLink();
-        }
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
     else init();

@@ -13,13 +13,13 @@ const host = 'ndubcdwohqzgxpuiowye.supabase.co';
 const sports = ['Fotbal','Baschet','Tenis','Volei','Tenis Picior'];
 const base = process.env.SITE_BASE_URL || 'http://127.0.0.1:8002/';
 const sportSlugs = {Fotbal:'fotbal',Baschet:'baschet',Tenis:'tenis',Volei:'volei','Tenis Picior':'tenis-de-picior'};
-// Sport links load a crawlable category; booking stays in the existing chooser.
+// The homepage reservation action opens its chooser directly; sport navigation still exposes crawlable category pages.
 async function openSport(page, sport) {
   await page.waitForLoadState('networkidle');
+  await page.evaluate(() => window.SpotivityNavigation?.whenSettled?.());
   const button = page.locator(`button.card-sport[data-sport="${sport}"]`);
   if (!await button.count()) {
-    const entry = page.locator(`a.card-sport[data-sport="${sport}"]`);
-    const link = await entry.count() ? entry : page.locator(`.home-desktop-nav a[data-sport-target="${sport}"]`);
+    const link = page.locator(`.home-desktop-nav a[data-sport-target="${sport}"]`);
     const url = await link.getAttribute('href');
     // Hidden desktop navigation still exposes its native URL on a phone.
     if (await link.isVisible()) await link.click();
@@ -27,10 +27,14 @@ async function openSport(page, sport) {
     await page.waitForURL(new URL(`terenuri/${sportSlugs[sport]}/`, base).href);
     await page.waitForLoadState('networkidle');
   }
+  const before = page.url();
   await button.click();
   await page.locator('#modal-terenuri').waitFor({state:'visible'});
+  assert.equal(page.url(), before, 'The reservation action opens the chooser without a document or URL change');
 }
 async function returnHome(page) {
+  await page.evaluate(() => window.SpotivityNavigation?.whenSettled?.());
+  if (!await page.locator('body').getAttribute('data-category-sport') && !await page.locator('body').getAttribute('data-court-id') && !await page.locator('body').getAttribute('data-base-id')) return;
   await page.locator('#home-brand').click();
   await page.waitForURL(new URL(base).href);
   await page.waitForLoadState('networkidle');
@@ -47,6 +51,7 @@ const ident = value => { assert.match(value,/^[a-zA-Z_][a-zA-Z0-9_]*$/); return 
 let checks = 0;
 
 async function openProfile(page) {
+  await page.evaluate(() => window.SpotivityNavigation?.whenSettled?.());
   if (await page.locator('#modal-profil').isVisible()) return;
   if (await page.locator('#base-admin-workspace').isVisible()) {
     await page.locator('#btn-inchide-administrare').click();
@@ -482,8 +487,8 @@ async function openProfile(page) {
     assert.equal(await page.locator('#modal-terenuri').isVisible(),false);
     assert.equal(await page.locator('#fundal-imagine-sport').evaluate(node=>node.style.opacity),'0');
     await page.waitForFunction(()=>!document.body.classList.contains('fara-scroll'));
-    assert.equal(await page.locator('.home-sport-hero').count(),1);
-    assert.equal(await page.locator('body').getAttribute('data-category-sport'),'Fotbal');
+    assert.equal(await page.locator('.home-sport-hero').count(),sports.length);
+    assert.equal(await page.locator('body').getAttribute('data-category-sport'),null);
     const notice=page.locator('#notificare-rezervare');
     await notice.waitFor({state:'visible'});
     assert.equal(await notice.getAttribute('role'),'status');
@@ -1034,7 +1039,7 @@ async function openProfile(page) {
     await mobile.evaluate(()=>window.spotivitySportAppearanceReady);
     assert.equal(await mobile.locator('.home-sport-hero').count(),sports.length);
     assert.equal(await mobile.locator('.card-sport[data-sport]').count(),sports.length);
-    assert.equal(await mobile.locator('#home-brand img').getAttribute('src'),'assets/imagini/avatar2.png');
+    assert.equal(await mobile.locator('#home-brand img').evaluate(image=>image.src),new URL('assets/imagini/avatar2.png',base).href);
     await assertSportImageLoaded(mobile.locator('#home-brand img'));
     const appearanceRows=await serial(async()=>{
       await pg.exec('reset role');
@@ -1047,7 +1052,7 @@ async function openProfile(page) {
       const hero=mobile.locator(`.home-sport-hero[data-home-sport="${appearance.sport}"]`);
       assert.equal(await hero.count(),1);
       await hero.scrollIntoViewIfNeeded();
-      assert.equal(await hero.locator(`[data-sport-background="${appearance.sport}"]`).getAttribute('src'),currentSportBackgrounds[appearance.sport]||appearance.fundal_url);
+      assert.equal(await hero.locator(`[data-sport-background="${appearance.sport}"]`).evaluate(image=>image.src),new URL(currentSportBackgrounds[appearance.sport]||appearance.fundal_url,base).href);
       assert.equal(await hero.locator('[data-sport-icon]').count(),0,'Sport headlines must be text only');
       await assertSportImageLoaded(hero.locator('[data-sport-background]'));
 
@@ -1231,13 +1236,11 @@ async function openProfile(page) {
       await lowerSport.scrollIntoViewIfNeeded();
       const originalScroll=await mobile.evaluate(()=>window.scrollY);
       assert.ok(originalScroll>0,`The stacked homepage must scroll to basketball at ${width}px`);
+      const chooserUrl=mobile.url();
       await lowerSport.click();
-      await mobile.waitForURL(new URL('terenuri/baschet/',base).href);
-      await mobile.waitForLoadState('networkidle');
-      await mobile.evaluate(()=>window.scrollTo({top:45,behavior:'instant'}));
-      await mobile.locator('button.card-sport[data-sport="Baschet"]').scrollIntoViewIfNeeded();
-      const categoryScroll=await mobile.evaluate(()=>window.scrollY);
-      await openSport(mobile,'Baschet');
+      await mobile.locator('#modal-terenuri').waitFor({state:'visible'});
+      assert.equal(mobile.url(),chooserUrl,'The homepage basketball action opens the chooser directly');
+      const categoryScroll=originalScroll;
       await mobile.waitForFunction(()=>document.body.classList.contains('fara-scroll'));
       await assertBackdrop(mobile,'modal-terenuri');
       await mobile.mouse.wheel(0,300);
@@ -1252,7 +1255,7 @@ async function openProfile(page) {
       await mobile.mouse.wheel(0,250);
       await mobile.waitForFunction(previous=>window.scrollY>previous,categoryScroll,{timeout:3000});
       assert.ok((await mobile.evaluate(()=>window.scrollY))>categoryScroll,`Closing the chooser must restore homepage scrolling at ${width}px`);
-      pass(`category page scroll remains locked under the full blurred chooser and returns to its original position at ${width}px`);
+      pass(`homepage scroll remains locked under the direct chooser and returns to its original position at ${width}px`);
       await mobile.evaluate(()=>window.scrollTo(0,0));
       await openProfile(mobile);
       await mobile.locator('#modal-auth').waitFor({state:'visible'});
@@ -1275,7 +1278,7 @@ async function openProfile(page) {
     await configuredAppearance.goto(base,{waitUntil:'networkidle'});
     await configuredAppearance.evaluate(()=>window.spotivitySportAppearanceReady);
     assert.equal(await configuredAppearance.locator('.home-sport-hero [data-sport-icon]').count(),0);
-    assert.equal(await configuredAppearance.locator('[data-sport-background="Fotbal"]').getAttribute('src'),'assets/imagini/VoleiVFinal.jpg');
+    assert.equal(await configuredAppearance.locator('[data-sport-background="Fotbal"]').evaluate(image=>image.src),new URL('assets/imagini/VoleiVFinal.jpg',base).href);
     await openSport(configuredAppearance,'Fotbal');
     await configuredAppearance.locator('#modal-terenuri').waitFor({state:'visible'});
     assert.match(await configuredAppearance.locator('#modal-terenuri .modal-continut').evaluate(node=>getComputedStyle(node).backgroundImage),/VoleiVFinal\.jpg/);
@@ -1288,8 +1291,8 @@ async function openProfile(page) {
     await unavailableAppearance.goto(base,{waitUntil:'networkidle'});
     await unavailableAppearance.evaluate(()=>window.spotivitySportAppearanceReady);
     assert.equal(await unavailableAppearance.locator('.home-sport-hero [data-sport-icon]').count(),0);
-    assert.equal(await unavailableAppearance.locator('[data-sport-background="Fotbal"]').getAttribute('src'),'assets/imagini/FotbalFinal.jpeg');
-    assert.equal(await unavailableAppearance.locator('[data-sport-background="Tenis Picior"]').getAttribute('src'),'assets/imagini/RealistTenispicior.png');
+    assert.equal(await unavailableAppearance.locator('[data-sport-background="Fotbal"]').evaluate(image=>image.src),new URL('assets/imagini/FotbalFinal.jpeg',base).href);
+    assert.equal(await unavailableAppearance.locator('[data-sport-background="Tenis Picior"]').evaluate(image=>image.src),new URL('assets/imagini/RealistTenispicior.png',base).href);
     await openSport(unavailableAppearance,'Fotbal');
     await unavailableAppearance.locator('#modal-terenuri').waitFor({state:'visible'});
     await unavailableAppearance.locator('#filtru-nume').fill('Court A');
@@ -1332,9 +1335,9 @@ async function openProfile(page) {
     assert.equal(await basesPage.locator('.home-nav [data-bases-target]').count(),0);
     assert.equal(await basesPage.locator('.home-explore-button').count(),0);
     for (const sport of sports) {
-      assert.equal(await basesPage.locator(`[data-home-sport="${sport}"] .home-hero-actions a`).count(),1);
-      assert.equal(await basesPage.locator(`[data-home-sport="${sport}"] .home-hero-actions a`).innerText(),'Rezervă un teren');
-      assert.equal(await basesPage.locator(`[data-home-sport="${sport}"] .home-hero-actions a`).getAttribute('href'),`terenuri/${sportSlugs[sport]}/`);
+      assert.equal(await basesPage.locator(`[data-home-sport="${sport}"] .home-hero-actions button`).count(),1);
+      assert.equal(await basesPage.locator(`[data-home-sport="${sport}"] .home-hero-actions button`).innerText(),'Rezervă un teren');
+      assert.equal(await basesPage.locator(`[data-home-sport="${sport}"] .home-hero-actions button`).getAttribute('data-sport'),sport);
     }
     assert.deepEqual((await basesPage.locator('[data-home-base-id]').evaluateAll(nodes=>nodes.map(node=>node.dataset.homeBaseId))).sort(),[baseIds.a,baseIds.b]);
     assert.ok((await basesPage.locator('#home-bases-directory').innerText()).includes(unsafeBaseName));
@@ -1425,11 +1428,14 @@ async function openProfile(page) {
     await basesPage.locator('#baze-sportive-share').click();
     await basesPage.waitForFunction(()=>Boolean(window.__sharedBaseUrl));
     const sharedUrl=new URL(await basesPage.evaluate(()=>window.__sharedBaseUrl));
-    assert.equal(sharedUrl.search,`?baza=${baseIds.a}`);
+    assert.equal(sharedUrl.searchParams.get('baza'),baseIds.a);
+    assert.equal(sharedUrl.searchParams.get('nume'),await basesPage.evaluate(name=>window.SpotivityEntityPaths.slug(name,'baza'),unsafeBaseName));
+    assert.equal(sharedUrl.searchParams.get('oras'),'targu-mures');
+    assert.deepEqual([...sharedUrl.searchParams.keys()].sort(),['baza','nume','oras']);
     assert.equal(sharedUrl.hash,'');
     assert.equal(sharedUrl.origin,new URL(base).origin);
     assert.equal(sharedUrl.pathname,new URL(base).pathname);
-    pass('copying a sports-base link includes only its public UUID and strips unrelated query parameters and authentication fragments');
+    pass('copying a sports-base link includes its public UUID, readable name and city while stripping unrelated query parameters and authentication fragments');
     await basesPage.locator('#inchide-baze-sportive').click();
     await basesPage.evaluate(()=>history.replaceState(null,'',location.pathname));
     await basesPage.locator('#filtru-oras-global').selectOption('București');
@@ -1464,12 +1470,17 @@ async function openProfile(page) {
     pass('a direct shared URL opens the correct base and Escape restores the homepage');
     const missingBase=await pageFor();
     await missingBase.goto(new URL(`?baza=${baseIds.inactive}`,base).href,{waitUntil:'networkidle'});
-    await missingBase.locator('#modal-baze-sportive').waitFor({state:'visible'});
+    await missingBase.evaluate(()=>window.SpotivityNavigation.whenSettled());
+    assert.equal(await missingBase.locator('#modal-baze-sportive').isVisible(),false);
+    await missingBase.locator('#public-navigation-status').waitFor({state:'visible'});
+    assert.ok((await missingBase.locator('#public-navigation-status').innerText()).trim());
     assert.equal(await missingBase.locator('[data-base-court]').count(),0);
     assert.ok((await missingBase.locator('#baze-sportive-continut').innerText()).trim());
     assert.ok(!(await missingBase.locator('#baze-sportive-continut').innerText()).includes('Terenul bazei dezactivate'));
     await missingBase.keyboard.press('Escape');
-    pass('an unavailable shared base gives a recoverable empty result without exposing its courts');
+    await openSport(missingBase,'Fotbal');
+    await missingBase.locator('#inchide-terenuri').click();
+    pass('an unavailable shared base shows a recoverable error without opening a stale dialog or exposing its courts');
     const nativeShare=await pageFor();
     await nativeShare.addInitScript(()=>{
       Object.defineProperty(navigator,'share',{configurable:true,value:async data=>{window.__nativeShare=data;throw new DOMException('Cancelled','AbortError');}});
@@ -1477,7 +1488,12 @@ async function openProfile(page) {
     await nativeShare.goto(new URL(`?baza=${baseIds.b}`,base).href,{waitUntil:'networkidle'});
     await nativeShare.locator('#baze-sportive-share').click();
     await nativeShare.waitForFunction(()=>Boolean(window.__nativeShare));
-    assert.equal(new URL((await nativeShare.evaluate(()=>window.__nativeShare)).url).search,`?baza=${baseIds.b}`);
+    const nativeSharedUrl=new URL((await nativeShare.evaluate(()=>window.__nativeShare)).url);
+    assert.equal(nativeSharedUrl.searchParams.get('baza'),baseIds.b);
+    assert.equal(nativeSharedUrl.searchParams.get('nume'),'baza-b');
+    assert.equal(nativeSharedUrl.searchParams.get('oras'),'bucuresti');
+    assert.deepEqual([...nativeSharedUrl.searchParams.keys()].sort(),['baza','nume','oras']);
+    assert.equal(nativeSharedUrl.hash,'');
     assert.equal(await nativeShare.locator('#modal-baze-sportive').isVisible(),true);
     assert.equal(await nativeShare.locator('[data-base-court]').count(),2);
     pass('native share cancellation preserves the current base without an exception');

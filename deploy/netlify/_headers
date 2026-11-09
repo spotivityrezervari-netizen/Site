@@ -22,6 +22,9 @@
 /terenuri/*
   Cache-Control: no-cache
 
+/baze-sportive/*
+  Cache-Control: no-cache
+
 /sitemap.xml
   Cache-Control: no-cache
 

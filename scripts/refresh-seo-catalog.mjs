@@ -24,13 +24,22 @@ export function publicCredentials(source) {
 
 export function snapshotFromPublicRows(courts, bases, refreshedAt = new Date().toISOString()) {
   if (!Array.isArray(courts) || !Array.isArray(bases)) throw new Error('Invalid public catalog response.');
-  const activeBases = new Set(bases.filter(base => base.este_activa === true).map(base => base.id));
-  const snapshot = { version: 1, refreshedAt, courts: courts.filter(court => court.este_activ === true &&
-      (!court.baza_sportiva_id || activeBases.has(court.baza_sportiva_id))).map(court => ({
-    id: court.id, nume: court.nume, sport: court.sport === 'Tenis de picior' ? 'Tenis Picior' : court.sport,
-    oras: court.oras, pret: court.pret === null || court.pret === undefined ? null : Number(court.pret)
-  })) };
-  snapshot.courts = validateCatalog(snapshot);
+  const activeBases = new Set(bases.filter(base => base.este_activa === true).map(base => String(base.id).toLowerCase()));
+  const snapshot = { version: 2, refreshedAt,
+    bases: bases.filter(base => base.este_activa === true).map(base => ({
+      id: base.id, nume: base.nume, oras: base.oras, descriere: base.descriere ?? ''
+    })),
+    courts: courts.filter(court => court.este_activ === true &&
+      (court.baza_sportiva_id === null || court.baza_sportiva_id === undefined || activeBases.has(String(court.baza_sportiva_id).toLowerCase()))).map(court => ({
+      id: court.id, nume: court.nume, sport: court.sport === 'Tenis de picior' ? 'Tenis Picior' : court.sport,
+      oras: court.oras, pret: court.pret === null || court.pret === undefined ? null : Number(court.pret),
+      baza_sportiva_id: court.baza_sportiva_id ?? null
+    })) };
+  const referencedBases = new Set(snapshot.courts.map(court => String(court.baza_sportiva_id).toLowerCase()));
+  snapshot.bases = snapshot.bases.filter(base => referencedBases.has(String(base.id).toLowerCase()));
+  const normalized = validateCatalog(snapshot);
+  snapshot.bases = normalized.bases;
+  snapshot.courts = normalized.courts;
   return snapshot;
 }
 
@@ -58,16 +67,16 @@ export async function refreshCatalog({ repoRoot = repositoryRoot } = {}) {
   }
   const [courts, bases] = await Promise.all([
     readAll('terenuri', 'id,nume,sport,oras,pret,este_activ,baza_sportiva_id', 'este_activ'),
-    readAll('baze_sportive', 'id,este_activa', 'este_activa')
+    readAll('baze_sportive', 'id,nume,oras,descriere,este_activa', 'este_activa')
   ]);
   const snapshot = snapshotFromPublicRows(courts, bases);
   await readReviewedFile(repoRoot, 'scripts/seo-public-catalog.json'); // refuse existing symlinks
   const handle = await open(path.join(repoRoot, 'scripts/seo-public-catalog.json'), constants.O_WRONLY | constants.O_TRUNC | constants.O_NOFOLLOW);
   try { await handle.writeFile(JSON.stringify(snapshot, null, 2) + '\n'); } finally { await handle.close(); }
-  return { courts: snapshot.courts.length, sports: SPORTS.filter(({ sport }) => snapshot.courts.some(court => court.sport === sport)).length };
+  return { bases: snapshot.bases.length, courts: snapshot.courts.length, sports: SPORTS.filter(({ sport }) => snapshot.courts.some(court => court.sport === sport)).length };
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   if (process.argv.length > 2) throw new Error('Usage: node scripts/refresh-seo-catalog.mjs');
-  refreshCatalog().then(result => console.log(`Refreshed ${result.courts} public courts across ${result.sports} sports. Regenerate and review the SEO pages before pushing.`))
+  refreshCatalog().then(result => console.log(`Refreshed ${result.bases} public bases and ${result.courts} public courts across ${result.sports} sports. Regenerate and review the SEO pages before pushing.`))
     .catch(error => { console.error(error.message); process.exitCode = 1; });
 }

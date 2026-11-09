@@ -39,5 +39,7 @@
         services.auth.watchIdentity();
         services.emailLinks = modules.emailLinks(context);
         services.emailLinks.mount();
+        window.spotivityPublicReady = true;
+        window.dispatchEvent(new Event('spotivity:public-ready'));
     });
 })();

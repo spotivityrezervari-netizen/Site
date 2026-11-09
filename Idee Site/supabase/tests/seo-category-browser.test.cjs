@@ -88,6 +88,7 @@ const pass = message => { checks++; console.log('PASS', message); };
             assert.equal(await page.locator('#rezervare-teren-selectat').innerText(), 'Court A');
             await page.keyboard.press('Escape');
             await page.locator('#modal-rezervare').waitFor({state: 'hidden'});
+            await page.evaluate(() => window.SpotivityNavigation?.whenSettled());
             for (const width of hosted === site ? [320, 390, 768, 1440] : [390]) {
                 await page.setViewportSize({width, height: 844});
                 await page.evaluate(() => window.scrollTo({top: 45, behavior: 'instant'}));
@@ -105,6 +106,7 @@ const pass = message => { checks++; console.log('PASS', message); };
                 assert.ok(Math.abs(after.scrollY-scroll) <= 1, `Category chooser locks scroll at ${width}px: ${JSON.stringify({before,opened,after})}`);
                 await page.keyboard.press('Escape');
                 await page.locator('#modal-terenuri').waitFor({state: 'hidden'});
+                await page.evaluate(() => window.SpotivityNavigation?.whenSettled());
                 await page.waitForFunction(() => !document.body.classList.contains('fara-scroll'));
                 assert.ok(Math.abs((await page.evaluate(() => scrollY))-scroll) <= 1, `Closing category chooser restores scroll at ${width}px`);
             }

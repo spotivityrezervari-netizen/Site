@@ -1,62 +1,90 @@
 {
-  "version": 1,
-  "refreshedAt": "2026-11-08T09:34:20.137Z",
+  "version": 2,
+  "refreshedAt": "2026-11-09T20:35:14.270Z",
+  "bases": [
+    {
+      "id": "2f8dee16-255d-4f3c-b8cb-8d59e7093f12",
+      "nume": "siefei[ep[edopkf",
+      "oras": "Târgu Mureș",
+      "descriere": ""
+    },
+    {
+      "id": "05bb1b11-d4d7-4dfb-91e7-095bb1ad457b",
+      "nume": "Baza A",
+      "oras": "Reghin",
+      "descriere": "hsjsisisjsh"
+    },
+    {
+      "id": "ab6d8804-bb31-418f-a455-7558b97eb142",
+      "nume": "Baza B",
+      "oras": "Târgu Mureș",
+      "descriere": ""
+    }
+  ],
   "courts": [
     {
       "id": 9,
       "nume": "Exemplu",
       "sport": "Fotbal",
       "oras": "Reghin",
-      "pret": 194
+      "pret": 194,
+      "baza_sportiva_id": "05bb1b11-d4d7-4dfb-91e7-095bb1ad457b"
     },
     {
       "id": 10,
       "nume": "Exemplu2",
       "sport": "Tenis",
       "oras": "Reghin",
-      "pret": 19
+      "pret": 19,
+      "baza_sportiva_id": "05bb1b11-d4d7-4dfb-91e7-095bb1ad457b"
     },
     {
       "id": 11,
       "nume": "Exemplu3",
       "sport": "Tenis",
-      "oras": "Târgu Mureș.",
-      "pret": 23
+      "oras": "Târgu Mureș",
+      "pret": 23,
+      "baza_sportiva_id": "ab6d8804-bb31-418f-a455-7558b97eb142"
     },
     {
       "id": 12,
       "nume": "Exemplu4",
       "sport": "Baschet",
-      "oras": "Târgu Mureș.",
-      "pret": 221
+      "oras": "Târgu Mureș",
+      "pret": 221,
+      "baza_sportiva_id": "ab6d8804-bb31-418f-a455-7558b97eb142"
     },
     {
       "id": 13,
       "nume": "Bernabeu",
       "sport": "Fotbal",
       "oras": "Suceava",
-      "pret": 10
+      "pret": 10,
+      "baza_sportiva_id": null
     },
     {
       "id": 18,
       "nume": "siefei[ep[edopkf — transil [199b041b-1]",
       "sport": "Fotbal",
       "oras": "Târgu Mureș",
-      "pret": 150
+      "pret": 150,
+      "baza_sportiva_id": "2f8dee16-255d-4f3c-b8cb-8d59e7093f12"
     },
     {
       "id": 23,
       "nume": "Tenis",
       "sport": "Tenis",
       "oras": "Reghin",
-      "pret": 25
+      "pret": 25,
+      "baza_sportiva_id": "05bb1b11-d4d7-4dfb-91e7-095bb1ad457b"
     },
     {
       "id": 24,
       "nume": "Jj",
       "sport": "Fotbal",
       "oras": "Reghin",
-      "pret": 222
+      "pret": 222,
+      "baza_sportiva_id": "05bb1b11-d4d7-4dfb-91e7-095bb1ad457b"
     }
   ]
 }

@@ -128,14 +128,19 @@
             }
 
             terenuriDisponibile.forEach(teren => {
-                const divTeren = document.createElement('div');
+                const divTeren = document.createElement('a');
                 divTeren.className = 'card-teren-poza btn-teren';
+                divTeren.href = window.SpotivityNavigation.courtUrl(teren);
                 const fallbackPhoto = window.appAssetUrl('assets/imagini/avatar2.png');
                 divTeren.innerHTML = `<img src="${window.escapeHtml(window.appAssetUrl(teren.poza) || fallbackPhoto)}" alt="${window.escapeHtml(teren.nume)}"><div class="info-teren-poza"><h3>${window.escapeHtml(teren.nume)}</h3><p>${window.escapeHtml(teren.pret)} ${window.dict[window.lang]['lei_ora']}</p></div>`;
                 divTeren.querySelector('img').addEventListener('error', function () {
                     if (this.getAttribute('src') !== fallbackPhoto) this.src = fallbackPhoto;
                 });
-                divTeren.addEventListener('click', () => services.bookings.openCourt(teren));
+                divTeren.addEventListener('click', event => {
+                    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+                    event.preventDefault();
+                    services.bookings.openCourt(teren);
+                });
                 containerDinamicTerenuri.appendChild(divTeren);
             });
         }
@@ -153,6 +158,7 @@
                 if (signal?.aborted || request !== baseCourtRequest || generation !== state.authGeneration ||
                     bookingGeneration !== services.bookings.generation() || error || !court || court.este_activ === false) return false;
                 state.sport = window.normalizeSportName(court.sport);
+                document.getElementById('modal-terenuri').dataset.sport = state.sport;
                 const translatedSport = window.dict[window.lang][state.sport.toLowerCase()] || state.sport;
                 document.getElementById('titlu-sport').textContent = `${window.dict[window.lang]['alege_terenul']} - ${translatedSport}`;
                 document.getElementById('filtru-data').value = window.siteDate();
@@ -173,43 +179,51 @@
             }
         };
 
+        async function openCourtList(sport, filters = {}) {
+            state.sport = window.normalizeSportName(sport);
+            const numeSportTradus = window.dict[window.lang][state.sport.toLowerCase()] || state.sport;
+
+            document.getElementById('titlu-sport').innerText = `${window.dict[window.lang]['alege_terenul']} - ${numeSportTradus}`;
+            document.getElementById('modal-terenuri').dataset.sport = state.sport;
+            document.getElementById('modal-terenuri').style.display = 'flex';
+
+            // Schimba fundalul cu imaginea sportului
+            const bgDiv = document.getElementById('fundal-imagine-sport');
+            if(bgDiv && state.sport) {
+
+                // Punem background-ul pe ecranul principal (in spatele modalului)
+                services.ui.setSportBackground(bgDiv, state.sport);
+                bgDiv.style.opacity = '1';
+
+                // Punem background-ul STRICT IN FEREASTRA (modal-continut)
+                const modalContinut = document.querySelector('#modal-terenuri .modal-continut');
+                if (modalContinut) {
+                    services.ui.setSportBackground(modalContinut, state.sport, true);
+                }
+            }
+
+            const aziFormatStandard = window.siteDate();
+            const filtruData = document.getElementById('filtru-data');
+            if(filtruData) filtruData.value = typeof filters.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(filters.date)
+                ? filters.date : aziFormatStandard;
+            services.ui.updateFilterDate();
+            const filtruOra = document.getElementById('filtru-ora');
+            if(filtruOra) {
+                const hour = window.bookingHourOptions.includes(filters.hour) ? filters.hour : 'ALL';
+                if (![...filtruOra.options].some(option => option.value === hour)) filtruOra.add(new Option(hour, hour));
+                filtruOra.value = hour;
+            }
+            const filtruNume = document.getElementById('filtru-nume');
+            if (filtruNume) filtruNume.value = typeof filters.name === 'string' ? filters.name.slice(0, 1000) : '';
+            clearTimeout(searchTimer);
+
+            await aplicaFiltruSiDeseneazaTerenuri();
+        }
+
         function mount() {
-            // --- LOGICA TERENURI ---
+            window.openSpotivityCourtList = openCourtList;
             document.querySelectorAll('button.card-sport[data-sport]').forEach(card => {
-                card.addEventListener('click', async () => {
-                    state.sport = window.normalizeSportName(card.getAttribute('data-sport'));
-                    const numeSportTradus = window.dict[window.lang][state.sport.toLowerCase()] || state.sport;
-
-                    document.getElementById('titlu-sport').innerText = `${window.dict[window.lang]['alege_terenul']} - ${numeSportTradus}`;
-                    document.getElementById('modal-terenuri').style.display = 'flex';
-
-                    // Schimba fundalul cu imaginea sportului
-                    const bgDiv = document.getElementById('fundal-imagine-sport');
-                    if(bgDiv && state.sport) {
-
-                        // Punem background-ul pe ecranul principal (in spatele modalului)
-                        services.ui.setSportBackground(bgDiv, state.sport);
-                        bgDiv.style.opacity = '1';
-
-                        // Punem background-ul STRICT IN FEREASTRA (modal-continut)
-                        const modalContinut = document.querySelector('#modal-terenuri .modal-continut');
-                        if (modalContinut) {
-                            services.ui.setSportBackground(modalContinut, state.sport, true);
-                        }
-                    }
-
-                    const aziFormatStandard = window.siteDate();
-                    const filtruData = document.getElementById('filtru-data');
-                    if(filtruData) filtruData.value = aziFormatStandard;
-                    services.ui.updateFilterDate();
-                    const filtruOra = document.getElementById('filtru-ora');
-                    if(filtruOra) filtruOra.value = 'ALL';
-                    const filtruNume = document.getElementById('filtru-nume');
-                    if (filtruNume) filtruNume.value = '';
-                    clearTimeout(searchTimer);
-
-                    await aplicaFiltruSiDeseneazaTerenuri();
-                });
+                card.addEventListener('click', () => openCourtList(card.getAttribute('data-sport')));
             });
             document.getElementById('filtru-oras-global')?.addEventListener('change', event => {
                 try { window.sessionStorage.setItem('spotivity-city', event.target.value); }
@@ -235,6 +249,7 @@
                 services.ui.resetSportBackground();
             });
             document.getElementById('inapoi-la-terenuri')?.addEventListener('click', () => { document.getElementById('modal-rezervare').style.display = 'none'; document.getElementById('modal-terenuri').style.display = 'flex';
+                    window.dispatchEvent(new CustomEvent('spotivity:public-court-closed', { detail: { toList: true } }));
 
                     // Schimba fundalul cu imaginea sportului
                     const bgDiv = document.getElementById('fundal-imagine-sport');

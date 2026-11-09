@@ -4,11 +4,10 @@ import { constants } from 'node:fs';
 import { lstat, open, mkdir, mkdtemp, rm, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SEO_PATHS, generateSeoFiles, productionHome, PRODUCTION_BASE_URL } from './seo-pages.mjs';
+import { SEO_PATHS, seoPaths as reviewedSeoPaths, generateSeoFiles, productionHome, PRODUCTION_BASE_URL } from './seo-pages.mjs';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const assetPath = /^(?:index\.html|css\/[A-Za-z0-9_-]+\.css|js\/(?:modules\/)?[A-Za-z0-9_-]+\.js|assets\/imagini\/[A-Za-z0-9_-]+\.(?:png|jpe?g|webp|avif|gif|ico))$/;
-const seoPaths = new Set(SEO_PATHS);
 
 async function readRegularFile(root, relative) {
   const parts = relative.split('/');
@@ -62,6 +61,19 @@ export async function buildPublic({ repoRoot = repositoryRoot } = {}) {
   if (manifest.version !== 1 || !Array.isArray(manifest.files) || !manifest.files.includes('index.html')) {
     throw new Error('Public manifest must have version 1, a files array, and index.html.');
   }
+  // Named pages are approved by the sanitized public snapshot, never by a
+  // wildcard HTML pattern. Read it through the same no-symlink/secret guards.
+  const includesSeo = SEO_PATHS.some(relative => manifest.files.includes(relative))
+    || manifest.files.includes('js/seo-route-index.js');
+  let catalog;
+  let expectedSeoPaths = [];
+  if (includesSeo) {
+    const catalogBytes = await readRegularFile(repoRoot, 'scripts/seo-public-catalog.json');
+    assertNoPrivateMaterial('scripts/seo-public-catalog.json', catalogBytes.toString('utf8'));
+    catalog = JSON.parse(catalogBytes.toString('utf8'));
+    expectedSeoPaths = reviewedSeoPaths(catalog);
+  }
+  const seoPaths = new Set(expectedSeoPaths);
   const files = new Set();
   for (const relative of manifest.files) {
     if (typeof relative !== 'string' || !(assetPath.test(relative) || seoPaths.has(relative)) || files.has(relative)) {
@@ -69,14 +81,10 @@ export async function buildPublic({ repoRoot = repositoryRoot } = {}) {
     }
     files.add(relative);
   }
-  const includesSeo = SEO_PATHS.some(relative => files.has(relative));
   let generated = new Map();
   if (includesSeo) {
-    if (SEO_PATHS.some(relative => !files.has(relative))) throw new Error('Public manifest must include the complete reviewed SEO route set.');
+    if (expectedSeoPaths.some(relative => !files.has(relative))) throw new Error('Public manifest must include the complete reviewed SEO route set.');
     const template = (await readRegularFile(repoRoot, 'Idee Site/index.html')).toString('utf8');
-    const catalogBytes = await readRegularFile(repoRoot, 'scripts/seo-public-catalog.json');
-    assertNoPrivateMaterial('scripts/seo-public-catalog.json', catalogBytes.toString('utf8'));
-    const catalog = JSON.parse(catalogBytes.toString('utf8'));
     const pagesSource = generateSeoFiles({ template, catalog });
     for (const [relative, expected] of pagesSource) {
       const source = await readRegularFile(repoRoot, `Idee Site/${relative}`);

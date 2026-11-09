@@ -57,13 +57,10 @@ async function footballPans(page, touch, label) {
 }
 
 async function openCourts(page) {
-    const navigation = await page.locator('#sport-fotbal .home-reserve-button').evaluate(node => node.tagName === 'A');
-    await page.locator('#sport-fotbal .home-reserve-button').click();
-    if (navigation) {
-        await page.waitForURL(new URL('terenuri/fotbal/',base).href);
-        await page.locator('#sport-fotbal .home-reserve-button').click();
-    }
+    const chooserUrl = page.url();
+    await page.locator('#sport-fotbal button.home-reserve-button').click();
     await page.locator('#modal-terenuri').waitFor({state: 'visible'});
+    assert.equal(page.url(), chooserUrl, 'The reservation action opens the chooser on the same page');
     await locked(page, true);
 }
 
@@ -151,6 +148,7 @@ async function openBooking(page) {
         assert.equal(await page.evaluate(() => scrollY), geometry.pageY, 'Dragging the modal margin does not scroll the underlying site');
         await page.locator('#inapoi-la-terenuri').click();
         await page.locator('#modal-rezervare').waitFor({state: 'hidden'});
+        await page.evaluate(() => window.SpotivityNavigation?.whenSettled());
         await page.locator('#modal-terenuri').waitFor({state: 'visible'});
         await locked(page, true);
         await page.locator('#inchide-terenuri').click();
@@ -175,6 +173,7 @@ async function openBooking(page) {
         await page.locator('#guest-booking-submit').click();
         await page.locator('#modal-rezervare-vizitator').waitFor({state: 'detached'});
         await page.locator('#modal-rezervare').waitFor({state: 'hidden'});
+        await page.evaluate(() => window.SpotivityNavigation?.whenSettled());
         await page.locator('#notificare-rezervare').waitFor({state: 'visible'});
         await footballPans(page, touch, 'guest booking success');
         pass('a real guest booking confirms through Edge/SQL and immediately restores native background panning');
@@ -190,6 +189,7 @@ async function openBooking(page) {
         await signed.page.locator('.btn-ora:not([disabled])').first().click();
         await signed.page.locator('#buton-confirma').click();
         await signed.page.locator('#modal-rezervare').waitFor({state: 'hidden'});
+        await signed.page.evaluate(() => window.SpotivityNavigation?.whenSettled());
         await signed.page.locator('#notificare-rezervare').waitFor({state: 'visible'});
         await footballPans(signed.page, signed.touch, 'signed-in booking success');
         pass('a real signed-in booking confirms through Edge/SQL and immediately restores native background panning');

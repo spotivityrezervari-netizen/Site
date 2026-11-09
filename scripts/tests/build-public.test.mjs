@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, readFile, writeFile, readdir, rm, symlink } from 'node:
 import path from 'node:path';
 import os from 'node:os';
 import { buildPublic } from '../build-public.mjs';
+import { SEO_PATHS, seoPaths } from '../seo-pages.mjs';
 
 const files = ['index.html', 'css/main.css', 'js/main.js', 'js/modules/public-auth.js', 'assets/imagini/logo.png'];
 const ordinary = {
@@ -90,6 +91,43 @@ test('manifest rejects non-browser sources, hidden files, traversal, duplicates 
   }
   await f.put('scripts/public-files.json', JSON.stringify({ version: 999, files }));
   await assert.rejects(f.build, /Public manifest/);
+});
+
+test('named court and base pages require exactly the validated public snapshot paths', async t => {
+  const f = await fixture(t);
+  const catalog = { version: 2, refreshedAt: '2026-11-09T10:00:00.000Z', bases: [], courts: [
+    { id: 17, nume: 'Arena Nord', sport: 'Fotbal', oras: 'Reghin', pret: 150, baza_sportiva_id: null }
+  ] };
+  await f.put('scripts/seo-public-catalog.json', JSON.stringify(catalog));
+  const approved = seoPaths(catalog);
+  const named = approved.find(relative => relative.endsWith('/index.html') && !SEO_PATHS.includes(relative));
+  assert.ok(named, 'The sanitized court must produce one exact named page.');
+  await f.manifest([...files, ...approved.filter(relative => relative !== named)]);
+  await assert.rejects(f.build, /complete reviewed SEO route set/);
+  for (const unapproved of ['terenuri/fotbal/another-court-999/index.html', 'baze-sportive/private-999/index.html', 'terenuri/fotbal/../../private/index.html']) {
+    await f.manifest([...files, ...approved, unapproved]);
+    await assert.rejects(f.build, /Unsafe, unsupported, or duplicate/);
+  }
+});
+
+test('the generated route index cannot be published independently from the reviewed SEO set', async t => {
+  const f = await fixture(t);
+  await f.put('scripts/seo-public-catalog.json', JSON.stringify({ version: 2, refreshedAt: '2026-11-09T10:00:00.000Z', bases: [], courts: [] }));
+  await f.put('Idee Site/js/seo-route-index.js', 'window.spotivitySeoRoutes={courts:{},bases:{}};');
+  await f.manifest([...files, 'js/seo-route-index.js']);
+  await assert.rejects(f.build, /complete reviewed SEO route set/);
+});
+
+test('the public snapshot is validated and cannot follow a symlink before entity paths are approved', async t => {
+  const f = await fixture(t);
+  const catalog = { version: 2, refreshedAt: '2026-11-09T10:00:00.000Z', bases: [], courts: [] };
+  await f.put('scripts/seo-public-catalog.json', JSON.stringify({ ...catalog, customer_email: 'private@example.test' }));
+  await f.manifest([...files, ...SEO_PATHS]);
+  await assert.rejects(f.build, /Invalid public SEO catalog|unapproved field/);
+  await rm(path.join(f.repoRoot, 'scripts/seo-public-catalog.json'));
+  await f.put('private-catalog.json', JSON.stringify(catalog));
+  await symlink(path.join(f.repoRoot, 'private-catalog.json'), path.join(f.repoRoot, 'scripts/seo-public-catalog.json'));
+  await assert.rejects(f.build, /no symlink components/);
 });
 
 test('symlinked input files cannot expose a file outside the browser source', async t => {

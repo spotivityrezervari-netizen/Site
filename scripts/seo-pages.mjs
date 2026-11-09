@@ -1,45 +1,62 @@
-// Deterministic, reviewed public category pages. Never read privileged data here.
+// Deterministic public sport, court and sports-base pages. Only allowlisted
+// anonymous catalog fields enter these documents; booking is revalidated live.
 import { constants } from 'node:fs';
 import { lstat, open } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import path from 'node:path';
+const require = createRequire(import.meta.url);
+const paths = require('../Idee Site/js/entity-paths.js');
 
 export const PAGES_BASE_URL = 'https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/';
 export const PRODUCTION_BASE_URL = 'https://spotivity.ro/';
+export const GENERATED_MARKER = '<!-- Spotivity generated public page; edit the shared shell/catalog instead. -->';
 export const SPORTS = Object.freeze([
   { sport: 'Fotbal', slug: 'fotbal', label: 'fotbal', intro: 'Găsește terenuri de fotbal pentru meciurile cu prietenii. Compară terenurile și orașele, apoi verifică programul și alege ora potrivită pentru echipa ta.' },
   { sport: 'Baschet', slug: 'baschet', label: 'baschet', intro: 'Descoperă terenuri de baschet pentru antrenamente și meciuri între prieteni. Alege terenul din orașul tău și verifică intervalele de rezervare în formular.' },
   { sport: 'Tenis', slug: 'tenis', label: 'tenis', intro: 'Caută terenuri de tenis pentru partide de simplu, dublu sau antrenamente. Vezi terenurile și tarifele publicate, apoi selectează data și ora în formularul de rezervare.' },
   { sport: 'Volei', slug: 'volei', label: 'volei', intro: 'Alege un teren de volei pentru următorul joc cu echipa. Consultă terenurile pe orașe și verifică programul de rezervare înainte de a stabili întâlnirea.' },
   { sport: 'Tenis Picior', slug: 'tenis-de-picior', label: 'tenis de picior', intro: 'Găsește terenuri de tenis de picior pentru jocuri cu prietenii și antrenamente. Alege locația potrivită și consultă intervalele din formularul de rezervare.' }
-].map(sport => Object.freeze({
-  ...sport,
-  title: `Terenuri de ${sport.label} – Rezervări online | Spotivity`,
-  description: `Descoperă terenuri de ${sport.label} pe Spotivity. Compară locațiile și tarifele publicate, verifică programul și rezervă online un teren.`
-})));
-export const SEO_PATHS = Object.freeze([...SPORTS.map(({ slug }) => `terenuri/${slug}/index.html`), 'robots.txt', 'sitemap.xml']);
+].map(sport => Object.freeze({ ...sport, title: `Terenuri de ${sport.label} – Rezervări online | Spotivity`, description: `Descoperă terenuri de ${sport.label} pe Spotivity. Compară locațiile și tarifele publicate, verifică programul și rezervă online un teren.` })));
+export const SEO_PATHS = Object.freeze([...SPORTS.map(({ slug }) => `terenuri/${slug}/index.html`), 'js/seo-route-index.js', 'robots.txt', 'sitemap.xml']);
 const escape = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
 const normalizeSport = value => value === 'Tenis de picior' ? 'Tenis Picior' : value;
-const validId = value => Number.isSafeInteger(value) && value > 0 || typeof value === 'string' && /^(?:[1-9]\d{0,18}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.test(value);
+const rowKeys = (row, allowed) => row && typeof row === 'object' && !Array.isArray(row) && Object.keys(row).every(key => allowed.includes(key));
+const city = value => value.trim().replace(/\.+$/, '');
+const publicText = (value, max, optional = false) => typeof value === 'string' && value.length <= max && (optional || value.trim().length > 0);
+const sortIds = (a, b) => String(a.id).localeCompare(String(b.id), 'en', { numeric: true });
 
 export function validateCatalog(catalog) {
-  if (!catalog || catalog.version !== 1 || !Array.isArray(catalog.courts) || catalog.courts.length > 100000 ||
-      Object.keys(catalog).some(key => !['version', 'refreshedAt', 'courts'].includes(key)) ||
-      typeof catalog.refreshedAt !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(catalog.refreshedAt) || !Number.isFinite(Date.parse(catalog.refreshedAt))) {
+  if (!rowKeys(catalog, ['version', 'refreshedAt', 'bases', 'courts']) || catalog.version !== 2 || !Array.isArray(catalog.courts) || !Array.isArray(catalog.bases) || catalog.courts.length > 100000 || catalog.bases.length > 100000 || typeof catalog.refreshedAt !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(catalog.refreshedAt) || !Number.isFinite(Date.parse(catalog.refreshedAt))) {
     throw new Error('Invalid public SEO catalog. Refresh the reviewed public snapshot.');
   }
-  const seen = new Set();
-  return catalog.courts.map(row => {
-    if (!row || Object.keys(row).some(key => !['id', 'nume', 'sport', 'oras', 'pret'].includes(key)) ||
-        !validId(row.id) || seen.has(String(row.id)) ||
-        typeof row.nume !== 'string' || !row.nume.trim() || row.nume.length > 200 ||
-        typeof row.oras !== 'string' || !row.oras.trim() || row.oras.length > 120 ||
-        !SPORTS.some(({ sport }) => sport === normalizeSport(row.sport)) ||
-        !(row.pret === null || typeof row.pret === 'number' && Number.isFinite(row.pret) && row.pret >= 0 && row.pret <= 1000000)) {
-      throw new Error('Invalid or unapproved field in public SEO court snapshot.');
-    }
-    seen.add(String(row.id));
-    return { id: row.id, nume: row.nume.trim(), sport: normalizeSport(row.sport), oras: row.oras.trim().replace(/\.+$/, ''), pret: row.pret };
-  }).sort((a, b) => String(a.id).localeCompare(String(b.id), 'en', { numeric: true }));
+  const baseIds = new Set();
+  const bases = catalog.bases.map(row => {
+    if (!rowKeys(row, ['id', 'nume', 'oras', 'descriere']) || !paths.validId(row.id) || baseIds.has(String(row.id).toLowerCase()) || !publicText(row.nume, 200) || !publicText(row.oras, 120) || !city(row.oras) || !(row.descriere === null || publicText(row.descriere, 20000, true))) throw new Error('Invalid or unapproved field in public SEO base snapshot.');
+    const id = typeof row.id === 'number' ? row.id : row.id.toLowerCase();
+    baseIds.add(String(id));
+    return { id, nume: row.nume.trim(), oras: city(row.oras), descriere: row.descriere?.trim() || '' };
+  }).sort(sortIds);
+  const courtIds = new Set();
+  const courts = catalog.courts.map(row => {
+    if (!rowKeys(row, ['id', 'nume', 'sport', 'oras', 'pret', 'baza_sportiva_id']) || !paths.validId(row.id) || courtIds.has(String(row.id).toLowerCase()) || !publicText(row.nume, 200) || !publicText(row.oras, 120) || !city(row.oras) || !SPORTS.some(({ sport }) => sport === normalizeSport(row.sport)) || !(row.pret === null || typeof row.pret === 'number' && Number.isFinite(row.pret) && row.pret >= 0 && row.pret <= 1000000) || !(row.baza_sportiva_id === null || paths.validId(row.baza_sportiva_id) && baseIds.has(String(row.baza_sportiva_id).toLowerCase()))) throw new Error('Invalid or unapproved field in public SEO court snapshot.');
+    const id = typeof row.id === 'number' ? row.id : row.id.toLowerCase();
+    courtIds.add(String(id));
+    return { id, nume: row.nume.trim(), sport: normalizeSport(row.sport), oras: city(row.oras), pret: row.pret, baza_sportiva_id: row.baza_sportiva_id === null ? null : String(row.baza_sportiva_id).toLowerCase() };
+  }).sort(sortIds);
+  return { version: 2, refreshedAt: catalog.refreshedAt, bases, courts };
+}
+
+function indexFor(catalog) {
+  const bases = new Map(catalog.bases.map(base => [String(base.id), base]));
+  const courts = Object.fromEntries(catalog.courts.map(court => [String(court.id), paths.courtPath(court, bases.get(court.baza_sportiva_id))]));
+  const basePaths = Object.fromEntries(catalog.bases.map(base => [String(base.id), paths.basePath(base)]));
+  const all = [...Object.values(courts), ...Object.values(basePaths)];
+  if (all.some(relative => !relative || relative.includes('..') || !/^[a-z0-9/-]+\/$/.test(relative)) || new Set(all).size !== all.length) throw new Error('Duplicate or invalid public entity route.');
+  return { courts, bases: basePaths };
+}
+export function seoPaths(input) {
+  const catalog = validateCatalog(input), index = indexFor(catalog);
+  return [...SEO_PATHS, ...Object.values(index.courts).map(route => route + 'index.html'), ...Object.values(index.bases).map(route => route + 'index.html')];
 }
 
 export async function readReviewedFile(root, relative) {
@@ -57,115 +74,103 @@ export async function readReviewedFile(root, relative) {
   try { return await handle.readFile('utf8'); } finally { await handle.close(); }
 }
 
-// The template is maintained as plain HTML. Only the known balanced sport
-// sections are transformed; a changed template fails instead of omitting pages.
+// Only balanced, explicitly labelled sport sections may be changed. Keep the
+// shared app modals and auxiliary public directories required by its bootstrap.
 function sportSections(template) {
-  const sections = [];
+  const sections = [], stack = [];
   const expression = /<\/?section\b[^>]*>/gi;
-  let match, open = [];
+  let match;
   while ((match = expression.exec(template))) {
     if (/^<\/section/i.test(match[0])) {
-      const section = open.pop();
+      const section = stack.pop();
       if (!section) throw new Error('Unbalanced section in SEO template.');
       if (section.sport) sections.push({ ...section, end: expression.lastIndex });
-    } else {
-      const sport = match[0].match(/\bdata-home-sport="([^"]+)"/);
-      open.push({ start: match.index, sport: sport?.[1] });
-    }
+    } else stack.push({ start: match.index, sport: match[0].match(/\bdata-home-sport="([^"]+)"/)?.[1] });
   }
-  if (open.length || sections.length !== SPORTS.length || SPORTS.some(({ sport }) => sections.filter(section => section.sport === sport).length !== 1)) {
-    throw new Error('SEO template must contain exactly the five reviewed sport sections.');
-  }
+  if (stack.length || sections.length !== SPORTS.length || SPORTS.some(({ sport }) => sections.filter(section => section.sport === sport).length !== 1)) throw new Error('SEO template must contain exactly the five reviewed sport sections.');
   return sections;
 }
-
+function withoutSports(template, sections) {
+  for (const section of [...sections].sort((a, b) => b.start - a.start)) template = template.slice(0, section.start) + template.slice(section.end);
+  return template;
+}
 function metadata(html, { baseUrl, title, description, route = '' }) {
   const canonical = new URL(route, baseUrl).href;
-  html = html.replace(/<title>[^<]*<\/title>/i, `<title>${escape(title)}</title>`);
-  const replacements = new Map([
-    ['name="description"', description], ['property="og:title"', title],
-    ['property="og:description"', description], ['property="og:url"', canonical],
-    ['property="og:image"', new URL('assets/imagini/avatar2.png', baseUrl).href]
-  ]);
+  html = html.replace(/<title>[^<]*<\/title>/i, () => `<title>${escape(title)}</title>`);
+  const replacements = new Map([['name="description"', description], ['property="og:title"', title], ['property="og:description"', description], ['property="og:url"', canonical], ['property="og:image"', new URL('assets/imagini/avatar2.png', baseUrl).href]]);
   for (const [attribute, value] of replacements) {
-    const pattern = new RegExp(`<meta\\s+${attribute}\\s+content="[^"]*"\\s*\\/?>`, 'i');
-    if (!pattern.test(html)) throw new Error(`SEO template is missing ${attribute}.`);
-    html = html.replace(pattern, `<meta ${attribute} content="${escape(value)}">`);
+    const expression = new RegExp(`<meta\\s+${attribute}\\s+content="[^"]*"\\s*\\/?>`, 'i');
+    if (!expression.test(html)) throw new Error(`SEO template is missing ${attribute}.`);
+    html = html.replace(expression, () => `<meta ${attribute} content="${escape(value)}">`);
   }
   if (!/<link rel="canonical" href="[^"]*"\s*\/?>/i.test(html)) throw new Error('SEO template is missing its canonical link.');
-  return html.replace(/<link rel="canonical" href="[^"]*"\s*\/?>/i, `<link rel="canonical" href="${escape(canonical)}">`);
+  return html.replace(/<link rel="canonical" href="[^"]*"\s*\/?>/i, () => `<link rel="canonical" href="${escape(canonical)}">`);
 }
-
 export function productionHome(html) {
-  // Keep the reviewed home copy and replace only its deployment-dependent URLs.
-  return html.replace(/(<link rel="canonical" href=")[^"]*(")/i, `$1${PRODUCTION_BASE_URL}$2`)
-    .replace(/(<meta property="og:url" content=")[^"]*(")/i, `$1${PRODUCTION_BASE_URL}$2`)
-    .replace(/(<meta property="og:image" content=")[^"]*(")/i, `$1${new URL('assets/imagini/avatar2.png', PRODUCTION_BASE_URL).href}$2`);
+  return html.replace(/(<link rel="canonical" href=")[^"]*(")/i, `$1${PRODUCTION_BASE_URL}$2`).replace(/(<meta property="og:url" content=")[^"]*(")/i, `$1${PRODUCTION_BASE_URL}$2`).replace(/(<meta property="og:image" content=")[^"]*(")/i, `$1${new URL('assets/imagini/avatar2.png', PRODUCTION_BASE_URL).href}$2`);
+}
+function link(relative, label, attributes = '') { return `<a href="${escape(relative)}"${attributes}>${escape(label)}</a>`; }
+function courtCards(courts, index) {
+  return courts.map(court => `<a href="${escape(index.courts[String(court.id)])}" class="home-court-card" data-entity-court-id="${escape(court.id)}" aria-label="Rezervă ${escape(court.nume)}, ${escape(court.oras)}"><span class="home-court-details"><strong>${escape(court.nume)}</strong><span class="home-court-meta">${escape(court.oras)}</span>${court.pret === null ? '' : `<span class="home-court-price">${escape(String(court.pret))} Lei/oră</span>`}</span></a>`).join('\n');
+}
+function breadcrumb(items) { return `<nav class="category-breadcrumb" aria-label="Navigare">${items.map(({ route, label, attributes }) => route ? link(route, label, attributes) : `<span aria-current="page">${escape(label)}</span>`).join(' ')}</nav>`; }
+function snapshotNote(catalog) { return `<p class="category-catalog-note">Catalog public actualizat la ${escape(catalog.refreshedAt.slice(0, 10))}. Tariful și disponibilitatea se verifică în formularul de rezervare.</p>`; }
+function finish(html, { baseUrl, route, title, description, sport, bodyAttribute }) {
+  html = html.replace(/<body\b([^>]*)>/i, (_, attributes) => `<body${attributes}${sport ? ` data-category-sport="${escape(sport)}"` : ''}${bodyAttribute || ''}>`);
+  html = html.replace(/(<a\b[^>]*\bid="home-brand"[^>]*\bhref=")[^"]*(")/i, '$1./$2');
+  if (sport) html = html.replace(/<a\b[^>]*\bdata-sport-target="[^"]*"[^>]*>/gi, tag => tag.includes(`data-sport-target="${sport}"`) ? tag.replace(/\saria-current="[^"]*"/gi, '').replace(/>$/, ' aria-current="page">') : tag);
+  html = html.replace('</main>', '<noscript><p class="category-catalog-note">Activează JavaScript pentru programul actualizat și rezervarea unui teren.</p></noscript>\n</main>');
+  html = metadata(html, { baseUrl, title, description, route });
+  const prefix = '../'.repeat(route.split('/').filter(Boolean).length);
+  html = html.replace(/\b(src|href)="([^"]*)"/gi, (attribute, name, value) => {
+    if (/^(?:[A-Za-z][A-Za-z\d+.-]*:|\/\/|#|\/)/.test(value)) return attribute;
+    return `${name}="${value === './' ? prefix : prefix + value}"`;
+  });
+  return html.replace(/(<!doctype html>)/i, (_, declaration) => `${declaration}\n${GENERATED_MARKER}`).replace(/[ \t]+(?=\r?$)/gm, '');
 }
 
-function staticCards(courts) {
-  return courts.map(court => `<button type="button" class="home-court-card" data-seo-court-id="${escape(court.id)}" aria-label="Rezervă ${escape(court.nume)}, ${escape(court.oras)}"><span class="home-court-details"><strong>${escape(court.nume)}</strong><span class="home-court-meta">${escape(court.oras)}</span>${court.pret === null ? '' : `<span class="home-court-price">${escape(String(court.pret))} Lei/oră</span>`}</span></button>`).join('\n');
-}
-
-export function generateSeoFiles({ template, catalog, baseUrl = PAGES_BASE_URL }) {
+export function generateSeoFiles({ template, catalog: input, baseUrl = PAGES_BASE_URL }) {
   if (![PAGES_BASE_URL, PRODUCTION_BASE_URL].includes(baseUrl)) throw new Error('Unreviewed SEO deployment origin.');
-  const courts = validateCatalog(catalog);
-  const sections = sportSections(template);
-  const files = new Map();
+  const catalog = validateCatalog(input), index = indexFor(catalog), sections = sportSections(template), files = new Map();
+  const stripped = withoutSports(template, sections);
+  const bases = new Map(catalog.bases.map(base => [String(base.id), base]));
   for (const sport of SPORTS) {
-    let html = template;
-    for (const section of [...sections].sort((a, b) => b.start - a.start)) {
-      if (section.sport !== sport.sport) html = html.slice(0, section.start) + html.slice(section.end);
-    }
-    const selected = sportSectionsInCategory(html, sport.sport);
-    let section = html.slice(selected.start, selected.end);
-    const heading = /<h[12]\b([^>]*)>[^<]*<\/h[12]>/i;
-    if (!heading.test(section)) throw new Error(`Missing sport heading: ${sport.slug}`);
-    section = section.replace(heading, (_, attributes) => `<h1${attributes.replace(/\sdata-i18n="[^"]*"/gi, '')}>Terenuri de ${sport.label}</h1>`);
-    section = section.replace(/(<\/h1>\s*<\/div>)/, `$1\n<p class="category-intro">${escape(sport.intro)}</p>`);
-    // The home CTA navigates to this category. Within a category it opens the
-    // existing sport/court chooser, whose backend still validates availability.
-    section = section.replace(/<a\b([^>]*\bclass="[^"]*\bcard-sport\b[^"]*"[^>]*)>([\s\S]*?)<\/a>/i,
-      (_, attributes, text) => `<button type="button"${attributes.replace(/\s(?:href|aria-current)="[^"]*"/gi, '')}>${text}</button>`);
+    const source = sections.find(section => section.sport === sport.sport);
+    let section = template.slice(source.start, source.end);
+    section = section.replace(/<h[12]\b([^>]*)>[^<]*<\/h[12]>/i, (_, attributes) => `<h1${attributes.replace(/\sdata-i18n="[^"]*"/gi, '')}>Terenuri de ${sport.label}</h1>`);
+    section = section.replace(/(<\/h1>\s*<\/div>)/, (_, opening) => `${opening}\n<p class="category-intro">${escape(sport.intro)}</p>`);
+    section = section.replace(/<a\b([^>]*\bclass="[^"]*\bcard-sport\b[^"]*"[^>]*)>([\s\S]*?)<\/a>/i, (_, attributes, text) => `<button type="button"${attributes.replace(/\s(?:href|aria-current)="[^"]*"/gi, '')}>${text}</button>`);
     section = section.replace(/\bloading="lazy"/, 'loading="eager" fetchpriority="high"');
-    const selectedCourts = courts.filter(court => court.sport === sport.sport);
+    const courts = catalog.courts.filter(court => court.sport === sport.sport);
     const strip = /(<div\b[^>]*\bdata-home-courts="[^"]+"[^>]*>)[\s\S]*?(<\/div>)/;
     if (!strip.test(section)) throw new Error(`Missing public court strip: ${sport.slug}`);
-    const content = selectedCourts.length ? staticCards(selectedCourts) : '<p class="home-discovery-message">Momentan nu sunt terenuri publicate pentru acest sport.</p>';
-    section = section.replace(strip, (_, opening, closing) => `${opening.replace(/aria-busy="true"/, 'aria-busy="false"')}${content}${closing}<p class="category-catalog-note">Catalog public actualizat la ${escape(catalog.refreshedAt.slice(0, 10))}. Tariful și disponibilitatea se verifică în formularul de rezervare.</p>`);
-    const breadcrumb = `<nav class="category-breadcrumb" aria-label="Navigare"><a href="./">Acasă</a><span aria-current="page">Terenuri de ${escape(sport.label)}</span></nav>\n`;
-    const related = `<nav class="category-related" aria-label="Alte sporturi">${SPORTS.filter(other => other !== sport).map(other => `<a href="terenuri/${other.slug}/">Terenuri de ${escape(other.label)}</a>`).join(' ')}</nav>`;
-    html = html.slice(0, selected.start) + breadcrumb + section + related + html.slice(selected.end);
-    html = html.replace(/<body\b([^>]*)>/i, `<body$1 data-category-sport="${escape(sport.sport)}">`);
-    html = html.replace(/(<a\b[^>]*\bid="home-brand"[^>]*\bhref=")[^"]*(")/i, '$1./$2');
-    html = html.replace(/<a\b[^>]*\bdata-sport-target="[^"]*"[^>]*>/gi, tag =>
-      tag.includes(`data-sport-target="${sport.sport}"`) ? tag.replace(/\saria-current="[^"]*"/gi, '').replace(/>$/, ' aria-current="page">') : tag);
-    // Meaningful navigation and catalog remain available without JavaScript;
-    // live schedules and booking require the existing authenticated app flow.
-    html = html.replace('</main>', '<noscript><p class="category-catalog-note">Activează JavaScript pentru programul actualizat și rezervarea unui teren.</p></noscript>\n</main>');
-    html = metadata(html, { ...sport, baseUrl, route: `terenuri/${sport.slug}/` });
-    // No <base> (base-uri 'none'). Both a Pages subdirectory and Netlify root
-    // work with the same page bytes and ordinary browser URL resolution.
-    html = html.replace(/\b(src|href)="([^"]*)"/gi, (attribute, name, value) => {
-      if (/^(?:[A-Za-z][A-Za-z\d+.-]*:|\/\/|#|\/)/.test(value)) return attribute;
-      return `${name}="${value === './' ? '../../' : `../../${value}`}"`;
-    });
-    files.set(`terenuri/${sport.slug}/index.html`, html);
+    section = section.replace(strip, (_, opening, closing) => `${opening.replace(/aria-busy="true"/, 'aria-busy="false"')}${courts.length ? courtCards(courts, index) : '<p class="home-discovery-message">Momentan nu sunt terenuri publicate pentru acest sport.</p>'}${closing}${snapshotNote(catalog)}`);
+    const intro = breadcrumb([{ route: './', label: 'Acasă' }, { label: `Terenuri de ${sport.label}` }]);
+    const related = `<nav class="category-related" aria-label="Alte sporturi">${SPORTS.filter(other => other !== sport).map(other => link(`terenuri/${other.slug}/`, `Terenuri de ${other.label}`)).join(' ')}</nav>`;
+    const html = stripped.replace(/(<main\b[^>]*>)/i, (_, opening) => `${opening}\n${intro}${section}${related}`);
+    files.set(`terenuri/${sport.slug}/index.html`, finish(html, { baseUrl, route: `terenuri/${sport.slug}/`, ...sport }));
   }
+  for (const court of catalog.courts) {
+    const base = bases.get(court.baza_sportiva_id), sport = SPORTS.find(item => item.sport === court.sport), route = index.courts[String(court.id)];
+    const title = `${court.nume}${base ? `, ${base.nume}` : ''} – ${sport.label} în ${court.oras} | Spotivity`;
+    const description = `Rezervă terenul ${court.nume} pentru ${sport.label} în ${court.oras}${base ? `, la ${base.nume}` : ''}. Consultă tariful publicat și verifică programul actualizat pe Spotivity.`;
+    const crumbs = [{ route: './', label: 'Acasă' }, { route: `terenuri/${sport.slug}/`, label: `Terenuri de ${sport.label}` }];
+    if (base) crumbs.push({ route: index.bases[String(base.id)], label: base.nume, attributes: ` data-entity-base-id="${escape(base.id)}"` });
+    crumbs.push({ label: court.nume });
+    const detail = `${breadcrumb(crumbs)}<section class="entity-page" aria-labelledby="entity-title"><p class="entity-eyebrow">Teren de ${escape(sport.label)} · ${escape(court.oras)}</p><h1 id="entity-title">${escape(court.nume)} — ${escape(court.oras)}</h1><p class="entity-intro">Teren de ${escape(sport.label)} în ${escape(court.oras)}${base ? `, în baza sportivă ${link(index.bases[String(base.id)], base.nume, ` data-entity-base-id="${escape(base.id)}"`)}` : ''}.</p>${court.pret === null ? '' : `<p class="entity-price">Tarif publicat: ${escape(court.pret)} Lei/oră</p>`}<button type="button" class="home-reserve-button" data-entity-booking="${escape(court.id)}">Verifică programul și rezervă</button>${snapshotNote(catalog)}<nav class="category-related" aria-label="Terenuri de ${escape(sport.label)}">${link(`terenuri/${sport.slug}/`, `Vezi toate terenurile de ${sport.label}`)}</nav></section>`;
+    const html = stripped.replace(/(<main\b[^>]*>)/i, (_, opening) => `${opening}\n${detail}`);
+    files.set(route + 'index.html', finish(html, { baseUrl, route, title, description, sport: court.sport, bodyAttribute: ` data-court-id="${escape(court.id)}"` }));
+  }
+  for (const base of catalog.bases) {
+    const route = index.bases[String(base.id)], courts = catalog.courts.filter(court => court.baza_sportiva_id === String(base.id));
+    const title = `${base.nume} – Bază sportivă în ${base.oras} | Spotivity`;
+    const description = `${base.nume}, bază sportivă în ${base.oras}. Descoperă terenurile publicate și verifică programul de rezervări online pe Spotivity.`;
+    const detail = `${breadcrumb([{ route: './', label: 'Acasă' }, { label: base.nume }])}<section class="entity-page" aria-labelledby="entity-title"><p class="entity-eyebrow">Bază sportivă · ${escape(base.oras)}</p><h1 id="entity-title">${escape(base.nume)} — ${escape(base.oras)}</h1><p class="entity-intro">Bază sportivă în ${escape(base.oras)}.</p>${base.descriere ? `<p class="entity-description">${escape(base.descriere)}</p>` : ''}<button type="button" class="home-reserve-button" data-entity-base="${escape(base.id)}">Vezi terenurile bazei</button><h2>Terenuri la ${escape(base.nume)}</h2><div class="entity-courts">${courts.length ? courtCards(courts, index) : '<p>Momentan nu sunt terenuri publicate la această bază sportivă.</p>'}</div>${snapshotNote(catalog)}</section>`;
+    const html = stripped.replace(/(<main\b[^>]*>)/i, (_, opening) => `${opening}\n${detail}`);
+    files.set(route + 'index.html', finish(html, { baseUrl, route, title, description, bodyAttribute: ` data-base-id="${escape(base.id)}"` }));
+  }
+  files.set('js/seo-route-index.js', `// Generated from the reviewed anonymous public catalog. No account data.\nwindow.spotivitySeoRoutes = ${JSON.stringify(index)};\n`);
   files.set('robots.txt', `User-agent: *\nAllow: /\n\nSitemap: ${new URL('sitemap.xml', baseUrl).href}\n`);
-  files.set('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${['', ...SPORTS.map(({ slug }) => `terenuri/${slug}/`)].map(route => `  <url><loc>${escape(new URL(route, baseUrl).href)}</loc></url>`).join('\n')}\n</urlset>\n`);
-  return files;
-}
-
-function sportSectionsInCategory(html, sport) {
-  const opening = new RegExp(`<section\\b[^>]*\\bdata-home-sport="${sport}"[^>]*>`, 'i').exec(html);
-  if (!opening) throw new Error('Selected category section is missing.');
-  const expression = /<\/?section\b[^>]*>/gi;
-  expression.lastIndex = opening.index;
-  let depth = 0, match;
-  while ((match = expression.exec(html))) {
-    depth += /^<\/section/i.test(match[0]) ? -1 : 1;
-    if (depth === 0) return { start: opening.index, end: expression.lastIndex };
-  }
-  throw new Error('Selected category section is unbalanced.');
+  files.set('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${['', ...SPORTS.map(({ slug }) => `terenuri/${slug}/`), ...Object.values(index.courts), ...Object.values(index.bases)].map(route => `  <url><loc>${escape(new URL(route, baseUrl).href)}</loc></url>`).join('\n')}\n</urlset>\n`);
+  return new Map(seoPaths(catalog).map(relative => [relative, files.get(relative)]));
 }

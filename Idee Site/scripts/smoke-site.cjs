@@ -55,6 +55,7 @@ async function verifiedHttpsRead(request) {
 }
 
 async function openProfile(page) {
+  await page.evaluate(() => window.SpotivityNavigation?.whenSettled?.());
   const profile = page.locator('#btn-top-cont');
   if (await profile.isVisible()) {
     await profile.click();
@@ -135,9 +136,7 @@ async function openProfile(page) {
     await page.locator('#modal-auth').waitFor({state:'hidden'});
     const sportSlugs = {Fotbal:'fotbal',Baschet:'baschet',Volei:'volei',Tenis:'tenis','Tenis Picior':'tenis-de-picior'};
     for (const sport of ['Fotbal','Baschet','Volei','Tenis','Tenis Picior']) {
-      await page.locator(`a.card-sport[data-sport="${sport}"]`).click();
-      await page.waitForURL(new URL(`terenuri/${sportSlugs[sport]}/`,siteBaseUrl).href);
-      await page.waitForLoadState('networkidle');
+      const originUrl = page.url();
       const courtsResponse = page.waitForResponse(response => {
         const url = new URL(response.url());
         return response.request().method() === 'GET' && url.pathname.endsWith('/rest/v1/terenuri')
@@ -145,6 +144,7 @@ async function openProfile(page) {
       });
       await page.locator(`.card-sport[data-sport="${sport}"]`).click();
       await page.locator('#modal-terenuri').waitFor({state:'visible'});
+      assert.equal(page.url(), originUrl, `${sport} reservation opens directly on the homepage`);
       const sportLabel = await page.evaluate(sport => window.dict?.[window.lang]?.[sport.toLowerCase()] || sport, sport);
       assert.ok((await page.locator('#titlu-sport').innerText()).includes(sportLabel));
       assert.equal((await courtsResponse).status(), 200);
@@ -160,9 +160,7 @@ async function openProfile(page) {
       assert.deepEqual(courtImages, [], `Court images failed for ${sport}`);
       await page.locator('#inchide-terenuri').click();
       await page.locator('#modal-terenuri').waitFor({state:'hidden'});
-      await page.locator('#home-brand').click();
-      await page.waitForURL(siteBaseUrl.href);
-      await page.waitForLoadState('networkidle');
+      assert.equal(page.url(), originUrl, `${sport} chooser closes on its original homepage`);
     }
     for (const image of await page.locator('.home-hero-art img').all()) {
       await image.scrollIntoViewIfNeeded();
@@ -171,7 +169,7 @@ async function openProfile(page) {
     await page.waitForFunction(() => [...document.images].every(img => img.complete));
     const imageFailures = await page.locator('img').evaluateAll(imgs => imgs.filter(i => (i.getAttribute('src') || i.getClientRects().length) && i.naturalWidth === 0).map(i => i.getAttribute('src')));
     assert.deepEqual(imageFailures, []);
-    console.log('PASS homepage: SDK loaded, all five category links and sport dialogs, login dialog, Escape, and images');
+    console.log('PASS homepage: SDK loaded, all five direct sport dialogs, login dialog, Escape, and images');
     await page.setViewportSize({width:390,height:844});
     assert.equal(await page.locator('#home-nav-search').isVisible(),true);
     assert.equal(await page.locator('#btn-top-cont').isVisible(),true);
@@ -227,9 +225,10 @@ async function openProfile(page) {
     await page.evaluate(() => window.spotivityDiscoveryReady);
     assert.equal(await page.locator('.home-nav [data-bases-target]').count(), 0);
     assert.equal(await page.locator('.home-explore-button').count(), 0);
-    assert.equal(await page.locator('.home-hero-actions a').count(), 5);
+    assert.equal(await page.locator('.home-hero-actions button').count(), 5);
     for (const [sport, slug] of Object.entries(sportSlugs)) {
-      assert.equal(await page.locator(`.home-hero-actions a[data-sport="${sport}"]`).getAttribute('href'), `terenuri/${slug}/`);
+      assert.equal(await page.locator(`.home-hero-actions button[data-sport="${sport}"]`).getAttribute('type'), 'button');
+      assert.equal(await page.locator(`.home-desktop-nav a[data-sport-target="${sport}"]`).evaluate(anchor=>anchor.href), new URL(`terenuri/${slug}/`,siteBaseUrl).href);
     }
     assert.ok(await page.locator('#home-bases-section').isVisible());
     await page.locator('#btn-home-search').click();
@@ -248,6 +247,7 @@ async function openProfile(page) {
     await page.locator('#modal-cautare-terenuri').waitFor({state:'hidden'});
     assert.equal(await page.locator('#rezervare-teren-selectat').innerText(), firstCourtName);
     await page.keyboard.press('Escape');
+    await page.evaluate(() => window.SpotivityNavigation?.whenSettled?.());
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     console.log('PASS live discovery: global name search, empty results, existing reservation form, one action per sport and separate bases section');
     for (const width of [390, 1440]) {

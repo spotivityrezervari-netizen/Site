@@ -40,6 +40,7 @@
             }
 
             window.genereazaZile();
+            window.dispatchEvent(new CustomEvent('spotivity:public-court-opened', { detail: { court: terenDinDB } }));
         }
         function genereazaZile() {
             const containerZile = document.getElementById('container-zile');

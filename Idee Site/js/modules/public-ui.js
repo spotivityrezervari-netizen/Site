@@ -92,12 +92,14 @@
             // --- ESC PENTRU A ÎNCHIDE ORICE MODAL ---
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') {
+                    const courtWasOpen = document.getElementById('modal-rezervare')?.style.display === 'flex';
                     const modals = ['modal-auth', 'modal-profil', 'modal-terenuri', 'modal-rezervare', 'modal-lista-rezervari', 'modal-chat-client', 'modal-parola-noua', 'modal-legal'];
                     modals.forEach(id => {
                         const el = document.getElementById(id);
                         if (el && el.style.display !== 'none') { clearModalPasswords(el); el.style.display = 'none';
                             if(id === 'modal-terenuri' || id === 'modal-rezervare') reseteazaFundalSport(); if (id === 'modal-chat-client') { const inp = document.getElementById('chat-client-input'); if (inp) inp.value = ''; } }
                     });
+                    if (courtWasOpen) window.dispatchEvent(new Event('spotivity:public-court-closed'));
                 }
             });
 
@@ -108,6 +110,7 @@
                     if (modalParent) {
                         clearModalPasswords(modalParent);
                         modalParent.style.display = 'none';
+                        if (modalParent.id === 'modal-rezervare') window.dispatchEvent(new Event('spotivity:public-court-closed'));
                         if (modalParent.id === 'modal-chat-client') { const inp = document.getElementById('chat-client-input'); if (inp) inp.value = ''; }
                     }
                 });

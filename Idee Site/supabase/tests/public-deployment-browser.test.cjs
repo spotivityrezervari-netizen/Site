@@ -95,12 +95,11 @@ const pass=message=>{checks++;console.log('PASS',message);};
     await page.locator('#btn-lang-en').click();await page.waitForFunction(()=>window.lang==='en');
     assert.equal(await page.locator('#home-nav-search-input').getAttribute('placeholder'),'Find a court');
     await page.locator('#btn-lang-ro').click();await page.waitForFunction(()=>window.lang==='ro');
-    await page.locator('#sport-fotbal .home-reserve-button').click();
-    await page.waitForURL(new URL('terenuri/fotbal/',site.url).href);
-    await page.waitForLoadState('networkidle');
+    const chooserUrl=page.url();
     await page.locator('#sport-fotbal button.home-reserve-button').click();await page.locator('#modal-terenuri').waitFor({state:'visible'});
+    assert.equal(page.url(),chooserUrl,'The homepage reservation action opens the court chooser directly without another page');
     await page.locator('.card-teren-poza').filter({hasText:'Court A'}).click();await page.locator('#modal-rezervare').waitFor({state:'visible'});
-    await page.keyboard.press('Escape');await page.locator('#modal-rezervare').waitFor({state:'hidden'});
+    await page.keyboard.press('Escape');await page.locator('#modal-rezervare').waitFor({state:'hidden'});await page.evaluate(()=>window.SpotivityNavigation?.whenSettled());
     pass('the real built modules and images initialize under CSP, language listeners work, and the court/booking dialogs still open');
 
     for(const width of [390,1440]){

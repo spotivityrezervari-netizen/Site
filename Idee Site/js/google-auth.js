@@ -73,6 +73,9 @@
     }
 
     const callback = captureCallback();
+    // Preserve only callback intent for public navigation after the SDK cleans
+    // the address. Tokens and callback parameters stay private to this module.
+    window.isSpotivityAuthCallback = () => !!(callback.queryCallback || callback.hashCallback || callback.recovery);
 
     function init() {
         const modal = document.getElementById('modal-auth');

@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Spotivity generated public page; edit the shared shell/catalog instead. -->
 <html lang="ro">
 <head>
     <meta charset="UTF-8">
@@ -21,9 +22,11 @@
 
     <link rel="stylesheet" href="../../css/style.css?v=47">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3" integrity="sha384-dl/4LkSyQ4uEucc48NM6VDZLAjLLq9yMzZ5JLXumBq7Ld33XBof73hseOqPhO89+" crossorigin="anonymous"></script>
-    <script src="../../js/google-auth.js?v=2"></script>
+    <script src="../../js/google-auth.js?v=3"></script>
     <script src="../../js/db.js?v=3"></script>
     <script src="../../js/security.js?v=6"></script>
+    <script src="../../js/entity-paths.js?v=1"></script>
+    <script src="../../js/seo-route-index.js?v=1" defer></script>
     <script src="../../js/sport-appearance.js?v=6"></script>
     <script src="../../js/base-media.js?v=2" defer></script>
     <link rel="stylesheet" href="../../css/guest-booking.css?v=1">
@@ -33,13 +36,14 @@
     <script src="../../js/modules/public-recovery.js?v=2" defer></script>
     <script src="../../js/modules/public-profile.js?v=4" defer></script>
     <script src="../../js/modules/public-auth.js?v=3" defer></script>
-    <script src="../../js/modules/public-ui.js?v=3" defer></script>
-    <script src="../../js/modules/public-courts.js?v=4" defer></script>
-    <script src="../../js/modules/public-bookings.js?v=2" defer></script>
+    <script src="../../js/modules/public-ui.js?v=4" defer></script>
+    <script src="../../js/modules/public-courts.js?v=5" defer></script>
+    <script src="../../js/modules/public-bookings.js?v=3" defer></script>
     <script src="../../js/modules/public-history.js?v=2" defer></script>
     <script src="../../js/modules/public-chat.js?v=4" defer></script>
+    <script src="../../js/public-navigation.js?v=1" defer></script>
     <script src="../../js/email-links.js?v=4" defer></script>
-    <script src="../../js/app.js?v=33" defer></script>
+    <script src="../../js/app.js?v=34" defer></script>
     <!-- Administration uses its own live session context inside index. -->
     <script src="../../js/modules/admin-core.js?v=4" defer></script>
     <script src="../../js/modules/admin-schedule.js?v=3" defer></script>
@@ -59,11 +63,11 @@
     <link rel="stylesheet" href="../../css/home.css?v=7">
     <link rel="stylesheet" href="../../css/theme.css?v=4">
     <script src="../../js/home.js?v=8" defer></script>
-    <script src="../../js/baze.js?v=7" defer></script>
-    <script src="../../js/home-discovery.js?v=8" defer></script>
+    <script src="../../js/baze.js?v=8" defer></script>
+    <script src="../../js/home-discovery.js?v=9" defer></script>
     <link rel="stylesheet" href="../../css/profile-editor.css?v=2">
     <script src="../../js/profile-editor.js?v=1" defer></script>
-    <link rel="stylesheet" href="../../css/home-layout.css?v=12">
+    <link rel="stylesheet" href="../../css/home-layout.css?v=13">
     <link rel="stylesheet" href="../../css/home-motion.css?v=2">
     <link rel="stylesheet" href="../../css/base-media.css?v=5">
     <script src="../../js/home-motion.js?v=4" defer></script>
@@ -150,8 +154,7 @@
         </header>
 
         <main class="home-main" id="home-main">
-            <nav class="category-breadcrumb" aria-label="Navigare"><a href="../../">Acasă</a><span aria-current="page">Terenuri de fotbal</span></nav>
-<section class="home-sport-hero home-hero-fotbal" id="sport-fotbal" data-home-sport="Fotbal" aria-labelledby="home-title-fotbal">
+<nav class="category-breadcrumb" aria-label="Navigare"><a href="../../">Acasă</a> <span aria-current="page">Terenuri de fotbal</span></nav><section class="home-sport-hero home-hero-fotbal" id="sport-fotbal" data-home-sport="Fotbal" aria-labelledby="home-title-fotbal">
                 <div class="home-hero-copy">
                     <div class="home-sport-heading">
                         <h1 id="home-title-fotbal">Terenuri de fotbal</h1>
@@ -165,16 +168,17 @@
                     <img src="../../assets/imagini/FotbalFinal.jpeg" data-sport-background="Fotbal" alt="" width="1600" height="1020" loading="eager" decoding="async" fetchpriority="high">
                 </div>
                 <div class="home-courts-wrap">
-                    <div class="home-courts-strip" data-home-courts="Fotbal" role="region" aria-label="Terenuri Fotbal" tabindex="0" aria-busy="false"><button type="button" class="home-court-card" data-seo-court-id="9" aria-label="Rezervă Exemplu, Reghin"><span class="home-court-details"><strong>Exemplu</strong><span class="home-court-meta">Reghin</span><span class="home-court-price">194 Lei/oră</span></span></button>
-<button type="button" class="home-court-card" data-seo-court-id="13" aria-label="Rezervă Bernabeu, Suceava"><span class="home-court-details"><strong>Bernabeu</strong><span class="home-court-meta">Suceava</span><span class="home-court-price">10 Lei/oră</span></span></button>
-<button type="button" class="home-court-card" data-seo-court-id="18" aria-label="Rezervă siefei[ep[edopkf — transil [199b041b-1], Târgu Mureș"><span class="home-court-details"><strong>siefei[ep[edopkf — transil [199b041b-1]</strong><span class="home-court-meta">Târgu Mureș</span><span class="home-court-price">150 Lei/oră</span></span></button>
-<button type="button" class="home-court-card" data-seo-court-id="24" aria-label="Rezervă Jj, Reghin"><span class="home-court-details"><strong>Jj</strong><span class="home-court-meta">Reghin</span><span class="home-court-price">222 Lei/oră</span></span></button></div><p class="category-catalog-note">Catalog public actualizat la 2026-11-08. Tariful și disponibilitatea se verifică în formularul de rezervare.</p>
+                    <div class="home-courts-strip" data-home-courts="Fotbal" role="region" aria-label="Terenuri Fotbal" tabindex="0" aria-busy="false"><a href="../../terenuri/fotbal/reghin-baza-a-exemplu-9/" class="home-court-card" data-entity-court-id="9" aria-label="Rezervă Exemplu, Reghin"><span class="home-court-details"><strong>Exemplu</strong><span class="home-court-meta">Reghin</span><span class="home-court-price">194 Lei/oră</span></span></a>
+<a href="../../terenuri/fotbal/suceava-bernabeu-13/" class="home-court-card" data-entity-court-id="13" aria-label="Rezervă Bernabeu, Suceava"><span class="home-court-details"><strong>Bernabeu</strong><span class="home-court-meta">Suceava</span><span class="home-court-price">10 Lei/oră</span></span></a>
+<a href="../../terenuri/fotbal/targu-mures-siefei-ep-edopkf-siefei-ep-edopkf-transil-199b041b-1-18/" class="home-court-card" data-entity-court-id="18" aria-label="Rezervă siefei[ep[edopkf — transil [199b041b-1], Târgu Mureș"><span class="home-court-details"><strong>siefei[ep[edopkf — transil [199b041b-1]</strong><span class="home-court-meta">Târgu Mureș</span><span class="home-court-price">150 Lei/oră</span></span></a>
+<a href="../../terenuri/fotbal/reghin-baza-a-jj-24/" class="home-court-card" data-entity-court-id="24" aria-label="Rezervă Jj, Reghin"><span class="home-court-details"><strong>Jj</strong><span class="home-court-meta">Reghin</span><span class="home-court-price">222 Lei/oră</span></span></a></div><p class="category-catalog-note">Catalog public actualizat la 2026-11-09. Tariful și disponibilitatea se verifică în formularul de rezervare.</p>
                 </div>
             </section><nav class="category-related" aria-label="Alte sporturi"><a href="../../terenuri/baschet/">Terenuri de baschet</a> <a href="../../terenuri/tenis/">Terenuri de tenis</a> <a href="../../terenuri/volei/">Terenuri de volei</a> <a href="../../terenuri/tenis-de-picior/">Terenuri de tenis de picior</a></nav>
-            
-            
-            
-            
+
+
+
+
+
             <section class="home-bases-section" id="home-bases-section" aria-labelledby="home-bases-title">
                 <div class="home-section-heading">
                     <h2 id="home-bases-title" data-i18n="baze_titlu">Baze sportive</h2>
