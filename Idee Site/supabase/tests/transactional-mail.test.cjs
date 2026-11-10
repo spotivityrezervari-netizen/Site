@@ -46,13 +46,69 @@ test('owner reservation emails include customer contact but no cancellation cred
 });
 
 test('cancellation confirmation has no stale cancellation button', async () => {
-  const { renderTransactionalMail } = await template;
+  const { renderTransactionalMail, LATE_CANCELLATION_POLICY_WARNING } = await template;
   const rendered = renderTransactionalMail(input('booking_cancelled_client'));
   assert.match(rendered.subject, /Rezervare anulată/);
   assert.match(rendered.text, /Anularea rezervării/);
   assert.ok(!rendered.html.includes('Anulează rezervarea'));
   assert.ok(!rendered.text.includes(booking.customerPhone));
   assert.match(rendered.text, /Găsește un teren/);
+  assert.ok(rendered.html.includes(LATE_CANCELLATION_POLICY_WARNING));
+  assert.ok(rendered.text.includes(LATE_CANCELLATION_POLICY_WARNING));
+  assert.ok(!rendered.subject.includes('târzie'));
+  assert.ok(!rendered.text.includes('Anulări târzii în total'));
+});
+
+test('late client cancellation shows the frozen cumulative occurrence and exact policy in both alternatives', async () => {
+  const { renderTransactionalMail, LATE_CANCELLATION_POLICY_WARNING } = await template;
+  for (const count of [1, 3, 4, 12]) {
+    const rendered = renderTransactionalMail(input('booking_cancelled_client', { lateCancellation: { totalCount: count }, booking: { ...booking, mapsURL: 'https://maps.app.goo.gl/exampleMap9' } }));
+    assert.match(rendered.subject, /^Anulare târzie: Terenul unu · Spotivity$/);
+    const occurrence = count === 1 ? 'prima anulare târzie' : `a ${count}-a anulare târzie`;
+    for (const content of [rendered.html, rendered.text]) {
+      for (const value of [occurrence, LATE_CANCELLATION_POLICY_WARNING, booking.courtName, '25 octombrie 2026', '18:00–19:00', '19:00–20:00', 'mai puțin de o oră', 'Găsește un teren', 'spotivity.rezervari@gmail.com']) assert.ok(content.includes(value), `${count}: missing ${value}`);
+      assert.ok(!content.includes('contul a fost închis'));
+      assert.ok(!content.includes('neprezentarea cu numărul'));
+    }
+    assert.ok(rendered.text.includes(`Anulări târzii în total: ${count}`));
+    assert.ok(links(rendered.html).includes('https://maps.app.goo.gl/exampleMap9'));
+    assert.ok(links(rendered.html).includes(`${SITE}#spotivity-action=account`));
+    assert.ok(!rendered.html.includes('Anulează rezervarea'));
+    assert.ok(!rendered.text.includes('opaque-test-token'));
+  }
+});
+
+test('late partial cancellation keeps the remaining hours separate from the cancelled event', async () => {
+  const { renderTransactionalMail } = await template;
+  const rendered = renderTransactionalMail(input('booking_cancelled_client', { lateCancellation: { totalCount: 2 }, booking: { ...booking, hours: ['19:00–20:00'], remainingHours: ['18:00–19:00'], amountRON: 120 } }));
+  assert.match(rendered.subject, /^Anulare târzie:/);
+  for (const content of [rendered.html, rendered.text]) {
+    assert.ok(content.includes('Anulare târzie a unei părți din rezervare'));
+    assert.ok(content.includes('Orele păstrate în rezervare: 18:00–19:00'));
+    assert.ok(content.includes('a 2-a anulare târzie'));
+  }
+  assert.match(rendered.text, /Ore: 19:00–20:00/);
+});
+
+test('malformed late metadata is rejected and cannot silently produce a normal or zero-count notice', async () => {
+  const { renderTransactionalMail } = await template;
+  for (const lateCancellation of [undefined, null, {}, [], { totalCount: 0 }, { totalCount: -1 }, { totalCount: 1.5 }, { totalCount: '2' }, { totalCount: NaN }, { totalCount: Infinity }, { totalCount: Number.MAX_SAFE_INTEGER + 1 }]) {
+    assert.throws(() => renderTransactionalMail(input('booking_cancelled_client', { lateCancellation })), TypeError);
+  }
+  for (const kind of ['booking_created_client', 'booking_created_owner', 'booking_cancelled_owner']) {
+    assert.throws(() => renderTransactionalMail(input(kind, { lateCancellation: { totalCount: 1 } })), TypeError);
+  }
+});
+
+test('late cancellation preserves escaping, header safety and safe links', async () => {
+  const { renderTransactionalMail } = await template;
+  const rendered = renderTransactionalMail(input('booking_cancelled_client', { lateCancellation: { totalCount: 4 }, recipient: { email: 'ana@example.test', name: '<Ana>' }, booking: { ...booking, courtName: '<svg onload="attack()">\r\nBcc: outsider@example.test', mapsURL: 'https://evil.example/maps' } }));
+  assert.ok(!/[\r\n\u2028\u2029]/.test(rendered.subject));
+  assert.ok(rendered.html.includes('&lt;svg onload=&quot;attack()&quot;&gt;'));
+  assert.ok(rendered.html.includes('&lt;Ana&gt;'));
+  assert.ok(!rendered.html.includes('<svg'));
+  assert.ok(rendered.text.includes('<svg onload="attack()">'));
+  assert.ok(!rendered.html.includes('https://evil.example/maps'));
 });
 
 test('partial cancellation names cancelled hours and explicitly preserves the other booked hours', async () => {

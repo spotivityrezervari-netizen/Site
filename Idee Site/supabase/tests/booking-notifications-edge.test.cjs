@@ -11,7 +11,10 @@ const SERVICE = 'the-service-role-secret';
 const CANCEL_SECRET = 'independent-cancellation-secret-32bytes';
 const BOOKING_HOOK = 'https://hook.eu2.make.com/booking12345678901234567890';
 const CHAT_HOOK = 'https://hook.eu2.make.com/chat12345678901234567890123';
+const PAGES_SITE = 'https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/';
 const day = '2026-10-25';
+const POLICY_WARNING = 'La mai mult de 3 neprezentări, riști închiderea contului.';
+const lateCancellation = total_count => ({ total_count, threshold: 3, warning: POLICY_WARNING });
 function job(kind='booking_created_client', overrides={}) {
   return {
     notification_id: ID,lease_token:LEASE,attempt:1,kind,booking_id:BOOKING,
@@ -95,7 +98,55 @@ test('owner bookings/cancellations and client cancellation notices contain no ra
     assert.ok(!calls.some(call=>call.path.endsWith('/attach_cancellation_token')));
     const send=calls.find(call=>call.url===BOOKING_HOOK);assert.ok(send);assert.ok(!send.body.html.includes('#anulare-rezervare='));
     if(kind.endsWith('_owner')) assert.ok(send.body.text.includes('+40 721 123 456'));
+    if(kind.endsWith('_owner')) assert.ok(!send.body.text.includes(POLICY_WARNING));
   }
+});
+test('late cancellation uses the existing customer event, authoritative snapshot and one deduplicated submission',async()=>{
+  const {handler,calls}=await fixture({jobs:[job('booking_cancelled_client',{late_cancellation:lateCancellation(4)})]});
+  const result=await(await handler(request({action:'dispatch',late_cancellation:lateCancellation(999)}))).json();
+  assert.deepEqual(result,{status:'submitted',submitted:1,queued:0,blocked:0});
+  const sends=calls.filter(call=>call.url===BOOKING_HOOK);assert.equal(sends.length,1);
+  const send=sends[0];assert.equal(send.body.kind,'booking_cancelled_client');assert.equal(send.body.notification_id,ID);
+  assert.equal(send.headers.get('X-Spotivity-Notification-Id'),ID);
+  assert.match(send.body.subject,/^Anulare târzie:/);
+  for(const content of [send.body.html,send.body.text]) {
+    for(const value of ['a 4-a anulare târzie',POLICY_WARNING,'Teren unu','25 octombrie 2026','18:00–19:00','19:00–20:00'])assert.ok(content.includes(value),value);
+    assert.ok(!content.includes('999'));
+    assert.ok(!content.includes('#anulare-rezervare='));
+  }
+  assert.deepEqual(calls.filter(call=>call.path.startsWith('/rest/v1/rpc/')).map(call=>call.path.split('/').at(-1)),['get_booking_notification_config','claim_booking_notifications','finish_booking_notification']);
+});
+test('ordinary cancellation cannot acquire a late penalty from dispatch input or booking fields',async()=>{
+  const ordinary=job('booking_cancelled_client');ordinary.booking.lateCancellation={totalCount:800};ordinary.booking.late_cancellation=lateCancellation(900);
+  const {handler,calls}=await fixture({jobs:[ordinary]});
+  assert.equal((await(await handler(request({action:'dispatch',late_cancellation:lateCancellation(999)}))).json()).submitted,1);
+  const send=calls.find(call=>call.url===BOOKING_HOOK);assert.match(send.body.subject,/^Rezervare anulată:/);
+  assert.ok(!send.body.text.includes('anulare târzie'));assert.ok(!send.body.text.includes('Anulări târzii în total'));
+  assert.ok(send.body.text.includes(POLICY_WARNING));
+});
+test('invalid event metadata blocks mail rather than inventing a late count or falling back to ordinary cancellation',async()=>{
+  const invalid=[null,[],{},lateCancellation(0),lateCancellation(-1),lateCancellation(1.5),lateCancellation('4'),lateCancellation(Number.MAX_SAFE_INTEGER+1),{...lateCancellation(4),threshold:4},{...lateCancellation(4),warning:'Contul a fost închis.'}];
+  for(const metadata of invalid) {
+    const {handler,calls}=await fixture({jobs:[job('booking_cancelled_client',{late_cancellation:metadata})]});
+    const result=await(await handler(request())).json();assert.equal(result.blocked,1);assert.equal(result.submitted,0);
+    assert.ok(!calls.some(call=>call.url===BOOKING_HOOK));
+    const finish=calls.find(call=>call.path.endsWith('/finish_booking_notification'));
+    assert.equal(finish.body.p_outcome,'blocked');assert.equal(finish.body.p_error_code,'invalid_template_input');
+  }
+  for(const kind of ['booking_created_client','booking_created_owner','booking_cancelled_owner','chat_client','account_welcome']) {
+    const {handler,calls}=await fixture({jobs:[job(kind,{late_cancellation:lateCancellation(4)})]});
+    assert.equal((await(await handler(request())).json()).blocked,1);
+    assert.ok(!calls.some(call=>call.url===BOOKING_HOOK||call.url===CHAT_HOOK));
+  }
+});
+test('retrying the late cancellation retains the event count and original notification identity',async()=>{
+  const pending=job('booking_cancelled_client',{late_cancellation:lateCancellation(3)});
+  const {handler,calls}=await fixture({jobs:[pending],fetch:call=>call.url===BOOKING_HOOK?new Response('Retry',{status:503}):undefined});
+  for(let attempt=0;attempt<2;attempt++)assert.equal((await(await handler(request())).json()).queued,1);
+  const sends=calls.filter(call=>call.url===BOOKING_HOOK);assert.equal(sends.length,2);
+  assert.deepEqual(sends[0].body,sends[1].body);
+  for(const send of sends){assert.equal(send.body.notification_id,ID);assert.ok(send.body.text.includes('a 3-a anulare târzie'));}
+  for(const finish of calls.filter(call=>call.path.endsWith('/finish_booking_notification'))){assert.equal(finish.body.p_notification_id,ID);assert.equal(finish.body.p_outcome,'retry');}
 });
 test('a partial booking receipt retains the cancellation link for its remaining hour',async()=>{
   const {handler,calls}=await fixture({jobs:[job('booking_created_client',{booking:{...job().booking,hours:['19:00'],amountRON:100}})]});
@@ -192,6 +243,43 @@ test('environment destinations preserve the other stored scenario and default ma
   const send=calls.find(call=>call.url===BOOKING_HOOK);
   assert.ok(send.body.html.includes('https://spotivity.ro/#anulare-rezervare='));
   assert.ok(!send.body.html.includes('spotivityrezervari-netizen.github.io'));
+});
+
+test('server site override keeps every email app action and cancellation capability on the reviewed Pages path', async () => {
+  for(const kind of ['booking_created_client','booking_created_owner','booking_cancelled_client','booking_cancelled_owner','chat_owner','chat_client','account_welcome']) {
+    const item=job(kind,{account:{firstName:'Ana'},chat:{courtName:'Teren unu',customerName:'Ana',preview:'Mesaj',messageID:'12345'}});
+    if(kind==='booking_cancelled_client')item.late_cancellation=lateCancellation(4);
+    const {handler,calls}=await fixture({config:{siteURL:PAGES_SITE},jobs:[item]});
+    const result=await(await handler(request({action:'dispatch',siteURL:'https://evil.example/'}))).json();assert.equal(result.submitted,1,kind);
+    const send=calls.find(call=>call.url===BOOKING_HOOK||call.url===CHAT_HOOK);
+    const links=[...send.body.html.matchAll(/href="([^"]+)"/g)].map(match=>match[1].replaceAll('&amp;','&'));
+    const appLinks=links.filter(link=>!link.startsWith('mailto:')&&!link.startsWith('tel:')&&!link.startsWith('https://calendar.google.com/'));
+    assert.ok(appLinks.length>0,kind);
+    for(const link of appLinks)assert.ok(link.startsWith(PAGES_SITE),`${kind}: ${link}`);
+    assert.ok(send.body.html.includes(`${PAGES_SITE}assets/imagini/avatar2.png`),kind);
+    assert.ok(!send.body.html.includes('https://spotivity.ro/'),kind);
+    assert.ok(!send.body.text.includes('https://spotivity.ro/'),kind);
+    assert.ok(!send.body.html.includes('evil.example'),kind);
+    if(kind==='booking_created_client') {
+      const {deriveBookingCancellationToken}=await tokens;
+      const token=await deriveBookingCancellationToken(CANCEL_SECRET,BOOKING);
+      assert.ok(appLinks.includes(`${PAGES_SITE}#anulare-rezervare=${BOOKING}&token=${token}`));
+      assert.ok(appLinks.includes(`${PAGES_SITE}#token=${token}&rezervare=${BOOKING}`));
+      const calendar=links.find(link=>link.startsWith('https://calendar.google.com/'));
+      assert.ok(new URL(calendar).searchParams.get('details').includes(PAGES_SITE));
+    }
+  }
+});
+
+test('foreign or unsafe server site configuration blocks delivery before attaching cancellation credentials', async () => {
+  for(const siteURL of ['https://evil.example/','http://spotivity.ro/','javascript:alert(1)','https://spotivityrezervari-netizen.github.io/Site/Idee%20Site-evil/','https://spotivityrezervari-netizen.github.io/Site/other/','https://user:secret@spotivity.ro/','https://spotivity.ro/%2e%2e/other','https://spotivity.ro/\r\nBcc:evil@example.test']) {
+    const {handler,calls}=await fixture({config:{siteURL}});
+    const result=await(await handler(request())).json();assert.equal(result.blocked,1,siteURL);assert.equal(result.submitted,0);
+    assert.ok(!calls.some(call=>call.url===BOOKING_HOOK||call.url===CHAT_HOOK));
+    assert.ok(!calls.some(call=>call.path.endsWith('/attach_cancellation_token')));
+    const finish=calls.find(call=>call.path.endsWith('/finish_booking_notification'));
+    assert.equal(finish.body.p_outcome,'blocked');assert.equal(finish.body.p_error_code,'invalid_template_input');
+  }
 });
 
 test('configuration lookup failure never falls back to unpaused environment delivery', async () => {

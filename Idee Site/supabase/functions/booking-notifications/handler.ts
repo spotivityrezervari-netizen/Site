@@ -1,10 +1,10 @@
-import { renderTransactionalMail, TRANSACTIONAL_SITE_URL } from '../_shared/transactional-mail.ts';
+import { LATE_CANCELLATION_POLICY_WARNING, renderTransactionalMail, TRANSACTIONAL_SITE_URL, validateTransactionalURL } from '../_shared/transactional-mail.ts';
 import type { TransactionalMailInput } from '../_shared/transactional-mail.ts';
 import { deriveBookingCancellationToken, hashCancellationToken } from '../_shared/booking-token.ts';
 
 export type NotificationWorkerConfig = {
   url: string; anonKey?: string; serviceKey: string;
-  cancellationSecret?: string;
+  cancellationSecret?: string; siteURL?: string;
   bookingMakeWebhookURL?: string; chatMakeWebhookURL?: string;
   makeWebhookURL?: string; notificationsReady?: boolean;
 };
@@ -36,6 +36,7 @@ export function createHandler(config: NotificationWorkerConfig, dependencies: De
   const transport = dependencies.fetch ?? fetch;
   const timeoutMs = dependencies.timeoutMs ?? 15000;
   const base = config.url.replace(/\/$/, '');
+  const siteURL = config.siteURL ?? TRANSACTIONAL_SITE_URL;
   const serviceHeaders = { apikey: config.serviceKey, Authorization: `Bearer ${config.serviceKey}`, 'Content-Type': 'application/json' };
   async function timedFetch(url: string, options: RequestInit): Promise<Response> {
     const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -74,7 +75,15 @@ export function createHandler(config: NotificationWorkerConfig, dependencies: De
     let rendered;
     let bookingID: string | null = null;
     try {
-      const input: any = { kind: job.kind, recipient: job.recipient, siteURL: TRANSACTIONAL_SITE_URL };
+      const appSiteURL = validateTransactionalURL(siteURL);
+      const input: any = { kind: job.kind, recipient: job.recipient, siteURL: appSiteURL };
+      if ('late_cancellation' in job) {
+        const late = job.late_cancellation;
+        if (job.kind !== 'booking_cancelled_client' || !object(late) || !Number.isSafeInteger(late.total_count) || late.total_count < 1 || late.threshold !== 3 || late.warning !== LATE_CANCELLATION_POLICY_WARNING) throw new TypeError('Invalid late cancellation notification');
+        // Only the service-only claim RPC supplies this immutable event snapshot.
+        // Never infer a customer penalty from dates, browser input or a later count.
+        input.lateCancellation = { totalCount: late.total_count };
+      }
       if (CHAT_KINDS.includes(job.kind)) input.chat = job.chat;
       else if (job.kind === 'account_welcome') {
         if (!object(job.account)) throw new TypeError('Invalid account notification');
@@ -95,7 +104,9 @@ export function createHandler(config: NotificationWorkerConfig, dependencies: De
           // This idempotent attach also covers cron racing with the booking
           // function between its create RPC and its own token attachment RPC.
           if (await rpc('attach_cancellation_token', { p_booking_id: bookingID, p_token_hash: tokenHash }) !== true) throw new Error('database_unavailable');
-          input.cancellationURL = `${TRANSACTIONAL_SITE_URL}#anulare-rezervare=${bookingID}&token=${token}`;
+          const cancellationURL = new URL(appSiteURL);
+          cancellationURL.hash = new URLSearchParams({ 'anulare-rezervare': bookingID!, token }).toString();
+          input.cancellationURL = cancellationURL.href;
         }
       }
       rendered = renderTransactionalMail(input as TransactionalMailInput);

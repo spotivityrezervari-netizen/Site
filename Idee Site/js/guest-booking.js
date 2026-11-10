@@ -123,6 +123,12 @@
         const status = document.createElement('p'); status.className = 'workflow-status'; status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
         return status;
     }
+    function attendanceWarning(id) {
+        const warning = document.createElement('p'); warning.id = id; warning.className = 'workflow-attendance-warning';
+        warning.setAttribute('data-i18n', 'neprezentari_avertisment');
+        warning.textContent = window.dict?.[window.lang]?.neprezentari_avertisment || 'La mai mult de 3 neprezentări, riști închiderea contului.';
+        return warning;
+    }
     function notificationText(result) {
         return result.notification_status === 'submitted'
             ? 'Rezervarea este confirmată. Datele și linkul de anulare au fost trimise serviciului de email.'
@@ -156,12 +162,14 @@
         }
         const policy = document.createElement('p'); policy.className = 'workflow-copy';
         policy.textContent = 'Poți avea o singură rezervare pe zi la același sport, în orice oraș. Aceasta poate include mai multe ore consecutive. Rezervările finalizate nu pot fi anulate.';
+        const warning = attendanceWarning('guest-booking-attendance-warning');
         const status = statusNode();
         const actions = document.createElement('div'); actions.className = 'workflow-actions';
         const submit = document.createElement('button'); submit.type = 'submit'; submit.id = 'guest-booking-submit'; submit.className = 'buton-rezervare'; submit.textContent = attempt.payload ? 'Verifică aceeași rezervare' : 'Confirmă rezervarea';
+        submit.setAttribute('aria-describedby', warning.id);
         const back = document.createElement('button'); back.type = 'button'; back.className = 'workflow-secondary'; back.textContent = 'Înapoi la ore';
         const signin = document.createElement('button'); signin.type = 'button'; signin.id = 'guest-booking-signin'; signin.className = 'workflow-secondary'; signin.textContent = 'Am deja cont';
-        actions.append(submit, back, signin); form.append(policy, status, actions); dialog.content.append(summary, intro, form);
+        actions.append(submit, back, signin); form.append(policy, warning, status, actions); dialog.content.append(summary, intro, form);
         let busy = false;
         const freeze = () => {
             form.querySelectorAll('input').forEach(input => { input.disabled = !!attempt.payload || busy; });
@@ -251,10 +259,12 @@
         const link = cancelLink; cancelLink = null;
         const dialog = mountDialog('modal-anulare-rezervare-email', link.viewOnly ? 'Rezervarea ta' : 'Anulare rezervare');
         const status = statusNode(); const summary = document.createElement('p'); summary.className = 'workflow-summary';
+        const warning = attendanceWarning('email-booking-attendance-warning'); warning.hidden = true;
         const actions = document.createElement('div'); actions.className = 'workflow-actions';
         const confirm = document.createElement('button'); confirm.type = 'button'; confirm.id = 'email-booking-cancel-confirm'; confirm.className = 'workflow-danger'; confirm.textContent = 'Confirmă anularea'; confirm.hidden = true;
+        confirm.setAttribute('aria-describedby', warning.id);
         const back = document.createElement('button'); back.type = 'button'; back.className = 'workflow-secondary'; back.textContent = 'Închide';
-        actions.append(confirm, back); dialog.content.append(summary, status, actions);
+        actions.append(confirm, back); dialog.content.append(summary, status, warning, actions);
         let busy = false;
         const close = () => { if (!busy) { link.token = ''; dialog.remove(); } };
         dialog.onDismiss(close); back.onclick = close;
@@ -270,14 +280,14 @@
                 status.textContent = errors.booking_ended; link.token = '';
             } else { status.textContent = link.viewOnly
                 ? 'Rezervarea este confirmată. Dacă dorești anularea, apasă pe „Confirmă anularea”. Orele vor deveni disponibile din nou.'
-                : 'Vrei să anulezi această rezervare? Orele vor deveni disponibile din nou.'; confirm.hidden = false; }
+                : 'Vrei să anulezi această rezervare? Orele vor deveni disponibile din nou.'; warning.hidden = false; confirm.hidden = false; }
         } catch (error) { if (dialog.modal.isConnected) status.textContent = error.message; }
         confirm.onclick = async () => {
             if (busy || !link.token || !preview) return;
             busy = true; confirm.disabled = true; back.disabled = true; dialog.close.disabled = true; status.textContent = 'Se anulează…';
             try {
                 await post({ action: 'cancel', ...link });
-                status.textContent = 'Rezervarea a fost anulată pentru orele nefinalizate. Istoricul este păstrat.'; confirm.hidden = true; link.token = '';
+                status.textContent = 'Rezervarea a fost anulată pentru orele nefinalizate. Istoricul este păstrat.'; confirm.hidden = true; warning.hidden = true; link.token = '';
                 window.dispatchEvent(new Event('spotivity:booking-cancelled'));
             } catch (error) { status.textContent = error.message; }
             finally { busy = false; confirm.disabled = false; back.disabled = false; dialog.close.disabled = false; }

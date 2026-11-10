@@ -1,7 +1,10 @@
 /** Romanian transactional email templates. Rendering never sends mail or creates credentials. */
 export const TRANSACTIONAL_SITE_URL = 'https://spotivity.ro/';
 export const TRANSACTIONAL_SUPPORT_EMAIL = 'spotivity.rezervari@gmail.com';
+export const LATE_CANCELLATION_POLICY_WARNING = 'La mai mult de 3 neprezentări, riști închiderea contului.';
 export type MailRecipient = { email: string; name?: string };
+/** Cumulative count frozen by the server when this cancellation was recorded. */
+export type LateCancellationMailDetails = { totalCount: number };
 export type BookingMailDetails = {
   id: string | number; courtName: string; sport: string; baseName: string; city: string;
   dayISO: string; hours: readonly string[]; remainingHours?: readonly string[];
@@ -12,7 +15,8 @@ export type ChatMailDetails = { courtName: string; customerName: string; preview
 type CommonInput = { recipient: MailRecipient; siteURL?: string };
 export type TransactionalMailInput = CommonInput & (
   | { kind: 'booking_created_client'; booking: BookingMailDetails; cancellationURL: string }
-  | { kind: 'booking_created_owner' | 'booking_cancelled_client' | 'booking_cancelled_owner'; booking: BookingMailDetails; cancellationURL?: never }
+  | { kind: 'booking_cancelled_client'; booking: BookingMailDetails; lateCancellation?: LateCancellationMailDetails; cancellationURL?: never }
+  | { kind: 'booking_created_owner' | 'booking_cancelled_owner'; booking: BookingMailDetails; cancellationURL?: never }
   | { kind: 'chat_owner' | 'chat_client'; chat: ChatMailDetails; cancellationURL?: never }
   | { kind: 'account_welcome'; firstName?: string; cancellationURL?: never }
 );
@@ -134,6 +138,7 @@ export function renderTransactionalMail(input: TransactionalMailInput): Rendered
   if (!input || typeof input !== 'object') throw new TypeError('Invalid transactional email input');
   const to = recipient(input.recipient), siteURL = validateTransactionalURL(input.siteURL ?? TRANSACTIONAL_SITE_URL);
   if (input.kind !== 'booking_created_client' && 'cancellationURL' in input && input.cancellationURL !== undefined) throw new TypeError('Cancellation links are for the booking client only');
+  if ('lateCancellation' in input && (input.kind !== 'booking_cancelled_client' || !input.lateCancellation || !Number.isSafeInteger(input.lateCancellation.totalCount) || input.lateCancellation.totalCount < 1)) throw new TypeError('Invalid late cancellation details');
   let subject = '', title = '', introduction = '', content = '', after = '', footer = 'E-mail generat automat de platforma Spotivity.';
   let actions: Action[] = [], rows: Row[] = [], notes: string[] = [];
   const firstName = input.kind === 'account_welcome' ? line(input.firstName || to.name?.split(/\s+/)[0]) : to.name;
@@ -200,13 +205,22 @@ export function renderTransactionalMail(input: TransactionalMailInput): Rendered
         break;
       case 'booking_cancelled_client':
       case 'booking_cancelled_owner': {
+        const lateCancellation = input.kind === 'booking_cancelled_client' ? input.lateCancellation : undefined;
         title = booking.remainingHours?.length ? (owner ? 'O rezervare a fost anulată parțial' : 'O parte din rezervare a fost anulată') : owner ? 'O rezervare a fost anulată' : 'Rezervarea ta a fost anulată';
         subject = `Rezervare anulată: ${line(booking.courtName)} · ${BRAND}`;
         introduction = booking.remainingHours?.length ? `Orele afișate mai jos au fost anulate. Orele păstrate în rezervare: ${booking.remainingHours.map(line).join(', ')}.` : owner ? 'Anularea rezervării de mai jos a fost înregistrată. Intervalele eliberate pot fi rezervate din nou.' : `Anularea rezervării tale la ${line(booking.baseName) || line(booking.courtName)} a fost înregistrată cu succes. Mai jos găsești detaliile orelor anulate.`;
+        if (lateCancellation) {
+          title = booking.remainingHours?.length ? 'Anulare târzie a unei părți din rezervare' : 'Anulare târzie a rezervării';
+          subject = `Anulare târzie: ${line(booking.courtName)} · ${BRAND}`;
+          const occurrence = lateCancellation.totalCount === 1 ? 'Aceasta este prima anulare târzie înregistrată pentru tine.' : `Aceasta este a ${lateCancellation.totalCount}-a anulare târzie înregistrată pentru tine.`;
+          notes.push('Ai anulat cel puțin un interval cu mai puțin de o oră înainte de începere sau după ce acesta începuse.', occurrence);
+          rows.push({ label: 'Anulări târzii în total', value: String(lateCancellation.totalCount) });
+        }
+        if (!owner) notes.push(LATE_CANCELLATION_POLICY_WARNING);
         rows.push({ label: 'Valoarea orelor anulate', value: money });
         actions = owner ? [{ label: 'Administrează rezervările', href: appAction(siteURL, 'admin', booking) }] : [{ label: 'Găsește un teren', href: siteURL }, { label: 'Accesează contul', href: appAction(siteURL, 'account'), secondary: true }];
         after = owner ? '' : booking.remainingHours?.length ? 'Au fost eliberate numai orele anulate. Restul rezervării tale rămâne neschimbat. Îți mulțumim că ai ales Spotivity!' : 'Orele anulate au fost eliberate. Când ești pregătit pentru următorul meci, poți alege un alt teren pe Spotivity. Ne vedem pe teren!';
-        content = (owner ? '' : section('Detalii anulare')) + rowsHTML(rows) + (owner ? section('Detalii client') + rowsHTML(contacts) : note(booking.remainingHours?.length ? 'Orele păstrate în rezervare rămân confirmate. Valoarea de mai sus descrie numai orele anulate.' : 'Rezervarea este anulată. Valoarea de mai sus descrie orele anulate și nu reprezintă o solicitare de plată.')) + actionsHTML(actions) + (after ? paragraph(after) : '');
+        content = (owner ? '' : section('Detalii anulare')) + rowsHTML(rows) + (owner ? section('Detalii client') + rowsHTML(contacts) : note(booking.remainingHours?.length ? 'Orele păstrate în rezervare rămân confirmate. Valoarea de mai sus descrie numai orele anulate.' : 'Rezervarea este anulată. Valoarea de mai sus descrie orele anulate și nu reprezintă o solicitare de plată.')) + notes.map(note).join('') + actionsHTML(actions) + (after ? paragraph(after) : '');
         break;
       }
       default: throw new TypeError('Unsupported transactional email kind');

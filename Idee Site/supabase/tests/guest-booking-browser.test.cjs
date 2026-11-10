@@ -5,26 +5,32 @@ const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
 const { chromium } = require('playwright');
 const script = readFileSync(join(__dirname, '../../js/guest-booking.js'), 'utf8');
+const i18nScript = readFileSync(join(__dirname, '../../js/modules/public-i18n.js'), 'utf8');
 const css = readFileSync(join(__dirname, '../../css/guest-booking.css'), 'utf8');
 const bookingId = '00000000-0000-0000-0000-000000000009';
 const userId = '00000000-0000-0000-0000-000000000001';
 const selection = { court_id: '1', day: '2027-01-03', hours: ['13:00', '12:00'], with_ball: true, expected_total: 215 };
 const token = 'a'.repeat(64);
 const result = { booking_id: bookingId, court_name: 'Court A', day: selection.day, hours: ['12:00', '13:00'], total: 215, state: 'activa', notification_status: 'queued' };
+const attendanceWarnings = {
+    ro: 'La mai mult de 3 neprezentări, riști închiderea contului.',
+    hu: 'Több mint 3 meg nem jelenés esetén a fiókod megszüntetését kockáztatod.',
+    en: 'More than 3 no-shows may lead to your account being closed.'
+};
 let checks = 0;
 function pass(name) { checks++; process.stdout.write(`ok ${checks} - ${name}\n`); }
 
 (async () => {
     const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium', headless: true, args: ['--no-sandbox'] });
     try {
-        const setup = async ({ hash = '', user = null, handler = () => ({ status: 200, data: result }), width = 390 } = {}) => {
+        const setup = async ({ hash = '', user = null, handler = () => ({ status: 200, data: result }), width = 390, language = 'ro' } = {}) => {
             const page = await browser.newPage({ viewport: { width, height: 844 } });
             const requests = [], failures = [];
             page.on('pageerror', error => failures.push(error.message));
             await page.route('**/*', async route => {
                 const request = route.request(), url = new URL(request.url());
                 if (url.host === 'booking-ui.test') {
-                    return route.fulfill({ contentType: 'text/html', body: `<!doctype html><html lang="ro"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;font-family:system-ui}.modal{position:fixed;inset:0;display:none;justify-content:center;background:#0008}.buton-rezervare{background:#d8b66a;color:#111;border:0}${css}</style></head><body><button id="original">Rezervă</button><script>const supabaseUrl='https://project.test';const supabaseKey='public-anon';let fixtureUser=${JSON.stringify(user)};const db={auth:{getSession:async()=>({data:{session:fixtureUser?{user:fixtureUser,access_token:'real-user-token'}:null}})}};window.bookingEnded=()=>false;</script><script>${script}</script></body></html>` });
+                    return route.fulfill({ contentType: 'text/html', body: `<!doctype html><html lang="ro"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;font-family:system-ui}.modal{position:fixed;inset:0;display:none;justify-content:center;background:#0008}.buton-rezervare{background:#d8b66a;color:#111;border:0}${css}</style></head><body><button id="original">Rezervă</button><script>const supabaseUrl='https://project.test';const supabaseKey='public-anon';let fixtureUser=${JSON.stringify(user)};const db={auth:{getSession:async()=>({data:{session:fixtureUser?{user:fixtureUser,access_token:'real-user-token'}:null}})}};window.bookingEnded=()=>false;</script><script>${i18nScript}</script><script>window.SpotivityModules.publicI18n();window.lang=${JSON.stringify(language)};</script><script>${script}</script></body></html>` });
                 }
                 assert.equal(url.href, 'https://project.test/functions/v1/booking-workflow');
                 assert.equal(request.method(), 'POST');
@@ -47,6 +53,9 @@ function pass(name) { checks++; process.stdout.write(`ok ${checks} - ${name}\n`)
         {
             const t = await setup(); await t.create(); await t.fill();
             assert.equal(await t.page.locator('#modal-rezervare-vizitator input[type=password]').count(), 0);
+            assert.equal(await t.page.locator('.workflow-attendance-warning').innerText(), attendanceWarnings.ro);
+            assert.equal(await t.page.locator('.workflow-attendance-warning').evaluate(node => !!(node.compareDocumentPosition(document.getElementById('guest-booking-submit')) & Node.DOCUMENT_POSITION_FOLLOWING)), true);
+            assert.equal(t.requests.length, 0, 'The account consequence is visible before submitting a reservation');
             await t.page.locator('#guest-phone').fill('not a phone');
             await t.page.locator('#guest-booking-submit').click();
             await t.page.waitForFunction(() => document.querySelector('.workflow-status').textContent.includes('Verifică numele'));
@@ -177,17 +186,21 @@ function pass(name) { checks++; process.stdout.write(`ok ${checks} - ${name}\n`)
             assert.equal(t.requests[0].body.action, 'preview_cancel'); assert.equal(t.requests[0].body.token, token);
             assert.equal(t.requests[0].headers.authorization, undefined);
             assert.equal(await t.page.locator('.workflow-status').textContent(), 'Vrei să anulezi această rezervare? Orele vor deveni disponibile din nou.');
+            assert.equal(await t.page.locator('.workflow-attendance-warning').innerText(), attendanceWarnings.ro);
+            assert.equal(await t.page.locator('.workflow-attendance-warning').isVisible(), true);
             await t.page.locator('#email-booking-cancel-confirm').click();
             await t.page.waitForFunction(() => document.querySelector('.workflow-status').textContent.includes('a fost anulată'));
             assert.equal(t.requests.length, 2); assert.equal(t.requests[1].body.action, 'cancel');
             assert.deepEqual(await t.page.evaluate(() => ({ local: { ...localStorage }, session: { ...sessionStorage } })), { local: {}, session: {} });
             assert.equal(await t.page.locator('#email-booking-cancel-confirm').isVisible(), false);
+            assert.equal(await t.page.locator('.workflow-attendance-warning').isVisible(), false);
             pass('email secret leaves the URL immediately; preview is read-only and cancellation needs an explicit button'); await t.page.close();
         }
         {
             const t = await setup({ hash: `#anulare-rezervare=${bookingId}&token=${token}`, handler: () => ({ status: 200, data: { ...result, can_cancel: false } }) });
             await t.page.waitForFunction(() => document.querySelector('.workflow-status')?.textContent.includes('finalizată'));
             assert.equal(await t.page.locator('#email-booking-cancel-confirm').isVisible(), false);
+            assert.equal(await t.page.locator('.workflow-attendance-warning').isVisible(), false);
             assert.equal(t.requests.length, 1); pass('completed reservation preview offers no cancellation action'); await t.page.close();
         }
         {
@@ -203,6 +216,19 @@ function pass(name) { checks++; process.stdout.write(`ok ${checks} - ${name}\n`)
             assert.equal(await t.page.locator('#email-booking-cancel-confirm').isVisible(), false);
             assert.equal(t.requests.length, 1);
             pass(`server ${code} cancellation error uses the matching Romanian explanation`); await t.page.close();
+        }
+        for (const language of ['hu', 'en']) {
+            const booking = await setup({ language }); await booking.create();
+            assert.equal(await booking.page.locator('.workflow-attendance-warning').innerText(), attendanceWarnings[language]);
+            assert.equal(booking.requests.length, 0);
+            await booking.page.close();
+            const cancellation = await setup({ language, hash: `#rezervare=${bookingId}&token=${token}`, handler: () => ({ status: 200, data: { ...result, can_cancel: true } }) });
+            await cancellation.page.locator('#email-booking-cancel-confirm').waitFor({ state: 'visible' });
+            assert.equal(await cancellation.page.locator('.workflow-attendance-warning').innerText(), attendanceWarnings[language]);
+            assert.equal(cancellation.requests.length, 1);
+            assert.equal(cancellation.requests[0].body.action, 'preview_cancel');
+            pass(`${language} guest booking and email cancellation show the translated warning before any confirming action`);
+            await cancellation.page.close();
         }
         for (const width of [320, 390, 768, 1440]) {
             const t = await setup({ width }); await t.create(); await t.fill();

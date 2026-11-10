@@ -2,6 +2,10 @@
 
 Actualizare 8 noiembrie: migrarea 032 este aplicată; chatul administrativ și notificările sale sunt numai pentru administratorii alocați, fără fallback către superadmin. Vezi [CHAT_ADMINISTRATORI.md](CHAT_ADMINISTRATORI.md).
 
+## 033 — totalul anulărilor târzii și avertizarea din email
+
+[033_late_cancellation_counts.sql](033_late_cancellation_counts.sql) a fost aplicată și verificată în live la 10 noiembrie 2026, după 027 și 032; workerul compatibil `booking-notifications` este activ la versiunea 8. Adaugă totalul istoricului autorizat în lista administratorului și păstrează un contor la momentul anulării pentru emailul automat existent al clientului. Nu numără prezența la teren, nu blochează conturi și nu retrimite emailuri istorice. Politica exactă, payloadul și pașii de aplicare sunt în [LATE_CANCELLATIONS.md](LATE_CANCELLATIONS.md). Migrarea 031 nu este necesară; Git și SQL nu publică automat workerul Edge sau site-ul.
+
 ## 029 — anunțuri manuale Make, cu grupuri exclusive
 
 [029_manual_announcement_campaigns.sql](029_manual_announcement_campaigns.sql) adaugă registrul privat al campaniilor și patru RPC-uri protejate prin chei distincte pentru clienți/admini. A fost aplicată cu aprobarea explicită a proprietarului și verificări de păstrare a datelor și permisiunilor existente. Numărul 028 era deja ocupat în baza live; nu reaplica o altă migrare sub acel număr.
@@ -10,7 +14,7 @@ Configurarea și cele nouă tipuri de email sunt descrise în [ANUNTURI_MAKE.md]
 
 ## 027 — reconciliere versionată și integritatea rezervărilor
 
-[027_booking_integrity_and_rate_limits.sql](027_booking_integrity_and_rate_limits.sql) este pregătită în Git și testată izolat; **nu este aplicată în producție prin acest commit**. Se aplică după 026, la viitoarea lansare autorizată, înaintea funcțiilor Edge și frontendului. Păstrează datele de business și contoarele rate-limit deja existente. Guardurile refuză o definiție SQL necunoscută; nu ocoli verificarea și nu reaplica 014/023/025 peste live.
+[027_booking_integrity_and_rate_limits.sql](027_booking_integrity_and_rate_limits.sql) figurează ca aplicată în registrul live verificat înaintea pregătirii migrării 033. Pentru un proiect nou se aplică după 026, înaintea funcțiilor Edge și frontendului compatibil. Păstrează datele de business și contoarele rate-limit deja existente. Guardurile refuză o definiție SQL necunoscută; nu ocoli verificarea și nu reaplica 014/023/025 peste live.
 
 Versionează verificarea opțională a totalului acceptat (`p_expected_total` / `PRICE_CHANGED`), separarea cotelor pentru UUID-uri autentificate și contacte de oaspete, înregistrarea anulărilor directe ale clientului și agregarea anulărilor după identitatea corectă. Înlocuiește numai semnăturile vechi ale RPC-urilor de creare, fără overloaduri ambigue. O cerere deja comisă, cu aceeași identitate și aceleași date, returnează rezultatul original chiar dacă tariful s-a schimbat între timp.
 

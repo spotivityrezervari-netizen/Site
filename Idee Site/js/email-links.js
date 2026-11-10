@@ -138,11 +138,20 @@
                 const day = document.getElementById('tabel-data'); if (day) day.value = context.day;
                 await window.incarcaTabelProgram?.(); if (current()) view.remove();
             }, true);
-            else if (context.can_cancel === true) button(actions, 'Anulează rezervarea', async () => {
-                if (!current() || !confirm('Confirmi anularea rezervării?')) return;
-                await window.SpotivityBooking.cancelOwned(context.booking_id, owner);
-                if (current()) { view.status.textContent = 'Rezervarea a fost anulată. Istoricul este păstrat.'; actions.replaceChildren(); window.dispatchEvent(new Event('spotivity:booking-cancelled')); }
-            });
+            else if (context.can_cancel === true) {
+                const warning = document.createElement('p'); warning.id = 'account-email-attendance-warning'; warning.className = 'workflow-attendance-warning';
+                warning.setAttribute('data-i18n', 'neprezentari_avertisment');
+                warning.textContent = window.dict?.[window.lang]?.neprezentari_avertisment || 'La mai mult de 3 neprezentări, riști închiderea contului.';
+                view.panel.insertBefore(warning, actions);
+                const cancel = button(actions, 'Anulează rezervarea', async () => {
+                    const copy = window.dict?.[window.lang];
+                    const cancellationPrompt = `${copy?.confirmare_anulare || 'Anulezi orele nefinalizate ale rezervării?'}\n\n${copy?.neprezentari_avertisment || 'La mai mult de 3 neprezentări, riști închiderea contului.'}`;
+                    if (!current() || !confirm(cancellationPrompt)) return;
+                    await window.SpotivityBooking.cancelOwned(context.booking_id, owner);
+                    if (current()) { view.status.textContent = 'Rezervarea a fost anulată. Istoricul este păstrat.'; warning.remove(); actions.replaceChildren(); window.dispatchEvent(new Event('spotivity:booking-cancelled')); }
+                });
+                cancel.setAttribute('aria-describedby', warning.id);
+            }
         }
         async function process() {
             if (!mounted || busy || !request) return;

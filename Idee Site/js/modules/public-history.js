@@ -149,7 +149,9 @@
                     const idRez = button.getAttribute('data-id');
                     const bookingId = button.getAttribute('data-booking-id');
                     const owner = state.user?.id;
-                    if (!owner || button.disabled || !confirm('Anulezi orele nefinalizate ale rezervării?')) return;
+                    const copy = window.dict?.[window.lang];
+                    const cancellationPrompt = `${copy?.confirmare_anulare || 'Anulezi orele nefinalizate ale rezervării?'}\n\n${copy?.neprezentari_avertisment || 'La mai mult de 3 neprezentări, riști închiderea contului.'}`;
+                    if (!owner || button.disabled || !confirm(cancellationPrompt)) return;
                     button.disabled = true;
                     try {
                         if (bookingId) {

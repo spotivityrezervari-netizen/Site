@@ -9,7 +9,8 @@
 .late-cancellation-list { display: grid; gap: 14px; }
 .late-cancellation-customer { padding: 18px; min-width: 0; border: 1px solid rgba(216,182,106,.28); border-radius: 14px; background: #17271c; }
 .late-cancellation-customer h3 { font-size: 18px; color: #f7f3e8; margin: 0; overflow-wrap: anywhere; }
-.late-cancellation-count { flex-shrink: 0; padding: 5px 10px; border: 1px solid rgba(216,182,106,.4); border-radius: 30px; font-size: 13px; color: #edca82; }
+.late-cancellation-count { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; box-sizing: border-box; min-width: 38px; min-height: 38px; padding: 6px 10px; border: 1px solid rgba(216,182,106,.6); border-radius: 999px; background: rgba(216,182,106,.14); font-size: 16px; font-weight: 700; line-height: 1.2; color: #edca82; }
+.late-cancellation-window-count { margin: 12px 0; color: #d2ccbd; font-size: 13px; line-height: 1.5; }
 .late-cancellation-flag { margin: 12px 0; font-size: 13px; color: #f0b59c; }
 .late-cancellation-contact, .late-cancellation-last { margin: 10px 0; line-height: 1.5; font-size: 14px; overflow-wrap: anywhere; }
 .late-cancellation-contact a, .late-cancellation-events summary { color: #edca82; }

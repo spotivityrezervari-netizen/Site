@@ -31,7 +31,7 @@
         const closeButton = element('button', 'late-cancellation-close', 'Închide'); closeButton.type = 'button';
         header.append(title, closeButton);
         const intro = element('p', 'late-cancellation-intro', 'Clienți cu anulări efectuate cu mai puțin de o oră înainte sau în timpul unei ore încă nefinalizate. Sunt excluse anulările făcute de personal.');
-        const policy = element('p', 'late-cancellation-policy', 'Perioadă: ultimele 30 de zile. De la 3 rezervări anulate târziu, clientul este marcat pentru verificare. Conturile nu sunt blocate automat.');
+        const policy = element('p', 'late-cancellation-policy', 'Lista și rezervările afișate acoperă ultimele 30 de zile. Insigna numerică arată totalul anulărilor târzii de până acum, pentru terenurile la care ai acces. De la 3 rezervări anulate târziu în ultimele 30 de zile, clientul este marcat pentru verificare. Conturile nu sunt blocate automat.');
         const scope = element('p', 'late-cancellation-intro'); scope.id = 'late-cancellation-scope';
         const refresh = element('button', 'btn-cont late-cancellation-refresh', 'Reîncarcă'); refresh.type = 'button';
         const status = element('p', 'late-cancellation-status'); status.id = 'late-cancellation-status'; status.setAttribute('role', 'status');
@@ -59,12 +59,21 @@
         function render(data) {
             list.replaceChildren();
             const customers = Array.isArray(data?.customers) ? data.customers : [];
-            status.textContent = customers.length ? `${customers.length} clienți cu anulări târzii în ultimele 30 de zile.` : 'Nu sunt înregistrate anulări târzii în ultimele 30 de zile.';
+            status.textContent = customers.length ? `${customers.length} ${customers.length === 1 ? 'client' : 'clienți'} cu anulări târzii în ultimele 30 de zile.` : 'Nu sunt înregistrate anulări târzii în ultimele 30 de zile.';
             for (const customer of customers) {
                 const card = element('article', 'late-cancellation-customer');
                 const heading = element('div', 'late-cancellation-customer-heading');
-                heading.append(element('h3', '', customer.name || 'Client'), element('span', 'late-cancellation-count', `${Number(customer.count) || 0} anulări`));
+                const total = customer.total_count;
+                const validTotal = Number.isSafeInteger(total) && total >= 0;
+                const totalLabel = validTotal
+                    ? `${total} ${total === 1 ? 'anulare târzie' : (total % 100 >= 20 || total > 0 && total % 100 === 0 ? 'de anulări târzii' : 'anulări târzii')} până acum`
+                    : 'Totalul anulărilor târzii nu este disponibil';
+                const badge = element('span', 'late-cancellation-count', validTotal ? String(total) : '—');
+                badge.setAttribute('role', 'img'); badge.setAttribute('aria-label', totalLabel); badge.title = totalLabel;
+                heading.append(element('h3', '', customer.name || 'Client'), badge);
                 card.append(heading);
+                const recent = customer.count;
+                card.append(element('p', 'late-cancellation-window-count', `Anulări târzii în ultimele 30 de zile: ${Number.isSafeInteger(recent) && recent >= 0 ? recent : 'indisponibil'}.`));
                 if (customer.frequent === true) card.append(element('p', 'late-cancellation-flag', 'Anulări repetate — de verificat'));
                 contact(card, customer.email, 'email'); contact(card, customer.phone, 'phone');
                 card.append(element('p', 'late-cancellation-last', `Ultima anulare: ${date(customer.last_cancelled_at)}`));

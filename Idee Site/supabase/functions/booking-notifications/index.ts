@@ -5,6 +5,7 @@ Deno.serve(createHandler({
   anonKey: Deno.env.get('SUPABASE_ANON_KEY') ?? '',
   serviceKey: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
   cancellationSecret: Deno.env.get('BOOKING_CANCELLATION_SECRET') ?? '',
+  siteURL: Deno.env.get('BOOKING_SITE_URL') || undefined,
   bookingMakeWebhookURL: Deno.env.get('BOOKING_MAKE_WEBHOOK_URL') || undefined,
   chatMakeWebhookURL: Deno.env.get('CHAT_MAKE_WEBHOOK_URL') || undefined,
 }));
