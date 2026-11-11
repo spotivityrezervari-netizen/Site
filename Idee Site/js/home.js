@@ -4,25 +4,31 @@
 
     const copy = {
         ro: {
-            home_intro_title: 'Rezervă terenuri de sport online', home_intro_description: 'Alege orașul și sportul, compară terenurile și verifică programul pentru următorul joc.',
+            home_intro_title: 'Rezervă terenuri de sport online', home_intro_description: 'Fotbal, baschet, tenis, volei sau tenis de picior. Găsește terenul potrivit și alege ora care îți convine.',
+            home_welcome_eyebrow: 'Spotivity · Loc pentru următorul tău joc', home_welcome_sports: 'Descoperă sporturile',
+            home_welcome_step_1: 'Alegi terenul', home_welcome_step_2: 'Verifici programul', home_welcome_step_3: 'Rezervi online',
             home_alege_oras: 'Alege orașul și găsește terenul potrivit.', home_profil: 'Profilul meu', home_vezi_baza: 'Vezi baza sportivă', home_inscrie_baza: 'Înscrie-ți baza',
             home_rezerva: 'Rezervă un teren', home_vezi_terenuri: 'Vezi terenurile',
             home_subtitlu_fotbal: 'Jocul începe aici.', home_subtitlu_baschet: 'Fiecare aruncare contează.',
-            home_subtitlu_tenis: 'Următorul punct e al tău.', home_subtitlu_volei: 'Adună echipa. Intră în joc.'
+            home_subtitlu_tenis: 'Următorul punct e al tău.', home_subtitlu_volei: 'Adună echipa. Intră în joc.', home_subtitlu_tenis_picior: 'Un joc nou pentru echipa ta.'
         },
         hu: {
-            home_intro_title: 'Foglalj sportpályát online', home_intro_description: 'Válassz várost és sportot, hasonlítsd össze a pályákat, és nézd meg a szabad időpontokat a következő játékhoz.',
+            home_intro_title: 'Foglalj sportpályát online', home_intro_description: 'Foci, kosárlabda, tenisz, röplabda vagy lábtenisz. Találd meg a megfelelő pályát és időpontot.',
+            home_welcome_eyebrow: 'Spotivity · A következő játékod helyszíne', home_welcome_sports: 'Fedezd fel a sportokat',
+            home_welcome_step_1: 'Válassz pályát', home_welcome_step_2: 'Nézd meg az időpontokat', home_welcome_step_3: 'Foglalj online',
             home_alege_oras: 'Válassz várost, és találd meg a megfelelő pályát.', home_profil: 'Profilom', home_vezi_baza: 'Sportközpont megtekintése', home_inscrie_baza: 'Sportközpont regisztrálása',
             home_rezerva: 'Pálya foglalása', home_vezi_terenuri: 'Pályák megtekintése',
             home_subtitlu_fotbal: 'Itt kezdődik a játék.', home_subtitlu_baschet: 'Minden dobás számít.',
-            home_subtitlu_tenis: 'Tiéd a következő pont.', home_subtitlu_volei: 'Hívd a csapatod. Játsszatok együtt.'
+            home_subtitlu_tenis: 'Tiéd a következő pont.', home_subtitlu_volei: 'Hívd a csapatod. Játsszatok együtt.', home_subtitlu_tenis_picior: 'Új játék a csapatodnak.'
         },
         en: {
-            home_intro_title: 'Book sports courts online', home_intro_description: 'Choose your city and sport, compare courts and check the schedule for your next game.',
+            home_intro_title: 'Book sports courts online', home_intro_description: 'Football, basketball, tennis, volleyball or foot tennis. Find your court and choose a time that works for you.',
+            home_welcome_eyebrow: 'Spotivity · A place for your next game', home_welcome_sports: 'Explore the sports',
+            home_welcome_step_1: 'Choose your court', home_welcome_step_2: 'Check the schedule', home_welcome_step_3: 'Book online',
             home_alege_oras: 'Choose your city and find your next court.', home_profil: 'My profile', home_vezi_baza: 'View sports centre', home_inscrie_baza: 'Register your sports centre',
             home_rezerva: 'Book a court', home_vezi_terenuri: 'Explore courts',
             home_subtitlu_fotbal: 'The game starts here.', home_subtitlu_baschet: 'Make every shot count.',
-            home_subtitlu_tenis: 'The next point is yours.', home_subtitlu_volei: 'Bring your team. Join the game.'
+            home_subtitlu_tenis: 'The next point is yours.', home_subtitlu_volei: 'Bring your team. Join the game.', home_subtitlu_tenis_picior: 'A new game for your team.'
         }
     };
     for (const [lang, labels] of Object.entries(copy)) {
