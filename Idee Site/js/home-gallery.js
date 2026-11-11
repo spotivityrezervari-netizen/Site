@@ -25,6 +25,8 @@
             en: { title: 'Sports photographs', pause: 'Pause photo rotation', play: 'Resume photo rotation' }
         };
         const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+        // One complete cycle includes both the still photograph and its slide.
+        const slideIntervalMs = 1500, transitionDurationMs = 600;
         const decodedImages = new Map();
         let current = 0, desired = 0, generation = 0, pending = 0, timer;
         let previewGeneration = 0, transition = null, outgoingTransition = null;
@@ -53,7 +55,7 @@
         }
         function schedule() {
             clearTimeout(timer);
-            if (canRotate() && !pending) timer = setTimeout(() => void show((current + 1) % photos.length).then(schedule), 3600);
+            if (canRotate() && !pending) timer = setTimeout(() => void show((current + 1) % photos.length).then(schedule), slideIntervalMs - transitionDurationMs);
         }
         const absolute = source => new URL(window.appAssetUrl(source), window.siteHomeUrl()).href;
         function load(source) {
@@ -117,7 +119,7 @@
                     back.hidden = false;
                     back.classList.add('is-entering');
                     const distance = frame.clientWidth + 24;
-                    const timing = { duration: 800, easing: 'cubic-bezier(.22,.61,.36,1)', fill: 'forwards' };
+                    const timing = { duration: transitionDurationMs, easing: 'cubic-bezier(.22,.61,.36,1)', fill: 'forwards' };
                     outgoingTransition = front.animate([
                         { transform: 'translate3d(0, 0, 0)' },
                         { transform: `translate3d(${-distance}px, 0, 0)` }
