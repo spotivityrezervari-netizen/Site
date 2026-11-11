@@ -136,6 +136,9 @@ function finish(html, { baseUrl, route, title, description, sport, bodyAttribute
     if (/^(?:[A-Za-z][A-Za-z\d+.-]*:|\/\/|#|\/)/.test(value)) return attribute;
     return `${name}="${value === './' ? prefix : prefix + value}"`;
   });
+  // Desktop <picture> sources currently contain one bundled image each.
+  // Rebase these too, so nested category pages can select HD before JS runs.
+  html = html.replace(/\bsrcset="(assets\/imagini\/[A-Za-z0-9_.-]+)"/g, (_, value) => `srcset="${prefix + value}"`);
   return html.replace(/(<!doctype html>)/i, (_, declaration) => `${declaration}\n${GENERATED_MARKER}`).replace(/[ \t]+(?=\r?$)/gm, '');
 }
 

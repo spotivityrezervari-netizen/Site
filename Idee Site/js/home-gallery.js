@@ -75,7 +75,8 @@
         async function photoImage(index) {
             const photo = photos[index];
             const fallback = absolute(`assets/imagini/${photo.file}`);
-            const preferred = absolute(window.getSportAppearance?.(photo.sport)?.fundal_url || `assets/imagini/${photo.file}`);
+            const selected = window.getSportAppearance?.(photo.sport)?.fundal_url || `assets/imagini/${photo.file}`;
+            const preferred = absolute(window.getSportBackgroundSource?.(photo.sport, selected) || selected);
             try { return await load(preferred); }
             catch (error) { if (preferred === fallback) throw error; return load(fallback); }
         }

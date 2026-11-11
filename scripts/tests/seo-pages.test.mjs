@@ -58,6 +58,18 @@ test('five categories keep one static H1, original booking controls and real cra
   assert.ok(generated.get('robots.txt').includes(`${PAGES_BASE_URL}sitemap.xml`));
 });
 
+test('desktop picture sources resolve from category URLs before JavaScript runs', () => {
+  const responsive = template.replaceAll('<img src="assets/imagini/logo.png" loading="lazy">', '<picture><source media="(min-width: 1024px)" srcset="assets/imagini/logo.png"><img src="assets/imagini/logo.png" loading="lazy"></picture>');
+  const generated = generateSeoFiles({ template: responsive, catalog });
+  for (const sport of SPORTS) {
+    const route = `terenuri/${sport.slug}/`;
+    const html = generated.get(route + 'index.html');
+    const source = html.match(/<source\b[^>]*\bsrcset="([^"]+)"/)?.[1];
+    assert.equal(source, '../../assets/imagini/logo.png');
+    assert.equal(new URL(source, PAGES_BASE_URL + route).href, PAGES_BASE_URL + 'assets/imagini/logo.png');
+  }
+});
+
 test('individual court and base documents contain real details, unique metadata, direct controls and related links without JavaScript', () => {
   const generated = generateSeoFiles({ template, catalog });
   const courtRoute = courtPath(catalog.courts[0]), baseRoute = paths.basePath(catalog.bases[0]);

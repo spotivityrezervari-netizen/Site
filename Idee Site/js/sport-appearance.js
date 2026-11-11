@@ -27,6 +27,15 @@
     };
     const pagesHome = 'https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/';
     const exactBundledImage = (value, path) => value === path || value === new URL(path, pagesHome).href;
+    // Keep the small original photos on phones. Only the two low-resolution
+    // bundled sources have restored desktop copies; custom settings take priority.
+    const desktopBackgrounds = {
+        Volei: 'assets/imagini/BackgroundVoleyball-desktop.jpg',
+        'Tenis Picior': 'assets/imagini/BackgroundLavolei-desktop.jpg'
+    };
+    const desktop = window.matchMedia?.('(min-width: 1024px)');
+    const desktopBackground = (key, source) => desktopBackgrounds[key]
+        && exactBundledImage(source, defaults[key].fundal_url) ? desktopBackgrounds[key] : '';
     const backgroundImage = (sport, value) => {
         const safe = safeImage(value);
         return exactBundledImage(safe, defaults[sport].fundal_url)
@@ -35,16 +44,40 @@
     };
     window.spotivitySportAppearance = { ...defaults };
     window.getSportAppearance = sport => window.spotivitySportAppearance[sportKey(sport)] || defaults.Fotbal;
+    window.getSportBackgroundSource = (sport, source) => {
+        const key = sportKey(sport);
+        const selected = source || window.getSportAppearance(sport).fundal_url;
+        return (desktop?.matches && key && desktopBackground(key, selected)) || selected;
+    };
     window.applySportAppearance = (root = document) => {
         for (const [attribute, column] of [['data-sport-icon', 'icona_url'], ['data-sport-background', 'fundal_url'], ['data-sport-ambient', 'fundal_url']]) {
             root.querySelectorAll(`img[${attribute}]`).forEach(img => {
                 const key = sportKey(img.getAttribute(attribute));
                 if (!key) return;
-                const source = window.appAssetUrl(window.spotivitySportAppearance[key][column]);
+                const selected = window.spotivitySportAppearance[key][column];
+                const source = window.appAssetUrl(selected);
+                const desktopSource = column === 'fundal_url'
+                    ? img.closest?.('picture')?.querySelector('source[data-sport-desktop]') : null;
+                if (desktopSource) {
+                    const hd = desktopBackground(key, selected);
+                    const srcset = hd && img.dataset.failedDesktopSource !== hd ? window.appAssetUrl(hd) : '';
+                    if (desktopSource.getAttribute('srcset') !== srcset) desktopSource.setAttribute('srcset', srcset);
+                }
                 if (img.getAttribute('src') !== source) img.src = source;
                 if (!img.dataset.appearanceFallbackBound) {
                     img.dataset.appearanceFallbackBound = 'true';
+                    if (column === 'fundal_url') {
+                        const fitScene = () => {
+                            if (img.naturalWidth && img.naturalHeight) img.closest?.('.home-hero-art')?.style.setProperty('--home-photo-ratio', String(img.naturalWidth / img.naturalHeight));
+                        };
+                        img.addEventListener('load', fitScene);
+                        fitScene();
+                    }
                     img.addEventListener('error', () => {
+                        if (desktopSource?.getAttribute('srcset')) {
+                            img.dataset.failedDesktopSource = desktopBackgrounds[key];
+                            desktopSource.setAttribute('srcset', '');
+                        }
                         const fallback = window.appAssetUrl(defaults[key][column]);
                         if (img.getAttribute('src') !== fallback) img.src = fallback;
                     });
@@ -52,6 +85,9 @@
             });
         }
     };
+    const desktopChanged = () => window.dispatchEvent(new CustomEvent('spotivity:sport-appearance', { detail: window.spotivitySportAppearance }));
+    if (desktop?.addEventListener) desktop.addEventListener('change', desktopChanged);
+    else desktop?.addListener(desktopChanged);
     document.addEventListener('DOMContentLoaded', () => window.applySportAppearance());
     window.spotivitySportAppearanceReady = (async () => {
         const abort = new AbortController();

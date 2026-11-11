@@ -37,8 +37,7 @@ body.pagina-publica { background: #101a14; }
 .welcome-photo-next.is-entering { z-index: 3; }
 .welcome-photo-card img { display: block; width: 100%; height: 100%; object-fit: contain; -webkit-user-drag: none; user-select: none; }
 @media (min-width: 1024px) {
-    .welcome-photo-card { width: min(calc((100% - 24px) * .90), calc((var(--welcome-stage-height) - 96px) * var(--photo-ratio) * .90)); }
-    .welcome-photo-card img { filter: brightness(1.05) contrast(1.04) saturate(1.03); }
+    .welcome-photo-card { width: min(calc((100% - 24px) * .80), calc((var(--welcome-stage-height) - 96px) * var(--photo-ratio) * .80)); }
 }
 .welcome-gallery-controls { display: flex; justify-content: flex-end; gap: 0; margin-top: 8px; }
 .pagina-publica .welcome-gallery-controls button { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 44px; width: 44px; height: 44px; margin: 0; padding: 0; border: 1px solid transparent; border-radius: 50%; background: transparent; color: #e2c783; box-shadow: none; }
@@ -162,6 +161,31 @@ body.pagina-publica { background: #101a14; }
     .pagina-publica .home-hero-baschet { --home-art-position: 22% 55%; --home-edge-bottom: clamp(100px, 10vw, 170px); }
     .pagina-publica .home-hero-volei { --home-art-position: 35% 50%; }
     .pagina-publica .home-sport-hero .home-hero-art img { transform: scale(1.035); }
+}
+/* A desktop screen must not stretch a portrait photograph across its full
+   width. Fit the complete scene into a centered stage instead of cropping it. */
+@media (min-width: 1024px) {
+    .pagina-publica .home-sport-hero {
+        --home-art-height: clamp(580px, 48vw, 760px);
+        --home-photo-ratio: 1.5;
+        --home-art-position: 50% 50%;
+        --home-edge-top: 160px;
+        --home-edge-bottom: 90px;
+        --home-side-fade: 48px;
+    }
+    .pagina-publica .home-hero-fotbal { --home-photo-ratio: 1.461832; }
+    .pagina-publica .home-hero-tenis { --home-photo-ratio: .750188; }
+    .pagina-publica .home-hero-tenis-picior { --home-photo-ratio: .704157; }
+    .pagina-publica .home-sport-hero .home-hero-art {
+        width: min(calc(100% - 96px), 1180px, calc(var(--home-art-height) * var(--home-photo-ratio)));
+        justify-self: center;
+    }
+    .pagina-publica .home-sport-hero .home-hero-art img {
+        object-fit: contain;
+        object-position: center;
+        transform: none;
+    }
+    .pagina-publica .home-hero-art::before { content: none; }
 }
 .pagina-publica .home-sport-hero:not(:has(.home-hero-art)) { grid-template-rows: auto auto; }
 .pagina-publica .home-sport-hero:not(:has(.home-hero-art)) .home-hero-copy { padding-bottom: 44px; }
