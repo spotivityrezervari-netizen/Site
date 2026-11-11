@@ -162,27 +162,27 @@ body.pagina-publica { background: #101a14; }
     .pagina-publica .home-hero-volei { --home-art-position: 35% 50%; }
     .pagina-publica .home-sport-hero .home-hero-art img { transform: scale(1.035); }
 }
-/* A desktop screen must not stretch a portrait photograph across its full
-   width. Fit the complete scene into a centered stage instead of cropping it. */
+/* One centered 4:3 frame for every desktop sport, regardless of source shape.
+   Tune the crop rather than changing the frame's width for portrait photos. */
 @media (min-width: 1024px) {
     .pagina-publica .home-sport-hero {
-        --home-art-height: clamp(580px, 48vw, 760px);
-        --home-photo-ratio: 1.5;
+        grid-template-rows: auto auto;
         --home-art-position: 50% 50%;
         --home-edge-top: 160px;
         --home-edge-bottom: 90px;
         --home-side-fade: 48px;
     }
-    .pagina-publica .home-hero-fotbal { --home-photo-ratio: 1.461832; }
-    .pagina-publica .home-hero-tenis { --home-photo-ratio: .750188; }
-    .pagina-publica .home-hero-tenis-picior { --home-photo-ratio: .704157; }
+    .pagina-publica .home-hero-tenis { --home-art-position: 50% 82%; }
+    .pagina-publica .home-hero-tenis-picior { --home-art-position: 50% 26%; }
     .pagina-publica .home-sport-hero .home-hero-art {
-        width: min(calc(100% - 96px), 1180px, calc(var(--home-art-height) * var(--home-photo-ratio)));
+        width: min(calc(100% - 96px), 1024px);
+        height: auto;
+        aspect-ratio: 4 / 3;
         justify-self: center;
     }
     .pagina-publica .home-sport-hero .home-hero-art img {
-        object-fit: contain;
-        object-position: center;
+        object-fit: cover;
+        object-position: var(--home-art-position);
         transform: none;
     }
     .pagina-publica .home-hero-art::before { content: none; }
