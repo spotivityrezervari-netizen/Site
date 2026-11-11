@@ -53,7 +53,7 @@
         }
         function schedule() {
             clearTimeout(timer);
-            if (canRotate() && !pending) timer = setTimeout(() => void show((current + 1) % photos.length).then(schedule), 4500);
+            if (canRotate() && !pending) timer = setTimeout(() => void show((current + 1) % photos.length).then(schedule), 3600);
         }
         const absolute = source => new URL(window.appAssetUrl(source), window.siteHomeUrl()).href;
         function load(source) {
@@ -117,7 +117,7 @@
                     back.hidden = false;
                     back.classList.add('is-entering');
                     const distance = frame.clientWidth + 24;
-                    const timing = { duration: 1000, easing: 'cubic-bezier(.22,.61,.36,1)', fill: 'forwards' };
+                    const timing = { duration: 800, easing: 'cubic-bezier(.22,.61,.36,1)', fill: 'forwards' };
                     outgoingTransition = front.animate([
                         { transform: 'translate3d(0, 0, 0)' },
                         { transform: `translate3d(${-distance}px, 0, 0)` }
