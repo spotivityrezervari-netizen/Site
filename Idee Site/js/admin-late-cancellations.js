@@ -34,9 +34,11 @@
         const policy = element('p', 'late-cancellation-policy', 'Lista acoperă ultimele 30 de zile. Insigna arată totalul abaterilor de până acum pentru terenurile la care ai acces. O rezervare se numără cel mult o dată, inclusiv după o anulare parțială târzie. De la 3 abateri recente, clientul este marcat pentru verificare. Conturile nu sunt blocate automat.');
         const scope = element('p', 'late-cancellation-intro'); scope.id = 'late-cancellation-scope';
         const refresh = element('button', 'btn-cont late-cancellation-refresh', 'Reîncarcă'); refresh.type = 'button';
+        const mark = element('button', 'btn-cont late-cancellation-mark', 'Marchează neprezentare'); mark.type = 'button'; mark.id = 'btn-mark-no-show';
+        const actions = element('div', 'late-cancellation-actions'); actions.append(mark, refresh);
         const status = element('p', 'late-cancellation-status'); status.id = 'late-cancellation-status'; status.setAttribute('role', 'status');
         const list = element('div', 'late-cancellation-list'); list.id = 'late-cancellation-list';
-        panel.append(header, intro, scope, policy, refresh, status, list); modal.append(panel); workspace.append(modal);
+        panel.append(header, intro, scope, policy, actions, status, list); modal.append(panel); workspace.append(modal);
         function close(restore = true) {
             request++; controller?.abort(); controller = null; refresh.disabled = false;
             modal.style.display = 'none'; list.replaceChildren(); status.textContent = '';
@@ -114,6 +116,15 @@
         }
         window.openLateCancellationReview = open;
         button.addEventListener('click', open);
+        mark.addEventListener('click', () => {
+            if (!role?.userId) return;
+            const history = document.getElementById('modal-istoric');
+            if (!history || typeof window.reincarcaIstoricAdmin !== 'function') return;
+            close(false); history.style.display = 'flex';
+            window.syncSpotivityModalScroll?.();
+            void window.reincarcaIstoricAdmin();
+            document.getElementById('btn-istoric')?.focus();
+        });
         refresh.addEventListener('click', load); closeButton.addEventListener('click', () => close());
         modal.addEventListener('click', event => { if (event.target === modal) close(); });
         modal.addEventListener('keydown', event => {

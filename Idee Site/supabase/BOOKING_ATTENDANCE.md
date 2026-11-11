@@ -49,3 +49,16 @@ Testele `booking-attendance.test.cjs` și `booking-attendance-browser.test.cjs` 
 Scenariul principal **7938404** este activ. Scenariile alternative vechi de anunț manual sunt **8377771** (clienți, activ) și **8377772** (administratori, oprit). Panoul superadminului folosește rutele din 7938404, nu depinde de aceste două scenarii alternative și nu trimite simultan prin ambele căi. Starea lor și starea chatului au fost păstrate.
 
 Supabase Auth folosește serviciul implicit, fără SMTP personalizat; limita configurată este de două emailuri Auth pe oră. Înscrierile sunt confirmate automat, deci nu există în prezent un email distinct de confirmare a înscrierii. Bunul venit din Make este un mesaj separat.
+
+
+## Corecția 035 — rezervări vechi și manuale
+
+Corecția 035 este aplicată în Supabase. Verificarea live, exclusiv prin citire, confirmă eligibilitatea rezervărilor finalizate existente, atât grupate, cât și vechi/manuale. Instalarea nu a creat marcaje sau emailuri de neprezentare. Workerul versiunea 9 și ruta Make existentă sunt păstrate.
+
+Migrarea `035_legacy_booking_attendance.sql` adaugă marcarea explicită pentru rezervările fără `booking_group_id`, fără să rescrie rândurile originale sau disponibilitatea. Prima marcare creează doar o legătură privată și evidența necesară contorului/emailului existent. Nu se trimit din nou confirmări de rezervare. Evidența aceasta este exclusă din limita de creare a rezervărilor de oaspeți; sunt păstrate exact cele două variante revizuite ale validării prețurilor și reîncercărilor.
+
+Pentru un cont deja asociat rezervării se folosește emailul confirmat din Auth. Un client manual fără adresă completă primește un câmp „Emailul clientului”; administratorul îl completează înainte de marcare. Adresa introdusă nu atașează automat oaspetele unui cont cu același email și nu poate înlocui destinatarul unei rezervări deja identificate.
+
+Butoanele de prezență sunt vizibile și pentru rezervările în curs sau viitoare, cu acțiunile dezactivate și ora de încheiere afișată. Cât timp lista este vizibilă, eligibilitatea este recitită periodic, fără a întrerupe completarea unui email sau o salvare. Panoul „Abateri clienți” include accesul „Marchează neprezentare” către lista rezervărilor. Marcarea „Nu s-a prezentat” folosește același contor comun și același `booking_attendance_client` din Make; nu sunt necesare un alt worker sau un webhook nou.
+
+Testele `legacy-attendance.test.cjs` și testul de browser extins verifică identificarea, păstrarea rezervării originale, trimiterea unui singur eveniment, lipsa confirmărilor duplicate, corectările, permisiunile și protejarea limitelor de rezervare. Instalarea nu marchează automat rezervări istorice.

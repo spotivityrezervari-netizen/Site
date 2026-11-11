@@ -10,7 +10,7 @@ const html=readFileSync(join(root,'index.html'),'utf8').replace(/<script\b[\s\S]
 test('administrators record and correct attendance through the real schedule, history and incident review',async()=>{
  const f=await fixture();let browser;
  try{
-  await f.apply();await f.root('select 1');await f.pg.exec(readFileSync(join(__dirname,'../033_late_cancellation_counts.sql'),'utf8'));await f.root('select 1');await f.pg.exec(readFileSync(join(__dirname,'../034_booking_attendance.sql'),'utf8'));
+  await f.apply();await f.root('select 1');await f.pg.exec(readFileSync(join(__dirname,'../033_late_cancellation_counts.sql'),'utf8'));await f.root('select 1');await f.pg.exec(readFileSync(join(__dirname,'../034_booking_attendance.sql'),'utf8'));await f.root('select 1');await f.pg.exec(readFileSync(join(__dirname,'../035_legacy_booking_attendance.sql'),'utf8'));
   const day=(await f.root("select ((now() at time zone 'Europe/Bucharest')::date-1)::text d")).rows[0].d;
   const court=(await f.root("select id::text id from public.terenuri where nume='Court A'")).rows[0];
   await f.root(`create or replace function spotivity_private.booking_instant(day_text text,hour_text text) returns timestamptz language sql stable set search_path='' as $$select statement_timestamp()+make_interval(secs=>coalesce(nullif(current_setting('spotivity.test_start',true),''),'7200')::integer+(extract(hour from hour_text::time)::integer-16)*3600)$$`);
@@ -19,6 +19,7 @@ test('administrators record and correct attendance through the real schedule, hi
    await f.root('select spotivity_private.create_booking_group_internal($1,$2,$3::date,$4::text[],false,$5,$6,$7,$8)',[id,court.id,day,[hour],uid(person),'Test Client',email,'+40711111111']);
   }
   await f.root("select set_config('spotivity.test_start','-14400',false)");await f.root('update public.rezervari set starts_at=starts_at where booking_group_id=any($1::uuid[])',[[booking,other]]);
+  const legacy=(await f.root("insert into public.rezervari(email_client,teren,sport,data_str,ora,pret_total,stare)values('Client manual','Court A','Fotbal',$1,'14:00','Custom','activa')returning id::text",[day])).rows[0].id;
   browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true});
   const page=await browser.newPage({viewport:{width:390,height:844}}),errors=[];
   page.on('pageerror',e=>errors.push(e.message));page.on('dialog',dialog=>dialog.accept());
@@ -37,6 +38,8 @@ test('administrators record and correct attendance through the real schedule, hi
     let sql,params;
     if(name==='get_booking_attendance'){sql='select public.get_booking_attendance($1::uuid[]) v';params=[args.p_booking_ids];}
     else if(name==='set_booking_attendance'){sql='select public.set_booking_attendance($1,$2,$3) v';params=[args.p_booking_id,args.p_status,args.p_expected_revision];}
+    else if(name==='get_legacy_booking_attendance'){sql='select public.get_legacy_booking_attendance($1::text[]) v';params=[args.p_reservation_ids];}
+    else if(name==='set_legacy_booking_attendance'){sql='select public.set_legacy_booking_attendance($1,$2,$3,$4) v';params=[args.p_reservation_id,args.p_status,args.p_expected_revision,args.p_email];}
     else if(name==='list_late_cancellations'){sql='select public.list_late_cancellations($1) v';params=[args.p_days];}
     else throw new Error('Unexpected fixture RPC');
     return{data:(await f.as(3,sql,params)).rows[0].v,error:null};
@@ -74,10 +77,21 @@ test('administrators record and correct attendance through the real schedule, hi
    if(screenshots)await page.screenshot({path:join(screenshots,`attendance-schedule-${width}.png`)});
   }
   await page.evaluate(async()=>{document.getElementById('modal-tabel-program').style.display='none';document.getElementById('modal-istoric').style.display='flex';await reincarcaIstoricAdmin();});
+  const manual=page.locator(`#container-istoric [data-reservation-attendance="${legacy}"]`).first();
+  await manual.locator('input[type="email"]').waitFor();
+  await manual.locator('input').fill('manual@example.test');
+  await manual.locator('[data-attendance-choice="no_show"]').click();
+  await manual.locator('[data-attendance-status="no_show"]').waitFor();
+  assert.equal((await jobs()).length,2);
   const history=page.locator(`#container-istoric [data-booking-attendance="${booking}"]`).first();await history.locator('[data-attendance-status="no_show"]').waitFor();
-  await history.locator('[data-attendance-choice="present"]').click();await history.locator('[data-attendance-status="present"]').waitFor();assert.equal((await jobs()).length,2);
+  await history.locator('[data-attendance-choice="present"]').click();await history.locator('[data-attendance-status="present"]').waitFor();assert.equal((await jobs()).length,3);
   await page.evaluate(()=>{document.getElementById('modal-istoric').style.display='none';dispatchEvent(new CustomEvent('spotivity:admin-role',{detail:{userId:testState.account.user_id,isSuper:false}}));openLateCancellationReview();});
-  await page.locator('#late-cancellation-status').filter({hasText:'Nu sunt înregistrate abateri'}).waitFor();
+  await page.locator('#late-cancellation-status').filter({hasText:'1 client cu abateri'}).waitFor();
+  await page.locator('#btn-mark-no-show').click();
+  await page.locator('#modal-istoric').waitFor({state:'visible'});
+  await page.locator('#container-istoric [data-reservation-attendance]').first().waitFor();
+  const upcoming=page.locator('#container-istoric [data-booking-attendance="00000000-0000-0000-0000-000000032001"]');
+  await upcoming.locator('[data-attendance-choice="no_show"]').waitFor();assert.ok(await upcoming.locator('[data-attendance-choice="no_show"]').isDisabled());assert.match(await upcoming.innerText(),/ora României/);
   assert.deepEqual(errors,[]);assert.ok(calls.some(c=>c.name==='set_booking_attendance'&&c.args.p_expected_revision===1));
  }finally{await browser?.close();await f.pg.close();}
 });

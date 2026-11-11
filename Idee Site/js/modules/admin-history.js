@@ -84,7 +84,7 @@
                             <p style="margin: 5px 0; font-size: 13px;"><strong>Client:</strong> ${textClientAfisat}</p>
                             <p style="margin: 5px 0;"><strong>${txtPret}:</strong> ${window.escapeHtml(r.pret_total)}</p>
                         </div>
-                        ${r.booking_group_id && esteTrecuta && !eAnulata && !eBlocaj ? `<div class="booking-attendance" data-booking-attendance="${window.escapeHtml(r.booking_group_id)}"></div>` : ''}
+                        ${!eAnulata && !eBlocaj ? `<div class="booking-attendance" ${r.booking_group_id ? `data-booking-attendance="${window.escapeHtml(r.booking_group_id)}"` : `data-reservation-attendance="${window.escapeHtml(r.id)}"`}></div>` : ''}
                         ${butonAnulare}
                     </div>`;
             });
