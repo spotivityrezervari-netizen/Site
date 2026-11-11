@@ -15,6 +15,8 @@ body.pagina-publica { background: #101a14; }
 .pagina-publica .home-sport-hero {
     --home-art-height: clamp(620px, 56vw, 980px);
     --home-art-position: 50% 50%;
+    --home-photo-ratio: 1.5;
+    --home-photo-width: 1200px;
     --home-edge-top: clamp(190px, 22vw, 300px);
     --home-edge-bottom: clamp(140px, 16vw, 220px);
     --home-side-fade: clamp(24px, 6vw, 110px);
@@ -69,7 +71,7 @@ body.pagina-publica { background: #101a14; }
     height: 100%;
     object-fit: cover;
     object-position: var(--home-art-position);
-    transform: scale(1.035);
+    transform: none;
     z-index: 1;
     pointer-events: none;
     -webkit-user-drag: none;
@@ -101,9 +103,30 @@ body.pagina-publica { background: #101a14; }
         linear-gradient(to bottom, #101a14, rgba(16, 26, 20, .78) 9%, transparent var(--home-edge-top), transparent calc(100% - var(--home-edge-bottom)), rgba(16, 26, 20, .8) calc(100% - 32px), #101a14),
         linear-gradient(to right, #101a14, rgba(16, 26, 20, .55) calc(var(--home-side-fade) * .4), transparent var(--home-side-fade), transparent calc(100% - var(--home-side-fade)), rgba(16, 26, 20, .55) calc(100% - var(--home-side-fade) * .4), #101a14);
 }
-.pagina-publica .home-hero-fotbal { --home-art-position: 8% 55%; }
-.pagina-publica .home-hero-baschet { --home-art-position: 22% 55%; --home-edge-bottom: clamp(100px, 10vw, 170px); }
-.pagina-publica .home-hero-volei { --home-art-position: 35% 50%; }
+.pagina-publica .home-hero-fotbal { --home-photo-ratio: 1.461832; --home-photo-width: 1149px; }
+.pagina-publica .home-hero-baschet { --home-photo-ratio: 1.5; --home-photo-width: 1170px; }
+.pagina-publica .home-hero-tenis { --home-photo-ratio: .750188; --home-photo-width: 1000px; }
+.pagina-publica .home-hero-volei { --home-photo-ratio: 1.496259; --home-photo-width: 600px; }
+.pagina-publica .home-hero-tenis-picior { --home-photo-ratio: .704225; --home-photo-width: 600px; }
+@media (min-width: 768px) {
+    /* Fit the complete scene inside its own faded frame. Small originals
+       stay within their native width instead of stretching across a monitor. */
+    .pagina-publica .home-sport-hero {
+        --home-art-height: clamp(560px, 48vw, 780px);
+        --home-edge-top: 20%;
+        --home-edge-bottom: 18%;
+        --home-side-fade: 8%;
+    }
+    .pagina-publica .home-sport-hero .home-hero-art {
+        width: min(100%, var(--home-photo-width), calc(var(--home-art-height) * var(--home-photo-ratio)));
+        height: auto;
+        aspect-ratio: var(--home-photo-ratio);
+        justify-self: center;
+        align-self: center;
+        margin: 0;
+    }
+    .pagina-publica .home-sport-hero .home-hero-art img { object-fit: contain; }
+}
 .pagina-publica .home-sport-hero:not(:has(.home-hero-art)) { grid-template-rows: auto auto; }
 .pagina-publica .home-sport-hero:not(:has(.home-hero-art)) .home-hero-copy { padding-bottom: 44px; }
 .pagina-publica .home-courts-wrap {
@@ -168,8 +191,12 @@ body.pagina-publica { background: #101a14; }
         padding: 0 0 24px;
     }
     .pagina-publica .home-hero-copy { padding: 48px 18px 0; }
-    .pagina-publica .home-hero-baschet { --home-edge-bottom: 105px; }
-    /* Keep the landscape ball photographs compact on narrow screens. */
+    .pagina-publica .home-hero-fotbal { --home-art-position: 55% 55%; }
+    .pagina-publica .home-hero-baschet { --home-art-position: 68% 50%; --home-edge-bottom: 105px; }
+    .pagina-publica .home-hero-tenis { --home-art-position: 50% 66%; }
+    .pagina-publica .home-hero-volei { --home-art-position: 52% 50%; }
+    .pagina-publica .home-hero-tenis-picior { --home-art-position: 50% 45%; --home-edge-top: 120px; }
+    /* Keep the tennis and volleyball sections compact on narrow screens. */
     .pagina-publica :is(.home-hero-tenis, .home-hero-volei) {
         --home-art-height: clamp(340px, 100vw, 460px);
         --home-edge-top: 125px;

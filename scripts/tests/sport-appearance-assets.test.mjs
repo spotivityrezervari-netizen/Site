@@ -6,11 +6,11 @@ import vm from 'node:vm';
 const site = new URL('../../Idee%20Site/', import.meta.url);
 const sources = await Promise.all(['js/security.js', 'js/sport-appearance.js'].map(name => readFile(new URL(name, site), 'utf8')));
 const current = {
-  Fotbal: 'assets/imagini/fundal-fotbal.webp',
-  Baschet: 'assets/imagini/fundal-baschet.webp',
-  Tenis: 'assets/imagini/fundal-tenis.webp',
-  Volei: 'assets/imagini/fundal-volei.webp',
-  'Tenis Picior': 'assets/imagini/fundal-tenis-picior.webp'
+  Fotbal: 'assets/imagini/BackgroundFootball.avif',
+  Baschet: 'assets/imagini/BackgroundBasketball.avif',
+  Tenis: 'assets/imagini/TenisFINAL.jpeg',
+  Volei: 'assets/imagini/BackgroundVoleyball.avif',
+  'Tenis Picior': 'assets/imagini/BackgroundLavolei.avif'
 };
 const pages = 'https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/';
 
@@ -35,11 +35,11 @@ test('bundled sport images exist when public configuration is unavailable', asyn
 
 test('retired relative and exact GitHub Pages defaults use the new photographs', async () => {
   const previous = {
-    Fotbal: ['RealistFotbal.png', 'RealistFotbal1.png', 'FotbalFinal.jpeg', 'BackgroundFootball.avif'],
-    Baschet: ['RealisBaschet.png', 'BaschetFinal.jpeg', 'BackgroundBasketball.avif'],
-    Tenis: ['RealistTenis.png', 'TenisFINAL.jpeg', 'TenisVFinal.jpg'],
-    Volei: ['RealistVolei.png', 'VoleiVFinal.jpg', 'BackgroundVoleyball.avif'],
-    'Tenis Picior': ['RealistTenispicior.png', 'BackgroundLavolei.avif']
+    Fotbal: ['fundal-fotbal.webp', 'RealistFotbal.png', 'RealistFotbal1.png', 'FotbalFinal.jpeg', 'BackgroundFootball.avif'],
+    Baschet: ['fundal-baschet.webp', 'RealisBaschet.png', 'BaschetFinal.jpeg', 'BackgroundBasketball.avif'],
+    Tenis: ['fundal-tenis.webp', 'RealistTenis.png', 'TenisFINAL.jpeg', 'TenisVFinal.jpg'],
+    Volei: ['fundal-volei.webp', 'RealistVolei.png', 'VoleiVFinal.jpg', 'BackgroundVoleyball.avif'],
+    'Tenis Picior': ['fundal-tenis-picior.webp', 'RealistTenispicior.png', 'BackgroundLavolei.avif']
   };
   for (const [sport, filenames] of Object.entries(previous)) {
     for (const filename of filenames) {

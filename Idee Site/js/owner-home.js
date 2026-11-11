@@ -12,11 +12,11 @@
     const knownSports = ['Fotbal', 'Baschet', 'Tenis', 'Volei', 'Tenis Picior'];
     const sportClasses = ['fotbal', 'baschet', 'tenis', 'volei', 'tenis-picior'];
     const sportImages = [
-        { file: 'fundal-fotbal.webp', width: 1100, height: 752 },
-        { file: 'fundal-baschet.webp', width: 1100, height: 733 },
-        { file: 'fundal-tenis.webp', width: 720, height: 960 },
-        { file: 'fundal-volei.webp', width: 600, height: 401 },
-        { file: 'fundal-tenis-picior.webp', width: 600, height: 852 }
+        { file: 'BackgroundFootball.avif', width: 1149, height: 786 },
+        { file: 'BackgroundBasketball.avif', width: 1170, height: 780 },
+        { file: 'TenisFINAL.jpeg', width: 1000, height: 1333 },
+        { file: 'BackgroundVoleyball.avif', width: 600, height: 401 },
+        { file: 'BackgroundLavolei.avif', width: 600, height: 852 }
     ];
     const sportName = value => window.normalizeSportName?.(value) || String(value || 'Alte sporturi').trim();
     const displaySport = sport => sport === 'Tenis Picior' ? 'Tenis de picior' : sport;

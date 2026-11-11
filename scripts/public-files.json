@@ -1,9 +1,14 @@
 {
   "version": 1,
   "files": [
+    "assets/imagini/BackgroundBasketball.avif",
+    "assets/imagini/BackgroundFootball.avif",
+    "assets/imagini/BackgroundLavolei.avif",
+    "assets/imagini/BackgroundVoleyball.avif",
     "assets/imagini/BaschetFinal.jpeg",
     "assets/imagini/FotbalFinal.jpeg",
     "assets/imagini/RealistTenispicior.png",
+    "assets/imagini/TenisFINAL.jpeg",
     "assets/imagini/TenisVFinal.jpg",
     "assets/imagini/VoleiVFinal.jpg",
     "assets/imagini/avatar2.png",
