@@ -5,7 +5,13 @@ import vm from 'node:vm';
 
 const site = new URL('../../Idee%20Site/', import.meta.url);
 const sources = await Promise.all(['js/security.js', 'js/sport-appearance.js'].map(name => readFile(new URL(name, site), 'utf8')));
-const current = { Tenis: 'assets/imagini/TenisVFinal.jpg', Volei: 'assets/imagini/VoleiVFinal.jpg' };
+const current = {
+  Fotbal: 'assets/imagini/fundal-fotbal.webp',
+  Baschet: 'assets/imagini/fundal-baschet.webp',
+  Tenis: 'assets/imagini/fundal-tenis.webp',
+  Volei: 'assets/imagini/fundal-volei.webp',
+  'Tenis Picior': 'assets/imagini/fundal-tenis-picior.webp'
+};
 const pages = 'https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/';
 
 async function appearance(rows = [], error = null) {
@@ -28,7 +34,14 @@ test('bundled sport images exist when public configuration is unavailable', asyn
 });
 
 test('retired relative and exact GitHub Pages defaults use the new photographs', async () => {
-  for (const [sport, filenames] of Object.entries({ Tenis: ['RealistTenis.png', 'TenisFINAL.jpeg'], Volei: ['RealistVolei.png'] })) {
+  const previous = {
+    Fotbal: ['RealistFotbal.png', 'RealistFotbal1.png', 'FotbalFinal.jpeg', 'BackgroundFootball.avif'],
+    Baschet: ['RealisBaschet.png', 'BaschetFinal.jpeg', 'BackgroundBasketball.avif'],
+    Tenis: ['RealistTenis.png', 'TenisFINAL.jpeg', 'TenisVFinal.jpg'],
+    Volei: ['RealistVolei.png', 'VoleiVFinal.jpg', 'BackgroundVoleyball.avif'],
+    'Tenis Picior': ['RealistTenispicior.png', 'BackgroundLavolei.avif']
+  };
+  for (const [sport, filenames] of Object.entries(previous)) {
     for (const filename of filenames) {
       const path = `assets/imagini/${filename}`;
       for (const fundal_url of [path, new URL(path, pages).href, new URL(path, pages).href.replace('%20', ' ')]) {
@@ -46,8 +59,12 @@ test('custom HTTPS images, custom local assets and unrelated sport choices remai
   const custom = [
     ['Tenis', 'https://cdn.example.test/assets/imagini/TenisFINAL.jpeg'],
     ['Tenis', `${pages}assets/imagini/TenisFINAL.jpeg?custom=1`],
+    ['Baschet', 'https://cdn.example.test/assets/imagini/BackgroundBasketball.avif'],
+    ['Tenis Picior', `${pages}assets/imagini/BackgroundLavolei.avif?custom=1`],
     ['Volei', 'assets/imagini/avatar2.png'],
-    ['Fotbal', 'assets/imagini/VoleiVFinal.jpg']
+    ['Fotbal', 'assets/imagini/VoleiVFinal.jpg'],
+    ['Volei', 'assets/imagini/BackgroundLavolei.avif'],
+    ['Tenis Picior', 'assets/imagini/BackgroundVoleyball.avif']
   ];
   for (const [sport, fundal_url] of custom) {
     const window = await appearance([{ sport, fundal_url }]);
@@ -55,15 +72,17 @@ test('custom HTTPS images, custom local assets and unrelated sport choices remai
   }
 });
 
-test('invalid or broken custom image falls back to the new bundled asset', async () => {
-  const invalid = await appearance([{ sport: 'Tenis', fundal_url: 'javascript:alert(1)' }]);
-  assert.equal(invalid.getSportAppearance('Tenis').fundal_url, current.Tenis);
-  const window = await appearance([{ sport: 'Volei', fundal_url: 'https://cdn.example.test/missing.jpg' }]);
-  const handlers = new Map(), attributes = new Map([['data-sport-background', 'Volei'], ['src', '']]);
-  const image = { dataset: {}, getAttribute: name => attributes.get(name),
-    set src(value) { attributes.set('src', value); }, addEventListener: (event, handler) => handlers.set(event, handler) };
-  window.applySportAppearance({ querySelectorAll: selector => selector === 'img[data-sport-background]' ? [image] : [] });
-  assert.equal(image.getAttribute('src'), 'https://cdn.example.test/missing.jpg');
-  handlers.get('error')();
-  assert.equal(image.getAttribute('src'), current.Volei);
+test('invalid or broken custom images fall back to each sport bundled asset', async () => {
+  for (const sport of Object.keys(current)) {
+    const invalid = await appearance([{ sport, fundal_url: 'javascript:alert(1)' }]);
+    assert.equal(invalid.getSportAppearance(sport).fundal_url, current[sport]);
+    const window = await appearance([{ sport, fundal_url: 'https://cdn.example.test/missing.jpg' }]);
+    const handlers = new Map(), attributes = new Map([['data-sport-background', sport], ['src', '']]);
+    const image = { dataset: {}, getAttribute: name => attributes.get(name),
+      set src(value) { attributes.set('src', value); }, addEventListener: (event, handler) => handlers.set(event, handler) };
+    window.applySportAppearance({ querySelectorAll: selector => selector === 'img[data-sport-background]' ? [image] : [] });
+    assert.equal(image.getAttribute('src'), 'https://cdn.example.test/missing.jpg');
+    handlers.get('error')();
+    assert.equal(image.getAttribute('src'), current[sport]);
+  }
 });

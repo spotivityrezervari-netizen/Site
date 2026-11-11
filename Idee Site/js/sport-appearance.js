@@ -1,11 +1,11 @@
 // Public visual settings only. Booking and staff authorization remain in Supabase RLS.
 (() => {
     const defaults = {
-        Fotbal: { sport: 'Fotbal', icona_url: 'assets/imagini/fotbalrealist.png', fundal_url: 'assets/imagini/FotbalFinal.jpeg', ordine: 1 },
-        Baschet: { sport: 'Baschet', icona_url: 'assets/imagini/baschetrealist.png', fundal_url: 'assets/imagini/BaschetFinal.jpeg', ordine: 2 },
-        Tenis: { sport: 'Tenis', icona_url: 'assets/imagini/tenisrealist.png', fundal_url: 'assets/imagini/TenisVFinal.jpg', ordine: 3 },
-        Volei: { sport: 'Volei', icona_url: 'assets/imagini/voleirealist.png', fundal_url: 'assets/imagini/VoleiVFinal.jpg', ordine: 4 },
-        'Tenis Picior': { sport: 'Tenis Picior', icona_url: 'assets/imagini/fotbalrealist.png', fundal_url: 'assets/imagini/RealistTenispicior.png', ordine: 5 }
+        Fotbal: { sport: 'Fotbal', icona_url: 'assets/imagini/fotbalrealist.png', fundal_url: 'assets/imagini/fundal-fotbal.webp', ordine: 1 },
+        Baschet: { sport: 'Baschet', icona_url: 'assets/imagini/baschetrealist.png', fundal_url: 'assets/imagini/fundal-baschet.webp', ordine: 2 },
+        Tenis: { sport: 'Tenis', icona_url: 'assets/imagini/tenisrealist.png', fundal_url: 'assets/imagini/fundal-tenis.webp', ordine: 3 },
+        Volei: { sport: 'Volei', icona_url: 'assets/imagini/voleirealist.png', fundal_url: 'assets/imagini/fundal-volei.webp', ordine: 4 },
+        'Tenis Picior': { sport: 'Tenis Picior', icona_url: 'assets/imagini/fotbalrealist.png', fundal_url: 'assets/imagini/fundal-tenis-picior.webp', ordine: 5 }
     };
     const keys = new Map(Object.keys(defaults).map(sport => [sport.toLocaleLowerCase('ro-RO'), sport]));
     keys.set('tenis de picior', 'Tenis Picior');
@@ -19,13 +19,18 @@
     // Older visual migrations/live settings still name the retired bundled
     // photographs. Upgrade only those exact defaults; retain custom images.
     const retiredBackgrounds = {
-        Tenis: ['assets/imagini/RealistTenis.png', 'assets/imagini/TenisFINAL.jpeg'],
-        Volei: ['assets/imagini/RealistVolei.png']
+        Fotbal: ['RealistFotbal.png', 'RealistFotbal1.png', 'FotbalFinal.jpeg', 'BackgroundFootball.avif'],
+        Baschet: ['RealisBaschet.png', 'BaschetFinal.jpeg', 'BackgroundBasketball.avif'],
+        Tenis: ['RealistTenis.png', 'TenisFINAL.jpeg', 'TenisVFinal.jpg'],
+        Volei: ['RealistVolei.png', 'VoleiVFinal.jpg', 'BackgroundVoleyball.avif'],
+        'Tenis Picior': ['RealistTenispicior.png', 'BackgroundLavolei.avif']
     };
     const pagesHome = 'https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/';
+    const exactBundledImage = (value, path) => value === path || value === new URL(path, pagesHome).href;
     const backgroundImage = (sport, value) => {
         const safe = safeImage(value);
-        return retiredBackgrounds[sport]?.some(path => safe === path || safe === new URL(path, pagesHome).href)
+        return exactBundledImage(safe, defaults[sport].fundal_url)
+            || retiredBackgrounds[sport]?.some(file => exactBundledImage(safe, `assets/imagini/${file}`))
             ? defaults[sport].fundal_url : safe || defaults[sport].fundal_url;
     };
     window.spotivitySportAppearance = { ...defaults };
