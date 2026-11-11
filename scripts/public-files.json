@@ -60,6 +60,7 @@
     "js/google-auth.js",
     "js/guest-booking.js",
     "js/home-discovery.js",
+    "js/home-gallery.js",
     "js/home-motion.js",
     "js/home.js",
     "js/modules/admin-allocations.js",

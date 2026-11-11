@@ -1082,7 +1082,7 @@ async function openProfile(page) {
       for (const sport of sports) {
         const image=mobile.locator(`.home-sport-hero [data-sport-background="${sport}"]`);
         const actual=await image.evaluate(img=>({width:img.naturalWidth,height:img.naturalHeight,fit:getComputedStyle(img).objectFit}));
-        assert.deepEqual(actual,{width:currentSportDimensions[sport][0],height:currentSportDimensions[sport][1],fit:width<768?'cover':'contain'},`${sport} full-resolution background at ${width}px`);
+        assert.deepEqual(actual,{width:currentSportDimensions[sport][0],height:currentSportDimensions[sport][1],fit:'cover'},`${sport} full-resolution background at ${width}px`);
       }
     }
     assert.ok(requests.some(request=>request.path==='/rest/v1/site_sporturi' && request.method==='GET' && !request.person));

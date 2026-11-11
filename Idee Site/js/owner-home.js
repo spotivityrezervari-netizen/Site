@@ -342,7 +342,7 @@
             section.setAttribute('aria-labelledby', title.id); heading.append(title);
             const actions = element('div', 'home-hero-actions');
             actions.append(actionButton('Program', 'program', { sport }, 'home-reserve-button owner-sport-program'));
-            copy.append(heading, element('p', 'home-sport-description', 'Program și rezervări pentru terenurile tale.'), actions); section.append(copy);
+            copy.append(heading, actions); section.append(copy);
             if (knownIndex >= 0) {
                 const artwork = sportImages[knownIndex];
                 const art = element('div', 'home-hero-art'); art.setAttribute('aria-hidden', 'true');

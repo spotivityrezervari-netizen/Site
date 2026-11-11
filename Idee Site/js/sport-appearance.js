@@ -35,39 +35,18 @@
     };
     window.spotivitySportAppearance = { ...defaults };
     window.getSportAppearance = sport => window.spotivitySportAppearance[sportKey(sport)] || defaults.Fotbal;
-    function syncPhotoBackdrop(img) {
-        const frame = img.closest?.('.home-hero-art');
-        if (!frame || !img.complete || !img.naturalWidth) return;
-        // Only a loaded photo supplies its desktop backdrop. Lazy images stay
-        // lazy, and absolute URLs remain valid after same-page entity routing.
-        const source = new URL(img.currentSrc || img.src, window.siteHomeUrl()).href;
-        frame.style.setProperty('--home-photo-backdrop', `url(${JSON.stringify(source)})`);
-    }
     window.applySportAppearance = (root = document) => {
         for (const [attribute, column] of [['data-sport-icon', 'icona_url'], ['data-sport-background', 'fundal_url'], ['data-sport-ambient', 'fundal_url']]) {
             root.querySelectorAll(`img[${attribute}]`).forEach(img => {
                 const key = sportKey(img.getAttribute(attribute));
                 if (!key) return;
                 const source = window.appAssetUrl(window.spotivitySportAppearance[key][column]);
-                if (img.getAttribute('src') !== source) {
-                    img.closest?.('.home-hero-art')?.style.removeProperty('--home-photo-backdrop');
-                    img.src = source;
-                }
-                if (attribute === 'data-sport-background') {
-                    if (!img.dataset.photoBackdropBound) {
-                        img.dataset.photoBackdropBound = 'true';
-                        img.addEventListener('load', () => syncPhotoBackdrop(img));
-                    }
-                    syncPhotoBackdrop(img);
-                }
+                if (img.getAttribute('src') !== source) img.src = source;
                 if (!img.dataset.appearanceFallbackBound) {
                     img.dataset.appearanceFallbackBound = 'true';
                     img.addEventListener('error', () => {
                         const fallback = window.appAssetUrl(defaults[key][column]);
-                        if (img.getAttribute('src') !== fallback) {
-                            img.closest?.('.home-hero-art')?.style.removeProperty('--home-photo-backdrop');
-                            img.src = fallback;
-                        }
+                        if (img.getAttribute('src') !== fallback) img.src = fallback;
                     });
                 }
             });
