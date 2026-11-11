@@ -28,12 +28,14 @@ body.pagina-publica { background: #101a14; }
 .welcome-steps li { min-width: 0; color: #c9d2c5; font-size: 12px; line-height: 1.6; }
 .welcome-steps strong { display: block; margin-bottom: 5px; color: #e2c783; font-size: 13px; font-weight: 600; }
 .welcome-visual { min-width: 0; }
-.welcome-art { position: relative; width: 100%; min-width: 0; padding-bottom: 36px; }
-.welcome-photo-frame { position: relative; isolation: isolate; overflow: clip; border: 1px solid rgba(216,182,106,.25); border-radius: 26px; background: #16251b; }
-.welcome-photo-frame::before { content: ''; position: absolute; inset: 0; z-index: -1; background-image: var(--welcome-photo, none); background-position: center; background-size: cover; filter: blur(20px); opacity: .3; }
-.welcome-cover { display: block; width: 100%; height: 440px; object-fit: cover; object-position: 55% center; }
-.welcome-cover[data-fit="contain"] { object-fit: contain; }
-.welcome-inset { position: absolute; left: -24px; bottom: 0; display: block; width: 164px; height: 214px; object-fit: cover; border: 7px solid #101a14; border-radius: 22px; box-shadow: 0 18px 40px rgba(0,0,0,.24); }
+.welcome-art { position: relative; width: 100%; min-width: 0; }
+.welcome-photo-frame { --welcome-stage-height: 480px; display: grid; place-items: center; position: relative; isolation: isolate; overflow: clip; width: 100%; height: var(--welcome-stage-height); }
+.welcome-photo-card { grid-area: 1 / 1; position: relative; --photo-ratio: 1.461832; width: min(calc(100% - 24px), calc((var(--welcome-stage-height) - 96px) * var(--photo-ratio))); aspect-ratio: var(--photo-ratio); overflow: hidden; border: 1px solid rgba(216,182,106,.25); border-radius: 22px; pointer-events: none; }
+.welcome-photo-card[hidden] { display: none; }
+.welcome-photo-current { z-index: 2; }
+.welcome-photo-next { z-index: 1; transform: translate(-10px, 36px) scale(.94); }
+.welcome-photo-next.is-entering { z-index: 3; }
+.welcome-photo-card img { display: block; width: 100%; height: 100%; object-fit: contain; -webkit-user-drag: none; user-select: none; }
 .welcome-gallery-controls { display: flex; justify-content: flex-end; gap: 0; margin-top: 8px; }
 .pagina-publica .welcome-gallery-controls button { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 44px; width: 44px; height: 44px; margin: 0; padding: 0; border: 1px solid transparent; border-radius: 50%; background: transparent; color: #e2c783; box-shadow: none; }
 .welcome-gallery-controls button[hidden] { display: none !important; }
@@ -44,8 +46,7 @@ body.pagina-publica { background: #101a14; }
 .welcome-gallery-controls svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
 @media (min-width: 768px) and (max-width: 1023px) {
     .pagina-publica .home-welcome { gap: 36px; padding: 48px 28px 72px; }
-    .welcome-cover { height: 380px; }
-    .welcome-inset { width: 140px; height: 184px; left: -12px; }
+    .welcome-photo-frame { --welcome-stage-height: 420px; }
 }
 @media (max-width: 767px) {
     .pagina-publica .home-welcome { grid-template-columns: minmax(0, 1fr); gap: 32px; min-height: calc(100svh - 180px); padding: 40px 24px 48px; }
@@ -54,10 +55,8 @@ body.pagina-publica { background: #101a14; }
     .welcome-eyebrow { margin-bottom: 16px; font-size: 10px; }
     .welcome-actions { gap: 14px 20px; margin-top: 24px; }
     .welcome-steps { margin-top: 28px; padding-top: 18px; gap: 12px; }
-    .welcome-art { padding-bottom: 0; }
-    .welcome-cover { height: auto; aspect-ratio: 4 / 3; }
-    .welcome-photo-frame { border-radius: 20px; }
-    .welcome-inset { display: none; }
+    .welcome-photo-frame { --welcome-stage-height: clamp(290px, 92vw, 380px); }
+    .welcome-photo-card { border-radius: 18px; }
 }
 .pagina-publica .home-city-region { background: linear-gradient(110deg, #203226, #18271d); }
 .pagina-publica #filtru-oras-global,
