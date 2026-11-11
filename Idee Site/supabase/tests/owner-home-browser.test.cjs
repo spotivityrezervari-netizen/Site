@@ -229,7 +229,7 @@ async function ownerTouchScrolling(page){
     await ownerTouchScrolling(admin);
     pass('owner backgrounds accept native vertical swipes in both directions after closing the drawer, while court rows still swipe horizontally');
     const addSport=()=>admin.locator('#owner-home-add-sport');
-    assert.equal(await addSport().innerText(),'Adaugă teren în alt sport');
+    assert.equal(await addSport().innerText(),'Adaugă teren');
     for(const width of [390,1440]){
       await admin.setViewportSize({width,height:width<768?844:1000});
       await addSport().scrollIntoViewIfNeeded();

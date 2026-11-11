@@ -167,8 +167,8 @@
         openOverlay('base-choice');
     }
 
-    function newSportButton(id, className = '') {
-        const button = buttonWithContext('Adaugă teren în alt sport', 'create', {}, className);
+    function newSportButton(id, className = '', label = 'Adaugă teren în alt sport') {
+        const button = buttonWithContext(label, 'create', {}, className);
         button.id = id;
         button.setAttribute('aria-haspopup', 'dialog');
         button.addEventListener('click', () => requestCreation('', button));
@@ -236,7 +236,8 @@
         const sports = element('div', 'owner-home-sports'); sports.id = 'owner-home-sports';
         const bases = element('section', 'home-bases-section owner-home-bases');
         bases.id = 'owner-home-bases'; bases.setAttribute('aria-label', 'Bazele tale sportive');
-        const actions = element('div', 'owner-home-actions'); actions.id = 'owner-home-actions'; actions.hidden = true;
+        const actions = element('section', 'owner-home-actions'); actions.id = 'owner-home-actions'; actions.hidden = true;
+        actions.setAttribute('aria-labelledby', 'owner-home-add-sport-title');
         content.append(message, sports, bases, actions);
 
         const menu = element('div', 'owner-home-menu'); menu.id = 'owner-home-menu'; menu.hidden = true;
@@ -397,7 +398,14 @@
             if (editableBases().length) {
                 const actions = byId('owner-home-actions');
                 actions.hidden = false;
-                actions.append(newSportButton('owner-home-add-sport', 'home-reserve-button'));
+                const heading = element('div', 'home-section-heading');
+                const title = element('h2', '', 'Adaugă teren în alt sport'); title.id = 'owner-home-add-sport-title';
+                heading.append(title);
+                const card = element('div', 'owner-new-sport-card');
+                const symbol = element('span', 'owner-new-sport-symbol'); symbol.setAttribute('aria-hidden', 'true'); symbol.append(icon('plus'));
+                const description = element('p', 'owner-new-sport-description', 'Alege sportul și completează detaliile noului teren.');
+                card.append(symbol, description, newSportButton('owner-home-add-sport', 'owner-button owner-button-primary owner-new-sport-button', 'Adaugă teren'));
+                actions.append(heading, card);
             }
         }
         renderMenu();
