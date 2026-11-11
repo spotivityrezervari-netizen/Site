@@ -18,6 +18,14 @@
 .late-cancellation-events summary { min-height: 44px; padding: 10px 0; cursor: pointer; }
 .late-cancellation-events ul { padding-left: 20px; }
 .late-cancellation-events li { margin: 8px 0; overflow-wrap: anywhere; }
+.booking-attendance { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(216,182,106,.25); text-align: left; }
+.booking-attendance-label { margin: 0 0 8px; color: #edca82; font-size: 13px; font-weight: 600; }
+.booking-attendance-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.booking-attendance .booking-attendance-choice { width: auto; min-height: 44px; margin: 0; padding: 9px 12px; border: 1px solid rgba(216,182,106,.4); border-radius: 8px; background: #243329; color: #f7f3e8; font: inherit; font-size: 12px; cursor: pointer; }
+.booking-attendance .booking-attendance-choice[aria-pressed="true"] { background: #d8b66a; color: #16251b; opacity: 1; }
+.booking-attendance .booking-attendance-choice:disabled { cursor: default; }
+.booking-attendance-choice:focus-visible { outline: 2px solid #edca82; outline-offset: 3px; }
+.booking-attendance-help, .booking-attendance-feedback { margin: 8px 0 0; font-size: 12px; line-height: 1.5; color: #d2ccbd; overflow-wrap: anywhere; }
 @media (max-width: 480px) {
  .late-cancellation-panel { padding: 18px 14px; }
  .late-cancellation-customer { padding: 14px; }

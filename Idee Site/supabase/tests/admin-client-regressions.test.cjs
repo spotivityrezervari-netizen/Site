@@ -61,6 +61,7 @@ test('large admin conversations acknowledge all unread messages without oversize
     const messages=Array.from({length:1003},(_,index)=>({id:index+1,email_client:'alice@example.test',teren:'Court A',
         expeditor:'client',mesaj:`message ${index+1}`,citit:false,created_at:'2026-11-03T12:00:00Z'}));
     const f=fixture({mesaje_chat:messages,clienti:[]});
+    f.context.state.account = { is_super: false, user_id: 'admin', terenuri: 'Court A' };
     f.load('modules/admin-chat.js');
     const chat=f.window.SpotivityModules.adminChat(f.context);
     await chat.initializeRealtime();
@@ -76,6 +77,7 @@ test('administrator chat reads beyond a capped page and retains separate drafts 
     const messages=Array.from({length:5},(_,index)=>({id:index+1,email_client:index===4?'bob@example.test':'alice@example.test',teren:'Court A',
         expeditor:'client',mesaj:`message ${index+1}`,citit:true,created_at:`2026-11-03T12:0${index}:00Z`}));
     const f=fixture({mesaje_chat:messages,clienti:[{email:'alice@example.test',nume:'Alice'},{email:'bob@example.test',nume:'Bob'}]});
+    f.context.state.account = { is_super: false, user_id: 'admin', terenuri: 'Court A' };
     f.load('modules/admin-chat.js');
     const chat=f.window.SpotivityModules.adminChat(f.context);
     await chat.initializeRealtime();

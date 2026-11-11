@@ -53,3 +53,8 @@ Destinatarul mesajului nou se recitește din contul Auth confirmat indicat de `c
 Migrarea 033 și workerul `booking-notifications` versiunea 8 sunt active. Payloadul privat al anulării clientului include contorul imuabil numai pentru evenimentul târziu corespunzător. Emailul are subiect „Anulare târzie”, totalul și avertismentul cerut; fluxul normalizat Make existent transmite subiectul și HTML-ul serverului. Nu se generează un al doilea email pentru aceeași anulare. Detaliile și testele sunt în [LATE_CANCELLATIONS.md](LATE_CANCELLATIONS.md).
 
 Linkurile operaționale folosesc setarea de server `BOOKING_SITE_URL`, configurată pe GitHub Pages până la lansarea domeniului final. Actualizează această setare la lansare împreună cu configurările de domeniu existente. Workerul păstrează autorizarea de serviciu și `verify_jwt=false`; nu se acceptă contoare ori destinatari din browser. Nu au fost trimise emailuri de test și nu s-a publicat pe Netlify.
+
+
+## Prezența și inventarul emailurilor — 11 noiembrie 2026
+
+[BOOKING_ATTENDANCE.md](BOOKING_ATTENDANCE.md) documentează migrarea 034, marcarea prezenței, totalul comun și cele două modele `booking_attendance_client`, prin scenariul existent 7938404. Include inventarul verificat al emailurilor și starea scenariilor, inclusiv chatul 7938798 oprit și alternativele manuale de anunț.

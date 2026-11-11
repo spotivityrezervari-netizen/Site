@@ -20,18 +20,18 @@
         let role = null, generation = 0, request = 0, controller = null, previousFocus = null;
         const button = element('button', 'card-sport admin-menu-card admin-comun');
         button.id = 'btn-late-cancellations'; button.type = 'button'; button.hidden = true; button.style.display = 'none';
-        button.append(element('h2', '', 'Anulări târzii'), element('span', 'admin-card-detail', 'Monitorizarea anulărilor neconforme'));
+        button.append(element('h2', '', 'Abateri clienți'), element('span', 'admin-card-detail', 'Neprezentări și anulări târzii'));
         tools.append(button);
         const modal = element('div', 'modal late-cancellation-modal');
         modal.id = 'modal-late-cancellations'; modal.style.display = 'none';
         modal.setAttribute('role', 'dialog'); modal.setAttribute('aria-modal', 'true'); modal.setAttribute('aria-labelledby', 'late-cancellation-title');
         const panel = element('section', 'modal-continut late-cancellation-panel');
         const header = element('div', 'late-cancellation-heading');
-        const title = element('h2', '', 'Anulări târzii'); title.id = 'late-cancellation-title';
+        const title = element('h2', '', 'Neprezentări și anulări târzii'); title.id = 'late-cancellation-title';
         const closeButton = element('button', 'late-cancellation-close', 'Închide'); closeButton.type = 'button';
         header.append(title, closeButton);
-        const intro = element('p', 'late-cancellation-intro', 'Clienți cu anulări efectuate cu mai puțin de o oră înainte sau în timpul unei ore încă nefinalizate. Sunt excluse anulările făcute de personal.');
-        const policy = element('p', 'late-cancellation-policy', 'Lista și rezervările afișate acoperă ultimele 30 de zile. Insigna numerică arată totalul anulărilor târzii de până acum, pentru terenurile la care ai acces. De la 3 rezervări anulate târziu în ultimele 30 de zile, clientul este marcat pentru verificare. Conturile nu sunt blocate automat.');
+        const intro = element('p', 'late-cancellation-intro', 'Clienți cu neprezentări confirmate de administratori sau anulări făcute cu mai puțin de o oră înainte ori în timpul unei ore nefinalizate. Anulările personalului sunt excluse.');
+        const policy = element('p', 'late-cancellation-policy', 'Lista acoperă ultimele 30 de zile. Insigna arată totalul abaterilor de până acum pentru terenurile la care ai acces. O rezervare se numără cel mult o dată, inclusiv după o anulare parțială târzie. De la 3 abateri recente, clientul este marcat pentru verificare. Conturile nu sunt blocate automat.');
         const scope = element('p', 'late-cancellation-intro'); scope.id = 'late-cancellation-scope';
         const refresh = element('button', 'btn-cont late-cancellation-refresh', 'Reîncarcă'); refresh.type = 'button';
         const status = element('p', 'late-cancellation-status'); status.id = 'late-cancellation-status'; status.setAttribute('role', 'status');
@@ -59,13 +59,15 @@
         function render(data) {
             list.replaceChildren();
             const customers = Array.isArray(data?.customers) ? data.customers : [];
+            const combined = data?.combined_incidents === true;
             status.textContent = customers.length ? `${customers.length} ${customers.length === 1 ? 'client' : 'clienți'} cu anulări târzii în ultimele 30 de zile.` : 'Nu sunt înregistrate anulări târzii în ultimele 30 de zile.';
+            if (combined) status.textContent = customers.length ? `${customers.length} ${customers.length === 1 ? 'client' : 'clienți'} cu abateri în ultimele 30 de zile.` : 'Nu sunt înregistrate abateri în ultimele 30 de zile.';
             for (const customer of customers) {
                 const card = element('article', 'late-cancellation-customer');
                 const heading = element('div', 'late-cancellation-customer-heading');
                 const total = customer.total_count;
                 const validTotal = Number.isSafeInteger(total) && total >= 0;
-                const totalLabel = validTotal
+                const totalLabel = combined ? (validTotal ? `${total} ${total === 1 ? 'abatere' : 'abateri'} până acum` : 'Totalul abaterilor nu este disponibil') : validTotal
                     ? `${total} ${total === 1 ? 'anulare târzie' : (total % 100 >= 20 || total > 0 && total % 100 === 0 ? 'de anulări târzii' : 'anulări târzii')} până acum`
                     : 'Totalul anulărilor târzii nu este disponibil';
                 const badge = element('span', 'late-cancellation-count', validTotal ? String(total) : '—');
@@ -73,16 +75,16 @@
                 heading.append(element('h3', '', customer.name || 'Client'), badge);
                 card.append(heading);
                 const recent = customer.count;
-                card.append(element('p', 'late-cancellation-window-count', `Anulări târzii în ultimele 30 de zile: ${Number.isSafeInteger(recent) && recent >= 0 ? recent : 'indisponibil'}.`));
-                if (customer.frequent === true) card.append(element('p', 'late-cancellation-flag', 'Anulări repetate — de verificat'));
+                card.append(element('p', 'late-cancellation-window-count', `${combined ? 'Abateri' : 'Anulări târzii'} în ultimele 30 de zile: ${Number.isSafeInteger(recent) && recent >= 0 ? recent : 'indisponibil'}.`));
+                if (customer.frequent === true) card.append(element('p', 'late-cancellation-flag', combined ? 'Abateri repetate — de verificat' : 'Anulări repetate — de verificat'));
                 contact(card, customer.email, 'email'); contact(card, customer.phone, 'phone');
-                card.append(element('p', 'late-cancellation-last', `Ultima anulare: ${date(customer.last_cancelled_at)}`));
+                card.append(element('p', 'late-cancellation-last', `${combined ? 'Ultima abatere' : 'Ultima anulare'}: ${date(customer.last_cancelled_at)}`));
                 const details = element('details', 'late-cancellation-events'); details.append(element('summary', '', 'Vezi rezervările'));
                 const events = element('ul');
                 for (const event of Array.isArray(customer.events) ? customer.events : []) {
                     const lead = Number(event.lead_minutes);
                     const description = Number.isFinite(lead) ? (lead < 0 ? 'după începerea orei' : `cu ${lead} minute înainte`) : 'interval indisponibil';
-                    events.append(element('li', '', `${event.court_name || 'Teren'} · ${date(event.starts_at)} · anulată ${description}, la ${date(event.cancelled_at)}`));
+                    events.append(element('li', '', `${event.court_name || 'Teren'} · ${date(event.starts_at)} · ${event.kind === 'no_show' ? 'neprezentare înregistrată' : `anulată ${description}`}, la ${date(event.cancelled_at)}`));
                 }
                 details.append(events); card.append(details); list.append(card);
             }
@@ -91,13 +93,13 @@
             if (!role?.userId || modal.style.display !== 'flex') return;
             const currentGeneration = generation, currentRole = role.userId, currentRequest = ++request;
             controller?.abort(); controller = new AbortController();
-            refresh.disabled = true; list.replaceChildren(); status.textContent = 'Se încarcă anulările târzii…';
+            refresh.disabled = true; list.replaceChildren(); status.textContent = 'Se încarcă abaterile…';
             try {
                 let query = db.rpc('list_late_cancellations', { p_days: 30 });
                 if (typeof query.abortSignal === 'function') query = query.abortSignal(controller.signal);
                 const { data, error } = await query;
                 if (generation !== currentGeneration || role?.userId !== currentRole || request !== currentRequest || modal.style.display !== 'flex') return;
-                if (error) throw new Error('Anulările nu au putut fi încărcate. Verifică accesul de administrator și încearcă din nou.');
+                if (error) throw new Error('Abaterile nu au putut fi încărcate. Verifică accesul de administrator și încearcă din nou.');
                 render(data);
             } catch (error) {
                 if (generation === currentGeneration && request === currentRequest && modal.style.display === 'flex') status.textContent = error.name === 'AbortError' ? '' : error.message;
@@ -127,12 +129,13 @@
             if (event.detail?.userId) {
                 role = { isSuper: event.detail.isSuper === true, userId: event.detail.userId };
                 scope.textContent = role.isSuper
-                    ? 'Vezi anulările târzii de la toate terenurile.'
-                    : 'Vezi numai anulările de la terenurile alocate în prezent. Numărul anulărilor și marcajele se calculează numai pentru aceste terenuri.';
+                    ? 'Vezi neprezentările și anulările târzii de la toate terenurile.'
+                    : 'Vezi numai abaterile de la terenurile alocate în prezent. Numărul și marcajele se calculează numai pentru aceste terenuri.';
                 button.hidden = false; button.style.display = 'flex';
             }
         });
         window.addEventListener('spotivity:admin-clear', clear);
+        window.addEventListener('spotivity:attendance-changed', () => { if (role?.userId && modal.style.display === 'flex') void load(); });
         return { open, close, clear };
     };
     // Deferred scripts already have the parsed workspace. Listen before the

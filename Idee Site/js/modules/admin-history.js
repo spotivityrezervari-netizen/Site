@@ -84,6 +84,7 @@
                             <p style="margin: 5px 0; font-size: 13px;"><strong>Client:</strong> ${textClientAfisat}</p>
                             <p style="margin: 5px 0;"><strong>${txtPret}:</strong> ${window.escapeHtml(r.pret_total)}</p>
                         </div>
+                        ${r.booking_group_id && esteTrecuta && !eAnulata && !eBlocaj ? `<div class="booking-attendance" data-booking-attendance="${window.escapeHtml(r.booking_group_id)}"></div>` : ''}
                         ${butonAnulare}
                     </div>`;
             });
@@ -93,6 +94,7 @@
                 const id = cancellations[Number(button.dataset.cancelHistory)];
                 button.addEventListener('click', () => window.anuleazaRezervareAdmin(id));
             });
+            await window.loadBookingAttendanceControls?.({ db, container, isCurrent: () => authRequest === state.authGeneration && !!state.account });
         };
 
         document.getElementById('btn-istoric')?.addEventListener('click', window.reincarcaIstoricAdmin);

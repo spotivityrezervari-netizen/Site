@@ -13,7 +13,7 @@ const BOOKING_HOOK = 'https://hook.eu2.make.com/booking12345678901234567890';
 const CHAT_HOOK = 'https://hook.eu2.make.com/chat12345678901234567890123';
 const PAGES_SITE = 'https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/';
 const day = '2026-10-25';
-const POLICY_WARNING = 'La mai mult de 3 neprezentări, riști închiderea contului.';
+const POLICY_WARNING = 'La mai mult de 3 neprezentări sau anulări târzii, riști închiderea contului.';
 const lateCancellation = total_count => ({ total_count, threshold: 3, warning: POLICY_WARNING });
 function job(kind='booking_created_client', overrides={}) {
   return {
@@ -166,7 +166,7 @@ test('chat uses its separate scenario and carries escaped HTML with the authoriz
 test('a missing chat scenario does not claim chat jobs',async()=>{
   const {handler,calls}=await fixture({settings:{ready:true,booking_webhook_url:BOOKING_HOOK,chat_webhook_url:null},jobs:[]});
   await handler(request());const claim=calls.find(call=>call.path.endsWith('/claim_booking_notifications'));
-  assert.ok(!claim.body.p_kinds.includes('chat_owner'));assert.ok(!claim.body.p_kinds.includes('chat_client'));assert.ok(claim.body.p_kinds.includes('account_welcome'));assert.equal(claim.body.p_kinds.length,5);
+  assert.ok(!claim.body.p_kinds.includes('chat_owner'));assert.ok(!claim.body.p_kinds.includes('chat_client'));assert.ok(claim.body.p_kinds.includes('account_welcome'));assert.equal(claim.body.p_kinds.length,6);
 });
 test('temporary Make errors retry the same stable notification ID and permanent errors block without leaking provider responses',async()=>{
   for(const [status,outcome,errorCode] of [[429,'retry','make_http_429'],[503,'retry','make_http_503'],[400,'blocked','make_rejected']]){
@@ -286,4 +286,37 @@ test('configuration lookup failure never falls back to unpaused environment deli
   const {handler,calls}=await fixture({config:{bookingMakeWebhookURL:BOOKING_HOOK},fetch:call=>call.path.endsWith('/get_booking_notification_config')?json({message:'unavailable'},503):undefined});
   assert.equal((await handler(request())).status,503);
   assert.deepEqual(calls.map(call=>call.path),['/rest/v1/rpc/get_booking_notification_config']);
+});
+
+test('attendance warnings and corrections use the existing booking transport and no cancellation capability',async()=>{
+ for(const [status,total] of [['no_show',4],['present',0]]){
+  const attendance={status,total_count:total,threshold:3,warning:POLICY_WARNING};
+  const {handler,calls}=await fixture({jobs:[job('booking_attendance_client',{attendance})]});
+  assert.equal((await(await handler(request())).json()).submitted,1);
+  const sends=calls.filter(c=>c.url===BOOKING_HOOK);assert.equal(sends.length,1);
+  const mail=sends[0].body;assert.equal(mail.to.email,'client@example.test');assert.equal(mail.kind,'booking_attendance_client');
+  assert.match(mail.subject,status==='no_show'?/Neprezentare la rezervare/:/Prezență corectată/);
+  for(const content of [mail.text,mail.html]){
+   assert.ok(content.includes('Abateri în total (neprezentări și anulări târzii)'));
+   assert.ok(content.includes('O rezervare se numără cel mult o dată'));
+   assert.ok(!content.includes('#anulare-rezervare='));
+  }
+  assert.ok(!calls.some(c=>c.path.endsWith('/attach_cancellation_token')));
+ }
+});
+test('invalid attendance metadata blocks a notice before any provider request',async()=>{
+ for(const attendance of [{status:'unknown',total_count:4,threshold:3,warning:POLICY_WARNING},{status:'no_show',total_count:0,threshold:3,warning:POLICY_WARNING},{status:'no_show',total_count:4,threshold:9,warning:POLICY_WARNING}]){
+  const {handler,calls}=await fixture({jobs:[job('booking_attendance_client',{attendance})]});
+  assert.equal((await(await handler(request())).json()).blocked,1);
+  assert.ok(!calls.some(c=>c.url===BOOKING_HOOK));
+ }
+});
+test('legacy queued cancellation metadata remains compatible and new snapshots include the combined count',async()=>{
+ const late={total_count:2,incident_total_count:5,threshold:3,warning:'La mai mult de 3 neprezentări, riști închiderea contului.'};
+ const {handler,calls}=await fixture({jobs:[job('booking_cancelled_client',{late_cancellation:late})]});
+ assert.equal((await(await handler(request())).json()).submitted,1);
+ const mail=calls.find(c=>c.url===BOOKING_HOOK).body;
+ assert.ok(mail.text.includes('Anulări târzii în total: 2'));
+ assert.ok(mail.text.includes('Abateri în total (neprezentări și anulări târzii): 5'));
+ assert.ok(mail.text.includes(POLICY_WARNING));
 });

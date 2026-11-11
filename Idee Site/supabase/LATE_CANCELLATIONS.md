@@ -1,5 +1,7 @@
 # Numărul anulărilor târzii
 
+**Extensia 034:** [Prezența și contorul comun](BOOKING_ATTENDANCE.md) adaugă neprezentările confirmate, corectările și totalul comun, fără dublarea aceleiași rezervări. Descrierea de mai jos documentează implementarea 033 anterioară acestei extensii.
+
 Migrarea [033_late_cancellation_counts.sql](033_late_cancellation_counts.sql) a fost aplicată și verificată în Supabase la 10 noiembrie 2026, după 027 și 032. Workerul `booking-notifications`, versiunea 8, este activ; toate cele patru fișiere sursă din pachetul publicat corespund exact codului testat. Migrarea 031, pentru domeniul anunțurilor, este independentă și rămâne neaplicată. Nu s-au creat rezervări și nu s-au trimis emailuri de test în proiectul live.
 
 O anulare inițiată de client se înregistrează când mai sunt strict mai puțin de 60 de minute până la o oră rezervată sau când ora a început și încă nu s-a încheiat. Exact 60 de minute înainte nu se înregistrează. Mai multe ore anulate din aceeași rezervare produc cel mult un eveniment. Orele finalizate rămân protejate de regulile existente. Anulările personalului nu se atribuie clientului.

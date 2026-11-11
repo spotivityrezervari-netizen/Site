@@ -1,10 +1,12 @@
 /** Romanian transactional email templates. Rendering never sends mail or creates credentials. */
 export const TRANSACTIONAL_SITE_URL = 'https://spotivity.ro/';
 export const TRANSACTIONAL_SUPPORT_EMAIL = 'spotivity.rezervari@gmail.com';
-export const LATE_CANCELLATION_POLICY_WARNING = 'La mai mult de 3 neprezentări, riști închiderea contului.';
+export const LEGACY_LATE_CANCELLATION_WARNING = 'La mai mult de 3 neprezentări, riști închiderea contului.';
+export const LATE_CANCELLATION_POLICY_WARNING = 'La mai mult de 3 neprezentări sau anulări târzii, riști închiderea contului.';
 export type MailRecipient = { email: string; name?: string };
 /** Cumulative count frozen by the server when this cancellation was recorded. */
-export type LateCancellationMailDetails = { totalCount: number };
+export type LateCancellationMailDetails = { totalCount: number; incidentTotalCount?: number };
+export type AttendanceMailDetails = { status: 'present' | 'no_show'; totalCount: number };
 export type BookingMailDetails = {
   id: string | number; courtName: string; sport: string; baseName: string; city: string;
   dayISO: string; hours: readonly string[]; remainingHours?: readonly string[];
@@ -16,6 +18,7 @@ type CommonInput = { recipient: MailRecipient; siteURL?: string };
 export type TransactionalMailInput = CommonInput & (
   | { kind: 'booking_created_client'; booking: BookingMailDetails; cancellationURL: string }
   | { kind: 'booking_cancelled_client'; booking: BookingMailDetails; lateCancellation?: LateCancellationMailDetails; cancellationURL?: never }
+  | { kind: 'booking_attendance_client'; booking: BookingMailDetails; attendance: AttendanceMailDetails; cancellationURL?: never }
   | { kind: 'booking_created_owner' | 'booking_cancelled_owner'; booking: BookingMailDetails; cancellationURL?: never }
   | { kind: 'chat_owner' | 'chat_client'; chat: ChatMailDetails; cancellationURL?: never }
   | { kind: 'account_welcome'; firstName?: string; cancellationURL?: never }
@@ -139,6 +142,9 @@ export function renderTransactionalMail(input: TransactionalMailInput): Rendered
   const to = recipient(input.recipient), siteURL = validateTransactionalURL(input.siteURL ?? TRANSACTIONAL_SITE_URL);
   if (input.kind !== 'booking_created_client' && 'cancellationURL' in input && input.cancellationURL !== undefined) throw new TypeError('Cancellation links are for the booking client only');
   if ('lateCancellation' in input && (input.kind !== 'booking_cancelled_client' || !input.lateCancellation || !Number.isSafeInteger(input.lateCancellation.totalCount) || input.lateCancellation.totalCount < 1)) throw new TypeError('Invalid late cancellation details');
+  if ('lateCancellation' in input && input.lateCancellation?.incidentTotalCount !== undefined && (!Number.isSafeInteger(input.lateCancellation.incidentTotalCount) || input.lateCancellation.incidentTotalCount < input.lateCancellation.totalCount)) throw new TypeError('Invalid combined incident count');
+  if (input.kind === 'booking_attendance_client' && (!input.attendance || !['present', 'no_show'].includes(input.attendance.status) || !Number.isSafeInteger(input.attendance.totalCount) || input.attendance.totalCount < (input.attendance.status === 'no_show' ? 1 : 0))) throw new TypeError('Invalid attendance details');
+  if ('attendance' in input && input.kind !== 'booking_attendance_client') throw new TypeError('Attendance details require an attendance notification');
   let subject = '', title = '', introduction = '', content = '', after = '', footer = 'E-mail generat automat de platforma Spotivity.';
   let actions: Action[] = [], rows: Row[] = [], notes: string[] = [];
   const firstName = input.kind === 'account_welcome' ? line(input.firstName || to.name?.split(/\s+/)[0]) : to.name;
@@ -180,6 +186,20 @@ export function renderTransactionalMail(input: TransactionalMailInput): Rendered
     let contacts: Row[] = [];
     if (owner) contacts = [{ label: 'Nume client', value: line(booking.customerName) }, { label: 'Telefon', value: line(booking.customerPhone), href: phoneLink(booking.customerPhone) }, { label: 'E-mail', value: line(booking.customerEmail), href: emailLink(booking.customerEmail) }];
     switch (input.kind) {
+      case 'booking_attendance_client': {
+        const absent = input.attendance.status === 'no_show';
+        title = absent ? 'Neprezentare înregistrată la rezervare' : 'Prezența la rezervare a fost corectată';
+        subject = `${absent ? 'Neprezentare la rezervare' : 'Prezență corectată'}: ${line(booking.courtName)} · ${BRAND}`;
+        introduction = absent
+          ? 'Administratorul bazei sportive a marcat că nu te-ai prezentat la rezervarea de mai jos.'
+          : 'Administratorul bazei sportive a corectat marcajul de neprezentare. Această rezervare este acum marcată „S-a prezentat”, iar totalul abaterilor a fost recalculat.';
+        rows.push({ label: 'Abateri în total (neprezentări și anulări târzii)', value: String(input.attendance.totalCount) });
+        notes.push('O rezervare se numără cel mult o dată în totalul abaterilor.');
+        if (absent) notes.push(LATE_CANCELLATION_POLICY_WARNING, 'Dacă marcajul este greșit, contactează baza sportivă pentru verificarea și corectarea prezenței.');
+        actions = [{ label: 'Accesează contul', href: appAction(siteURL, 'account') }];
+        content = section('Detalii rezervare') + rowsHTML(rows) + notes.map(note).join('') + actionsHTML(actions);
+        break;
+      }
       case 'booking_created_client': {
         title = 'Confirmare oficială a rezervării tale'; subject = `Rezervare confirmată: ${line(booking.courtName)} · ${BRAND}`;
         introduction = `Rezervarea ta la ${line(booking.baseName) || line(booking.courtName)} a fost înregistrată cu succes. Mai jos găsești toate detaliile pentru următorul meci.`;
@@ -215,6 +235,7 @@ export function renderTransactionalMail(input: TransactionalMailInput): Rendered
           const occurrence = lateCancellation.totalCount === 1 ? 'Aceasta este prima anulare târzie înregistrată pentru tine.' : `Aceasta este a ${lateCancellation.totalCount}-a anulare târzie înregistrată pentru tine.`;
           notes.push('Ai anulat cel puțin un interval cu mai puțin de o oră înainte de începere sau după ce acesta începuse.', occurrence);
           rows.push({ label: 'Anulări târzii în total', value: String(lateCancellation.totalCount) });
+          if (lateCancellation.incidentTotalCount !== undefined) rows.push({ label: 'Abateri în total (neprezentări și anulări târzii)', value: String(lateCancellation.incidentTotalCount) });
         }
         if (!owner) notes.push(LATE_CANCELLATION_POLICY_WARNING);
         rows.push({ label: 'Valoarea orelor anulate', value: money });

@@ -126,7 +126,7 @@
     function attendanceWarning(id) {
         const warning = document.createElement('p'); warning.id = id; warning.className = 'workflow-attendance-warning';
         warning.setAttribute('data-i18n', 'neprezentari_avertisment');
-        warning.textContent = window.dict?.[window.lang]?.neprezentari_avertisment || 'La mai mult de 3 neprezentări, riști închiderea contului.';
+        warning.textContent = window.dict?.[window.lang]?.neprezentari_avertisment || 'La mai mult de 3 neprezentări sau anulări târzii, riști închiderea contului.';
         return warning;
     }
     function notificationText(result) {

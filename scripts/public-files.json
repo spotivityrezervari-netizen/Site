@@ -44,6 +44,7 @@
     "css/theme.css",
     "index.html",
     "js/admin-announcements.js",
+    "js/admin-attendance.js",
     "js/admin-baze.js",
     "js/admin-club-requests.js",
     "js/admin-late-cancellations.js",

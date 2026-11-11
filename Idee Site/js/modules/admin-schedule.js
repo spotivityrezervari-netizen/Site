@@ -47,6 +47,7 @@
 
         window.incarcaTabelProgram = async function() {
             const request = ++state.programGeneration;
+            const authRequest = state.authGeneration;
             const terenAles = document.getElementById('tabel-teren').value;
             const dataInput = document.getElementById('tabel-data').value;
             const tbody = document.getElementById('tabel-corp-program');
@@ -159,6 +160,7 @@
                         }
 
                         col3 = `<span style="color:white; font-size:12px; line-height:1.4;">${infoClient}</span><div class="program-detalii-footer"><span style="font-size:12px; color:#aaa;">${window.escapeHtml(rGasita.pret_total)}</span>${chatBtnStr}</div>`;
+                        if (rGasita.booking_group_id && window.bookingEnded(rGasita.data_str, rGasita.ora)) col3 += `<div class="booking-attendance" data-booking-attendance="${window.escapeHtml(rGasita.booking_group_id)}"></div>`;
                     }
                 } else {
                     const oraId = ora.replace(':', '');
@@ -190,6 +192,7 @@
                 const binding = actions[Number(element.dataset.programAction)];
                 element.addEventListener(binding.type, binding.handler);
             });
+            await window.loadBookingAttendanceControls?.({ db, container: tbody, isCurrent: () => request === state.programGeneration && authRequest === state.authGeneration && !!state.account });
         };
 
         document.getElementById('tabel-data')?.addEventListener('change', () => window.incarcaTabelProgram());

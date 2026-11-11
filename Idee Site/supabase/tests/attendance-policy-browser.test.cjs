@@ -7,9 +7,9 @@ const { join } = require('node:path');
 const source = name => readFileSync(join(__dirname, '../../js', name), 'utf8');
 const html = readFileSync(join(__dirname, '../../index.html'), 'utf8').replace(/<script\b[\s\S]*?<\/script>/gi, '');
 const warnings = {
-    ro: 'La mai mult de 3 neprezentări, riști închiderea contului.',
-    hu: 'Több mint 3 meg nem jelenés esetén a fiókod megszüntetését kockáztatod.',
-    en: 'More than 3 no-shows may lead to your account being closed.'
+    ro: 'La mai mult de 3 neprezentări sau anulări târzii, riști închiderea contului.',
+    hu: 'Több mint 3 meg nem jelenés vagy késői lemondás esetén a fiókod megszüntetését kockáztatod.',
+    en: 'More than 3 no-shows or late cancellations may lead to your account being closed.'
 };
 const bookingId = '00000000-0000-0000-0000-000000000009';
 let browser;

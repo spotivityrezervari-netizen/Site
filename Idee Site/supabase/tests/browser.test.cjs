@@ -90,6 +90,11 @@ async function openProfile(page) {
     for (const file of ['014_booking_groups.sql', '015_profile_contact.sql', '016_notification_outbox.sql', '017_base_avatars.sql', '018_google_profile_names.sql', '019_owner_court_creation.sql', '020_final_sport_backgrounds.sql', '021_account_welcome.sql', '022_email_booking_context.sql', '023_late_cancellations.sql', '024_client_chat_notifications.sql', '025_admin_late_cancellation_scope.sql', '026_retired_court_identity.sql']) {
       await pg.exec(readFileSync(join(__dirname, '..', file), 'utf8'));
     }
+    // Keep this legacy-booking fixture's dispatcher compatible with the additive
+    // worker kind. Full 034 permissions/counts are exercised in attendance tests.
+    const attendanceMigration = readFileSync(join(__dirname, '../034_booking_attendance.sql'), 'utf8');
+    const claimDefinition = attendanceMigration.match(/create or replace function public\.claim_booking_notifications\([\s\S]*?\n\$\$;/)[0];
+    await pg.exec(claimDefinition);
     await pg.exec("update public.terenuri set poza='assets/imagini/avatar2.png'");
     const tomorrow=(await pg.query("select ((now() at time zone 'Europe/Bucharest')::date+1)::text as d")).rows[0].d;
     let queue=Promise.resolve();

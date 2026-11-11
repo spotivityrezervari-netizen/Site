@@ -1,4 +1,4 @@
-import { LATE_CANCELLATION_POLICY_WARNING, renderTransactionalMail, TRANSACTIONAL_SITE_URL, validateTransactionalURL } from '../_shared/transactional-mail.ts';
+import { LATE_CANCELLATION_POLICY_WARNING, LEGACY_LATE_CANCELLATION_WARNING, renderTransactionalMail, TRANSACTIONAL_SITE_URL, validateTransactionalURL } from '../_shared/transactional-mail.ts';
 import type { TransactionalMailInput } from '../_shared/transactional-mail.ts';
 import { deriveBookingCancellationToken, hashCancellationToken } from '../_shared/booking-token.ts';
 
@@ -11,7 +11,7 @@ export type NotificationWorkerConfig = {
 type Dependencies = { fetch?: typeof fetch; now?: () => number; timeoutMs?: number };
 type Json = Record<string, any>;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const BOOKING_KINDS = ['booking_created_client','booking_created_owner','booking_cancelled_client','booking_cancelled_owner'];
+const BOOKING_KINDS = ['booking_created_client','booking_created_owner','booking_cancelled_client','booking_cancelled_owner','booking_attendance_client'];
 const ACCOUNT_KINDS = ['account_welcome'];
 const CHAT_KINDS = ['chat_owner', 'chat_client'];
 const MAKE = /^https:\/\/hook\.(?:(?:eu|us)[0-9]+\.)?(?:make|integromat)\.com\/[A-Za-z0-9_-]{10,}\/?$/;
@@ -79,10 +79,16 @@ export function createHandler(config: NotificationWorkerConfig, dependencies: De
       const input: any = { kind: job.kind, recipient: job.recipient, siteURL: appSiteURL };
       if ('late_cancellation' in job) {
         const late = job.late_cancellation;
-        if (job.kind !== 'booking_cancelled_client' || !object(late) || !Number.isSafeInteger(late.total_count) || late.total_count < 1 || late.threshold !== 3 || late.warning !== LATE_CANCELLATION_POLICY_WARNING) throw new TypeError('Invalid late cancellation notification');
+        if (job.kind !== 'booking_cancelled_client' || !object(late) || !Number.isSafeInteger(late.total_count) || late.total_count < 1 || late.threshold !== 3 || ![LATE_CANCELLATION_POLICY_WARNING, LEGACY_LATE_CANCELLATION_WARNING].includes(late.warning)) throw new TypeError('Invalid late cancellation notification');
         // Only the service-only claim RPC supplies this immutable event snapshot.
         // Never infer a customer penalty from dates, browser input or a later count.
-        input.lateCancellation = { totalCount: late.total_count };
+        input.lateCancellation = { totalCount: late.total_count, incidentTotalCount: late.incident_total_count };
+      }
+      if ('attendance' in job && job.kind !== 'booking_attendance_client') throw new TypeError('Unexpected attendance notification');
+      if (job.kind === 'booking_attendance_client') {
+        const attendance = job.attendance;
+        if (!object(attendance) || attendance.threshold !== 3 || attendance.warning !== LATE_CANCELLATION_POLICY_WARNING) throw new TypeError('Invalid attendance notification');
+        input.attendance = { status: attendance.status, totalCount: attendance.total_count };
       }
       if (CHAT_KINDS.includes(job.kind)) input.chat = job.chat;
       else if (job.kind === 'account_welcome') {
