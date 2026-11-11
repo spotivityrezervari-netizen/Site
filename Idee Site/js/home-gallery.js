@@ -1,4 +1,4 @@
-/* Clear photo cards rise from the back of the welcome stack. */
+/* Clear welcome photos rotate automatically from right to left. */
 (() => {
     'use strict';
     function init() {
@@ -7,6 +7,7 @@
         const image = gallery.querySelector('.welcome-cover');
         const front = gallery.querySelector('[data-photo-current]');
         const back = gallery.querySelector('[data-photo-next]');
+        const frame = gallery.querySelector('.welcome-photo-frame');
         const backImage = back.querySelector('img');
         const buttons = [...gallery.querySelectorAll('[data-welcome-sport]')];
         const toggle = gallery.querySelector('[data-gallery-toggle]');
@@ -26,8 +27,8 @@
         const reduced = matchMedia('(prefers-reduced-motion: reduce)');
         const decodedImages = new Map();
         let current = 0, desired = 0, generation = 0, pending = 0, timer;
-        let previewGeneration = 0, transition = null;
-        let paused = false, hovered = false, visible = false, explicitPlay = false;
+        let previewGeneration = 0, transition = null, outgoingTransition = null;
+        let paused = false, visible = false;
 
         function syncControls() {
             const text = labels[window.lang] || labels.ro;
@@ -47,13 +48,12 @@
         }
         function canRotate() {
             return visible && !document.hidden && !paused && !reduced.matches
-                && (explicitPlay || (!hovered && !gallery.contains(document.activeElement)))
                 && !document.body.classList.contains('fara-scroll')
                 && !document.body.classList.contains('home-menu-open');
         }
         function schedule() {
             clearTimeout(timer);
-            if (canRotate() && !pending) timer = setTimeout(() => void show((current + 1) % photos.length).then(schedule), 7000);
+            if (canRotate() && !pending) timer = setTimeout(() => void show((current + 1) % photos.length).then(schedule), 4500);
         }
         const absolute = source => new URL(window.appAssetUrl(source), window.siteHomeUrl()).href;
         function load(source) {
@@ -86,6 +86,8 @@
         }
         function cancelTransition() {
             if (transition) { transition.cancel(); transition = null; }
+            if (outgoingTransition) { outgoingTransition.cancel(); outgoingTransition = null; }
+            back.hidden = true;
             back.classList.remove('is-entering');
         }
         async function preparePreview() {
@@ -94,7 +96,7 @@
                 const decoded = await photoImage((current + 1) % photos.length);
                 if (version !== previewGeneration || pending) return;
                 fillCard(back, backImage, decoded);
-                back.hidden = false;
+                back.hidden = true;
             } catch { if (version === previewGeneration) back.hidden = true; }
         }
         async function show(index, manual = false) {
@@ -114,11 +116,16 @@
                     fillCard(back, backImage, decoded);
                     back.hidden = false;
                     back.classList.add('is-entering');
+                    const distance = frame.clientWidth + 24;
+                    const timing = { duration: 1000, easing: 'cubic-bezier(.22,.61,.36,1)', fill: 'forwards' };
+                    outgoingTransition = front.animate([
+                        { transform: 'translate3d(0, 0, 0)' },
+                        { transform: `translate3d(${-distance}px, 0, 0)` }
+                    ], timing);
                     animation = transition = back.animate([
-                        { opacity: 0, transform: 'translate(-10px, 40px) scale(.94)' },
-                        { opacity: 1, transform: 'translate(0, -12px) scale(1.01)', offset: .75 },
-                        { opacity: 1, transform: 'translate(0, 0) scale(1)' }
-                    ], { duration: 1000, easing: 'cubic-bezier(.22,.61,.36,1)', fill: 'forwards' });
+                        { transform: `translate3d(${distance}px, 0, 0)` },
+                        { transform: 'translate3d(0, 0, 0)' }
+                    ], timing);
                     try { await animation.finished; } catch { return; }
                     if (request !== generation) return;
                 }
@@ -126,9 +133,7 @@
                 image.dataset.gallerySport = photo.sport;
                 current = index;
                 syncControls();
-                back.hidden = true;
-                if (animation) { animation.cancel(); transition = null; }
-                back.classList.remove('is-entering');
+                cancelTransition();
             } finally {
                 if (pending === request) {
                     pending = 0;
@@ -137,13 +142,11 @@
             }
         }
         buttons.forEach((button, index) => button.addEventListener('click', () => {
-            explicitPlay = false;
             clearTimeout(timer);
             void show(index, true).then(schedule);
         }));
         toggle.addEventListener('click', () => {
             paused = !paused;
-            explicitPlay = !paused;
             if (paused) {
                 generation++; previewGeneration++; pending = 0; desired = current;
                 cancelTransition();
@@ -151,14 +154,11 @@
             }
             syncControls(); schedule();
         });
-        gallery.addEventListener('pointerenter', event => { if (event.pointerType !== 'touch') { hovered = true; explicitPlay = false; schedule(); } });
-        gallery.addEventListener('pointerleave', () => { hovered = false; schedule(); });
-        gallery.addEventListener('focusin', event => { if (event.target !== toggle) explicitPlay = false; schedule(); });
-        gallery.addEventListener('focusout', () => setTimeout(schedule, 0));
         document.addEventListener('visibilitychange', schedule);
         window.addEventListener('spotivity:language', syncControls);
         window.addEventListener('spotivity:sport-appearance', () => { if (visible) void show(desired, true).then(schedule); });
         const motionChanged = () => {
+            if (reduced.matches && outgoingTransition) outgoingTransition.finish();
             if (reduced.matches && transition) transition.finish();
             syncControls(); schedule();
         };
