@@ -204,13 +204,14 @@ body.pagina-publica { background: #101a14; }
 .pagina-publica img.sports-base-photo { background: #211e18; }
 
 /* City and court search share the same compact dimensions at every width. */
-.pagina-publica { --home-header-field-width: 340px; }
+.pagina-publica { --home-header-field-width: 340px; --home-header-field-height: 40px; }
 .pagina-publica .home-city-inner {
     grid-template-columns: minmax(0, 1fr) minmax(0, var(--home-header-field-width)) auto;
 }
 .pagina-publica #selector-limba { justify-self: end; }
-.pagina-publica #filtru-oras-global { font-size: 16px; }
-.pagina-publica .home-nav { gap: 18px; }
+.pagina-publica #filtru-oras-global { height: var(--home-header-field-height); font-size: 16px; }
+.pagina-publica .home-city-chevron { top: 50%; transform: translateY(-50%); }
+.pagina-publica .home-nav { min-height: 56px; padding-block: 6px; gap: 18px; }
 .pagina-publica .home-desktop-nav { flex: 0 1 auto; gap: 12px; }
 .pagina-publica .home-nav-search {
     display: flex;
@@ -218,8 +219,8 @@ body.pagina-publica { background: #101a14; }
     flex: 0 0 var(--home-header-field-width);
     width: var(--home-header-field-width);
     min-width: 0;
-    height: 44px;
-    min-height: 44px;
+    height: var(--home-header-field-height);
+    min-height: var(--home-header-field-height);
     margin-inline: auto;
     border: 1px solid var(--spotivity-gold-border);
     border-radius: 8px;
