@@ -13,11 +13,11 @@
         const toggle = gallery.querySelector('[data-gallery-toggle]');
         const controls = gallery.querySelector('.welcome-gallery-controls');
         const photos = [
-            { sport: 'Fotbal', file: 'BackgroundFootball.avif' },
-            { sport: 'Baschet', file: 'BackgroundBasketball.avif' },
-            { sport: 'Tenis', file: 'TenisFINAL.jpeg' },
-            { sport: 'Volei', file: 'BackgroundVoleyball.avif' },
-            { sport: 'Tenis Picior', file: 'BackgroundLavolei.avif' }
+            { sport: 'Fotbal', slug: 'fotbal', file: 'BackgroundFootball.avif' },
+            { sport: 'Baschet', slug: 'baschet', file: 'BackgroundBasketball.avif' },
+            { sport: 'Tenis', slug: 'tenis', file: 'TenisFINAL.jpeg' },
+            { sport: 'Volei', slug: 'volei', file: 'BackgroundVoleyball.avif' },
+            { sport: 'Tenis Picior', slug: 'tenis-de-picior', file: 'BackgroundLavolei.avif' }
         ];
         const labels = {
             ro: { title: 'Fotografiile sporturilor', pause: 'Oprește schimbarea fotografiilor', play: 'Reia schimbarea fotografiilor' },
@@ -26,12 +26,25 @@
         };
         const reduced = matchMedia('(prefers-reduced-motion: reduce)');
         // One complete cycle includes both the still photograph and its slide.
-        const slideIntervalMs = 1500, transitionDurationMs = 600;
+        const slideIntervalMs = 2500, transitionDurationMs = 600;
         const decodedImages = new Map();
         let current = 0, desired = 0, generation = 0, pending = 0, timer;
         let previewGeneration = 0, transition = null, outgoingTransition = null;
-        let paused = false, visible = false;
+        let paused = false, visible = false, bookingFocused = false;
 
+        function syncCard(card, index) {
+            const photo = photos[index];
+            const text = window.dict?.[window.lang];
+            const sport = text?.[photo.sport.toLowerCase()] || photo.sport;
+            const reserve = text?.home_rezerva || 'Rezervă un teren';
+            const link = card.querySelector('.welcome-photo-link');
+            card.dataset.galleryIndex = String(index);
+            link.dataset.sport = photo.sport;
+            link.href = new URL(`terenuri/${photo.slug}/`, window.siteHomeUrl()).href;
+            link.setAttribute('aria-label', `${reserve} — ${sport}`);
+            link.querySelector('[data-slide-title]').textContent = sport;
+            link.querySelector('[data-slide-cta]').textContent = reserve;
+        }
         function syncControls() {
             const text = labels[window.lang] || labels.ro;
             controls.setAttribute('aria-label', text.title);
@@ -47,9 +60,11 @@
             toggle.title = paused ? text.play : text.pause;
             toggle.setAttribute('aria-pressed', String(paused));
             toggle.querySelector('path').setAttribute('d', paused ? 'M6 4l7 4-7 4z' : 'M5 4v8M11 4v8');
+            syncCard(front, current);
+            if (back.dataset.galleryIndex !== undefined) syncCard(back, Number(back.dataset.galleryIndex));
         }
         function canRotate() {
-            return visible && !document.hidden && !paused && !reduced.matches
+            return visible && !document.hidden && !paused && !bookingFocused && !reduced.matches
                 && !document.body.classList.contains('fara-scroll')
                 && !document.body.classList.contains('home-menu-open');
         }
@@ -80,12 +95,13 @@
             try { return await load(preferred); }
             catch (error) { if (preferred === fallback) throw error; return load(fallback); }
         }
-        function fillCard(card, img, decoded) {
+        function fillCard(card, img, decoded, index) {
             card.style.setProperty('--photo-ratio', String(decoded.naturalWidth / decoded.naturalHeight));
             img.src = decoded.src;
             img.width = decoded.naturalWidth;
             img.height = decoded.naturalHeight;
             img.draggable = false;
+            syncCard(card, index);
         }
         function cancelTransition() {
             if (transition) { transition.cancel(); transition = null; }
@@ -96,9 +112,10 @@
         async function preparePreview() {
             const version = ++previewGeneration;
             try {
-                const decoded = await photoImage((current + 1) % photos.length);
+                const index = (current + 1) % photos.length;
+                const decoded = await photoImage(index);
                 if (version !== previewGeneration || pending) return;
-                fillCard(back, backImage, decoded);
+                fillCard(back, backImage, decoded, index);
                 back.hidden = true;
             } catch { if (version === previewGeneration) back.hidden = true; }
         }
@@ -116,7 +133,7 @@
                 if (request !== generation || (!manual && !canRotate())) return;
                 let animation;
                 if (image.src !== decoded.src && visible && !document.hidden && !reduced.matches && back.animate) {
-                    fillCard(back, backImage, decoded);
+                    fillCard(back, backImage, decoded, index);
                     back.hidden = false;
                     back.classList.add('is-entering');
                     const distance = frame.clientWidth + 24;
@@ -132,7 +149,7 @@
                     try { await animation.finished; } catch { return; }
                     if (request !== generation) return;
                 }
-                fillCard(front, image, decoded);
+                fillCard(front, image, decoded, index);
                 image.dataset.gallerySport = photo.sport;
                 current = index;
                 syncControls();
@@ -144,6 +161,46 @@
                 }
             }
         }
+        for (const card of [front, back]) {
+            const link = card.querySelector('.welcome-photo-link');
+            // The incoming copy is pointer-operable, but never receives keyboard
+            // focus while it is moving or duplicates the committed slide for AT.
+            if (card === back) link.addEventListener('mousedown', event => {
+                if (event.button === 0) event.preventDefault();
+            });
+            link.addEventListener('click', event => {
+                if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                const index = Number(card.dataset.galleryIndex);
+                const photo = photos[index];
+                const primary = photo && [...document.querySelectorAll('button.card-sport[data-sport]')]
+                    .find(button => button.dataset.sport === photo.sport);
+                // Keep the real category URL usable before the booking module
+                // mounts, with JavaScript disabled, and for modified clicks.
+                if (!primary || typeof window.openSpotivityCourtList !== 'function') return;
+                event.preventDefault();
+                bookingFocused = event.detail === 0 && link.matches(':focus-visible');
+                generation++; previewGeneration++; pending = 0;
+                clearTimeout(timer);
+                fillCard(front, image, card.querySelector('img'), index);
+                current = desired = index;
+                image.dataset.gallerySport = photo.sport;
+                cancelTransition(); syncControls();
+                front.querySelector('.welcome-photo-link').focus({ preventScroll: true });
+                primary.click();
+                schedule();
+            });
+        }
+        gallery.addEventListener('focusin', event => {
+            const link = event.target.closest('.welcome-photo-link');
+            if (!link || !front.contains(link) || !link.matches(':focus-visible')) return;
+            bookingFocused = true;
+            generation++; previewGeneration++; pending = 0; desired = current;
+            cancelTransition(); schedule();
+        });
+        gallery.addEventListener('focusout', () => {
+            bookingFocused = front.contains(document.activeElement) && document.activeElement.matches('.welcome-photo-link:focus-visible');
+            schedule();
+        });
         buttons.forEach((button, index) => button.addEventListener('click', () => {
             clearTimeout(timer);
             void show(index, true).then(schedule);

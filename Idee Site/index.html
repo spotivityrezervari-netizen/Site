@@ -65,12 +65,12 @@
     <link rel="stylesheet" href="css/home.css?v=7">
     <link rel="stylesheet" href="css/theme.css?v=4">
     <script src="js/home.js?v=10" defer></script>
-    <script src="js/home-gallery.js?v=6" defer></script>
+    <script src="js/home-gallery.js?v=7" defer></script>
     <script src="js/baze.js?v=8" defer></script>
     <script src="js/home-discovery.js?v=9" defer></script>
     <link rel="stylesheet" href="css/profile-editor.css?v=2">
     <script src="js/profile-editor.js?v=1" defer></script>
-    <link rel="stylesheet" href="css/home-layout.css?v=26">
+    <link rel="stylesheet" href="css/home-layout.css?v=27">
     <link rel="stylesheet" href="css/home-motion.css?v=2">
     <link rel="stylesheet" href="css/base-media.css?v=5">
     <script src="js/home-motion.js?v=4" defer></script>
@@ -176,13 +176,21 @@
                     </ol>
                 </div>
                 <div class="welcome-visual" data-welcome-gallery>
-                    <div class="welcome-art" aria-hidden="true">
+                    <div class="welcome-art">
                         <div class="welcome-photo-frame">
-                            <div class="welcome-photo-card welcome-photo-current" data-photo-current>
+                            <div class="welcome-photo-card welcome-photo-current" data-photo-current data-gallery-index="0">
                                 <img class="welcome-cover" src="assets/imagini/BackgroundFootball.avif" alt="" width="1149" height="786" loading="eager" fetchpriority="high" decoding="async" draggable="false">
+                                <a class="welcome-photo-link" href="terenuri/fotbal/" data-sport="Fotbal" aria-label="Rezervă un teren — Fotbal">
+                                    <span class="welcome-slide-title" data-slide-title>Fotbal</span>
+                                    <span class="welcome-slide-cta" data-slide-cta>Rezervă un teren</span>
+                                </a>
                             </div>
-                            <div class="welcome-photo-card welcome-photo-next" data-photo-next hidden>
+                            <div class="welcome-photo-card welcome-photo-next" data-photo-next data-gallery-index="1" aria-hidden="true" hidden>
                                 <img class="welcome-under-image" alt="" decoding="async" draggable="false">
+                                <a class="welcome-photo-link" href="terenuri/baschet/" data-sport="Baschet" aria-label="Rezervă un teren — Baschet" tabindex="-1">
+                                    <span class="welcome-slide-title" data-slide-title>Baschet</span>
+                                    <span class="welcome-slide-cta" data-slide-cta>Rezervă un teren</span>
+                                </a>
                             </div>
                         </div>
                     </div>
