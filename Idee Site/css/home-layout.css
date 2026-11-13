@@ -203,17 +203,26 @@ body.pagina-publica { background: #101a14; }
 .pagina-publica .home-courts-strip::-webkit-scrollbar-thumb { background: #9d854f; }
 .pagina-publica img.sports-base-photo { background: #211e18; }
 
-/* The search field fills the space between the brand and the mobile menu. */
+/* City and court search share the same compact dimensions at every width. */
+.pagina-publica { --home-header-field-width: 340px; }
+.pagina-publica .home-city-inner {
+    grid-template-columns: minmax(0, 1fr) minmax(0, var(--home-header-field-width)) auto;
+}
+.pagina-publica #selector-limba { justify-self: end; }
+.pagina-publica #filtru-oras-global { font-size: 16px; }
 .pagina-publica .home-nav { gap: 18px; }
 .pagina-publica .home-desktop-nav { flex: 0 1 auto; gap: 12px; }
 .pagina-publica .home-nav-search {
     display: flex;
     align-items: center;
-    flex: 1 1 0;
+    flex: 0 0 var(--home-header-field-width);
+    width: var(--home-header-field-width);
     min-width: 0;
+    height: 44px;
     min-height: 44px;
+    margin-inline: auto;
     border: 1px solid var(--spotivity-gold-border);
-    border-radius: 14px;
+    border-radius: 8px;
     background: #1b2d20;
     color-scheme: dark;
     overflow: hidden;
@@ -222,7 +231,8 @@ body.pagina-publica { background: #101a14; }
     flex: 1 1 0;
     min-width: 0;
     width: 0;
-    height: 44px;
+    height: 100%;
+    margin: 0;
     padding: 0 12px;
     border: 0;
     border-radius: 0;
@@ -236,13 +246,20 @@ body.pagina-publica { background: #101a14; }
     border-color: var(--spotivity-gold);
     box-shadow: 0 0 0 2px rgba(216, 182, 106, .16);
 }
-.pagina-publica #btn-home-search { flex: 0 0 44px; width: 44px; min-width: 44px; padding: 0; }
+.pagina-publica #btn-home-search { flex: 0 0 44px; width: 44px; min-width: 44px; height: 100%; min-height: 0; padding: 0; }
+
+@media (min-width: 768px) and (max-width: 1023px) {
+    .pagina-publica { --home-header-field-width: min(340px, calc(100vw - 600px)); }
+    .pagina-publica .home-nav { gap: 12px; }
+    .pagina-publica .home-desktop-nav { gap: 4px; }
+}
 
 @media (max-width: 767px) {
+    .pagina-publica { --home-header-field-width: min(340px, calc(100vw - 180px)); }
+    .pagina-publica .home-city-inner { grid-template-columns: minmax(0, var(--home-header-field-width)) auto; }
     .pagina-publica .home-nav { gap: 8px; padding-inline: 12px; }
     .pagina-publica .home-brand { margin-right: 0; }
     .pagina-publica .home-profile-button { display: inline-flex; flex: 0 0 44px; width: 44px; min-width: 44px; }
-    .pagina-publica .home-nav-search { flex: 1 1 0; }
     .pagina-publica.home-menu-open .home-nav-search { visibility: hidden; }
     .pagina-publica .home-sport-hero {
         --home-art-height: clamp(490px, 136vw, 660px);
@@ -278,6 +295,7 @@ body.pagina-publica { background: #101a14; }
 }
 
 @media (max-width: 360px) {
+    .pagina-publica { --home-header-field-width: calc(100vw - 168px); }
     .pagina-publica .home-nav { gap: 4px; }
 }
 
