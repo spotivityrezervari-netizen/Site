@@ -359,13 +359,15 @@ let checks = 0;
       const dimensions = await homepage.evaluate(() => {
         const rect = id => {const r = document.getElementById(id).getBoundingClientRect(); return {left: r.left, right: r.right, width: r.width, height: r.height};};
         return {width: innerWidth, pageWidth: document.documentElement.scrollWidth, brand: rect('home-brand'), search: rect('home-nav-search'),
-          input: rect('home-nav-search-input'), submit: rect('btn-home-search'), profile: rect('btn-top-cont'), menu: rect('btn-mobile-menu'),
+          input: rect('home-nav-search-input'), submit: rect('btn-home-search'), city: rect('filtru-oras-global'), profile: rect('btn-top-cont'), menu: rect('btn-mobile-menu'),
           profileVisible: document.getElementById('btn-top-cont').getClientRects().length > 0};
       });
       assert.ok(dimensions.pageWidth <= width+1, JSON.stringify(dimensions));
       assert.ok(dimensions.search.left >= dimensions.brand.right+3 && dimensions.search.right <= width-8, JSON.stringify(dimensions));
-      assert.ok(dimensions.input.width >= 100 && dimensions.input.height >= 40, JSON.stringify(dimensions));
-      assert.ok(dimensions.submit.width >= 40 && dimensions.submit.height >= 40, JSON.stringify(dimensions));
+      assert.equal(dimensions.search.height,40);assert.equal(dimensions.city.height,40);
+      assert.ok(Math.abs(dimensions.search.width-dimensions.city.width)<.1,JSON.stringify(dimensions));
+      assert.ok(dimensions.input.width >= 100 && dimensions.input.height === dimensions.search.height-2, JSON.stringify(dimensions));
+      assert.ok(dimensions.submit.width >= 40 && dimensions.submit.height === dimensions.search.height-2, JSON.stringify(dimensions));
       if (width < 768) {
         assert.equal(dimensions.profileVisible, true);
         assert.ok(dimensions.search.right <= dimensions.profile.left-3 && dimensions.profile.right <= dimensions.menu.left-3, JSON.stringify(dimensions));

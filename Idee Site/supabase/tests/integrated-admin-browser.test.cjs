@@ -110,7 +110,7 @@ async function fits(page,selector,label){
 }
 
 (async()=>{
-  const fixture=await createFixture();let browser;
+  const fixture=await createFixture({throughVersion:39});let browser;
   const {pg,root,requests}=fixture;
   const ids={first:uid(701),second:uid(702),other:uid(703)};
   try{
@@ -463,10 +463,10 @@ async function fits(page,selector,label){
     await superPage.keyboard.press('Escape');
     await superPage.locator('#sectiune-dashboard .admin-menu-card').filter({hasText:'Rezervări'}).click();await superPage.locator('#btn-istoric').click();await superPage.waitForFunction(()=>document.getElementById('container-istoric').textContent.includes('Court Excluded'));
     assert.ok((await superPage.locator('#container-istoric').innerText()).includes('Court Excluded'));assert.ok((await superPage.locator('#container-istoric').innerText()).includes('Court B'));
-    await superPage.keyboard.press('Escape');await superPage.locator('#btn-vezi-chat-admin').click();await superPage.waitForFunction(()=>document.getElementById('chat-admin-lista-conversații').textContent.includes('Mesaj privat străin'));
-    assert.ok((await superPage.locator('#chat-admin-lista-conversații').innerText()).includes('Mesaj privat străin'));assert.ok((await superPage.locator('#chat-admin-lista-conversații').innerText()).includes('Mesaj Sud'));
     await superPage.keyboard.press('Escape');
-    pass('same-page superadmin preserves global city/court editing, the full schedule, all booking contact details and global chat');
+    assert.equal(await superPage.locator('#btn-vezi-chat-admin').isVisible(),false,'Superadmin has no field-admin chat entry');
+    assert.equal(await superPage.locator('#modal-chat-admin').isVisible(),false,'Private field conversations are not opened for the superadmin');
+    pass('same-page superadmin preserves global city/court editing, schedule and booking contacts without a field-admin chat entry');
 
     await root(()=>pg.query("insert into auth.users(id,email,email_confirmed_at) values($1,'employee@example.test',now())",[uid(77)]));
     await superPage.locator('#sectiune-dashboard .super-admin-only').filter({hasText:'Creare Angajat'}).click();

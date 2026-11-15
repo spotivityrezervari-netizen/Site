@@ -220,8 +220,9 @@ async function seed(fixture) {
                 for (const {sport} of SPORTS) {
                     const entry = page.locator(`button.card-sport[data-sport="${sport}"]`);
                     await entry.scrollIntoViewIfNeeded();
-                    const before = await page.evaluate(() => scrollY);
+                    await entry.evaluate(button=>button.addEventListener('pointerdown',()=>{window.__pickerScrollBefore=scrollY;},{once:true}));
                     await entry.click();
+                    const before = await page.evaluate(() => window.__pickerScrollBefore);
                     await page.locator('#modal-terenuri').waitFor({state: 'visible'});
                     await page.waitForFunction(() => document.body.classList.contains('fara-scroll'));
                     assert.equal(page.url(), hosted.server.url, sport+' opens its picker before navigation');

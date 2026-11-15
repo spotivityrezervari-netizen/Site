@@ -136,6 +136,7 @@ test('invalid guest fields, invalid calendar dates, password and nonconsecutive 
     ['invalid date', { day: '2026-02-30' }, 'invalid_input'],
     ...[undefined, null, '215', -1, 1.001, 1e30].map(expected_total => ['invalid expected total', {expected_total}, 'invalid_input']),
     ['boolean required', { with_ball: 'false' }, 'invalid_input'],
+    ...['a<b@example.test', 'a>b@example.test', 'a\u0085b@example.test', 'a\ufeffb@example.test', 'é'.repeat(124)+'@test.example'].map(email => ['undeliverable guest email', {email}, 'invalid_input']),
     ['hour gaps', { hours: ['14:00', '16:00'] }, 'invalid_hours'],
     ['hour duplicates', { hours: ['14:00', '14:00'] }, 'invalid_hours'],
     ['midnight wrap', { hours: ['22:00', '00:00'] }, 'invalid_hours'],
@@ -205,6 +206,7 @@ test('SQL errors map to stable safe codes without exposing constraints, contact 
     ['42501', 'A confirmed account is required.', 'unauthenticated', 401],
     ['42501', 'Completed bookings cannot be cancelled.', 'completed_booking', 409],
     ['42501', 'Invalid cancellation link.', 'invalid_cancellation', 403],
+    ['42501', 'BOOKING_RESTRICTED: private administrator note must stay private', 'booking_restricted', 403],
   ];
   for (const [code, message, expected, status] of cases) await t.test(expected, async () => {
     const { handler, calls } = await fixture({ fetch: call => call.path.endsWith('/create_guest_booking_group') ? json({ code, message, details: 'secret-query client@example.test', hint: SECRET }, 400) : undefined });

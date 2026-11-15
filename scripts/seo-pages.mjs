@@ -4,6 +4,7 @@ import { constants } from 'node:fs';
 import { lstat, open } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import path from 'node:path';
+import { redirectSeoAlias } from './seo-alias-runtime.mjs';
 const require = createRequire(import.meta.url);
 const paths = require('../Idee Site/js/entity-paths.js');
 const seoData = require('../Idee Site/js/seo-data.js');
@@ -18,7 +19,7 @@ export const SPORTS = Object.freeze([
   { sport: 'Volei', slug: 'volei', label: 'volei', intro: 'Alege un teren de volei pentru următorul joc cu echipa. Consultă terenurile pe orașe și verifică programul de rezervare înainte de a stabili întâlnirea.' },
   { sport: 'Tenis Picior', slug: 'tenis-de-picior', label: 'tenis de picior', intro: 'Găsește terenuri de tenis de picior pentru jocuri cu prietenii și antrenamente. Alege locația potrivită și consultă intervalele din formularul de rezervare.' }
 ].map(sport => Object.freeze({ ...sport, title: `Terenuri de ${sport.label} – Rezervări online | Spotivity`, description: `Descoperă terenuri de ${sport.label} pe Spotivity. Compară locațiile și tarifele publicate, verifică programul și rezervă online un teren.` })));
-export const SEO_PATHS = Object.freeze([...SPORTS.map(({ slug }) => `terenuri/${slug}/index.html`), 'js/seo-route-index.js', 'robots.txt', 'sitemap.xml']);
+export const SEO_PATHS = Object.freeze([...SPORTS.map(({ slug }) => `terenuri/${slug}/index.html`), 'js/seo-route-index.js', 'js/seo-alias-redirect.js', 'robots.txt', 'sitemap.xml']);
 const escape = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
 const normalizeSport = value => value === 'Tenis de picior' ? 'Tenis Picior' : value;
 const rowKeys = (row, allowed) => row && typeof row === 'object' && !Array.isArray(row) && Object.keys(row).every(key => allowed.includes(key));
@@ -55,9 +56,39 @@ function indexFor(catalog) {
   if (all.some(relative => !relative || relative.includes('..') || !/^[a-z0-9/-]+\/$/.test(relative)) || new Set(all).size !== all.length) throw new Error('Duplicate or invalid public entity route.');
   return { courts, bases: basePaths };
 }
-export function seoPaths(input) {
+export function reconcileRouteHistory(input, history = { version: 1, courts: {}, bases: {} }) {
   const catalog = validateCatalog(input), index = indexFor(catalog);
-  return [...SEO_PATHS, ...Object.values(index.courts).map(route => route + 'index.html'), ...Object.values(index.bases).map(route => route + 'index.html')];
+  if (!rowKeys(history, ['version', 'courts', 'bases']) || history.version !== 1) throw new Error('Invalid SEO route history.');
+  const result = { version: 1, courts: {}, bases: {} }, occupied = new Map();
+  for (const kind of ['courts', 'bases']) {
+    if (!history[kind] || Array.isArray(history[kind]) || typeof history[kind] !== 'object' || Object.keys(history[kind]).length > 200000) throw new Error('Invalid SEO route history identities.');
+    const combined = new Set([...Object.keys(history[kind]), ...Object.keys(index[kind])]);
+    for (const id of [...combined].sort((a, b) => a.localeCompare(b, 'en', { numeric: true }))) {
+      if (paths.normalizedId(id) !== id) throw new Error('Invalid SEO route history identity.');
+      const previous = history[kind][id] ?? [];
+      if (!Array.isArray(previous) || previous.length > 1000 || new Set(previous).size !== previous.length) throw new Error('Invalid SEO route history routes.');
+      const routes = [...new Set([...previous, ...(index[kind][id] ? [index[kind][id]] : [])])].sort();
+      for (const route of routes) {
+        const prefix = kind === 'courts' ? /^terenuri\/(?:fotbal|baschet|tenis|volei|tenis-de-picior)\/[a-z0-9-]+\/$/ : /^baze-sportive\/[a-z0-9-]+\/$/;
+        if (typeof route !== 'string' || route.length > 240 || !prefix.test(route) || !route.endsWith(`-${id}/`) || occupied.has(route)) throw new Error('Unsafe or duplicate SEO historical route.');
+        occupied.set(route, `${kind}:${id}`);
+      }
+      result[kind][id] = routes;
+    }
+  }
+  return result;
+}
+export function seoAliases(input, history) {
+  const catalog = validateCatalog(input), index = indexFor(catalog), reviewed = reconcileRouteHistory(catalog, history);
+  return ['courts', 'bases'].flatMap(kind => Object.entries(reviewed[kind]).flatMap(([id, routes]) =>
+    index[kind][id] ? routes.filter(route => route !== index[kind][id]).map(route => ({ kind, id, route, target: index[kind][id] })) : []));
+}
+export function seoPaths(input, history) {
+  const catalog = validateCatalog(input), index = indexFor(catalog);
+  return [...SEO_PATHS, ...Object.values(index.courts).map(route => route + 'index.html'), ...Object.values(index.bases).map(route => route + 'index.html'), ...seoAliases(catalog, history).map(alias => alias.route + 'index.html')];
+}
+export function netlifyAliasRedirects(catalog, history) {
+  return seoAliases(catalog, history).flatMap(({ route, target }) => [`/${route} /${target} 301!`, `/${route.slice(0, -1)} /${target} 301!`]).join('\n') + '\n';
 }
 
 export async function readReviewedFile(root, relative) {
@@ -142,7 +173,7 @@ function finish(html, { baseUrl, route, title, description, sport, bodyAttribute
   return html.replace(/(<!doctype html>)/i, (_, declaration) => `${declaration}\n${GENERATED_MARKER}`).replace(/[ \t]+(?=\r?$)/gm, '');
 }
 
-export function generateSeoFiles({ template, catalog: input, baseUrl = PAGES_BASE_URL }) {
+export function generateSeoFiles({ template, catalog: input, routeHistory, baseUrl = PAGES_BASE_URL }) {
   if (![PAGES_BASE_URL, PRODUCTION_BASE_URL].includes(baseUrl)) throw new Error('Unreviewed SEO deployment origin.');
   const catalog = validateCatalog(input), index = indexFor(catalog), sections = sportSections(template), files = new Map();
   const stripped = withoutSports(template, sections);
@@ -183,7 +214,16 @@ export function generateSeoFiles({ template, catalog: input, baseUrl = PAGES_BAS
     files.set(route + 'index.html', finish(html, { baseUrl, route, title, description, bodyAttribute: ` data-base-id="${escape(base.id)}"`, kind: 'base', base }));
   }
   files.set('js/seo-route-index.js', `// Generated from the reviewed anonymous public catalog. No account data.\nwindow.spotivitySeoRoutes = ${JSON.stringify(index)};\n`);
+  files.set('js/seo-alias-redirect.js', `// Generated public alias navigation. No inline script is needed.\n(${redirectSeoAlias.toString()})();\n`);
   files.set('robots.txt', `User-agent: *\nAllow: /\n\nSitemap: ${new URL('sitemap.xml', baseUrl).href}\n`);
   files.set('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${['', ...SPORTS.map(({ slug }) => `terenuri/${slug}/`), ...Object.values(index.courts), ...Object.values(index.bases)].map(route => `  <url><loc>${escape(new URL(route, baseUrl).href)}</loc></url>`).join('\n')}\n</urlset>\n`);
-  return new Map(seoPaths(catalog).map(relative => [relative, files.get(relative)]));
+  for (const { route, target } of seoAliases(catalog, routeHistory)) {
+    const csp = template.match(/<meta\b[^>]*http-equiv="Content-Security-Policy"[^>]*>/i)?.[0];
+    const referrer = template.match(/<meta\b[^>]*name="referrer"[^>]*>/i)?.[0];
+    if (!csp || !referrer) throw new Error('Alias pages require the shared CSP and referrer policy.');
+    const prefix = '../'.repeat(route.split('/').filter(Boolean).length);
+    const canonical = new URL(target, baseUrl).href;
+    files.set(route + 'index.html', `<!doctype html>\n${GENERATED_MARKER}\n<html lang="ro"><head><meta charset="UTF-8">${csp}${referrer}<meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,follow"><title>Adresă actualizată | Spotivity</title><link rel="canonical" href="${escape(canonical)}"><script src="${prefix}js/seo-alias-redirect.js" defer></script></head><body><main><h1>Pagina s-a mutat</h1><p>Adresa acestui teren sau a bazei sportive a fost actualizată.</p><p><a id="seo-alias-destination" href="${prefix + target}">Continuă către pagina actuală</a></p><p><a href="${prefix}">Pagina principală Spotivity</a></p></main></body></html>\n`);
+  }
+  return new Map(seoPaths(catalog, routeHistory).map(relative => [relative, files.get(relative)]));
 }

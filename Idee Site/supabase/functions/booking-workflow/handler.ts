@@ -1,5 +1,6 @@
 import { deriveBookingCancellationToken, hashCancellationToken } from '../_shared/booking-token.ts';
 import { publicRateSubject } from '../_shared/public-rate-limit.ts';
+import { isMailAddress } from '../_shared/email-address.ts';
 
 type Json = Record<string, any>;
 type Config = { url: string; anonKey: string; serviceKey: string; cancelSecret?: string };
@@ -42,7 +43,7 @@ function createInput(input: Json): Json {
   if (input.action === 'create_guest') {
     result.p_contact_name = text(input.contact_name, 1, 200);
     result.p_email = text(input.email, 3, 254).toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(result.p_email)) throw invalid('Adresa de email nu este validă.');
+    if (!isMailAddress(result.p_email)) throw invalid('Adresa de email nu este validă.');
     result.p_phone = text(input.phone, 7, 50);
     const digits = result.p_phone.replace(/\D/g, '');
     if (!/^\+?[0-9 ().-]+$/.test(result.p_phone) || digits.length < 7 || digits.length > 15) throw invalid('Numărul de telefon nu este valid.');
@@ -104,6 +105,7 @@ export function createHandler(config: Config, dependencies: Dependencies = {}) {
     const message = String(data?.message ?? '');
     if (response.status === 429 || /quota|rate.limit|too many|daily limit/i.test(message)) return new ApiError(429, 'rate_limit', 'Ai trimis prea multe cereri. Reîncearcă mai târziu.');
     if (response.status >= 500) return unavailable();
+    if (/\bBOOKING_RESTRICTED\b/.test(message)) return new ApiError(403, 'booking_restricted', 'Rezervările tale sunt restricționate. Contactează administratorul terenului.');
     if (/\bPRICE_CHANGED\b/i.test(message)) return new ApiError(409, 'price_changed', 'Prețul terenului s-a modificat. Verifică noul total și confirmă din nou rezervarea.');
     if (/one active booking per sport|one booking per sport/i.test(message)) return new ApiError(409, 'booking_limit', 'Poți avea o singură rezervare la același sport în aceeași zi, indiferent de teren sau oraș. Alege mai multe ore consecutive într-o singură rezervare.');
     if (/completed bookings cannot be cancelled|completed.*cancel/i.test(message)) return new ApiError(409, 'completed_booking', 'Rezervările finalizate nu pot fi anulate.');

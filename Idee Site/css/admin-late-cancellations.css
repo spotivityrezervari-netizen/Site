@@ -19,6 +19,16 @@
 .late-cancellation-events summary { min-height: 44px; padding: 10px 0; cursor: pointer; }
 .late-cancellation-events ul { padding-left: 20px; }
 .late-cancellation-events li { margin: 8px 0; overflow-wrap: anywhere; }
+.late-restriction-heading { margin: 24px 0 14px; color: #edca82; font-size: 20px; }
+.late-restriction-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(216,182,106,.25); }
+.late-restriction-field { display: grid; gap: 7px; min-width: 0; color: #d2ccbd; font-size: 13px; }
+.late-restriction-controls :is(select,input[type="text"]) { width: 100%; min-width: 0; min-height: 44px; margin: 0; padding: 9px 10px; border: 1px solid rgba(216,182,106,.4); border-radius: 8px; background: #17271c; color: #f7f3e8; font: inherit; }
+.late-restriction-global { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; min-height: 44px; color: #d2ccbd; font-size: 13px; }
+.late-restriction-global input { width: 20px; height: 20px; margin: 0; }
+.late-restriction-button { width: auto; justify-self: start; min-height: 44px; margin: 0; padding: 10px 14px; border: 1px solid rgba(216,182,106,.5); border-radius: 8px; background: #243329; color: #f7f3e8; font: inherit; font-size: 13px; cursor: pointer; }
+.late-restriction-button:disabled { opacity: .6; cursor: wait; }
+.late-restriction-active h4 { margin: 0; color: #f7f3e8; font-size: 17px; overflow-wrap: anywhere; }
+.late-restriction-controls :is(select,input,button):focus-visible, .late-restriction-button:focus-visible { outline: 2px solid #edca82; outline-offset: 3px; }
 .booking-attendance { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(216,182,106,.25); text-align: left; }
 .booking-attendance-label { margin: 0 0 8px; color: #edca82; font-size: 13px; font-weight: 600; }
 .booking-attendance-actions { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -35,4 +45,5 @@
  .late-cancellation-customer { padding: 14px; }
  .late-cancellation-customer-heading { align-items: flex-start; }
  .late-cancellation-close { padding: 10px; }
+ .late-restriction-controls { grid-template-columns: minmax(0, 1fr); }
 }

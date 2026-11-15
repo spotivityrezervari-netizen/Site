@@ -133,7 +133,7 @@ let passed=0;
   console.log('PASS passwords are cleared after login/register attempts, close, Escape and logout while email retry data stays available');passed++;
   const chooserUrl=normal.page.url();await normal.page.locator('button.card-sport[data-sport="Fotbal"]').click();await normal.page.locator('#modal-terenuri').waitFor({state:'visible'});assert.equal(normal.page.url(),chooserUrl);
   const image=normal.page.locator('.card-teren-poza img');await image.waitFor();await normal.page.waitForFunction(()=>document.querySelector('.card-teren-poza img')?.naturalWidth>0);
-  assert.equal(await image.evaluate(node=>node.src),new URL('assets/imagini/avatar2.png',base).href);
+  assert.equal(await image.evaluate(node=>node.src),new URL('assets/imagini/spotivity-256.webp',base).href);
   console.log('PASS a court without a photo gets a valid image in the same card layout');passed++;
   assert.deepEqual(errors,[]);console.log(`\n${passed} recovery and photo checks passed.`);
  }finally{for(const context of contexts)await context.close();await browser.close()}

@@ -7,7 +7,7 @@ import {request} from 'node:http';
 import {createRequire} from 'node:module';
 
 const require=createRequire(import.meta.url);
-const {servePublicArtifact}=require('../../Idee Site/supabase/tests/public-artifact-server.cjs');
+const {servePublicArtifact,parseRedirects}=require('../../Idee Site/supabase/tests/public-artifact-server.cjs');
 
 async function fixture(t,options={}){
   const temporary=await mkdtemp(join(tmpdir(),'spotivity-route-server-'));
@@ -26,10 +26,25 @@ async function fixture(t,options={}){
   }
   await writeFile(join(temporary,'outside.txt'),'private outside');
   await symlink(join(temporary,'outside.txt'),join(directory,'escape.txt'));
-  const site=await servePublicArtifact({directory,...options});
+  const {redirects,...serverOptions}=options;
+  if(redirects)await writeFile(join(directory,'_redirects'),redirects);
+  const site=await servePublicArtifact({directory,...serverOptions});
   t.after(()=>site.close());
   return site;
 }
+
+test('reviewed Netlify aliases force one-hop301 and preserve query; Pages keeps native static behavior',async t=>{
+  const redirects='/terenuri/fotbal/old-1/ /terenuri/tenis/current-1/ 301!\n/terenuri/fotbal/old-1 /terenuri/tenis/current-1/ 301!\n';
+  const site=await fixture(t,{redirects,prefix:'/Site/Idee%20Site/'});
+  for(const route of ['terenuri/fotbal/old-1/','terenuri/fotbal/old-1']){
+    const response=await fetch(site.url+route+'?code=fixture',{redirect:'manual'});
+    assert.equal(response.status,301);assert.equal(response.headers.get('location'),'/Site/Idee%20Site/terenuri/tenis/current-1/?code=fixture');
+  }
+  assert.equal((await fetch(site.url+'_redirects')).status,404);
+  const pages=await fixture(t,{redirects,applyHeaders:false});
+  assert.equal((await fetch(pages.url+'terenuri/fotbal/old-1/',{redirect:'manual'})).status,404);
+  for(const value of ['/terenuri/fotbal/x-1/ https://evil.example/ 301!', '/private/ /terenuri/fotbal/x-1/ 301!', '/terenuri/fotbal/x-1/ /terenuri/fotbal/y-1/ 302'])assert.throws(()=>parseRedirects(value),/Invalid/);
+});
 
 function rawRequest(base,path,method='GET'){
   return new Promise((resolve,reject)=>{

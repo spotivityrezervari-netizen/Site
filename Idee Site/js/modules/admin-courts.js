@@ -4,6 +4,90 @@
     const modules = window.SpotivityModules = window.SpotivityModules || {};
     modules.adminCourts = function(context) {
         const { db, state } = context;
+        const photoBucket = 'poze_terenuri';
+        const photoTypes = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/avif': 'avif', 'image/gif': 'gif' };
+        const photoPathPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[a-z0-9][a-z0-9_.-]{0,199}$/i;
+        const pendingPhotos = new Map();
+        const inFlightPhotos = new Set();
+        const queueKey = userId => `spotivity-court-photo-cleanup:${userId}`;
+        function queuedPhotos(userId) {
+            if (!pendingPhotos.has(userId)) {
+                let value = [];
+                try { value = JSON.parse(localStorage.getItem(queueKey(userId)) || '[]'); } catch { /* Storage can be unavailable. */ }
+                pendingPhotos.set(userId, Array.isArray(value) ? value.filter(path => typeof path === 'string' && photoPathPattern.test(path)).slice(-50) : []);
+            }
+            return pendingPhotos.get(userId);
+        }
+        function queuePhoto(userId, path, remove = false) {
+            const paths = queuedPhotos(userId).filter(value => value !== path);
+            if (!remove) paths.push(path);
+            pendingPhotos.set(userId, paths.slice(-50));
+            try { localStorage.setItem(queueKey(userId), JSON.stringify(paths.slice(-50))); } catch { /* Retry within this page still works. */ }
+        }
+        function photoPath(url) {
+            if (typeof url !== 'string') return null;
+            try {
+                const parsed = new URL(url);
+                if (parsed.origin !== new URL(supabaseUrl).origin) return null;
+                const match = parsed.pathname.match(/^\/storage\/v1\/(?:object\/public|render\/image\/public)\/poze_terenuri\/(.+)$/);
+                const path = match && decodeURIComponent(match[1]);
+                return path && photoPathPattern.test(path) ? path : null;
+            } catch { return null; }
+        }
+        async function photoOperation(userId, sameContext) {
+            const check = () => { if (!sameContext()) throw new Error('Sesiunea s-a schimbat. Conectează-te din nou.'); };
+            check();
+            const { data: identity, error: identityError } = await db.auth.getUser(); check();
+            const { data: auth, error: authError } = await db.auth.getSession(); check();
+            const session = auth?.session;
+            if (identityError || authError || identity?.user?.id !== userId || session?.user?.id !== userId || !session.access_token || !session.refresh_token) throw new Error('Autentifică-te din nou.');
+            const client = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
+            const { error } = await client.auth.setSession({ access_token: session.access_token, refresh_token: session.refresh_token }); check();
+            const { data: verified, error: verifyError } = await client.auth.getUser(); check();
+            if (error || verifyError || verified?.user?.id !== userId) throw new Error('Autentifică-te din nou.');
+            return { client, userId, isSuper: state.account?.is_super === true, path: null };
+        }
+        async function removePhoto(operation, path) {
+            if (!path || !photoPathPattern.test(path) || (!operation.isSuper && path.split('/')[0] !== operation.userId)) return false;
+            try {
+                // Migration 039 checks ALL court references server-side. It also
+                // protects successful writes whose acknowledgement was lost.
+                const { data, error } = await operation.client.storage.from(photoBucket).remove([path]);
+                if (error || !Array.isArray(data) || !data.some(item => item.name === path)) return false;
+                queuePhoto(operation.userId, path, true);
+                return true;
+            } catch { return false; }
+        }
+        async function retryPhotos(operation) {
+            for (const path of [...queuedPhotos(operation.userId)]) {
+                if (!inFlightPhotos.has(path)) await removePhoto(operation, path);
+            }
+        }
+        async function uploadPhoto(operation, file) {
+            const extension = photoTypes[file.type];
+            if (!extension || !Number.isFinite(file.size) || file.size < 1 || file.size > 5242880) throw new Error('Alege o imagine JPG, PNG, WebP, AVIF sau GIF de maximum 5 MB.');
+            const path = `${operation.userId}/${crypto.randomUUID()}.${extension}`;
+            operation.path = path;
+            inFlightPhotos.add(path);
+            queuePhoto(operation.userId, path);
+            const { error } = await operation.client.storage.from(photoBucket).upload(path, file);
+            if (error) throw new Error('Eroare la urcarea pozei: ' + error.message);
+            const url = operation.client.storage.from(photoBucket).getPublicUrl(path)?.data?.publicUrl;
+            if (!url || photoPath(url) !== path) throw new Error('Adresa fotografiei nu poate fi verificată.');
+            return url;
+        }
+        async function finishPhoto(operation, saved) {
+            if (!operation?.path) return;
+            inFlightPhotos.delete(operation.path);
+            if (saved) queuePhoto(operation.userId, operation.path, true);
+            else await removePhoto(operation, operation.path);
+        }
+        window.addEventListener('spotivity:admin-role', () => {
+            const userId = state.account?.user_id;
+            if (!userId || !queuedPhotos(userId).length) return;
+            const sameContext = context.captureContext();
+            void photoOperation(userId, sameContext).then(retryPhotos).catch(() => {});
+        });
         window.incarcaTerenuriAdmin = async function() {
             const authRequest = state.authGeneration;
             const container = document.getElementById('container-lista-terenuri');
@@ -21,7 +105,7 @@
                 html += `
                     <div class="admin-existing-court" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; color: white; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                         <div style="display: flex; gap: 15px; align-items: center;">
-                            <img src="${window.escapeHtml(window.appAssetUrl(t.poza) || window.appAssetUrl('assets/imagini/avatar2.png'))}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 5px;">
+                            <img src="${window.escapeHtml(window.appAssetUrl(t.poza) || window.appAssetUrl('assets/imagini/spotivity-256.webp'))}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 5px;">
                             <div>
                                 <h4 style="margin: 0 0 5px 0; color: #f59e0b;">${window.escapeHtml(t.sport)} - ${window.escapeHtml(t.nume)}</h4>
                                 <p style="margin: 0; font-size: 13px; color: #ccc;">Preț: ${t.pret} Lei/oră | Minge: ${textMinge}</p>
@@ -71,35 +155,39 @@
 
             let dateDeUpdatat = { oras, pret: parseInt(pret), optiune_minge: minge, pret_minge: parseInt(pretMinge), este_activ: esteActiv, are_chat: areChat, ore_rezervabile: oreRezervabile };
 
-            if (fileInput && fileInput.files && fileInput.files[0]) {
-                const file = fileInput.files[0];
-                const ext = file.name.split('.').pop();
-                const { data: currentAuth } = await db.auth.getUser();
-                if (!sameContext()) return;
-                if (!currentAuth.user || currentAuth.user.id !== savingUserId) { if (btnSave) btnSave.disabled = false; return alert('Autentifică-te din nou.'); }
-                const fileName = `${currentAuth.user.id}/${crypto.randomUUID()}.${ext}`;
-
-                const { error: uploadError } = await db.storage.from('poze_terenuri').upload(fileName, file);
-                if (!sameContext()) return;
-                if (uploadError) {
-                    if(btnSave) { btnSave.innerText = `Salvează Setările pt ${numeTeren}`; btnSave.disabled = false; }
-                    return alert("Eroare la urcarea pozei: " + uploadError.message);
+            let operation = null, savedPhoto = false, previousPhoto = null;
+            try {
+                if (fileInput?.files?.[0]) {
+                    operation = await photoOperation(savingUserId, sameContext);
+                    await retryPhotos(operation);
+                    const before = await operation.client.from('terenuri').select('poza').eq('id', idDB).maybeSingle();
+                    if (before.error || !before.data) throw new Error('Setările terenului nu pot fi verificate. Reîncarcă pagina.');
+                    if (!sameContext()) return;
+                    previousPhoto = photoPath(before.data.poza);
+                    dateDeUpdatat.poza = await uploadPhoto(operation, fileInput.files[0]);
                 }
-
-                const { data: publicUrlData } = db.storage.from('poze_terenuri').getPublicUrl(fileName);
-                dateDeUpdatat.poza = publicUrlData.publicUrl;
-            }
-
-            if (!sameContext()) return;
-            const { error } = await db.from('terenuri').update(dateDeUpdatat).eq('id', idDB);
-            if (!sameContext()) return;
-            if (!error) {
+                if (!sameContext()) return;
+                const client = operation?.client || db;
+                const { error } = await client.from('terenuri').update(dateDeUpdatat).eq('id', idDB);
+                if (error) throw error;
+                if (operation) {
+                    const after = await client.from('terenuri').select('poza').eq('id', idDB).maybeSingle();
+                    if (after.error || after.data?.poza !== dateDeUpdatat.poza) throw new Error('Salvarea fotografiei nu poate fi confirmată. Reîncarcă setările înainte să reîncerci.');
+                    savedPhoto = true;
+                    if (previousPhoto && previousPhoto !== operation.path && (operation.isSuper || previousPhoto.split('/')[0] === operation.userId)) {
+                        queuePhoto(operation.userId, previousPhoto);
+                        await removePhoto(operation, previousPhoto);
+                    }
+                }
+                if (!sameContext()) return;
                 alert('Setări salvate!');
                 await window.refreshSpotivityAdminAccess?.({ force: true });
+            } catch (error) {
+                if (sameContext()) alert('Eroare: ' + (error.message || 'Setările nu pot fi salvate.'));
+            } finally {
+                await finishPhoto(operation, savedPhoto);
+                if (sameContext()) { btnSave.innerText = `Salvează Setările pt ${numeTeren}`; btnSave.disabled = false; }
             }
-            else alert("Eroare: " + error.message);
-
-            if(btnSave) { btnSave.innerText = `Salvează Setările pt ${numeTeren}`; btnSave.disabled = false; }
         };
         window.deschideModalAdaugaTeren = function() {
             if (!state.account?.is_super) return;
@@ -134,44 +222,35 @@
             if (!nume || !pret || !locatie) return alert("Completează câmpurile!");
             const btn = document.getElementById('btn-adauga-teren'); btn.innerText = "Se salvează..."; btn.disabled = true;
 
-            let urlPoza = null;
-            if (fileInput && fileInput.files && fileInput.files[0]) {
-                const file = fileInput.files[0];
-                const ext = file.name.split('.').pop();
-                const { data: currentAuth } = await db.auth.getUser();
-                if (!sameContext()) return;
-                if (!currentAuth.user || currentAuth.user.id !== savingUserId) { btn.disabled = false; return alert('Autentifică-te din nou.'); }
-                const fileName = `${currentAuth.user.id}/${crypto.randomUUID()}.${ext}`;
-
-                // Urcăm fișierul fizic în Storage (Bucket: poze_terenuri)
-                const { data: uploadData, error: uploadError } = await db.storage
-                    .from('poze_terenuri')
-                    .upload(fileName, file);
-                if (!sameContext()) return;
-                if (uploadError) {
-                    alert("Eroare la urcarea pozei: " + uploadError.message);
-                    btn.innerText = "Adaugă Teren"; btn.disabled = false;
-                    return;
+            let urlPoza = null, operation = null, savedPhoto = false;
+            try {
+                if (fileInput?.files?.[0]) {
+                    operation = await photoOperation(savingUserId, sameContext);
+                    await retryPhotos(operation);
+                    if (!sameContext()) return;
+                    urlPoza = await uploadPhoto(operation, fileInput.files[0]);
                 }
-
-                // Extragem link-ul public către poză
-                const { data: publicUrlData } = db.storage.from('poze_terenuri').getPublicUrl(fileName);
-                urlPoza = publicUrlData.publicUrl;
-            }
-
-            if (createAuthRequest !== state.authGeneration || !state.account?.is_super) return;
-            const { error } = await db.from('terenuri').insert([{
-                nume, sport, oras, pret: parseInt(pret), optiune_minge: minge, pret_minge: parseInt(pretMinge), locatie, poza: urlPoza, este_activ: true, baza_sportiva_id: bazaSportivaId
-            }]);
-            if (createAuthRequest !== state.authGeneration) return;
-
-            if (error) alert("Eroare DB: " + error.message);
-            else {
-                alert("Teren adăugat!");
+                if (!sameContext() || createAuthRequest !== state.authGeneration || !state.account?.is_super) return;
+                const client = operation?.client || db;
+                const { error } = await client.from('terenuri').insert([{
+                    nume, sport, oras, pret: parseInt(pret), optiune_minge: minge, pret_minge: parseInt(pretMinge), locatie, poza: urlPoza, este_activ: true, baza_sportiva_id: bazaSportivaId
+                }]);
+                if (error) throw error;
+                if (operation) {
+                    const after = await client.from('terenuri').select('id').eq('poza', urlPoza).maybeSingle();
+                    if (after.error || !after.data) throw new Error('Salvarea terenului nu poate fi confirmată. Reîncarcă lista înainte să reîncerci.');
+                    savedPhoto = true;
+                }
+                if (!sameContext()) return;
+                alert('Teren adăugat!');
                 document.getElementById('modal-adauga-teren').style.display = 'none';
                 await window.refreshSpotivityAdminAccess?.({ force: true });
+            } catch (error) {
+                if (sameContext()) alert('Eroare DB: ' + (error.message || 'Terenul nu poate fi salvat.'));
+            } finally {
+                await finishPhoto(operation, savedPhoto);
+                if (sameContext()) { btn.innerText = 'Adaugă Teren'; btn.disabled = false; }
             }
-            btn.innerText = "Adaugă Teren"; btn.disabled = false;
         });
         window.stergeTerenDublaConfirmare = async function(idDB, numeTeren) {
             if (!state.account?.is_super) return;

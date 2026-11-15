@@ -1,0 +1,52 @@
+# Remedieri tehnice — noiembrie 2026
+
+Această actualizare repară problemele identificate la audit. Publicarea pe Netlify rămâne oprită; commiturile intermediare includ `[skip netlify]`. Un push Git nu aplică singur migrările sau funcțiile Supabase.
+
+## Funcții și date
+
+Ordinea de instalare pentru o bază aflată la migrarea 035 este **036 → 037 → 038 → 039**, înaintea noului frontend. Nu reaplica migrările vechi peste o instalare existentă. Protecțiile migrărilor refuză obiecte necunoscute sau versiuni deja depășite.
+
+- **036:** anularea explicită a unei rezervări manuale eligibile folosește acum fluxul de incidente și notificări al rezervărilor grupate. Nu transformă în masă rezervările vechi și nu generează emailuri istorice. Contactele istorice nevalide rămân anulabile; nu se inventează destinatari pentru ele.
+- **037:** restricții manuale pentru rezervări, cu permisiuni verificate în SQL și jurnal privat. Un administrator poate acționa numai pentru terenurile alocate; superadminul poate alege și întregul site. Restricția nu închide contul și nu anulează rezervările existente.
+- **038:** API-ul, SQL și rendererul de email acceptă același contract de adresă. O adresă care nu poate fi folosită de expeditor este respinsă înainte de ocuparea unui interval nou.
+- **039:** ștergerea unei fotografii din `poze_terenuri` este permisă numai în limitele de acces existente și dacă niciun teren nu o mai referă, inclusiv terenurile ascunse utilizatorului. Migrarea nu șterge obiecte existente.
+
+Funcțiile Edge `booking-workflow`, `club-applications` și `booking-notifications` trebuie publicate separat cu toate importurile locale, inclusiv `_shared/email-address.ts` și, unde este folosit, `_shared/public-rate-limit.ts`. `verify_jwt=false` se păstrează pentru handler-ele care verifică explicit sesiunea sau autorizarea serviciului. Nu introduce chei de serviciu în frontend.
+
+## Restricționarea unui client
+
+În administrare, deschide **Anulări târzii / neprezentări**. De la 3 abateri vizibile în aria administrată, cardul clientului permite alegerea duratei de **3, 7, 14 sau 30 de zile**, ori **Permanentă**. Decizia necesită confirmare și poate avea o notă internă. Nu există blocare automată.
+
+Superadminul poate selecta aplicarea generală; administratorul obișnuit nu poate bloca rezervările la terenurile altcuiva. Restricțiile active pot fi ridicate din același panou. Expirarea temporară este verificată pe server. Mutarea unei rezervări la alt interval nu ocolește o restricție activă.
+
+Restricțiile conturilor sunt legate de identitatea Auth. Pentru rezervările fără cont, serverul verifică și contactele curente corespunzătoare; un contact anonim inventat nu poate fi identificat cu certitudine ca aceeași persoană. O rezervare de oaspete nu poate crea singură o restricție pentru un cont verificat al altcuiva.
+
+## Interfață, imagini și SEO
+
+- Refuzul sau umplerea `localStorage` nu mai întrerupe inițializarea aplicației. Limba revine sigur la o valoare acceptată.
+- Istoricul deschis se redesenează la limita de expirare din datele deja încărcate, fără polling de bază de date; timerul se oprește la închidere, ascundere sau deconectare.
+- Resursele inițiale de brand folosesc `spotivity-32.png`, `spotivity-96.png` și `spotivity-256.webp`. Originalul rămâne disponibil pentru referințe vechi și imaginea de partajare, dar nu este folosit ca logo/fotografie implicită încărcată inițial.
+- La salvarea nereușită a unei fotografii noi se încearcă recuperarea obiectului încărcat. Înlocuirile confirmate curăță vechiul obiect numai dacă nu mai este referit. O confirmare pierdută nu permite ștergerea unei fotografii deja salvate în teren. Eșecurile de rețea sau de autorizare la cleanup nu șterg alte imagini și nu maschează eroarea originală.
+- `scripts/seo-route-history.json` păstrează identitatea adreselor deja generate. Redenumirile și mutările generează aliasuri directe spre ruta curentă; GitHub Pages primește fallback HTML și redirect extern compatibil CSP, iar buildul Netlify produce reguli 301 pentru o publicare viitoare. Entitățile retrase nu sunt prezentate ca active.
+
+## Emailuri și limita Make
+
+Nu este necesar un al treilea scenariu activ. Scenariul central **7938404** primește rezervările, anulările, prezența/neprezentarea, bun venitul, chatul și anunțurile din panoul superadminului. Destinatarul și conținutul sunt verificate și generate pe server. Ruta de notificări păstrează procesarea secvențială, confidențialitatea și registrul de deduplicare; nu adaugă CC/BCC.
+
+`scripts/make-chat.mjs` este transformarea pură, testată, care adaugă tipurile `chat_owner` și `chat_client` la ruta existentă. Nu conține webhookuri sau credențiale și nu face apeluri de provider. Destinația de chat din configurația privată Supabase se aliniază cu webhookul central după verificarea blueprintului. Scenariul vechi de chat poate rămâne oprit. Scenariile manuale vechi nu trebuie confundate cu trimiterea din panoul superadminului.
+
+Un răspuns acceptat de Make nu garantează livrarea în inbox. Nu relua manual execuția direct de la Gmail după un rezultat incert; verifică mai întâi starea din registrul privat de livrări.
+
+## Verificare
+
+Testele folosesc PostgreSQL temporar, Chromium și transporturi simulate. Acoperă rolurile/scopurile, restricțiile și expirarea lor, anulările manuale, validarea emailurilor, curățarea sigură a imaginilor, storage indisponibil, istoricul, aliasurile și fluxurile obișnuite de rezervare/admin.
+
+Înainte de push:
+
+```bash
+node --test scripts/tests/*.test.mjs
+node scripts/generate-seo-pages.mjs --check
+node scripts/build-public.mjs
+```
+
+Testele SQL suplimentare sunt în `supabase/tests/{manual-booking-cancellations,client-restrictions,guest-email-validation,court-photo-cleanup}.test.cjs`; variantele de ID numeric se rulează cu `SPOTIVITY_TEST_INTEGER_IDS=1`. Testele de browser corespunzătoare și `public-resilience-browser.test.cjs` nu modifică proiectul real. Pentru actualizarea catalogului și regenerarea adreselor, urmează `scripts/SEO_PAGES.md` și păstrează fișierul de istoric în Git.

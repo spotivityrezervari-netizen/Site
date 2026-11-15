@@ -118,7 +118,8 @@
             document.querySelectorAll('.super-admin-only').forEach(node => { node.style.display = 'none'; });
             state.managedCourts = [];
             context.chat.clearState({ preserveDrafts: preserveChatDrafts, retainedCourts: retainedChatCourts });
-            localStorage.removeItem('admin_session');
+            try { localStorage.removeItem('admin_session'); }
+            catch { /* Continue clearing privileged UI even when browser storage is blocked. */ }
             context.modalNodes().forEach(modal => { modal.style.display = 'none'; });
             document.querySelectorAll('#base-admin-workspace .modal input, #base-admin-workspace .modal textarea').forEach(input => {
                 if (input.type === 'checkbox' || input.type === 'radio') input.checked = false;

@@ -82,7 +82,12 @@
             }
         };
 
-        window.lang = localStorage.getItem('limba_app') || 'ro';
+        const supportedLanguages = new Set(['ro', 'hu', 'en']);
+        const languageOrDefault = value => supportedLanguages.has(value) ? value : 'ro';
+        let storedLanguage;
+        try { storedLanguage = localStorage.getItem('limba_app'); }
+        catch { /* Language persistence is optional; Auth and booking still mount. */ }
+        window.lang = languageOrDefault(storedLanguage);
         window.tipIstoricDeschis = null; // Stochează ce tip de istoric este deschis ("active" sau "istoric")
 
         // Funcție globală utilitară pentru traducerea automată a zilelor reținute în BD
@@ -129,8 +134,9 @@
         Object.assign(window.dict.en, {cauta_teren:'Find a court',cauta_teren_placeholder:'Court name',niciun_teren_cautare:'No courts match this name.'});
 
         window.schimbaLimba = function(limbaNoua) {
-            window.lang = limbaNoua;
-            localStorage.setItem('limba_app', window.lang);
+            window.lang = languageOrDefault(limbaNoua);
+            try { localStorage.setItem('limba_app', window.lang); }
+            catch { /* Keep the chosen language in memory when storage is unavailable. */ }
 
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const cheie = el.getAttribute('data-i18n');
@@ -148,7 +154,7 @@
 
             // Colorare și Evidențiere buton limbă (Activ)
             document.querySelectorAll('.btn-lang').forEach(btn => {
-                if (btn.id === `btn-lang-${limbaNoua}`) {
+                if (btn.id === `btn-lang-${window.lang}`) {
                     btn.style.background = 'rgba(255,255,255,0.16)';
                     btn.style.color = '#fff';
                     btn.style.boxShadow = 'none';

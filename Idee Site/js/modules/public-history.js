@@ -5,7 +5,67 @@
     const modules = window.SpotivityModules ||= {};
     modules.publicHistory = function(context) {
         const { db, state, services } = context;
-        let historyRequest = 0;
+        let historyRequest = 0, expiryTimer = null, snapshot = null, mounted = false;
+        const hourMs = 60 * 60 * 1000;
+        const maxTimerMs = 2147483647;
+        const bucharestParts = new Intl.DateTimeFormat('en-GB', {
+            timeZone: 'Europe/Bucharest', year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+        });
+        const historyIsOpen = () => {
+            const modal = document.getElementById('modal-lista-rezervari');
+            return !!modal && !modal.hidden && modal.style.display === 'flex';
+        };
+        function stopExpiryTimer() { clearTimeout(expiryTimer); expiryTimer = null; }
+        function invalidate() {
+            historyRequest++;
+            snapshot = null;
+            stopExpiryTimer();
+        }
+        function slotEnd(row) {
+            const startsAt = Date.parse(row.starts_at || '');
+            if (Number.isFinite(startsAt)) return startsAt + hourMs;
+            const day = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(row.data_str || ''));
+            const time = /^(\d{2}):(\d{2})$/.exec(String(row.ora || ''));
+            if (!day || !time || Number(time[1]) > 23 || Number(time[2]) > 59) return NaN;
+            // Resolve a civil Bucharest slot, including DST, independently of
+            // the browser's timezone. Booking starts are outside the DST gap.
+            const wanted = Date.UTC(Number(day[1]), Number(day[2]) - 1, Number(day[3]), Number(time[1]), Number(time[2]));
+            let instant = wanted;
+            for (let i = 0; i < 3; i++) {
+                const parts = bucharestParts.formatToParts(new Date(instant));
+                const part = type => Number(parts.find(value => value.type === type).value);
+                const local = Date.UTC(part('year'), part('month') - 1, part('day'), part('hour'), part('minute'));
+                if (local === wanted) return instant + hourMs;
+                instant += wanted - local;
+            }
+            return NaN;
+        }
+        function scheduleExpiry() {
+            stopExpiryTimer();
+            if (!snapshot || snapshot.owner !== state.user?.id || !historyIsOpen() || document.hidden) return;
+            const now = Date.now();
+            let next = Infinity;
+            for (const row of snapshot.data) {
+                const end = slotEnd(row);
+                if (Number.isFinite(end)) {
+                    if (row.stare !== 'anulata' && end > now) next = Math.min(next, end);
+                    // Default history also expires hourly rows after 30 days.
+                    const retainedUntil = end + 30 * 24 * hourMs + 1;
+                    if (retainedUntil > now) next = Math.min(next, retainedUntil);
+                } else if (row.stare !== 'anulata' && !window.esteRezervareTrecuta(row.data_str, row.ora, row.timestamp_start)) {
+                    // Only pre-migration civil dates need the minute fallback;
+                    // it redraws cached rows and never polls the database.
+                    next = Math.min(next, now + 60000 - now % 60000);
+                }
+            }
+            if (Number.isFinite(next)) expiryTimer = setTimeout(refreshCachedHistory, Math.min(maxTimerMs, Math.max(50, next - now + 25)));
+        }
+        function refreshCachedHistory() {
+            stopExpiryTimer();
+            if (!snapshot || snapshot.owner !== state.user?.id || !historyIsOpen() || document.hidden) return;
+            renderHistory(snapshot.data, snapshot.tip, true);
+        }
         const slotAmount = row => parseFloat(String(row.pret_total).replace(',', '.')) || 0;
         const amount = rows => `${rows.reduce((sum, row) => sum + slotAmount(row), 0).toLocaleString('ro-RO', { maximumFractionDigits: 2 })} RON`;
         function hourIntervals(rows) {
@@ -31,6 +91,8 @@
         async function deschideIstoric(tip) {
             if (!state.user) return;
             const owner = state.user.id, request = ++historyRequest;
+            snapshot = null;
+            stopExpiryTimer();
             window.tipIstoricDeschis = tip;
             document.getElementById('modal-profil').style.display = 'none';
             document.getElementById('modal-lista-rezervari').style.display = 'flex';
@@ -55,6 +117,12 @@
                 container.innerHTML = `<p style='color:white; text-align:center;'>${window.dict[window.lang]['fara_rezervari']}</p>`; return;
             }
 
+            snapshot = { owner, tip, data };
+            renderHistory(data, tip);
+        }
+
+        function renderHistory(data, tip, preserveView = false) {
+            const container = document.getElementById('container-rezervari');
             const cards = [];
             const grouped = new Map();
             data.forEach(row => {
@@ -113,7 +181,7 @@
                     : '';
                 const totalLabel = partial ? 'Total ore păstrate' : r.stare === 'anulata' ? 'Valoare anulată' : 'Total';
                 cards.push(`
-                    <div style="background: rgba(255,255,255,0.05); border: 1px solid ${culoareBorder}; padding: 15px; border-radius: 8px; color: white; margin-bottom: 10px; opacity: ${opacitate};">
+                    <div data-history-key="${window.escapeHtml(r.booking_group_id ? `group:${r.booking_group_id}` : `legacy:${r.id}`)}" style="background: rgba(255,255,255,0.05); border: 1px solid ${culoareBorder}; padding: 15px; border-radius: 8px; color: white; margin-bottom: 10px; opacity: ${opacitate};">
                         <h4 style="margin: 0 0 10px 0; color: ${culoareTitlu};">⚽ ${window.escapeHtml(r.sport)} - ${window.escapeHtml(r.teren)} ${window.escapeHtml(numeOras)}${textExtra}</h4>
                         <p style="margin: 5px 0;">📅 ${window.escapeHtml(dataTradusa)} | ⏰ ${window.escapeHtml(displayHours)}</p>
                         <p style="margin: 5px 0;">${totalLabel}: <strong>${window.escapeHtml(r.pret_total)}</strong></p>
@@ -123,11 +191,40 @@
                 `);
             });
 
+            const active = document.activeElement;
+            const focusWasInside = preserveView && !!active && container.contains(active);
+            const focusedGroup = focusWasInside ? active.closest('[data-history-key]')?.dataset.historyKey : null;
+            const focusKey = focusWasInside ? ['data-id', 'data-booking-id', 'data-teren', 'data-location']
+                .map(attribute => [attribute, active.getAttribute(attribute)]).filter(([, value]) => value !== null) : [];
+            const scrollers = preserveView ? [container, document.getElementById('modal-lista-rezervari'),
+                document.querySelector('#modal-lista-rezervari .modal-continut')].filter(Boolean).map(node => [node, node.scrollTop]) : [];
             container.innerHTML = cards.join('');
             if (cards.length === 0) container.innerHTML = `<p style='color:white; text-align:center;'>${window.dict[window.lang]['fara_rezervari']}</p>`;
+            if (focusWasInside) {
+                const replacement = focusKey.length && [...container.querySelectorAll('button')]
+                    .find(button => button.closest('[data-history-key]')?.dataset.historyKey === focusedGroup
+                        && focusKey.every(([attribute, value]) => button.getAttribute(attribute) === value));
+                if (replacement) replacement.focus({ preventScroll: true });
+                else { container.tabIndex = -1; container.focus({ preventScroll: true }); }
+            }
+            scrollers.forEach(([node, scrollTop]) => { node.scrollTop = scrollTop; });
+            scheduleExpiry();
         }
 
         function mount() {
+            if (mounted) return;
+            mounted = true;
+            const modal = document.getElementById('modal-lista-rezervari');
+            if (modal) new MutationObserver(() => {
+                if (historyIsOpen()) refreshCachedHistory();
+                else stopExpiryTimer();
+            }).observe(modal, { attributes: true, attributeFilter: ['style', 'hidden'] });
+            document.addEventListener('visibilitychange', refreshCachedHistory);
+            window.addEventListener('focus', refreshCachedHistory);
+            window.addEventListener('pageshow', refreshCachedHistory);
+            window.addEventListener('spotivity:profile-user', () => {
+                if (snapshot && snapshot.owner !== state.user?.id) invalidate();
+            });
             document.getElementById('btn-vezi-active')?.addEventListener('click', () => deschideIstoric("active"));
             document.getElementById('btn-vezi-istoric')?.addEventListener('click', () => deschideIstoric("istoric"));
             document.getElementById('inapoi-la-profil')?.addEventListener('click', () => {
@@ -188,6 +285,6 @@
                 }
             });
         }
-        return { open: deschideIstoric, mount, invalidate: () => { historyRequest++; } };
+        return { open: deschideIstoric, mount, invalidate };
     };
 })();

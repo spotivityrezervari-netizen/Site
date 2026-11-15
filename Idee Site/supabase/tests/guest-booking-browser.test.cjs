@@ -13,9 +13,9 @@ const selection = { court_id: '1', day: '2027-01-03', hours: ['13:00', '12:00'],
 const token = 'a'.repeat(64);
 const result = { booking_id: bookingId, court_name: 'Court A', day: selection.day, hours: ['12:00', '13:00'], total: 215, state: 'activa', notification_status: 'queued' };
 const attendanceWarnings = {
-    ro: 'La mai mult de 3 neprezentări, riști închiderea contului.',
-    hu: 'Több mint 3 meg nem jelenés esetén a fiókod megszüntetését kockáztatod.',
-    en: 'More than 3 no-shows may lead to your account being closed.'
+    ro: 'La mai mult de 3 neprezentări sau anulări târzii, riști închiderea contului.',
+    hu: 'Több mint 3 meg nem jelenés vagy késői lemondás esetén a fiókod megszüntetését kockáztatod.',
+    en: 'More than 3 no-shows or late cancellations may lead to your account being closed.'
 };
 let checks = 0;
 function pass(name) { checks++; process.stdout.write(`ok ${checks} - ${name}\n`); }

@@ -22,6 +22,16 @@ function parseHeaders(source){
   }
   return rules;
 }
+function parseRedirects(source){
+  const routes=new Map(),safe=/^\/(?:terenuri|baze-sportive)\/[a-z0-9/-]+\/?$/;
+  for(const line of source.split(/\r?\n/)){
+    if(!line.trim()||line.trimStart().startsWith('#'))continue;
+    const match=line.trim().match(/^(\S+)\s+(\S+)\s+301!$/);
+    if(!match||!safe.test(match[1])||!safe.test(match[2])||routes.has(match[1]))throw new Error('Invalid reviewed alias redirect');
+    routes.set(match[1],match[2]);
+  }
+  return routes;
+}
 const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8',
   '.json':'application/json','.xml':'application/xml; charset=utf-8','.txt':'text/plain; charset=utf-8',
   '.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp',
@@ -37,6 +47,11 @@ async function servePublicArtifact({directory,port=0,applyHeaders=true,mountPath
   const encodedMount=mount.split('/').map(encodeURIComponent).join('/');
   const root=await realpath(directory);
   const rules=applyHeaders?parseHeaders(await readFile(resolve(root,'_headers'),'utf8')):[];
+  let redirects=new Map();
+  if(applyHeaders){
+    try{redirects=parseRedirects(await readFile(resolve(root,'_redirects'),'utf8'));}
+    catch(error){if(error.code!=='ENOENT')throw error;}
+  }
   const server=createServer(async(req,res)=>{
     let pathname='/';
     try{
@@ -49,9 +64,12 @@ async function servePublicArtifact({directory,port=0,applyHeaders=true,mountPath
       pathname='/'+pathname.slice(mount.length);
       for(const rule of rules)if(rule.match.test(pathname))for(const [name,value]of Object.entries(rule.headers))res.setHeader(name,value);
       if(!['GET','HEAD'].includes(req.method)){res.writeHead(405);res.end();return;}
+      if(redirects.has(pathname)){
+        res.writeHead(301,{location:encodedMount.slice(0,-1)+redirects.get(pathname)+requested.search});res.end();return;
+      }
       const parts=pathname.split('/');
       // Netlify consumes _headers itself; it is not a published document.
-      if(parts.some(part=>part.startsWith('.')||part==='_headers')||/[\\\u0000-\u001f\u007f]/.test(pathname))throw new Error('Not public');
+      if(parts.some(part=>part.startsWith('.')||part==='_headers'||part==='_redirects')||/[\\\u0000-\u001f\u007f]/.test(pathname))throw new Error('Not public');
       const target=resolve(root,'.'+pathname);
       let path=await realpath(target),rel=relative(root,path);
       if(rel.startsWith('..'+sep)||rel==='..')throw new Error('Not a public file');
@@ -73,7 +91,7 @@ async function servePublicArtifact({directory,port=0,applyHeaders=true,mountPath
   return {url:`http://127.0.0.1:${server.address().port}${encodedMount}`,server,close:()=>new Promise((done,reject)=>server.close(error=>error?reject(error):done()))};
 }
 
-module.exports={servePublicArtifact,parseHeaders};
+module.exports={servePublicArtifact,parseHeaders,parseRedirects};
 if(require.main===module){
   servePublicArtifact({directory:process.env.PUBLIC_BUILD_DIR||process.argv[2],port:Number(process.env.PORT||0)})
     .then(({url})=>process.stdout.write(url+'\n')).catch(error=>{console.error(error.message);process.exitCode=1;});

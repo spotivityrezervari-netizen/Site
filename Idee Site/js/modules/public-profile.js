@@ -5,7 +5,8 @@
     const modules = window.SpotivityModules ||= {};
     modules.publicProfile = function(context) {
         const { db, state } = context;
-        localStorage.removeItem('user_session');
+        try { localStorage.removeItem('user_session'); }
+        catch { /* Legacy local caches never determine the authenticated profile. */ }
         function renderProfileUser() {
             const user = state.user;
             document.getElementById('profil-nume').textContent = user?.nume || '';

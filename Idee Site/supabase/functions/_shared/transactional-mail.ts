@@ -1,4 +1,5 @@
 /** Romanian transactional email templates. Rendering never sends mail or creates credentials. */
+import { isMailAddress } from './email-address.ts';
 export const TRANSACTIONAL_SITE_URL = 'https://spotivity.ro/';
 export const TRANSACTIONAL_SUPPORT_EMAIL = 'spotivity.rezervari@gmail.com';
 export const LEGACY_LATE_CANCELLATION_WARNING = 'La mai mult de 3 neprezentări, riști închiderea contului.';
@@ -33,7 +34,7 @@ const LEGACY_PATH = '/Site/Idee Site/';
 const CONTROL = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g;
 const escapeHTML = (value: unknown): string => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]!));
 const line = (value: unknown): string => String(value ?? '').replace(CONTROL, ' ').replace(/\s+/g, ' ').trim();
-const emailValid = (email: unknown): email is string => typeof email === 'string' && email.length <= 254 && /^[^\s@<>\u0000-\u001f\u007f]+@[^\s@<>\u0000-\u001f\u007f]+\.[^\s@<>\u0000-\u001f\u007f]+$/.test(email);
+const emailValid = isMailAddress;
 /** App links stay on the production origin/path, including client-only opaque capabilities. */
 export function validateTransactionalURL(value: string): string {
   if (typeof value !== 'string' || value.length > 4096 || /[\s\u0000-\u001f\u007f]/.test(value)) throw new TypeError('Invalid transactional email URL');

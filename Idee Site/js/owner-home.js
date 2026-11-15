@@ -212,7 +212,7 @@
         const brand = element('a', 'home-brand owner-home-brand');
         brand.href = '#owner-home'; brand.setAttribute('aria-label', 'Spotivity — pagina principală');
         const logo = element('img');
-        logo.src = window.appAssetUrl('assets/imagini/avatar2.png'); logo.alt = 'Spotivity'; logo.width = 30; logo.height = 30;
+        logo.src = window.appAssetUrl('assets/imagini/spotivity-96.png'); logo.alt = 'Spotivity'; logo.width = 30; logo.height = 30;
         brand.append(logo);
         const search = element('form', 'home-nav-search'); search.id = 'owner-home-nav-search';
         search.setAttribute('role', 'search'); search.setAttribute('aria-label', 'Caută în terenurile tale');
@@ -289,7 +289,7 @@
         const card = actionButton('', 'court', context, 'home-court-card owner-court-card');
         card.setAttribute('aria-label', `Editează ${court.nume || 'terenul'}, ${displaySport(sport)}, ${court.oras || base?.oras || ''}${court.este_activ === false ? ', ascuns clienților' : ''}`);
         const image = element('img', 'home-court-photo');
-        const fallbackPhoto = window.appAssetUrl('assets/imagini/avatar2.png');
+        const fallbackPhoto = window.appAssetUrl('assets/imagini/spotivity-256.webp');
         image.src = safeImage(court.poza) || fallbackPhoto;
         image.alt = ''; image.width = 240; image.height = 160; image.loading = 'lazy'; image.decoding = 'async';
         image.addEventListener('error', () => { if (image.getAttribute('src') !== fallbackPhoto) image.src = fallbackPhoto; });

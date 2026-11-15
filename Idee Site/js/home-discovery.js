@@ -99,7 +99,7 @@
             if (bookingBusy) card.setAttribute('aria-disabled', 'true');
             card.setAttribute('aria-label', `${t('reserve')} ${court.nume}, ${translatedSport(court)}, ${cityName(court.oras)}`);
             const image = node('img', 'home-court-photo');
-            image.src = window.appAssetUrl?.(court.poza) || window.appAssetUrl('assets/imagini/avatar2.png');
+            image.src = window.appAssetUrl?.(court.poza) || window.appAssetUrl('assets/imagini/spotivity-256.webp');
             image.alt = '';
             image.width = 240; image.height = 160; image.loading = 'lazy';
             image.addEventListener('error', () => { image.remove(); }, { once: true });

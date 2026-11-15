@@ -90,11 +90,9 @@ async function openProfile(page) {
     for (const file of ['014_booking_groups.sql', '015_profile_contact.sql', '016_notification_outbox.sql', '017_base_avatars.sql', '018_google_profile_names.sql', '019_owner_court_creation.sql', '020_final_sport_backgrounds.sql', '021_account_welcome.sql', '022_email_booking_context.sql', '023_late_cancellations.sql', '024_client_chat_notifications.sql', '025_admin_late_cancellation_scope.sql', '026_retired_court_identity.sql']) {
       await pg.exec(readFileSync(join(__dirname, '..', file), 'utf8'));
     }
-    // Keep this legacy-booking fixture's dispatcher compatible with the additive
-    // worker kind. Full 034 permissions/counts are exercised in attendance tests.
-    const attendanceMigration = readFileSync(join(__dirname, '../034_booking_attendance.sql'), 'utf8');
-    const claimDefinition = attendanceMigration.match(/create or replace function public\.claim_booking_notifications\([\s\S]*?\n\$\$;/)[0];
-    await pg.exec(claimDefinition);
+    // createBookingWorkflowFixture installs the complete registered migration
+    // chain. Do not transplant a later RPC into this earlier schema: its hash
+    // guard must inspect the real preceding implementation during migration.
     await pg.exec("update public.terenuri set poza='assets/imagini/avatar2.png'");
     const tomorrow=(await pg.query("select ((now() at time zone 'Europe/Bucharest')::date+1)::text as d")).rows[0].d;
     let queue=Promise.resolve();
@@ -162,6 +160,14 @@ async function openProfile(page) {
           assert.equal(request.method(),'POST');
           await pg.exec(`set role ${person ? 'authenticated' : 'anon'}`);
           return reply(200,(await pg.query('select public.get_admin_access() value')).rows[0].value);
+        }
+        if (['/rest/v1/rpc/get_booking_attendance','/rest/v1/rpc/get_legacy_booking_attendance'].includes(url.pathname)) {
+          assert.equal(request.method(),'POST');
+          const name=url.pathname.split('/').pop(),body=request.postDataJSON();
+          await pg.exec(`set role ${person ? 'authenticated' : 'anon'}`);
+          const argument=name==='get_booking_attendance'?body.p_booking_ids:body.p_reservation_ids;
+          const cast=name==='get_booking_attendance'?'uuid[]':'text[]';
+          return reply(200,(await pg.query(`select public.${name}($1::${cast}) value`,[argument])).rows[0].value);
         }
         if (url.pathname==='/rest/v1/rpc/save_sports_base') {
           assert.equal(request.method(),'POST');
@@ -768,7 +774,13 @@ async function openProfile(page) {
     await configuredClient.locator(`.anulare-client[data-id="${outsideHour.id}"]`).waitFor({state:'hidden'});
     await serial(async () => {
       await pg.exec('reset role');
-      assert.deepEqual((await pg.query('select * from public.rezervari where id=$1',[outsideHour.id])).rows[0],{...outsideHour,stare:'anulata'});
+      const cancelled=(await pg.query('select * from public.rezervari where id=$1',[outsideHour.id])).rows[0];
+      assert.ok(cancelled.booking_group_id,'The server snapshots an ungrouped booking before cancellation so notifications remain complete');
+      assert.deepEqual({...cancelled,booking_group_id:outsideHour.booking_group_id},{...outsideHour,stare:'anulata'},'Cancellation preserves every customer-controlled booking field');
+      const group=(await pg.query('select status,owner_auth_id from spotivity_private.booking_groups where id=$1',[cancelled.booking_group_id])).rows[0];
+      assert.equal(group.status,'anulata');assert.equal(group.owner_auth_id,uid(1));
+      const notices=(await pg.query('select kind from spotivity_private.notification_outbox where booking_id=$1 order by kind',[cancelled.booking_group_id])).rows;
+      assert.deepEqual(notices.map(row=>row.kind),['booking_cancelled_client','booking_cancelled_owner']);
     });
     pass('a client still sees and cancels an existing booking outside the revised court hours');
     await admin.locator('.program-reincarca').click();
@@ -1057,7 +1069,7 @@ async function openProfile(page) {
     pass('the welcome booking button directly lists published courts across sports and returns focus on close');
     assert.equal(await mobile.locator('.home-sport-hero').count(),sports.length);
     assert.equal(await mobile.locator('.card-sport[data-sport]').count(),sports.length);
-    assert.equal(await mobile.locator('#home-brand img').evaluate(image=>image.src),new URL('assets/imagini/avatar2.png',base).href);
+    assert.equal(await mobile.locator('#home-brand img').evaluate(image=>image.src),new URL('assets/imagini/spotivity-96.png',base).href);
     await assertSportImageLoaded(mobile.locator('#home-brand img'));
     const appearanceRows=await serial(async()=>{
       await pg.exec('reset role');
@@ -1086,12 +1098,14 @@ async function openProfile(page) {
       await mobile.setViewportSize({width,height:844});
       for (const sport of sports) {
         const image=mobile.locator(`.home-sport-hero [data-sport-background="${sport}"]`);
+        await image.evaluate(img=>img.decode());
         const actual=await image.evaluate(img=>({width:img.naturalWidth,height:img.naturalHeight,fit:getComputedStyle(img).objectFit}));
-        assert.deepEqual(actual,{width:currentSportDimensions[sport][0],height:currentSportDimensions[sport][1],fit:'cover'},`${sport} full-resolution background at ${width}px`);
+        const dimensions=width>=1024&&sport==='Volei'?[1536,1024]:width>=1024&&sport==='Tenis Picior'?[1052,1494]:currentSportDimensions[sport];
+        assert.deepEqual(actual,{width:dimensions[0],height:dimensions[1],fit:'cover'},`${sport} full-resolution background at ${width}px`);
       }
     }
     assert.ok(requests.some(request=>request.path==='/rest/v1/site_sporturi' && request.method==='GET' && !request.person));
-    pass('all five sport sections have text-only headings and Supabase-configured realistic backgrounds with the avatar2 brand');
+    pass('all five sport sections have text-only headings and Supabase-configured realistic backgrounds with the optimized brand');
     await mobile.evaluate(()=>window.spotivityDiscoveryReady);
     const footCourt=superCourts.find(court=>court.sport==='Tenis Picior');
     assert.ok(footCourt);

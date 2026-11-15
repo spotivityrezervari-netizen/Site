@@ -4,7 +4,8 @@ import { mkdtemp, mkdir, readFile, writeFile, rm, symlink, access } from 'node:f
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import os from 'node:os';
-import { SPORTS, SEO_PATHS, PAGES_BASE_URL, PRODUCTION_BASE_URL, GENERATED_MARKER, generateSeoFiles, validateCatalog, seoPaths } from '../seo-pages.mjs';
+import { SPORTS, SEO_PATHS, PAGES_BASE_URL, PRODUCTION_BASE_URL, GENERATED_MARKER, generateSeoFiles, validateCatalog, seoPaths, reconcileRouteHistory, seoAliases } from '../seo-pages.mjs';
+import { redirectSeoAlias } from '../seo-alias-runtime.mjs';
 import { generateSourcePages } from '../generate-seo-pages.mjs';
 import { snapshotFromPublicRows, publicCredentials } from '../refresh-seo-catalog.mjs';
 import { buildPublic } from '../build-public.mjs';
@@ -196,7 +197,7 @@ test('source and route index generation is deterministic, drift guarded, with pr
   assert.equal(await readFile(path.join(repoRoot, 'dist', relative), 'utf8'), html);
 });
 
-test('regeneration retires only owned removed/renamed entity files and their manifest entries', async t => {
+test('repeated renames and moves retain direct aliases while retired identities become real missing pages', async t => {
   const { repoRoot, put } = await fixture(t);
   await generateSourcePages({ repoRoot });
   const oldRelative = courtPath(catalog.courts[0]) + 'index.html';
@@ -204,16 +205,72 @@ test('regeneration retires only owned removed/renamed entity files and their man
   await put('Idee Site/' + foreignRelative, '<h1>A contributor page remains untouched</h1>');
   const changed = structuredClone(catalog); changed.courts[0].nume = 'Renamed Court';
   await put('scripts/seo-public-catalog.json', JSON.stringify(changed));
-  await assert.rejects(generateSourcePages({ repoRoot, check: true }), /Obsolete/);
+  await assert.rejects(generateSourcePages({ repoRoot, check: true }), /stale/);
   await generateSourcePages({ repoRoot }); await generateSourcePages({ repoRoot, check: true });
-  await assert.rejects(access(path.join(repoRoot, 'Idee Site', oldRelative)), { code: 'ENOENT' });
+  const alias = await readFile(path.join(repoRoot, 'Idee Site', oldRelative), 'utf8');
+  assert.ok(alias.includes('noindex,follow') && alias.includes('id="seo-alias-destination"'));
   assert.ok((await readFile(path.join(repoRoot, 'Idee Site', foreignRelative), 'utf8')).includes('contributor'));
   const manifest = JSON.parse(await readFile(path.join(repoRoot, 'scripts/public-files.json')));
-  assert.ok(!manifest.files.includes(oldRelative));
+  assert.ok(manifest.files.includes(oldRelative));
   const current = paths.courtPath(changed.courts[0], changed.bases[0]) + 'index.html';
   assert.ok(manifest.files.includes(current));
+  changed.courts[0].nume = 'Third name'; changed.courts[0].oras = 'Cluj-Napoca'; changed.courts[0].sport = 'Tenis';
+  changed.bases[0].nume = 'Renamed sports centre';
+  await put('scripts/seo-public-catalog.json', JSON.stringify(changed));
+  await generateSourcePages({ repoRoot }); await generateSourcePages({ repoRoot, check: true });
+  const history = JSON.parse(await readFile(path.join(repoRoot, 'scripts/seo-route-history.json')));
+  const finalRoute = paths.courtPath(changed.courts[0], changed.bases[0]);
+  for (const old of [oldRelative, current]) {
+    const html = await readFile(path.join(repoRoot, 'Idee Site', old), 'utf8');
+    assert.ok(html.includes(`href="${PAGES_BASE_URL + finalRoute}"`), 'Every historical slug points directly to the latest route');
+    assert.ok(html.indexOf('Content-Security-Policy') < html.indexOf('<script'));
+    assert.doesNotMatch(html, /<script[^>]*>[^<]+<\/script>|http-equiv="refresh"|<base\b/i);
+  }
+  assert.equal(history.courts['1'].length, 3); assert.equal(history.bases[baseId].length, 2);
+  assert.ok(!seoAliases(changed, history).some(item => item.route === finalRoute));
   await buildPublic({ repoRoot });
+  const redirects = await readFile(path.join(repoRoot, 'dist/_redirects'), 'utf8');
+  assert.ok(redirects.includes(`/${oldRelative.replace(/index.html$/, '')} /${finalRoute} 301!`));
+  assert.ok(redirects.includes(`/${current.replace(/index.html$/, '')} /${finalRoute} 301!`));
   await assert.rejects(access(path.join(repoRoot, 'dist', foreignRelative)), { code: 'ENOENT' });
+  await put('scripts/seo-public-catalog.json', JSON.stringify({ ...changed, courts: [], bases: [] }));
+  await assert.rejects(generateSourcePages({ repoRoot, check: true }), /Obsolete/);
+  await generateSourcePages({ repoRoot }); await generateSourcePages({ repoRoot, check: true });
+  for (const route of history.courts['1']) await assert.rejects(access(path.join(repoRoot, 'Idee Site', route + 'index.html')), { code: 'ENOENT' });
+  for (const route of history.bases[baseId]) await assert.rejects(access(path.join(repoRoot, 'Idee Site', route + 'index.html')), { code: 'ENOENT' });
+  assert.deepEqual(JSON.parse(await readFile(path.join(repoRoot, 'scripts/seo-route-history.json'))), history, 'Retirement does not erase the identity history');
+  assert.ok((await readFile(path.join(repoRoot, 'Idee Site', foreignRelative), 'utf8')).includes('contributor'));
+});
+
+test('historical aliases cannot expose arbitrary paths, other identities or unsafe redirect destinations', () => {
+  const history = reconcileRouteHistory(catalog);
+  for (const route of ['../private/', 'https://evil.example/a/', 'terenuri/fotbal/wrong-999/', 'terenuri/fotbal/../private-1/', 'terenuri/fotbal/x-1/?token=secret']) {
+    assert.throws(() => reconcileRouteHistory(catalog, { ...history, courts: { 1: [route] } }), /historical route/);
+  }
+  assert.throws(() => reconcileRouteHistory(catalog, { ...history, courts: { '__bad': [] } }), /identity/);
+  assert.throws(() => reconcileRouteHistory(catalog, { ...history, private_email: 'secret' }), /history/);
+  assert.throws(() => reconcileRouteHistory(catalog, { ...history, courts: { 1: [history.courts['1'][0], history.courts['1'][0]] } }), /routes/);
+});
+
+test('Pages alias navigation preserves protected query/hash intents and rejects open redirects', () => {
+  const root = new URL('https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/');
+  const old = new URL('terenuri/fotbal/old-1/?code=fixture-code#access_token=fixture&type=recovery', root);
+  const target = new URL('terenuri/tenis/new-1/', root);
+  const original = { document: globalThis.document, location: globalThis.location };
+  try {
+    const replaced = [];
+    globalThis.location = { href: old.href, origin: old.origin, search: old.search, hash: old.hash, replace: value => replaced.push(value) };
+    globalThis.document = { currentScript: { src: new URL('js/seo-alias-redirect.js', root).href }, getElementById: () => ({ href: target.href }) };
+    redirectSeoAlias();
+    assert.equal(replaced[0], target.href + old.search + old.hash);
+    for (const value of ['https://evil.example/terenuri/fotbal/a-1/', 'javascript:alert(1)', new URL('../other/terenuri/fotbal/a-1/', root).href, new URL('private/', root).href]) {
+      globalThis.document.getElementById = () => ({ href: value }); redirectSeoAlias();
+      assert.equal(replaced.length, 1, value);
+    }
+  } finally {
+    if (original.document === undefined) delete globalThis.document; else globalThis.document = original.document;
+    if (original.location === undefined) delete globalThis.location; else globalThis.location = original.location;
+  }
 });
 
 test('exact generated routes do not loosen manifest paths or overwrite foreign files or follow symlinks', async t => {

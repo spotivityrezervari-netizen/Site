@@ -13,11 +13,12 @@ const ident = value => {assert.match(value,/^[a-zA-Z_][a-zA-Z0-9_]*$/);return `"
 const jsonResponse = (status,data,extra={}) => new Response(data===undefined?null:JSON.stringify(data),{status,headers:{'content-type':'application/json','access-control-allow-origin':'*','access-control-expose-headers':'X-Supabase-Api-Version,Content-Range','x-supabase-api-version':'2024-01-01',...extra}});
 
 async function createFixture({throughVersion=27}={}) {
-  assert.ok(Number.isInteger(throughVersion)&&throughVersion>=20&&throughVersion<=27,'A supported fixture migration boundary is required');
+  assert.ok(Number.isInteger(throughVersion)&&throughVersion>=20&&throughVersion<=39,'A supported fixture migration boundary is required');
   const pg = new PGlite();
   await pg.exec(readFileSync(join(__dirname,'schema.sql'),'utf8'));
   if(throughVersion>=21)await pg.exec("alter table auth.users add column created_at timestamptz not null default '2000-01-01'");
-  const migrations = ['001_security.sql','003_court_hours.sql','004_admin_scope_hardening.sql','005_sport_appearance.sql','006_sports_bases.sql','007_completed_booking_cancellation.sql','008_profile_edit.sql','009_base_photos.sql','010_foot_tennis.sql',...readdirSync(join(__dirname,'..')).filter(name=>/^(?:01[1-9]|02[0-7])_.*\.sql$/.test(name)).sort()];
+  if(throughVersion>=29)await pg.exec("alter table auth.users add column deleted_at timestamptz,add column banned_until timestamptz,add column is_anonymous boolean not null default false");
+  const migrations = ['001_security.sql','003_court_hours.sql','004_admin_scope_hardening.sql','005_sport_appearance.sql','006_sports_bases.sql','007_completed_booking_cancellation.sql','008_profile_edit.sql','009_base_photos.sql','010_foot_tennis.sql',...readdirSync(join(__dirname,'..')).filter(name=>/^(?:01[1-9]|02[0-9]|03[0-9])_.*\.sql$/.test(name)).sort()];
   assert.ok(migrations.length>=11);
   for(const name of migrations.filter(name=>Number(name.slice(0,3))<=throughVersion))await pg.exec(readFileSync(join(__dirname,'..',name),'utf8'));
   // Bucket configuration is read internally by the Storage transport, while object RLS remains real.
@@ -34,10 +35,12 @@ async function createFixture({throughVersion=27}={}) {
   const session=async account=>({access_token:token(account.id),refresh_token:'fixture-refresh-'+account.id,expires_in:3600,token_type:'bearer',user:await getUser(account.id)});
   const pauseNext=(path,method)=>{let enter,release,timer;const entered=new Promise((resolve,reject)=>{timer=setTimeout(()=>reject(new Error(`Expected ${method} ${path}`)),15000);enter=()=>{clearTimeout(timer);resolve();};});const wait=new Promise(resolve=>release=resolve);gate={path,method,enter,wait};return {entered,release};};
   const rpc=async(path,body)=>{
-    const name=path.split('/').pop();assert.ok(['get_admin_access','save_sports_base','submit_club_application','submit_club_request','approve_club_request','reject_club_request','consume_public_rate_limit'].includes(name),name);
+    const name=path.split('/').pop();assert.ok(['get_admin_access','save_sports_base','submit_club_application','submit_club_request','approve_club_request','reject_club_request','consume_public_rate_limit',
+      'get_booking_attendance','get_legacy_booking_attendance','set_booking_attendance','set_legacy_booking_attendance',
+      'list_late_cancellations','list_customer_booking_restrictions','set_customer_booking_restriction','revoke_customer_booking_restriction'].includes(name),name);
     const keys=Object.keys(body);for(const key of keys)assert.match(key,/^p_[a-z_]+$/);
     const jsonKeys=new Set(['p_terenuri','p_prices']);
-    const casts={p_id:'::uuid',p_admin_ids:'::uuid[]',p_court_ids:'::text[]',p_este_activa:'::boolean'};
+    const casts={p_id:'::uuid',p_admin_ids:'::uuid[]',p_court_ids:'::text[]',p_booking_ids:'::uuid[]',p_reservation_ids:'::text[]',p_reservation_id:'::text',p_este_activa:'::boolean',p_days:'::integer',p_permanent:'::boolean',p_global:'::boolean',p_expected_revision:'::integer'};
     const result=await pg.query(`select public.${ident(name)}(${keys.map((key,i)=>`${key} => $${i+1}${casts[key]||(jsonKeys.has(key)?'::jsonb':key.endsWith('_id')?'::uuid':key==='p_expected_updated_at'?'::timestamptz':'')}`).join(',')}) value`,keys.map(key=>jsonKeys.has(key)?JSON.stringify(body[key]):body[key]));
     return result.rows[0].value;
   };

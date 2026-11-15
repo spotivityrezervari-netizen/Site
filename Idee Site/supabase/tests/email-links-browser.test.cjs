@@ -10,7 +10,7 @@ const { createFixture, uid, host } = require('./club-request-fixture.cjs');
 const { createBookingWorkflowFixture } = require('./booking-workflow-fixture.cjs');
 const base = process.env.SITE_BASE_URL || 'http://127.0.0.1:8117/';
 const id = uid(51001), guestId = uid(51002);
-const attendanceWarning = 'La mai mult de 3 neprezentări, riști închiderea contului.';
+const attendanceWarning = 'La mai mult de 3 neprezentări sau anulări târzii, riști închiderea contului.';
 let checks = 0;
 const pass = text => { checks++; console.log('PASS', text); };
 

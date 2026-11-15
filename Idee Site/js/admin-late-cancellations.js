@@ -31,17 +31,19 @@
         const closeButton = element('button', 'late-cancellation-close', 'Închide'); closeButton.type = 'button';
         header.append(title, closeButton);
         const intro = element('p', 'late-cancellation-intro', 'Clienți cu neprezentări confirmate de administratori sau anulări făcute cu mai puțin de o oră înainte ori în timpul unei ore nefinalizate. Anulările personalului sunt excluse.');
-        const policy = element('p', 'late-cancellation-policy', 'Lista acoperă ultimele 30 de zile. Insigna arată totalul abaterilor de până acum pentru terenurile la care ai acces. O rezervare se numără cel mult o dată, inclusiv după o anulare parțială târzie. De la 3 abateri recente, clientul este marcat pentru verificare. Conturile nu sunt blocate automat.');
+        const policy = element('p', 'late-cancellation-policy', 'Lista acoperă ultimele 30 de zile. Insigna arată totalul abaterilor de până acum pentru terenurile la care ai acces. O rezervare se numără cel mult o dată. De la 3 abateri poți decide manual o restricție temporară sau permanentă pentru rezervări. Nu se aplică restricții automate. Restricția nu închide contul și nu anulează rezervările existente.');
         const scope = element('p', 'late-cancellation-intro'); scope.id = 'late-cancellation-scope';
         const refresh = element('button', 'btn-cont late-cancellation-refresh', 'Reîncarcă'); refresh.type = 'button';
         const mark = element('button', 'btn-cont late-cancellation-mark', 'Marchează neprezentare'); mark.type = 'button'; mark.id = 'btn-mark-no-show';
         const actions = element('div', 'late-cancellation-actions'); actions.append(mark, refresh);
         const status = element('p', 'late-cancellation-status'); status.id = 'late-cancellation-status'; status.setAttribute('role', 'status');
         const list = element('div', 'late-cancellation-list'); list.id = 'late-cancellation-list';
-        panel.append(header, intro, scope, policy, actions, status, list); modal.append(panel); workspace.append(modal);
+        const restrictionTitle = element('h3', 'late-restriction-heading', 'Restricții active');
+        const restrictionList = element('div', 'late-cancellation-list'); restrictionList.id = 'client-restriction-list';
+        panel.append(header, intro, scope, policy, actions, status, list, restrictionTitle, restrictionList); modal.append(panel); workspace.append(modal);
         function close(restore = true) {
             request++; controller?.abort(); controller = null; refresh.disabled = false;
-            modal.style.display = 'none'; list.replaceChildren(); status.textContent = '';
+            modal.style.display = 'none'; list.replaceChildren(); restrictionList.replaceChildren(); status.textContent = '';
             window.syncSpotivityModalScroll?.();
             if (restore && previousFocus?.isConnected && !previousFocus.hidden) previousFocus.focus();
         }
@@ -58,7 +60,62 @@
             if (url) content.href = url;
             line.append(content); parent.append(line);
         }
-        function render(data) {
+        async function restrictionAction(control, rpc, params) {
+            const actor = role?.userId, version = generation;
+            if (!actor || control.disabled) return;
+            control.disabled = true; status.textContent = 'Se salvează restricția…';
+            try {
+                const { error } = await db.rpc(rpc, params);
+                if (error) throw error;
+                if (role?.userId === actor && generation === version && modal.style.display === 'flex') await load();
+            } catch {
+                if (role?.userId === actor && generation === version && modal.style.display === 'flex') status.textContent = 'Acțiunea a fost respinsă. Reîncarcă lista, verifică numărul abaterilor și accesul la terenuri, apoi încearcă din nou.';
+            } finally { if (control.isConnected) control.disabled = false; }
+        }
+        function restrictionControls(card, customer, ready) {
+            if (!ready || !Number.isSafeInteger(customer.total_count) || customer.total_count < 3 || !customer.events?.[0]?.booking_id) return;
+            const form = element('div', 'late-restriction-controls');
+            const durationLabel = element('label', 'late-restriction-field', 'Durata restricției');
+            const duration = element('select', 'late-restriction-duration'); duration.setAttribute('aria-label', 'Durata restricției');
+            for (const [value, label] of [['3', '3 zile'], ['7', '7 zile'], ['14', '14 zile'], ['30', '30 de zile'], ['permanent', 'Permanentă']]) {
+                const option = element('option', '', label); option.value = value; duration.append(option);
+            }
+            duration.value = '7'; durationLabel.append(duration);
+            const reasonLabel = element('label', 'late-restriction-field', 'Notă internă (opțional)');
+            const reason = element('input', 'late-restriction-reason'); reason.type = 'text'; reason.maxLength = 300; reason.placeholder = 'Motivul deciziei'; reasonLabel.append(reason);
+            const globalLabel = element('label', 'late-restriction-global');
+            const global = element('input'); global.type = 'checkbox'; global.checked = role?.isSuper === true;
+            if (role?.isSuper) globalLabel.append(global, document.createTextNode(' Aplică pe toate terenurile platformei'));
+            const restrict = element('button', 'late-restriction-button', 'Restricționează rezervările'); restrict.type = 'button';
+            restrict.addEventListener('click', () => {
+                const permanent = duration.value === 'permanent', all = role?.isSuper === true && global.checked;
+                const where = all ? 'pe toate terenurile platformei' : 'pe terenurile alocate în prezent';
+                if (!confirm(`Restricționezi rezervările pentru ${customer.name || 'acest client'} ${where}, ${permanent ? 'permanent' : `pentru ${duration.value} zile`}? Rezervările existente și anularea lor rămân disponibile.`)) return;
+                void restrictionAction(restrict, 'set_customer_booking_restriction', {
+                    p_booking_id: customer.events[0].booking_id, p_days: permanent ? null : Number(duration.value),
+                    p_permanent: permanent, p_global: all, p_reason: reason.value.trim()
+                });
+            });
+            form.append(durationLabel, reasonLabel); if (role?.isSuper) form.append(globalLabel); form.append(restrict); card.append(form);
+        }
+        function renderRestrictions(data) {
+            restrictionList.replaceChildren();
+            if (!data) { restrictionList.append(element('p', 'late-cancellation-intro', 'Restricțiile nu au putut fi încărcate. Reîncarcă lista înainte de o decizie.')); return; }
+            const rows = Array.isArray(data.restrictions) ? data.restrictions : [];
+            if (!rows.length) restrictionList.append(element('p', 'late-cancellation-intro', 'Nu sunt restricții active în aria ta de administrare.'));
+            for (const item of rows) {
+                const card = element('article', 'late-cancellation-customer late-restriction-active');
+                card.append(element('h4', '', item.name || 'Client'), element('p', 'late-cancellation-contact', item.email || ''),
+                    element('p', 'late-cancellation-contact', `${item.court_name || 'Teren'} · ${item.permanent ? 'Permanentă' : `Până la ${date(item.expires_at)}`}`));
+                if (item.reason) card.append(element('p', 'late-cancellation-intro', item.reason));
+                const revoke = element('button', 'late-restriction-button', 'Ridică restricția'); revoke.type = 'button';
+                revoke.addEventListener('click', () => {
+                    if (confirm(`Ridici restricția pentru ${item.name || 'acest client'} — ${item.court_name || 'teren'}?`)) void restrictionAction(revoke, 'revoke_customer_booking_restriction', { p_restriction_id: item.restriction_id, p_reason: '' });
+                });
+                card.append(revoke); restrictionList.append(card);
+            }
+        }
+        function render(data, restrictions) {
             list.replaceChildren();
             const customers = Array.isArray(data?.customers) ? data.customers : [];
             const combined = data?.combined_incidents === true;
@@ -88,21 +145,31 @@
                     const description = Number.isFinite(lead) ? (lead < 0 ? 'după începerea orei' : `cu ${lead} minute înainte`) : 'interval indisponibil';
                     events.append(element('li', '', `${event.court_name || 'Teren'} · ${date(event.starts_at)} · ${event.kind === 'no_show' ? 'neprezentare înregistrată' : `anulată ${description}`}, la ${date(event.cancelled_at)}`));
                 }
-                details.append(events); card.append(details); list.append(card);
+                details.append(events); card.append(details); restrictionControls(card, customer, !!restrictions); list.append(card);
             }
+            renderRestrictions(restrictions);
         }
         async function load() {
             if (!role?.userId || modal.style.display !== 'flex') return;
             const currentGeneration = generation, currentRole = role.userId, currentRequest = ++request;
             controller?.abort(); controller = new AbortController();
-            refresh.disabled = true; list.replaceChildren(); status.textContent = 'Se încarcă abaterile…';
+            refresh.disabled = true; list.replaceChildren(); restrictionList.replaceChildren(); status.textContent = 'Se încarcă abaterile…';
             try {
                 let query = db.rpc('list_late_cancellations', { p_days: 30 });
                 if (typeof query.abortSignal === 'function') query = query.abortSignal(controller.signal);
                 const { data, error } = await query;
                 if (generation !== currentGeneration || role?.userId !== currentRole || request !== currentRequest || modal.style.display !== 'flex') return;
                 if (error) throw new Error('Abaterile nu au putut fi încărcate. Verifică accesul de administrator și încearcă din nou.');
-                render(data);
+                let restrictions = null;
+                try {
+                    let restrictionQuery = db.rpc('list_customer_booking_restrictions');
+                    if (typeof restrictionQuery.abortSignal === 'function') restrictionQuery = restrictionQuery.abortSignal(controller.signal);
+                    const response = await restrictionQuery;
+                    if (!response.error && Array.isArray(response.data?.restrictions)
+                        && typeof response.data.can_restrict_globally === 'boolean') restrictions = response.data;
+                } catch { /* The incident list stays usable during a staged backend upgrade. */ }
+                if (generation !== currentGeneration || role?.userId !== currentRole || request !== currentRequest || modal.style.display !== 'flex') return;
+                render(data, restrictions);
             } catch (error) {
                 if (generation === currentGeneration && request === currentRequest && modal.style.display === 'flex') status.textContent = error.name === 'AbortError' ? '' : error.message;
             } finally {
@@ -130,7 +197,7 @@
         modal.addEventListener('keydown', event => {
             if (event.key === 'Escape') { event.preventDefault(); close(); }
             if (event.key === 'Tab') {
-                const focusable = [...panel.querySelectorAll('button:not(:disabled),a[href],summary')].filter(node => node.getClientRects().length);
+                const focusable = [...panel.querySelectorAll('button:not(:disabled),a[href],summary,input:not(:disabled),select:not(:disabled),textarea:not(:disabled)')].filter(node => node.getClientRects().length);
                 if (event.shiftKey && document.activeElement === focusable[0]) { event.preventDefault(); focusable.at(-1)?.focus(); }
                 else if (!event.shiftKey && document.activeElement === focusable.at(-1)) { event.preventDefault(); focusable[0]?.focus(); }
             }

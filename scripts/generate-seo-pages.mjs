@@ -4,7 +4,7 @@ import { constants } from 'node:fs';
 import { lstat, mkdir, open, readdir, unlink, rmdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { GENERATED_MARKER, SEO_PATHS, generateSeoFiles, readReviewedFile } from './seo-pages.mjs';
+import { GENERATED_MARKER, SEO_PATHS, generateSeoFiles, readReviewedFile, reconcileRouteHistory } from './seo-pages.mjs';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 async function managedPages(root) {
@@ -47,7 +47,12 @@ async function writeReviewed(root, relative, content) {
 export async function generateSourcePages({ repoRoot = repositoryRoot, check = false } = {}) {
   const template = await readReviewedFile(repoRoot, 'Idee Site/index.html');
   const catalog = JSON.parse(await readReviewedFile(repoRoot, 'scripts/seo-public-catalog.json'));
-  const files = generateSeoFiles({ template, catalog });
+  let previousHistory;
+  try { previousHistory = JSON.parse(await readReviewedFile(repoRoot, 'scripts/seo-route-history.json')); }
+  catch (error) { if (error.code !== 'ENOENT') throw error; }
+  const routeHistory = reconcileRouteHistory(catalog, previousHistory);
+  if (check && previousHistory && JSON.stringify(previousHistory) !== JSON.stringify(routeHistory)) throw new Error('SEO route history is stale. Run node scripts/generate-seo-pages.mjs');
+  const files = generateSeoFiles({ template, catalog, routeHistory });
   const owned = await managedPages(repoRoot), obsolete = owned.filter(relative => !files.has(relative));
   const manifest = JSON.parse(await readReviewedFile(repoRoot, 'scripts/public-files.json'));
   if (manifest.version !== 1 || !Array.isArray(manifest.files) || manifest.files.some(file => typeof file !== 'string') || new Set(manifest.files).size !== manifest.files.length) throw new Error('Invalid public manifest for source generation.');
@@ -73,8 +78,8 @@ export async function generateSourcePages({ repoRoot = repositoryRoot, check = f
     }
   }
   if (!check) {
-    // An explicit regeneration may retire prior names/removed inventory, but
-    // never deletes unmarked contributor HTML or follows directory symlinks.
+    // Renamed active identities keep alias pages. Only retired inventory is
+    // removed, producing real 404s without advertising old private details.
     for (const relative of obsolete) {
       const current = await readReviewedFile(repoRoot, `Idee Site/${relative}`);
       if (!current.includes(GENERATED_MARKER)) throw new Error('Obsolete SEO source changed during generation.');
@@ -86,6 +91,7 @@ export async function generateSourcePages({ repoRoot = repositoryRoot, check = f
         parent = path.posix.dirname(parent);
       }
     }
+    await writeReviewed(repoRoot, 'scripts/seo-route-history.json', JSON.stringify(routeHistory, null, 2) + '\n');
     await writeReviewed(repoRoot, 'scripts/public-files.json', JSON.stringify(desiredManifest, null, 2) + '\n');
   }
   return [...files.keys()];

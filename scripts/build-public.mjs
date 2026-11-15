@@ -4,7 +4,7 @@ import { constants } from 'node:fs';
 import { lstat, open, mkdir, mkdtemp, rm, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SEO_PATHS, seoPaths as reviewedSeoPaths, generateSeoFiles, productionHome, PRODUCTION_BASE_URL } from './seo-pages.mjs';
+import { SEO_PATHS, seoPaths as reviewedSeoPaths, generateSeoFiles, productionHome, PRODUCTION_BASE_URL, reconcileRouteHistory, netlifyAliasRedirects } from './seo-pages.mjs';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const assetPath = /^(?:index\.html|css\/[A-Za-z0-9_-]+\.css|js\/(?:modules\/)?[A-Za-z0-9_-]+\.js|assets\/imagini\/[A-Za-z0-9_-]+\.(?:png|jpe?g|webp|avif|gif|ico))$/;
@@ -65,13 +65,21 @@ export async function buildPublic({ repoRoot = repositoryRoot } = {}) {
   // wildcard HTML pattern. Read it through the same no-symlink/secret guards.
   const includesSeo = SEO_PATHS.some(relative => manifest.files.includes(relative))
     || manifest.files.includes('js/seo-route-index.js');
-  let catalog;
+  let catalog, routeHistory;
   let expectedSeoPaths = [];
   if (includesSeo) {
     const catalogBytes = await readRegularFile(repoRoot, 'scripts/seo-public-catalog.json');
     assertNoPrivateMaterial('scripts/seo-public-catalog.json', catalogBytes.toString('utf8'));
     catalog = JSON.parse(catalogBytes.toString('utf8'));
-    expectedSeoPaths = reviewedSeoPaths(catalog);
+    let history;
+    try {
+      const source = (await readRegularFile(repoRoot, 'scripts/seo-route-history.json')).toString('utf8');
+      assertNoPrivateMaterial('scripts/seo-route-history.json', source);
+      history = JSON.parse(source);
+    } catch (error) { if (error.code !== 'ENOENT') throw error; }
+    routeHistory = reconcileRouteHistory(catalog, history);
+    if (history && JSON.stringify(history) !== JSON.stringify(routeHistory)) throw new Error('SEO route history is stale. Run node scripts/generate-seo-pages.mjs');
+    expectedSeoPaths = reviewedSeoPaths(catalog, routeHistory);
   }
   const seoPaths = new Set(expectedSeoPaths);
   const files = new Set();
@@ -85,13 +93,13 @@ export async function buildPublic({ repoRoot = repositoryRoot } = {}) {
   if (includesSeo) {
     if (expectedSeoPaths.some(relative => !files.has(relative))) throw new Error('Public manifest must include the complete reviewed SEO route set.');
     const template = (await readRegularFile(repoRoot, 'Idee Site/index.html')).toString('utf8');
-    const pagesSource = generateSeoFiles({ template, catalog });
+    const pagesSource = generateSeoFiles({ template, catalog, routeHistory });
     for (const [relative, expected] of pagesSource) {
       const source = await readRegularFile(repoRoot, `Idee Site/${relative}`);
       assertNoPrivateMaterial(relative, source.toString('utf8'));
       if (source.toString('utf8') !== expected) throw new Error(`Generated SEO source is stale: ${relative}. Run node scripts/generate-seo-pages.mjs`);
     }
-    generated = generateSeoFiles({ template, catalog, baseUrl: PRODUCTION_BASE_URL });
+    generated = generateSeoFiles({ template, catalog, routeHistory, baseUrl: PRODUCTION_BASE_URL });
   }
   const entries = [];
   for (const relative of files) {
@@ -116,6 +124,10 @@ export async function buildPublic({ repoRoot = repositoryRoot } = {}) {
   const headers = await readRegularFile(repoRoot, 'deploy/netlify/_headers');
   assertNoPrivateMaterial('_headers', headers.toString('utf8'));
   entries.push(['_headers', headers]);
+  if (includesSeo) {
+    const redirects = netlifyAliasRedirects(catalog, routeHistory);
+    if (redirects.trim()) entries.push(['_redirects', Buffer.from(redirects)]);
+  }
 
   const destination = path.join(repoRoot, 'dist');
   try {

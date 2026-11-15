@@ -73,14 +73,23 @@ contact, token or service-key data is fetched or saved. Review the snapshot and
 generated diff before pushing. Static prices carry their snapshot date, and the
 runtime rechecks their current values and schedule when opening a court.
 
-Commit the generated source HTML, `js/seo-route-index.js`, `robots.txt`,
-`sitemap.xml`, snapshot and updated `scripts/public-files.json` together with the
-shared shell. Generation updates only the reviewed generated entries in the
-manifest. It marks owned pages and removes obsolete marked entity files when a
-name changes or inventory is retired; unmarked contributor documents are kept,
-and an unowned file at a required entity path is never overwritten. Names are
-part of the canonical URL, so treat public renames as URL changes and review any
-external links that need updating before publication.
+Commit the generated source HTML, `js/seo-route-index.js`,
+`js/seo-alias-redirect.js`, `robots.txt`, `sitemap.xml`, snapshot,
+`scripts/seo-route-history.json` and updated `scripts/public-files.json` together
+with the shared shell. The route history records every reviewed public path by
+stable court/base ID. Preserve it across refreshes: after a rename, city change,
+sport change or base reassignment, every historical active path points directly
+to the latest canonical path, including after several changes or a name revert.
+
+GitHub Pages serves a small `noindex,follow` alias page with the current canonical
+URL, an ordinary destination link and an external CSP-compatible redirect script.
+The script preserves query/hash intents such as Auth recovery and cancellation.
+The production build emits forced one-hop HTTP301 rules in `dist/_redirects` for
+Netlify; building this file does not deploy anything. Alias paths stay out of the
+sitemap. Retired/deleted identities lose their marked pages and aliases, giving
+real404 responses; their history remains recorded for a later reactivation.
+Unmarked contributor documents remain untouched and an unowned document at a
+required path is never overwritten.
 
 `--check` refuses missing, changed or obsolete generated documents and manifest
 drift. The public build derives its exact complete entity path set from the
