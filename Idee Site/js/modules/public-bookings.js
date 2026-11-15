@@ -7,6 +7,7 @@
         const { db, state, services } = context;
         let hoursRequest = 0, bookingContextGeneration = 0;
         let bookingInFlight = false, hoursLoading = false;
+        let selectFilteredHourOnLoad = false;
         let terenCurent = '', terenCurentId = '', pretTerenCurent = 0, pretMingeCurent = 15;
         let mingeBifata = false, oraSelectata = [], dataSelectataStr = '';
         const quoteTotal = () => Math.round((pretTerenCurent * oraSelectata.length + (mingeBifata ? pretMingeCurent : 0)) * 100) / 100;
@@ -76,6 +77,7 @@
                     bookingContextGeneration++;
                     dataSelectataStr = dataCurenta.toISOString().slice(0,10);
                     oraSelectata = [];
+                    selectFilteredHourOnLoad = true;
                     incarcaOreDinSupabase();
                 });
                 containerZile.appendChild(btnZi);
@@ -140,6 +142,10 @@
                 }
             }
 
+            // The filter seeds a new day/court selection once. Availability
+            // refreshes must preserve an explicit removal or replacement of it.
+            const selectFilteredHour = selectFilteredHourOnLoad;
+            selectFilteredHourOnLoad = false;
             containerOre.innerHTML = '';
             for (const oraTxt of oreTeren) {
                 const i = Number(oraTxt.split(':')[0]);
@@ -163,7 +169,7 @@
                     btnOra.addEventListener('click', () => toggleOra(btnOra, oraTxt));
 
                     // Dacă ora curentă corespunde cu cea din filtru, o bifăm automat
-                    if (selection.includes(oraTxt) || (suntemPeZiuaCautata && oraCautataInFiltru === oraTxt)) {
+                    if (selection.includes(oraTxt) || (selectFilteredHour && suntemPeZiuaCautata && oraCautataInFiltru === oraTxt)) {
                         btnOra.classList.add('selectat');
                         oraSelectata.push(oraTxt);
                     }

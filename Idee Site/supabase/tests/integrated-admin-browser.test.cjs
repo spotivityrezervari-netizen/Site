@@ -110,7 +110,7 @@ async function fits(page,selector,label){
 }
 
 (async()=>{
-  const fixture=await createFixture({throughVersion:39});let browser;
+  const fixture=await createFixture({throughVersion:40});let browser;
   const {pg,root,requests}=fixture;
   const ids={first:uid(701),second:uid(702),other:uid(703)};
   try{
@@ -296,12 +296,15 @@ async function fits(page,selector,label){
 
     await admin.locator('#sectiune-dashboard .admin-menu-card').filter({hasText:'Rezervări'}).click();await admin.locator('#btn-istoric').click();await admin.waitForFunction(()=>document.getElementById('container-istoric').textContent.includes('Completed guest'));
     const history=admin.locator('#container-istoric');assert.ok(!(await history.innerText()).includes('Archived guest'));assert.ok(!(await history.innerText()).includes('Court B'));assert.ok(!(await history.innerText()).includes('Court Excluded'));
-    const completed=history.locator('.admin-history-card').filter({hasText:'Completed guest'});assert.ok((await completed.innerText()).includes('FINALIZATĂ'));assert.equal(await completed.locator('button').count(),0);
+    const completed=history.locator('.admin-history-card').filter({hasText:'Completed guest'});assert.ok((await completed.innerText()).includes('FINALIZATĂ'));assert.equal(await completed.locator('[data-cancel-history]').count(),0);
+    await completed.locator('[data-attendance-choice="no_show"]').waitFor({state:'visible'});
+    assert.equal(await completed.locator('[data-attendance-choice="no_show"]').isEnabled(),true,'Completed reservations retain attendance actions');
+    assert.equal(await completed.locator('input[type="email"]').isVisible(),true,'A historical name-only contact requires an explicit email');
     const guestCard=history.locator('.admin-history-card').filter({hasText:seeded.guestName});
     assert.ok((await guestCard.innerText()).includes('+40733123456'));assert.ok(!(await guestCard.innerText()).includes('Nume: Bob'));assert.equal(await guestCard.locator('img').count(),0);
     const deniedCancel=await raw(admin,async id=>db.from('rezervari').update({stare:'anulata'}).eq('id',id).select('id'),seeded.past.id);assert.match(deniedCancel.error?.message||'',/Completed bookings cannot be cancelled/);
     assert.equal((await root(()=>pg.query('select stare from public.rezervari where id=$1',[seeded.past.id]))).rows[0].stare,'activa');
-    const future=history.locator('.admin-history-card').filter({hasText:'Invitat integrat'});await future.locator('button').click();await admin.waitForFunction(()=>[...document.querySelectorAll('#container-istoric .admin-history-card')].some(card=>card.textContent.includes('Invitat integrat')&&card.textContent.includes('ANULATĂ')));
+    const future=history.locator('.admin-history-card').filter({hasText:'Invitat integrat'});await future.locator('[data-cancel-history]').click();await admin.waitForFunction(()=>[...document.querySelectorAll('#container-istoric .admin-history-card')].some(card=>card.textContent.includes('Invitat integrat')&&card.textContent.includes('ANULATĂ')));
     assert.equal((await root(()=>pg.query('select stare from public.rezervari where id=$1',[manual[0].id]))).rows[0].stare,'anulata');
     await fits(admin,'#modal-istoric .modal-continut','history');await admin.keyboard.press('Escape');
     pass('history hides completed bookings older than 30 days without deleting them, respects the selected base, and keeps completed cancellations blocked in both UI and API');

@@ -8,12 +8,40 @@ const source=name=>readFileSync(join(__dirname,'../../js',name),'utf8');
 const settle=()=>new Promise(resolve=>setTimeout(resolve,0));
 
 function fixture(tables={}) {
-    class Element {
-        constructor(){this.style={};this.value='';this.innerText='';this.disabled=false;this.children=[];this.handlers={};this.classList={add(){},remove(){}};}
+    class Events {
+        constructor(){this.handlers={};}
+        addEventListener(type,handler){(this.handlers[type]||=[]).push(handler);}
+        dispatchEvent(event){for(const handler of this.handlers[event.type]||[])handler(event);return !event.defaultPrevented;}
+        async emit(type){for(const handler of this.handlers[type]||[])await handler({type,target:this,currentTarget:this});await settle();}
+    }
+    class MutationObserver {
+        constructor(callback){this.callback=callback;this.targets=new Map();this.records=[];this.scheduled=false;}
+        observe(target,options){this.targets.set(target,options);target.observers.add(this);}
+        disconnect(){for(const target of this.targets.keys())target.observers.delete(this);this.targets.clear();this.records=[];}
+        takeRecords(){return this.records.splice(0);}
+        attributeChanged(target,attributeName){
+            const options=this.targets.get(target);
+            if(!options?.attributes||(options.attributeFilter&&!options.attributeFilter.includes(attributeName)))return;
+            this.records.push({type:'attributes',target,attributeName});
+            if(!this.scheduled){this.scheduled=true;queueMicrotask(()=>{
+                this.scheduled=false;const records=this.takeRecords();if(records.length)this.callback(records,this);
+            });}
+        }
+    }
+    class Element extends Events {
+        constructor(){
+            super();this.observers=new Set();this._hidden=false;
+            this.style=new Proxy({}, {set:(style,key,value)=>{
+                if(style[key]!==value){style[key]=value;for(const observer of this.observers)observer.attributeChanged(this,'style');}
+                return true;
+            }});
+            this.value='';this.innerText='';this.disabled=false;this.children=[];this.classList={add(){},remove(){}};
+        }
+        set hidden(value){if(this._hidden!==!!value){this._hidden=!!value;for(const observer of this.observers)observer.attributeChanged(this,'hidden');}}
+        get hidden(){return this._hidden;}
+        getClientRects(){return !this.hidden&&['flex','block'].includes(this.style.display)?[{}]:[];}
         set innerHTML(value){this.html=value;this.children=[];}
         get innerHTML(){return this.html||'';}
-        addEventListener(type,handler){(this.handlers[type]||=[]).push(handler);}
-        async emit(type){for(const handler of this.handlers[type]||[])await handler({target:this,currentTarget:this});await settle();}
         appendChild(child){this.children.push(child);}
         querySelectorAll(){return [];}
         focus(){}
@@ -46,9 +74,9 @@ function fixture(tables={}) {
         channel(){return {on(_event,_filter,handler){realtime=handler;return this;},subscribe(){return this;}};},
         removeChannel(){}
     };
-    const document={getElementById:node,querySelector:()=>node('modal-box'),createElement:()=>new Element(),addEventListener(){}};
-    const window={SpotivityModules:{},location:{href:'https://fixture.test/'}};
-    const sandbox={window,document,URL,Intl,Date,Map,Set,setTimeout,alert:message=>alerts.push(message),confirm:()=>true};
+    const document=Object.assign(new Events(),{getElementById:node,querySelector:()=>node('modal-box'),createElement:()=>new Element(),hidden:false});
+    const window=Object.assign(new Events(),{SpotivityModules:{},location:{href:'https://fixture.test/'}});
+    const sandbox={window,document,URL,Intl,Date,Map,Set,MutationObserver,setTimeout,clearTimeout,alert:message=>alerts.push(message),confirm:()=>true};
     runInNewContext(source('security.js'),sandbox);
     const state={account:{is_super:true,user_id:'admin'},authGeneration:1,programGeneration:0};
     const context={db,state,modalNodes:()=>[],captureContext:()=>()=>!!state.account};

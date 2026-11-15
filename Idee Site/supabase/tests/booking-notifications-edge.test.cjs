@@ -256,7 +256,7 @@ test('server site override keeps every email app action and cancellation capabil
     const appLinks=links.filter(link=>!link.startsWith('mailto:')&&!link.startsWith('tel:')&&!link.startsWith('https://calendar.google.com/'));
     assert.ok(appLinks.length>0,kind);
     for(const link of appLinks)assert.ok(link.startsWith(PAGES_SITE),`${kind}: ${link}`);
-    assert.ok(send.body.html.includes(`${PAGES_SITE}assets/imagini/avatar2.png`),kind);
+    assert.ok(send.body.html.includes(`${PAGES_SITE}assets/imagini/spotivity-96.png`),kind);
     assert.ok(!send.body.html.includes('https://spotivity.ro/'),kind);
     assert.ok(!send.body.text.includes('https://spotivity.ro/'),kind);
     assert.ok(!send.body.html.includes('evil.example'),kind);

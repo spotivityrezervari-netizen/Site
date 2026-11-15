@@ -124,7 +124,7 @@ test('chat email escapes previews and preserves readable plaintext without crede
   const rendered = renderTransactionalMail({ kind: 'chat_owner', recipient: { email: 'owner@example.test' }, chat: { courtName: '<Teren & "unu">', customerName: '<Ana>', preview: '<img src=x onerror="attack()"> & Salut!\nAș dori o informație.' }, password: 'must-not-be-rendered', access_token: 'secret-token-ignored' });
   assert.ok(rendered.html.includes('&lt;img src=x onerror=&quot;attack()&quot;&gt; &amp; Salut!'));
   assert.equal((rendered.html.match(/<img /g)||[]).length, 1);
-  assert.ok(rendered.html.includes('assets/imagini/avatar2.png'));
+  assert.ok(rendered.html.includes('assets/imagini/spotivity-96.png'));
   assert.ok(!rendered.html.includes('<img src=x'));
   assert.ok(rendered.text.includes('<img src=x onerror="attack()"> & Salut! Aș dori o informație.'));
   assert.match(rendered.text, /Deschide conversațiile/);
@@ -345,7 +345,7 @@ test('all four client emails share the logo, palette and contact and contain no 
   const { renderTransactionalMail } = await template;
   const mails = [renderTransactionalMail(input()), renderTransactionalMail(input('booking_cancelled_client')), renderTransactionalMail({ kind: 'account_welcome', recipient: { email: 'ana@example.test', name: 'Ana Exemplu' }, firstName: 'Ana' }), renderTransactionalMail({ kind: 'chat_client', recipient: { email: 'ana@example.test', name: 'Ana' }, chat: { courtName: 'Teren', baseName: 'Baza Sportului', customerName: 'Ana', preview: 'Te așteptăm la teren.', messageID: '42' } })];
   for (const mail of mails) {
-    assert.ok(mail.html.includes('assets/imagini/avatar2.png'));
+    assert.ok(mail.html.includes('assets/imagini/spotivity-96.png'));
     assert.match(mail.html, /#101a14/); assert.match(mail.html, /#d8b66a/);
     assert.ok(mail.text.includes('spotivity.rezervari@gmail.com'));
     assert.ok(!/\p{Extended_Pictographic}/u.test(mail.subject + mail.text));
@@ -359,7 +359,7 @@ test('new default emails use spotivity.ro while secure legacy cancellation links
   for(const origin of ['https://spotivity.ro/','https://www.spotivity.ro/']) {
     assert.equal(validateTransactionalURL(origin),origin);
     const mail=renderTransactionalMail(input('booking_created_client',{siteURL:origin,cancellationURL:`${origin}#anulare-rezervare=old-id&token=opaque`}));
-    assert.ok(mail.html.includes(`${origin}assets/imagini/avatar2.png`));
+    assert.ok(mail.html.includes(`${origin}assets/imagini/spotivity-96.png`));
   }
   const cancel=`${LEGACY}#anulare-rezervare=old-id&token=opaque`;
   assert.equal(validateTransactionalURL(cancel),cancel);

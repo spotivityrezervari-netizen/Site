@@ -271,7 +271,8 @@
         modal.addEventListener('keydown', event => {
             if (event.key === 'Escape') { event.preventDefault(); close(); }
             if (event.key !== 'Tab') return;
-            const items = [...modal.querySelectorAll('input,button:not([disabled])')].filter(item => item.getClientRects().length);
+            const items = [...modal.querySelectorAll('a[href],input:not([disabled]),button:not([disabled])')]
+                .filter(item => item.tabIndex >= 0 && item.getClientRects().length && getComputedStyle(item).visibility !== 'hidden');
             if (event.shiftKey && document.activeElement === items[0]) { event.preventDefault(); items.at(-1)?.focus(); }
             else if (!event.shiftKey && document.activeElement === items.at(-1)) { event.preventDefault(); items[0]?.focus(); }
         });

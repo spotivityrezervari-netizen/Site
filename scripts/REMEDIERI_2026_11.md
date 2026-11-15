@@ -4,12 +4,13 @@ Această actualizare repară problemele identificate la audit. Publicarea pe Net
 
 ## Funcții și date
 
-Ordinea de instalare pentru o bază aflată la migrarea 035 este **036 → 037 → 038 → 039**, înaintea noului frontend. Nu reaplica migrările vechi peste o instalare existentă. Protecțiile migrărilor refuză obiecte necunoscute sau versiuni deja depășite.
+Ordinea de instalare pentru o bază aflată la migrarea 035 este **036 → 037 → 038 → 039 → 040**, înaintea noului frontend. Nu reaplica migrările vechi peste o instalare existentă. Protecțiile migrărilor refuză obiecte necunoscute sau versiuni deja depășite.
 
 - **036:** anularea explicită a unei rezervări manuale eligibile folosește acum fluxul de incidente și notificări al rezervărilor grupate. Nu transformă în masă rezervările vechi și nu generează emailuri istorice. Contactele istorice nevalide rămân anulabile; nu se inventează destinatari pentru ele.
 - **037:** restricții manuale pentru rezervări, cu permisiuni verificate în SQL și jurnal privat. Un administrator poate acționa numai pentru terenurile alocate; superadminul poate alege și întregul site. Restricția nu închide contul și nu anulează rezervările existente.
 - **038:** API-ul, SQL și rendererul de email acceptă același contract de adresă. O adresă care nu poate fi folosită de expeditor este respinsă înainte de ocuparea unui interval nou.
 - **039:** ștergerea unei fotografii din `poze_terenuri` este permisă numai în limitele de acces existente și dacă niciun teren nu o mai referă, inclusiv terenurile ascunse utilizatorului. Migrarea nu șterge obiecte existente.
+- **040:** prezența pentru rezervările manuale/istorice folosește aceeași validare a emailului. Contactele absente sau neutilizabile cer explicit o adresă validă; adresele deja salvate și identitatea conturilor nu pot fi redirecționate. Instalarea nu rescrie rezervări și nu trimite notificări istorice. Pentru o bază deja la 039 se aplică numai 040.
 
 Funcțiile Edge `booking-workflow`, `club-applications` și `booking-notifications` trebuie publicate separat cu toate importurile locale, inclusiv `_shared/email-address.ts` și, unde este folosit, `_shared/public-rate-limit.ts`. `verify_jwt=false` se păstrează pentru handler-ele care verifică explicit sesiunea sau autorizarea serviciului. Nu introduce chei de serviciu în frontend.
 
@@ -24,8 +25,11 @@ Restricțiile conturilor sunt legate de identitatea Auth. Pentru rezervările f�
 ## Interfață, imagini și SEO
 
 - Refuzul sau umplerea `localStorage` nu mai întrerupe inițializarea aplicației. Limba revine sigur la o valoare acceptată.
-- Istoricul deschis se redesenează la limita de expirare din datele deja încărcate, fără polling de bază de date; timerul se oprește la închidere, ascundere sau deconectare.
-- Resursele inițiale de brand folosesc `spotivity-32.png`, `spotivity-96.png` și `spotivity-256.webp`. Originalul rămâne disponibil pentru referințe vechi și imaginea de partajare, dar nu este folosit ca logo/fotografie implicită încărcată inițial.
+- Istoricul deschis al clientului și statusurile din istoricul administratorului se actualizează la expirarea rezervării din datele deja încărcate, fără polling suplimentar al bazei de date. Timerul se oprește la închidere, ascundere sau deconectare. În administrare se păstrează controalele și ciornele pentru prezență.
+- Reîmprospătarea disponibilității păstrează orele selectate sau deselectate explicit; ora filtrului se aplică numai la inițializarea zilei/terenului, fără a adăuga ulterior o oră taxată.
+- Refuzul unei rezervări din cauza unei restricții este explicat în română, maghiară și engleză. Nu se expun detalii private ale bazei de date și se păstrează protecția împotriva dublurilor după un răspuns incert.
+- Rezultatele din căutarea terenurilor sunt accesibile prin Tab, Shift+Tab și Enter; dialogul păstrează focusul în interior.
+- Resursele inițiale de brand folosesc `spotivity-32.png`, `spotivity-96.png` și `spotivity-256.webp`. Originalul rămâne disponibil pentru referințe vechi și imaginea de partajare, dar nu este folosit ca logo/fotografie implicită încărcată inițial. Antetul emailurilor folosește aceeași siglă de 96 px, aproximativ 16 KB, în locul originalului de 2 MB.
 - La salvarea nereușită a unei fotografii noi se încearcă recuperarea obiectului încărcat. Înlocuirile confirmate curăță vechiul obiect numai dacă nu mai este referit. O confirmare pierdută nu permite ștergerea unei fotografii deja salvate în teren. Eșecurile de rețea sau de autorizare la cleanup nu șterg alte imagini și nu maschează eroarea originală.
 - `scripts/seo-route-history.json` păstrează identitatea adreselor deja generate. Redenumirile și mutările generează aliasuri directe spre ruta curentă; GitHub Pages primește fallback HTML și redirect extern compatibil CSP, iar buildul Netlify produce reguli 301 pentru o publicare viitoare. Entitățile retrase nu sunt prezentate ca active.
 
@@ -49,4 +53,4 @@ node scripts/generate-seo-pages.mjs --check
 node scripts/build-public.mjs
 ```
 
-Testele SQL suplimentare sunt în `supabase/tests/{manual-booking-cancellations,client-restrictions,guest-email-validation,court-photo-cleanup}.test.cjs`; variantele de ID numeric se rulează cu `SPOTIVITY_TEST_INTEGER_IDS=1`. Testele de browser corespunzătoare și `public-resilience-browser.test.cjs` nu modifică proiectul real. Pentru actualizarea catalogului și regenerarea adreselor, urmează `scripts/SEO_PAGES.md` și păstrează fișierul de istoric în Git.
+Testele SQL suplimentare sunt în `supabase/tests/{manual-booking-cancellations,client-restrictions,guest-email-validation,court-photo-cleanup,legacy-attendance-email}.test.cjs`; variantele de ID numeric se rulează cu `SPOTIVITY_TEST_INTEGER_IDS=1`. Testele de browser corespunzătoare și `public-resilience-browser.test.cjs` nu modifică proiectul real. Pentru actualizarea catalogului și regenerarea adreselor, urmează `scripts/SEO_PAGES.md` și păstrează fișierul de istoric în Git.

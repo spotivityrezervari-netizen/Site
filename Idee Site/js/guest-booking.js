@@ -38,6 +38,13 @@
         service_unavailable: 'Serviciul de rezervări nu este disponibil momentan. Încearcă din nou.',
         guest_unavailable: 'Rezervarea fără cont nu este disponibilă până la activarea emailurilor de confirmare. Nu a fost creată nicio rezervare. Poți rezerva dintr-un cont sau poți contacta baza.'
     };
+    const localizedErrors = {
+        booking_restricted: {
+            ro: 'Nu poți face rezervări la acest teren cât timp restricția este activă. Contactează administratorul terenului pentru detalii.',
+            hu: 'Amíg a korlátozás érvényes, ezen a pályán nem foglalhatsz. A részletekért fordulj a pálya adminisztrátorához.',
+            en: 'You cannot book this court while the restriction is active. Contact the court administrator for details.'
+        }
+    };
     errors.completed_booking = errors.booking_ended;
     errors.invalid_cancellation = errors.invalid_token;
     errors.unauthenticated = errors.unauthorized;
@@ -56,7 +63,9 @@
             if (!response.ok || !data || data.error) {
                 const code = typeof data?.code === 'string' ? data.code : 'service_unavailable';
                 const unknown = (response.status >= 500 || !data) && code !== 'guest_unavailable';
-                throw new WorkflowError(errors[code] || 'Cererea nu a putut fi finalizată. Verifică datele și încearcă din nou.', code, unknown);
+                const message = localizedErrors[code]?.[window.lang] || localizedErrors[code]?.ro || errors[code]
+                    || 'Cererea nu a putut fi finalizată. Verifică datele și încearcă din nou.';
+                throw new WorkflowError(message, code, unknown);
             }
             if (!UUID.test(String(data.booking_id || ''))) {
                 throw new WorkflowError('Răspunsul nu confirmă rezervarea. Apasă din nou pentru a verifica aceeași cerere, fără a crea o dublură.', 'unknown_response', true);
