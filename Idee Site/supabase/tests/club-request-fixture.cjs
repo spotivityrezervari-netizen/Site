@@ -13,12 +13,12 @@ const ident = value => {assert.match(value,/^[a-zA-Z_][a-zA-Z0-9_]*$/);return `"
 const jsonResponse = (status,data,extra={}) => new Response(data===undefined?null:JSON.stringify(data),{status,headers:{'content-type':'application/json','access-control-allow-origin':'*','access-control-expose-headers':'X-Supabase-Api-Version,Content-Range','x-supabase-api-version':'2024-01-01',...extra}});
 
 async function createFixture({throughVersion=27}={}) {
-  assert.ok(Number.isInteger(throughVersion)&&throughVersion>=20&&throughVersion<=40,'A supported fixture migration boundary is required');
+  assert.ok(Number.isInteger(throughVersion)&&throughVersion>=20&&throughVersion<=42,'A supported fixture migration boundary is required');
   const pg = new PGlite();
   await pg.exec(readFileSync(join(__dirname,'schema.sql'),'utf8'));
   if(throughVersion>=21)await pg.exec("alter table auth.users add column created_at timestamptz not null default '2000-01-01'");
   if(throughVersion>=29)await pg.exec("alter table auth.users add column deleted_at timestamptz,add column banned_until timestamptz,add column is_anonymous boolean not null default false");
-  const migrations = ['001_security.sql','003_court_hours.sql','004_admin_scope_hardening.sql','005_sport_appearance.sql','006_sports_bases.sql','007_completed_booking_cancellation.sql','008_profile_edit.sql','009_base_photos.sql','010_foot_tennis.sql',...readdirSync(join(__dirname,'..')).filter(name=>/^(?:01[1-9]|02[0-9]|03[0-9])_.*\.sql$/.test(name)).sort()];
+  const migrations = readdirSync(join(__dirname,'..')).filter(name=>/^0\d{2}_.*\.sql$/.test(name)&&!/^00[02]_/.test(name)).sort();
   assert.ok(migrations.length>=11);
   for(const name of migrations.filter(name=>Number(name.slice(0,3))<=throughVersion))await pg.exec(readFileSync(join(__dirname,'..',name),'utf8'));
   // Bucket configuration is read internally by the Storage transport, while object RLS remains real.

@@ -599,7 +599,7 @@ async function openProfile(page) {
     });
     await page.locator('#btn-forgot-password').click();
     assert.equal((await recoveryResponse).status(),200);
-    await page.waitForFunction(()=>document.getElementById('btn-forgot-password').style.pointerEvents==='auto');
+    await page.waitForFunction(()=>document.getElementById('btn-forgot-password').disabled===false);
     const recover=requests.find(r=>r.path==='/auth/v1/recover');
     assert.equal(recover.method,'POST');
     assert.equal(recover.body.email,'alice@example.test');

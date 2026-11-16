@@ -19,8 +19,8 @@
     }
 
     class WorkflowError extends Error {
-        constructor(message, code, unknown = false) {
-            super(message); this.code = code; this.unknown = unknown;
+        constructor(message, code, unknown = false, retryable = false) {
+            super(message); this.code = code; this.unknown = unknown; this.retryable = retryable;
         }
     }
     const errors = {
@@ -65,15 +65,15 @@
                 const unknown = (response.status >= 500 || !data) && code !== 'guest_unavailable';
                 const message = localizedErrors[code]?.[window.lang] || localizedErrors[code]?.ro || errors[code]
                     || 'Cererea nu a putut fi finalizată. Verifică datele și încearcă din nou.';
-                throw new WorkflowError(message, code, unknown);
+                throw new WorkflowError(message, code, unknown, response.status >= 500 || response.status === 429 || (response.ok && !data));
             }
             if (!UUID.test(String(data.booking_id || ''))) {
-                throw new WorkflowError('Răspunsul nu confirmă rezervarea. Apasă din nou pentru a verifica aceeași cerere, fără a crea o dublură.', 'unknown_response', true);
+                throw new WorkflowError('Răspunsul nu confirmă rezervarea. Apasă din nou pentru a verifica aceeași cerere, fără a crea o dublură.', 'unknown_response', true, true);
             }
             return data;
         } catch (error) {
             if (error instanceof WorkflowError) throw error;
-            throw new WorkflowError('Nu am putut confirma răspunsul serverului. Apasă din nou pentru a verifica aceeași rezervare, fără a crea o dublură.', 'unknown_response', true);
+            throw new WorkflowError('Nu am putut confirma răspunsul serverului. Apasă din nou pentru a verifica aceeași rezervare, fără a crea o dublură.', 'unknown_response', true, true);
         } finally { clearTimeout(timer); }
     }
     function normalizeSelection(selection) {
@@ -272,27 +272,40 @@
         const actions = document.createElement('div'); actions.className = 'workflow-actions';
         const confirm = document.createElement('button'); confirm.type = 'button'; confirm.id = 'email-booking-cancel-confirm'; confirm.className = 'workflow-danger'; confirm.textContent = 'Confirmă anularea'; confirm.hidden = true;
         confirm.setAttribute('aria-describedby', warning.id);
+        const retry = document.createElement('button'); retry.type = 'button'; retry.id = 'email-booking-preview-retry'; retry.className = 'workflow-secondary'; retry.textContent = 'Reîncearcă verificarea'; retry.hidden = true;
         const back = document.createElement('button'); back.type = 'button'; back.className = 'workflow-secondary'; back.textContent = 'Închide';
-        actions.append(confirm, back); dialog.content.append(summary, status, warning, actions);
-        let busy = false;
+        actions.append(confirm, retry, back); dialog.content.append(summary, status, warning, actions);
+        let busy = false, previewLoading = false;
         const close = () => { if (!busy) { link.token = ''; dialog.remove(); } };
         dialog.onDismiss(close); back.onclick = close;
         if (!UUID.test(link.booking_id || '') || !/^[0-9a-f]{64}$/i.test(link.token || '')) { status.textContent = errors.invalid_token; link.token = ''; return; }
-        status.textContent = 'Se verifică rezervarea…';
         let preview = null;
-        try {
-            preview = await post({ action: 'preview_cancel', ...link });
-            if (!dialog.modal.isConnected) return;
-            summary.textContent = `${summaryText(preview)} · Total: ${Number(preview.total).toLocaleString('ro-RO')} lei`;
-            if (preview.state === 'anulata' || preview.state === 'cancelled') { status.textContent = 'Rezervarea este deja anulată.'; link.token = ''; }
-            else if (preview.can_cancel === false || (preview.day && preview.hours?.length && window.bookingEnded?.(preview.day, preview.hours[preview.hours.length - 1]))) {
-                status.textContent = errors.booking_ended; link.token = '';
-            } else { status.textContent = link.viewOnly
-                ? 'Rezervarea este confirmată. Dacă dorești anularea, apasă pe „Confirmă anularea”. Orele vor deveni disponibile din nou.'
-                : 'Vrei să anulezi această rezervare? Orele vor deveni disponibile din nou.'; warning.hidden = false; confirm.hidden = false; }
-        } catch (error) { if (dialog.modal.isConnected) status.textContent = error.message; }
+        const loadPreview = async () => {
+            if (busy || previewLoading || !link.token || !dialog.modal.isConnected) return;
+            previewLoading = true; preview = null; retry.disabled = true;
+            confirm.hidden = true; warning.hidden = true; status.textContent = 'Se verifică rezervarea…';
+            try {
+                const result = await post({ action: 'preview_cancel', ...link });
+                if (!dialog.modal.isConnected) return;
+                preview = result; retry.hidden = true;
+                summary.textContent = `${summaryText(preview)} · Total: ${Number(preview.total).toLocaleString('ro-RO')} lei`;
+                if (preview.state === 'anulata' || preview.state === 'cancelled') { status.textContent = 'Rezervarea este deja anulată.'; link.token = ''; }
+                else if (preview.can_cancel === false || (preview.day && preview.hours?.length && window.bookingEnded?.(preview.day, preview.hours[preview.hours.length - 1]))) {
+                    status.textContent = errors.booking_ended; link.token = '';
+                } else { status.textContent = link.viewOnly
+                    ? 'Rezervarea este confirmată. Dacă dorești anularea, apasă pe „Confirmă anularea”. Orele vor deveni disponibile din nou.'
+                    : 'Vrei să anulezi această rezervare? Orele vor deveni disponibile din nou.'; warning.hidden = false; confirm.hidden = false; }
+            } catch (error) {
+                if (!dialog.modal.isConnected) return;
+                const permanent = ['invalid_token', 'invalid_cancellation', 'forbidden', 'invalid_input', 'booking_ended', 'completed_booking'].includes(error.code);
+                retry.hidden = !error.retryable || permanent;
+                if (retry.hidden) link.token = '';
+                status.textContent = error.message;
+            } finally { previewLoading = false; retry.disabled = false; }
+        };
+        retry.onclick = loadPreview;
         confirm.onclick = async () => {
-            if (busy || !link.token || !preview) return;
+            if (busy || previewLoading || !link.token || !preview) return;
             busy = true; confirm.disabled = true; back.disabled = true; dialog.close.disabled = true; status.textContent = 'Se anulează…';
             try {
                 await post({ action: 'cancel', ...link });
@@ -301,6 +314,7 @@
             } catch (error) { status.textContent = error.message; }
             finally { busy = false; confirm.disabled = false; back.disabled = false; dialog.close.disabled = false; }
         };
+        await loadPreview();
         setTimeout(() => back.focus(), 0);
     }
     window.SpotivityBooking = Object.freeze({

@@ -14,7 +14,7 @@ const source=readFileSync(join(__dirname,'../../js/modules/admin-courts.js'),'ut
 (async()=>{
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true});
  try{
-  for(const scenario of ['failed-update','failed-create','auth-switch','lost-ack','replacement','shared-reference']){
+  for(const scenario of ['failed-update','failed-create','auth-switch','lost-ack','replacement','shared-reference','corrupt-update','corrupt-create','decode-auth-switch']){
    const pg=new PGlite(),context=await browser.newContext();
    try{
     await pg.exec(readFileSync(join(__dirname,'schema.sql'),'utf8'));
@@ -24,13 +24,13 @@ const source=readFileSync(join(__dirname,'../../js/modules/admin-courts.js'),'ut
      return pg.query(sql,args);
     };
     const court=(await as(null,"select id::text id from public.terenuri where nume='Court A'")).rows[0].id;
-    const old=uid(3)+'/previous.png',shared=scenario==='shared-reference';
-    if(['replacement','shared-reference'].includes(scenario)){
+    const old=uid(3)+'/previous.png',shared=scenario==='shared-reference',create=scenario.endsWith('create'),corrupt=scenario.startsWith('corrupt-');
+    if(['replacement','shared-reference','corrupt-update','decode-auth-switch'].includes(scenario)){
      await as(null,'insert into storage.objects(bucket_id,name)values($1,$2)',['poze_terenuri',old]);
      await as(null,"update public.terenuri set poza=$1 where nume='Court A'",[imageURL(old)]);
      if(shared)await as(null,"update public.terenuri set poza=$1 where nume='Hidden Court'",[imageURL(old)]);
     }
-    const owner=uid(scenario==='failed-create'?4:3),records=[],errors=[];
+    const owner=uid(create?4:3),records=[],errors=[];
     let failedCleanup=scenario==='failed-update'?1:0;
     const page=await context.newPage();
     await page.route('**/*',route=>route.fulfill({status:200,contentType:'text/html',body:'<!doctype html><html><body></body></html>'}));
@@ -62,10 +62,19 @@ const source=readFileSync(join(__dirname,'../../js/modules/admin-courts.js'),'ut
      else throw new Error('Unknown fixture action');
      return scenario==='lost-ack'?{error:{message:'Fixture acknowledgement lost'}}:{error:null};
     });
-    await page.evaluate(({court,owner,scenario,backend})=>{
+    await page.evaluate(({court,owner,scenario,backend,create})=>{
      document.body.innerHTML=`<button id="btn-save-${court}">Save</button><input id="pret-${court}" value="100"><input id="oras-${court}" value="Reghin"><input id="minge-${court}" type="checkbox"><input id="pret-minge-${court}" value="0"><input id="activ-${court}" type="checkbox" checked><input id="are-chat-${court}" type="checkbox" checked><input id="poza-${court}" type="file"><div id="ore-rezervabile-${court}"><input class="ora-rezervabila" type="checkbox" value="09:00" checked></div><button id="btn-adauga-teren">Create</button><input id="teren-nume" value="New Court"><input id="teren-sport" value="Fotbal"><input id="teren-oras" value="Reghin"><input id="teren-pret" value="100"><input id="teren-minge" type="checkbox"><input id="teren-pret-minge" value="0"><input id="teren-locatie" value="https://maps.example.test/new"><input id="teren-poza" type="file"><input id="teren-baza" value=""><div id="modal-adauga-teren"></div>`;
-     window.photoState={authGeneration:1,account:{user_id:owner,is_super:scenario==='failed-create'}};
+     window.photoState={authGeneration:1,account:{user_id:owner,is_super:create}};
      window.photoAlerts=[];window.alert=message=>photoAlerts.push(message);window.confirm=()=>true;
+     window.photoObjectURLs={created:[],revoked:[]};
+     const createObjectURL=URL.createObjectURL.bind(URL),revokeObjectURL=URL.revokeObjectURL.bind(URL);
+     URL.createObjectURL=file=>{const url=createObjectURL(file);photoObjectURLs.created.push(url);return url;};
+     URL.revokeObjectURL=url=>{photoObjectURLs.revoked.push(url);revokeObjectURL(url);};
+     if(scenario==='decode-auth-switch'){
+      const decode=HTMLImageElement.prototype.decode;
+      HTMLImageElement.prototype.decode=async function(){await decode.call(this);photoDecodeStarted=true;await new Promise(resolve=>window.photoFinishDecode=resolve);};
+      window.photoDecodeStarted=false;
+     }
      window.supabaseUrl=backend;window.supabaseKey='fixture-public-key';window.bookingHourOptions=['09:00'];window.refreshSpotivityAdminAccess=async()=>{};
      function client(initial){
       let actor=initial;
@@ -86,12 +95,17 @@ const source=readFileSync(join(__dirname,'../../js/modules/admin-courts.js'),'ut
      }
      window.createClient=()=>client(null);window.photoDB=client(owner);
      window.photoContext={db:photoDB,state:photoState,captureContext:()=>{const version=photoState.authGeneration,id=photoState.account.user_id;return()=>version===photoState.authGeneration&&id===photoState.account.user_id;}};
-    },{court,owner,scenario,backend});
+    },{court,owner,scenario,backend,create});
     await page.addScriptTag({content:source});await page.evaluate(()=>SpotivityModules.adminCourts(photoContext));
-    const input=page.locator(scenario==='failed-create'?'#teren-poza':'#poza-'+court);
-    await input.setInputFiles({name:'court.png',mimeType:'image/png',buffer:png});
-    if(scenario==='failed-create'){
+    const input=page.locator(create?'#teren-poza':'#poza-'+court);
+    await input.setInputFiles({name:'court.png',mimeType:'image/png',buffer:corrupt?Buffer.from('not an image'):png});
+    if(create){
      await page.locator('#btn-adauga-teren').click();await page.waitForFunction(()=>!document.getElementById('btn-adauga-teren').disabled&&photoAlerts.length===1);
+    }else if(scenario==='decode-auth-switch'){
+     await page.evaluate(court=>{window.photoPendingSave=salveazaSetariTeren(court,'Court A');},court);
+     await page.waitForFunction(()=>photoDecodeStarted);
+     await page.evaluate(()=>{photoState.authGeneration++;photoState.account={user_id:'00000000-0000-0000-0000-000000000002',is_super:false};photoFinishDecode();});
+     await page.evaluate(()=>photoPendingSave);
     }else await page.evaluate(court=>salveazaSetariTeren(court,'Court A'),court);
     let objects=(await as(null,"select name from storage.objects where bucket_id='poze_terenuri' order by name")).rows.map(row=>row.name);
     if(scenario==='failed-update'){
@@ -99,6 +113,14 @@ const source=readFileSync(join(__dirname,'../../js/modules/admin-courts.js'),'ut
      await page.evaluate(court=>salveazaSetariTeren(court,'Court A'),court);
      objects=(await as(null,"select name from storage.objects where bucket_id='poze_terenuri'")).rows.map(row=>row.name);assert.deepEqual(objects,[]);
      assert.ok((await page.evaluate(()=>photoAlerts)).every(message=>message.includes('Fixture rejected save')));
+    }else if(corrupt||scenario==='decode-auth-switch'){
+     assert.ok(!records.some(row=>['upload','update','insert','remove'].includes(row.op)),'An undecodable image or stale identity must not mutate Storage or court metadata');
+     const saved=(await as(null,'select poza from public.terenuri where id::text=$1',[court])).rows[0].poza;
+     assert.equal(saved,create?null:imageURL(old));
+     assert.deepEqual(objects,create?[]:[old]);
+     if(corrupt)assert.match((await page.evaluate(()=>photoAlerts)).join(' '),/nu poate fi afișat ca imagine/);
+     else assert.deepEqual(await page.evaluate(()=>photoAlerts),[]);
+     if(create)assert.equal((await as(null,"select count(*)::int total from public.terenuri where nume='New Court'")).rows[0].total,0);
     }else if(['failed-create','auth-switch'].includes(scenario))assert.deepEqual(objects,[]);
     else{
      const saved=(await as(null,'select poza from public.terenuri where id::text=$1',[court])).rows[0].poza;
@@ -111,6 +133,7 @@ const source=readFileSync(join(__dirname,'../../js/modules/admin-courts.js'),'ut
      assert.equal(records.find(row=>row.op==='remove').actor,owner,'Cleanup remains bound to the original Auth identity');
      assert.ok(!records.some(row=>row.op==='update'));
     }
+    const urls=await page.evaluate(()=>photoObjectURLs);assert.ok(urls.created.length>0);assert.deepEqual(urls.revoked,urls.created,'Every validation releases its temporary object URL');
     assert.deepEqual(errors,[]);console.log('PASS actual court editor '+scenario);
    }finally{await context.close();await pg.close();}
   }

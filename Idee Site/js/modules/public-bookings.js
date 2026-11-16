@@ -254,10 +254,12 @@
             document.getElementById('buton-confirma')?.addEventListener('click', async () => {
                 if (bookingInFlight || hoursLoading || (!oraSelectata.length && !pendingBooking())) return;
                 const ownerId = state.user?.id || null;
+                const submittedGeneration = bookingContextGeneration;
                 const identity = state.user ? { ...state.user } : null;
                 const selected = pendingBooking() || {
                     court_id: terenCurentId, day: dataSelectataStr, hours: [...oraSelectata].sort(), with_ball: mingeBifata, expected_total: quoteTotal()
                 };
+                const submittedContextIsCurrent = selected.court_id === terenCurentId && selected.day === dataSelectataStr;
                 if (!consecutiveHours(selected.hours)) { bookingNote().textContent = 'Selectează numai ore consecutive.'; return; }
                 if (!window.SpotivityBooking) { alert('Serviciul de rezervări nu s-a încărcat. Reîncarcă pagina.'); return; }
                 const butonConfirma = document.getElementById('buton-confirma');
@@ -267,9 +269,13 @@
                     const court = state.courts.find(row => String(row.id) === selected.court_id);
                     const result = await window.SpotivityBooking.create(selected, { user: identity, court_name: court?.nume || terenCurent });
                     if (!result || (state.user?.id || null) !== ownerId) return;
-                    document.getElementById('modal-rezervare').style.display = 'none';
-                    document.getElementById('modal-terenuri').style.display = 'none';
-                    services.ui.resetSportBackground();
+                    // A reply belongs to the submitted selection. Navigation may
+                    // have opened another day/court while that request was pending.
+                    if (submittedContextIsCurrent && submittedGeneration === bookingContextGeneration && document.getElementById('modal-rezervare').style.display === 'flex') {
+                        document.getElementById('modal-rezervare').style.display = 'none';
+                        document.getElementById('modal-terenuri').style.display = 'none';
+                        services.ui.resetSportBackground();
+                    }
                     services.ui.showBookingSuccess(window.SpotivityBooking.notificationText(result));
                     window.dispatchEvent(new CustomEvent('spotivity:booking-created', { detail: { booking_id: result.booking_id } }));
                 } catch (error) {

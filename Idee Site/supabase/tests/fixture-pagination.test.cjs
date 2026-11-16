@@ -3,6 +3,19 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const {createFixture}=require('./club-request-fixture.cjs');
 
+test('a requested browser fixture boundary installs that migration without silently stopping at an older version',async()=>{
+ for(const throughVersion of [40,42]){
+  const f=await createFixture({throughVersion});
+  try{
+   const versions=(await f.root(()=>f.pg.query('select version from spotivity_private.migrations order by version'))).rows.map(row=>row.version);
+   assert.equal(Math.max(...versions),throughVersion);
+   assert.ok(versions.includes(40),'The shared email contract is installed when requested');
+   assert.equal(versions.includes(41),throughVersion>=41);
+   assert.equal(versions.includes(42),throughVersion>=42);
+  }finally{await f.close();}
+ }
+});
+
 test('shared browser fixture applies current SQL, honors row caps/ranges and transports durable rate limits',async()=>{
  const f=await createFixture();
  try{

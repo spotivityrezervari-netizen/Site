@@ -45,7 +45,7 @@
             const { error } = await client.auth.setSession({ access_token: session.access_token, refresh_token: session.refresh_token }); check();
             const { data: verified, error: verifyError } = await client.auth.getUser(); check();
             if (error || verifyError || verified?.user?.id !== userId) throw new Error('Autentifică-te din nou.');
-            return { client, userId, isSuper: state.account?.is_super === true, path: null };
+            return { client, userId, isSuper: state.account?.is_super === true, path: null, check };
         }
         async function removePhoto(operation, path) {
             if (!path || !photoPathPattern.test(path) || (!operation.isSuper && path.split('/')[0] !== operation.userId)) return false;
@@ -64,8 +64,21 @@
             }
         }
         async function uploadPhoto(operation, file) {
+            operation.check();
             const extension = photoTypes[file.type];
             if (!extension || !Number.isFinite(file.size) || file.size < 1 || file.size > 5242880) throw new Error('Alege o imagine JPG, PNG, WebP, AVIF sau GIF de maximum 5 MB.');
+            const preview = URL.createObjectURL(file);
+            try {
+                const image = new Image();
+                image.src = preview;
+                await image.decode();
+                if (!image.naturalWidth || !image.naturalHeight) throw new Error('Invalid image');
+            } catch {
+                throw new Error('Fișierul nu poate fi afișat ca imagine. Alege o altă fotografie.');
+            } finally {
+                URL.revokeObjectURL(preview);
+            }
+            operation.check();
             const path = `${operation.userId}/${crypto.randomUUID()}.${extension}`;
             operation.path = path;
             inFlightPhotos.add(path);

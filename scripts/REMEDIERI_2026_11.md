@@ -4,13 +4,17 @@ Această actualizare repară problemele identificate la audit. Publicarea pe Net
 
 ## Funcții și date
 
-Ordinea de instalare pentru o bază aflată la migrarea 035 este **036 → 037 → 038 → 039 → 040**, înaintea noului frontend. Nu reaplica migrările vechi peste o instalare existentă. Protecțiile migrărilor refuză obiecte necunoscute sau versiuni deja depășite.
+Ordinea de instalare pentru o bază aflată la migrarea 035 este **036 → 037 → 038 → 039 → 040 → 041 → 042**, înaintea noului frontend. Nu reaplica migrările vechi peste o instalare existentă. Protecțiile migrărilor refuză obiecte necunoscute sau versiuni deja depășite.
 
 - **036:** anularea explicită a unei rezervări manuale eligibile folosește acum fluxul de incidente și notificări al rezervărilor grupate. Nu transformă în masă rezervările vechi și nu generează emailuri istorice. Contactele istorice nevalide rămân anulabile; nu se inventează destinatari pentru ele.
 - **037:** restricții manuale pentru rezervări, cu permisiuni verificate în SQL și jurnal privat. Un administrator poate acționa numai pentru terenurile alocate; superadminul poate alege și întregul site. Restricția nu închide contul și nu anulează rezervările existente.
 - **038:** API-ul, SQL și rendererul de email acceptă același contract de adresă. O adresă care nu poate fi folosită de expeditor este respinsă înainte de ocuparea unui interval nou.
 - **039:** ștergerea unei fotografii din `poze_terenuri` este permisă numai în limitele de acces existente și dacă niciun teren nu o mai referă, inclusiv terenurile ascunse utilizatorului. Migrarea nu șterge obiecte existente.
 - **040:** prezența pentru rezervările manuale/istorice folosește aceeași validare a emailului. Contactele absente sau neutilizabile cer explicit o adresă validă; adresele deja salvate și identitatea conturilor nu pot fi redirecționate. Instalarea nu rescrie rezervări și nu trimite notificări istorice. Pentru o bază deja la 039 se aplică numai 040.
+
+
+- **041:** separă identitatea istorică a contului de legătura Auth care poate deveni NULL la ștergere. Abaterile unui cont șters nu se adună la cele ale unui oaspete cu același email; notificările pentru contul șters nu sunt redirecționate către acel oaspete. Se păstrează UUID-urile dovedite de rezervări sau evenimente existente, fără asociere dedusă din adresa de email. Identitățile deja pierdute și fără dovezi nu pot fi reconstruite automat.
+- **042:** recalcularea stării unui grup de rezervare este serializată înaintea citirii orelor. Două anulări simultane nu mai pot lăsa grupul „anulat parțial” după anularea tuturor orelor. Instalarea nu modifică rezervări, prețuri sau emailuri existente.
 
 Funcțiile Edge `booking-workflow`, `club-applications` și `booking-notifications` trebuie publicate separat cu toate importurile locale, inclusiv `_shared/email-address.ts` și, unde este folosit, `_shared/public-rate-limit.ts`. `verify_jwt=false` se păstrează pentru handler-ele care verifică explicit sesiunea sau autorizarea serviciului. Nu introduce chei de serviciu în frontend.
 
@@ -24,6 +28,11 @@ Restricțiile conturilor sunt legate de identitatea Auth. Pentru rezervările f�
 
 ## Interfață, imagini și SEO
 
+- Fotografiile terenurilor sunt decodate înainte de upload. Un fișier corupt, chiar declarat JPG/PNG, nu mai poate înlocui fotografia existentă; URL-ul temporar este eliberat, iar identitatea se verifică din nou după decodare.
+- Confirmarea întârziată a unei rezervări nu închide alt teren sau altă zi deschisă între timp. Reîncercarea unei rezervări cu rezultat incert păstrează cererea inițială și contextul nou al interfeței.
+- Un link de anulare permite reîncercarea explicită a previzualizării după erori temporare, înainte de confirmarea anulării. Tokenul rămâne în memorie și este eliminat din adresă și la închiderea dialogului.
+- Previzualizările de anunț expirate sau cu destinatari schimbați pot fi refăcute explicit cu o aprobare nouă; campaniile deja aprobate ori cu răspuns incert păstrează identificatorul pentru a preveni dublurile.
+- Resetarea parolei blochează cererile duble inclusiv din tastatură și redevine disponibilă după o eroare a serviciului Auth.
 - Refuzul sau umplerea `localStorage` nu mai întrerupe inițializarea aplicației. Limba revine sigur la o valoare acceptată.
 - Istoricul deschis al clientului și statusurile din istoricul administratorului se actualizează la expirarea rezervării din datele deja încărcate, fără polling suplimentar al bazei de date. Timerul se oprește la închidere, ascundere sau deconectare. În administrare se păstrează controalele și ciornele pentru prezență.
 - Reîmprospătarea disponibilității păstrează orele selectate sau deselectate explicit; ora filtrului se aplică numai la inițializarea zilei/terenului, fără a adăuga ulterior o oră taxată.
@@ -53,4 +62,12 @@ node scripts/generate-seo-pages.mjs --check
 node scripts/build-public.mjs
 ```
 
-Testele SQL suplimentare sunt în `supabase/tests/{manual-booking-cancellations,client-restrictions,guest-email-validation,court-photo-cleanup,legacy-attendance-email}.test.cjs`; variantele de ID numeric se rulează cu `SPOTIVITY_TEST_INTEGER_IDS=1`. Testele de browser corespunzătoare și `public-resilience-browser.test.cjs` nu modifică proiectul real. Pentru actualizarea catalogului și regenerarea adreselor, urmează `scripts/SEO_PAGES.md` și păstrează fișierul de istoric în Git.
+Testele SQL suplimentare sunt în `supabase/tests/{manual-booking-cancellations,client-restrictions,guest-email-validation,court-photo-cleanup,legacy-attendance-email,durable-booking-customer-identity}.test.cjs`; variantele de ID numeric se rulează cu `SPOTIVITY_TEST_INTEGER_IDS=1`. Testele de browser corespunzătoare și `public-resilience-browser.test.cjs` nu modifică proiectul real. Pentru actualizarea catalogului și regenerarea adreselor, urmează `scripts/SEO_PAGES.md` și păstrează fișierul de istoric în Git.
+
+Verificarea concurenței folosește două sesiuni PostgreSQL reale, cu administratori diferiți, într-un container temporar fără rețea. Nu accesează Supabase live și nu trimite emailuri. Necesită Docker local și imaginea `postgres:17` deja disponibilă:
+
+```bash
+python "Idee Site/supabase/tests/booking-state-concurrency.test.py"
+```
+
+Fixture-ul comun de browser verifică acum că migrarea cerută este instalată efectiv; o versiune acceptată nu mai este omisă de un filtru vechi de nume de fișiere.

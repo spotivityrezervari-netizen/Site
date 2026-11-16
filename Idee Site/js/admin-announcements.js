@@ -150,21 +150,28 @@
             const current = token(); setBusy(true); status('Se verifică mesajul și destinatarii…');
             const file = get('image').files?.[0];
             try {
-                if (!draft) draft = { id: crypto.randomUUID(), audience: get('audience').value, subject: get('subject').value.trim(), message: get('message').value.trim(), path: null };
-                if (file && !draft.path) {
-                    await validateImage(file); if (!valid(current)) return;
-                    draft.path = `${role.userId}/${draft.id}/${crypto.randomUUID()}.${file.type === 'image/png' ? 'png' : 'jpg'}`;
+                for (let attemptNumber = 0; attemptNumber < 2; attemptNumber++) {
+                    if (!draft) draft = { id: crypto.randomUUID(), audience: get('audience').value, subject: get('subject').value.trim(), message: get('message').value.trim(), path: null };
+                    if (file && !draft.path) {
+                        await validateImage(file); if (!valid(current)) return;
+                        draft.path = `${role.userId}/${draft.id}/${crypto.randomUUID()}.${file.type === 'image/png' ? 'png' : 'jpg'}`;
+                    }
+                    const attempt = { ...draft };
+                    if (file && !draft.uploaded) {
+                        const { error } = await db.storage.from(imageBucket).upload(attempt.path, file, { contentType: file.type, upsert: false, cacheControl: '31536000' });
+                        if (!valid(current)) return;
+                        if (error && String(error.statusCode || error.status) !== '409') throw error;
+                        draft.uploaded = true;
+                    }
+                    const data = await rpc('admin_announcement_preview', { p_campaign_id: attempt.id, p_audience: attempt.audience, p_subject: attempt.subject, p_message: attempt.message, p_image_path: attempt.path }, current);
+                    // Re-read the immutable campaign before replacing it: a lost
+                    // approval response may have left it approved and sending.
+                    if (attemptNumber === 0 && data.status === 'preview' && (data.expired || data.stale)) { invalidate(); continue; }
+                    renderPreview(data);
+                    status(data.status === 'approved' ? 'Anunțul este deja aprobat. Verifică progresul și destinatarii rămași în istoric.' : data.count > 0 ? 'Previzualizare salvată. Verifică mesajul și confirmă destinatarii înainte de trimitere.' : 'Nu există destinatari eligibili pentru acest grup. Nu se vor trimite emailuri.');
+                    await loadHistory();
+                    break;
                 }
-                const attempt = { ...draft };
-                if (file) {
-                    const { error } = await db.storage.from(imageBucket).upload(attempt.path, file, { contentType: file.type, upsert: false, cacheControl: '31536000' });
-                    if (!valid(current)) return;
-                    if (error && String(error.statusCode || error.status) !== '409') throw error;
-                }
-                const data = await rpc('admin_announcement_preview', { p_campaign_id: attempt.id, p_audience: attempt.audience, p_subject: attempt.subject, p_message: attempt.message, p_image_path: attempt.path }, current);
-                renderPreview(data);
-                status(data.count > 0 ? 'Previzualizare salvată. Verifică mesajul și confirmă destinatarii înainte de trimitere.' : 'Nu există destinatari eligibili pentru acest grup. Nu se vor trimite emailuri.');
-                await loadHistory();
             } catch (error) { if (valid(current)) status(error?.message === 'image' ? 'Alege o imagine JPG sau PNG validă, de maximum 5 MB.' : explain(error), true); }
             finally { if (valid(current)) setBusy(false); }
         }
@@ -174,7 +181,14 @@
                 await rpc('admin_announcement_send', { p_campaign_id: item.campaign_id, p_expected_count: item.count, p_fingerprint: item.fingerprint }, current);
                 invalidate(); status('Anunțul a fost pus în coadă. Urmărește progresul în istoric; confirmarea nu înseamnă că toate emailurile au ajuns în inbox.');
                 await loadHistory();
-            } catch (error) { if (valid(current)) { status(explain(error), true); await loadHistory(); } }
+            } catch (error) {
+                if (valid(current)) {
+                    if (preview?.campaign_id === item.campaign_id && ['40001', '22023'].includes(error?.code)) {
+                        preview = { ...preview, stale: true }; get('confirm').checked = false;
+                    }
+                    status(explain(error), true); await loadHistory();
+                }
+            }
             finally { if (valid(current)) setBusy(false); }
         }
         async function resumeCampaign(item) {

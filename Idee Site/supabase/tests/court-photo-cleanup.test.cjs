@@ -4,10 +4,12 @@ const assert=require('node:assert/strict');
 const {PGlite}=require('@electric-sql/pglite');
 const {readFileSync}=require('node:fs');
 const {join}=require('node:path');
+const {File}=require('node:buffer');
 const vm=require('node:vm');
 const uid=n=>`00000000-0000-0000-0000-${String(n).padStart(12,'0')}`;
 const base='https://fixture.supabase.test';
 const photoURL=path=>base+'/storage/v1/object/public/poze_terenuri/'+path;
+const photoFile=()=>new File([Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jUL8AAAAASUVORK5CYII=','base64')],'court.png',{type:'image/png'});
 const sqlFile=name=>readFileSync(join(__dirname,'..',name),'utf8');
 async function fixture(){
  const pg=new PGlite();let schema=readFileSync(join(__dirname,'schema.sql'),'utf8');
@@ -40,8 +42,8 @@ async function editor(f,options={}){
  const state={authGeneration:1,account:{user_id:uid(options.super?4:3),is_super:!!options.super}};
  const owner=state.account.user_id,files=new Set(),alerts=[],deleted=[],storage=new Map(),events=new Map();let counter=0;
  const elements=new Map(Object.entries({
-  ['btn-save-'+f.court]:{},['pret-'+f.court]:{value:'100'},['oras-'+f.court]:{value:'Reghin'},['minge-'+f.court]:{checked:false},['pret-minge-'+f.court]:{value:'0'},['activ-'+f.court]:{checked:true},['are-chat-'+f.court]:{checked:true},['poza-'+f.court]:{files:[{name:'court.jpg',type:'image/jpeg',size:1024}]},['ore-rezervabile-'+f.court]:{querySelectorAll:()=>[{value:'09:00'}]},
-  'btn-adauga-teren':{addEventListener:(_,handler)=>events.set('create',handler)},'teren-nume':{value:'New Court'},'teren-sport':{value:'Fotbal'},'teren-oras':{value:'Reghin'},'teren-pret':{value:'100'},'teren-minge':{checked:false},'teren-pret-minge':{value:'0'},'teren-locatie':{value:'https://maps.example.test/court'},'teren-poza':{files:[{name:'court.jpg',type:'image/jpeg',size:1024}]},'teren-baza':{value:''},'modal-adauga-teren':{style:{}}
+  ['btn-save-'+f.court]:{},['pret-'+f.court]:{value:'100'},['oras-'+f.court]:{value:'Reghin'},['minge-'+f.court]:{checked:false},['pret-minge-'+f.court]:{value:'0'},['activ-'+f.court]:{checked:true},['are-chat-'+f.court]:{checked:true},['poza-'+f.court]:{files:[photoFile()]},['ore-rezervabile-'+f.court]:{querySelectorAll:()=>[{value:'09:00'}]},
+  'btn-adauga-teren':{addEventListener:(_,handler)=>events.set('create',handler)},'teren-nume':{value:'New Court'},'teren-sport':{value:'Fotbal'},'teren-oras':{value:'Reghin'},'teren-pret':{value:'100'},'teren-minge':{checked:false},'teren-pret-minge':{value:'0'},'teren-locatie':{value:'https://maps.example.test/court'},'teren-poza':{files:[photoFile()]},'teren-baza':{value:''},'modal-adauga-teren':{style:{}}
  }));
  const person=id=>Number(id.split('-').at(-1));
  function client(initial){
@@ -65,7 +67,9 @@ async function editor(f,options={}){
    }})}};
  }
  const db=client(owner);const window={bookingHourOptions:['09:00'],addEventListener:(name,handler)=>events.set(name,handler),refreshSpotivityAdminAccess:async()=>{}};
- const context=vm.createContext({window,document:{getElementById:id=>elements.get(id)||null},URL,localStorage:{getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,value)},createClient:()=>client(null),supabaseUrl:base,supabaseKey:'public-fixture-key',crypto:{randomUUID:()=>uid(++counter+100)},alert:message=>alerts.push(message),confirm:()=>true});
+ // Chromium covers actual decoding; this VM fixture isolates cleanup with a valid image.
+ class Image{naturalWidth=1;naturalHeight=1;async decode(){}}
+ const context=vm.createContext({window,document:{getElementById:id=>elements.get(id)||null},URL,Image,localStorage:{getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,value)},createClient:()=>client(null),supabaseUrl:base,supabaseKey:'public-fixture-key',crypto:{randomUUID:()=>uid(++counter+100)},alert:message=>alerts.push(message),confirm:()=>true});
  vm.runInContext(readFileSync(join(__dirname,'../../js/modules/admin-courts.js'),'utf8'),context);window.SpotivityModules.adminCourts({db,state,captureContext:()=>{const generation=state.authGeneration,id=state.account.user_id;return()=>generation===state.authGeneration&&id===state.account.user_id}});
  return{state,options,owner,window,files,deleted,alerts,storage,save:()=>window.salveazaSetariTeren(f.court,'Court A'),create:()=>events.get('create')(),async addPhoto(path,court='Court A'){await f.as(null,'insert into storage.objects(bucket_id,name)values($1,$2)',['poze_terenuri',path]);files.add(path);await f.as(null,'update public.terenuri set poza=$1 where nume=$2',[photoURL(path),court])}};
 }

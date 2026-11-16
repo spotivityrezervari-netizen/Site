@@ -113,6 +113,7 @@
 
                 nouBtnUitat.addEventListener('click', async (e) => {
                     e.preventDefault();
+                    if (nouBtnUitat.disabled) return;
                     // Încearcă să ia emailul din câmpul de login. Dacă e gol, cere prin prompt.
                     let email = document.getElementById('login-email')?.value.trim();
                     if (!email) {
@@ -122,19 +123,18 @@
 
                     const textInitial = nouBtnUitat.innerText;
                     nouBtnUitat.innerText = "⏳...";
-                    nouBtnUitat.style.pointerEvents = "none";
-
-                    const { error } = await db.auth.resetPasswordForEmail(email.trim(), {
-                        redirectTo: window.siteHomeUrl(),
-                    });
-
-                    nouBtnUitat.innerText = textInitial;
-                    nouBtnUitat.style.pointerEvents = "auto";
-
-                    if (error) {
-                        alert("Eroare la trimitere: " + error.message);
-                    } else {
+                    nouBtnUitat.disabled = true;
+                    try {
+                        const { error } = await db.auth.resetPasswordForEmail(email.trim(), {
+                            redirectTo: window.siteHomeUrl(),
+                        });
+                        if (error) throw error;
                         alert("Ți-am trimis un link de resetare a parolei pe email! Deschide-l în același browser în care l-ai solicitat. Verifică și folderul Spam.");
+                    } catch (error) {
+                        alert("Eroare la trimitere: " + (error?.message || 'Încearcă din nou.'));
+                    } finally {
+                        nouBtnUitat.innerText = textInitial;
+                        nouBtnUitat.disabled = false;
                     }
                 });
             }
