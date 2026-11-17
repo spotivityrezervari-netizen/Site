@@ -15,6 +15,8 @@
         let chatClientTerenCurent = null; // Stochează terenul selectat curent pentru conversație
         let chatClientMesajeToate = []; // Toate mesajele clientului
         let chatRealtimeGeneration = 0, chatMessageRequest = 0, chatListRequest = 0, conversationGeneration = 0;
+        const pendingSends = new Set();
+        const sendKey = (owner, court) => JSON.stringify([owner, court]);
         const avertismentChatClient = document.getElementById('chat-client-avertisment');
 
         // A confirmed email change keeps the same UUID. Refresh mutable identity
@@ -219,8 +221,9 @@
                 .gte('starts_at', new Date(Date.now() - 60 * 60 * 1000).toISOString()).order('id', { ascending: true }));
             if (state.user?.id !== owner || state.user.email !== email || chatClientTerenCurent !== teren || conversation !== conversationGeneration) return;
             const allowed = !error && bookings?.some(r => !window.esteRezervareTrecuta(r.data_str,r.ora,r.timestamp_start));
-            inputChatClient.disabled = !allowed;
-            btnTrimiteChatClient.disabled = !allowed;
+            const disabled = !allowed || pendingSends.has(sendKey(owner, teren));
+            inputChatClient.disabled = disabled;
+            btnTrimiteChatClient.disabled = disabled;
             avertismentChatClient.style.display = allowed ? 'none' : 'block';
         }
 
@@ -233,8 +236,11 @@
             const email = state.user.email;
             const court = chatClientTerenCurent;
             const conversation = conversationGeneration;
+            const key = sendKey(owner, court);
+            if (pendingSends.has(key)) return;
             const stillCurrent = () => state.user?.id === owner && state.user.email === email && chatClientTerenCurent === court
                 && conversation === conversationGeneration && document.getElementById('modal-chat-client').style.display !== 'none';
+            pendingSends.add(key);
             inputChatClient.disabled = true;
             btnTrimiteChatClient.disabled = true;
             try {
@@ -257,9 +263,15 @@
             } catch (error) {
                 if (stillCurrent()) alert('Eroare la trimitere: ' + error.message);
             } finally {
-                if (stillCurrent()) {
-                    await actualizeazaDreptulChatClient(court, owner, email, conversation);
-                    if (stillCurrent() && !inputChatClient.disabled) inputChatClient.focus();
+                pendingSends.delete(key);
+                // Returning to this court while the request was pending creates
+                // a new view generation; that view must also regain its controls.
+                const currentEmail = state.user?.email, currentConversation = conversationGeneration;
+                const currentCourt = () => state.user?.id === owner && state.user.email === currentEmail && chatClientTerenCurent === court
+                    && conversationGeneration === currentConversation && modalChatClient.style.display !== 'none';
+                if (currentCourt()) {
+                    await actualizeazaDreptulChatClient(court, owner, currentEmail, currentConversation);
+                    if (currentCourt() && !inputChatClient.disabled) inputChatClient.focus();
                 }
             }
         }

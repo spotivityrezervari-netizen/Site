@@ -4,7 +4,7 @@ Această actualizare repară problemele identificate la audit. Publicarea pe Net
 
 ## Funcții și date
 
-Ordinea de instalare pentru o bază aflată la migrarea 035 este **036 → 037 → 038 → 039 → 040 → 041 → 042**, înaintea noului frontend. Nu reaplica migrările vechi peste o instalare existentă. Protecțiile migrărilor refuză obiecte necunoscute sau versiuni deja depășite.
+Ordinea de instalare pentru o bază aflată la migrarea 035 este **036 → 037 → 038 → 039 → 040 → 041 → 042 → 043**, înaintea noului frontend. Nu reaplica migrările vechi peste o instalare existentă. Protecțiile migrărilor refuză obiecte necunoscute sau versiuni deja depășite.
 
 - **036:** anularea explicită a unei rezervări manuale eligibile folosește acum fluxul de incidente și notificări al rezervărilor grupate. Nu transformă în masă rezervările vechi și nu generează emailuri istorice. Contactele istorice nevalide rămân anulabile; nu se inventează destinatari pentru ele.
 - **037:** restricții manuale pentru rezervări, cu permisiuni verificate în SQL și jurnal privat. Un administrator poate acționa numai pentru terenurile alocate; superadminul poate alege și întregul site. Restricția nu închide contul și nu anulează rezervările existente.
@@ -15,6 +15,8 @@ Ordinea de instalare pentru o bază aflată la migrarea 035 este **036 → 037 �
 
 - **041:** separă identitatea istorică a contului de legătura Auth care poate deveni NULL la ștergere. Abaterile unui cont șters nu se adună la cele ale unui oaspete cu același email; notificările pentru contul șters nu sunt redirecționate către acel oaspete. Se păstrează UUID-urile dovedite de rezervări sau evenimente existente, fără asociere dedusă din adresa de email. Identitățile deja pierdute și fără dovezi nu pot fi reconstruite automat.
 - **042:** recalcularea stării unui grup de rezervare este serializată înaintea citirii orelor. Două anulări simultane nu mai pot lăsa grupul „anulat parțial” după anularea tuturor orelor. Instalarea nu modifică rezervări, prețuri sau emailuri existente.
+
+- **043:** o modificare administrativă cu același contact păstrează identitatea exactă a rezervării manuale. Normalizarea veche a emailului nu mai poate lega o rezervare a unui cont șters de un cont nou cu aceeași adresă, nici converti un oaspete la cont în timpul unei simple modificări de preț. Schimbarea explicită a contactului și rezervările noi păstrează regulile existente. Instalarea nu repară prin presupuneri date istorice deja suprascrise și nu rescrie rezervări sau notificări.
 
 Funcțiile Edge `booking-workflow`, `club-applications` și `booking-notifications` trebuie publicate separat cu toate importurile locale, inclusiv `_shared/email-address.ts` și, unde este folosit, `_shared/public-rate-limit.ts`. `verify_jwt=false` se păstrează pentru handler-ele care verifică explicit sesiunea sau autorizarea serviciului. Nu introduce chei de serviciu în frontend.
 
@@ -28,6 +30,10 @@ Restricțiile conturilor sunt legate de identitatea Auth. Pentru rezervările f�
 
 ## Interfață, imagini și SEO
 
+- Datele clientului din istoricul și programul administratorului sunt asociate exclusiv după UUID-ul rezervării. Un email egal nu mai poate împrumuta numele, telefonul ori conversația unui alt cont; deschiderea Chat din program cere profilul exact al contului rezervării.
+- Chatul clientului păstrează blocarea trimiterii în timpul actualizărilor realtime. O cerere în curs nu poate trimite încă o copie a mesajului; navigarea, erorile și schimbarea contului păstrează izolarea conversațiilor.
+- Salvarea unei rezervări inline sau a unei alocări administrative verifică sesiunea și aceeași ciornă înainte de scriere. Cererile în curs sunt deduplicate, iar completările mai vechi nu șterg un formular editat între timp. O citire nereușită a disponibilității sau a alocărilor nu mai este urmată de inserare.
+- Programul administratorului expiră comenzile pentru orele încheiate din datele deja încărcate. Nu remontează controalele de prezență și nu afectează formularele manuale pentru intervale goale, inclusiv date istorice.
 - Fotografiile terenurilor sunt decodate înainte de upload. Un fișier corupt, chiar declarat JPG/PNG, nu mai poate înlocui fotografia existentă; URL-ul temporar este eliberat, iar identitatea se verifică din nou după decodare.
 - Confirmarea întârziată a unei rezervări nu închide alt teren sau altă zi deschisă între timp. Reîncercarea unei rezervări cu rezultat incert păstrează cererea inițială și contextul nou al interfeței.
 - Un link de anulare permite reîncercarea explicită a previzualizării după erori temporare, înainte de confirmarea anulării. Tokenul rămâne în memorie și este eliminat din adresă și la închiderea dialogului.
@@ -62,7 +68,7 @@ node scripts/generate-seo-pages.mjs --check
 node scripts/build-public.mjs
 ```
 
-Testele SQL suplimentare sunt în `supabase/tests/{manual-booking-cancellations,client-restrictions,guest-email-validation,court-photo-cleanup,legacy-attendance-email,durable-booking-customer-identity}.test.cjs`; variantele de ID numeric se rulează cu `SPOTIVITY_TEST_INTEGER_IDS=1`. Testele de browser corespunzătoare și `public-resilience-browser.test.cjs` nu modifică proiectul real. Pentru actualizarea catalogului și regenerarea adreselor, urmează `scripts/SEO_PAGES.md` și păstrează fișierul de istoric în Git.
+Testele SQL suplimentare sunt în `supabase/tests/{manual-booking-cancellations,client-restrictions,guest-email-validation,court-photo-cleanup,legacy-attendance-email,durable-booking-customer-identity,manual-booking-identity-transitions}.test.cjs`; variantele de ID numeric se rulează cu `SPOTIVITY_TEST_INTEGER_IDS=1`. Testele de browser corespunzătoare și `public-resilience-browser.test.cjs` nu modifică proiectul real. Pentru actualizarea catalogului și regenerarea adreselor, urmează `scripts/SEO_PAGES.md` și păstrează fișierul de istoric în Git.
 
 Verificarea concurenței folosește două sesiuni PostgreSQL reale, cu administratori diferiți, într-un container temporar fără rețea. Nu accesează Supabase live și nu trimite emailuri. Necesită Docker local și imaginea `postgres:17` deja disponibilă:
 

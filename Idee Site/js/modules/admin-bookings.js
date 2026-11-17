@@ -4,6 +4,7 @@
     const modules = window.SpotivityModules = window.SpotivityModules || {};
     modules.adminBookings = function(context) {
         const { db, state } = context;
+        const pendingInlineSaves = new WeakSet();
         async function adminHourIsAllowed(courtName, hour) {
             const sameContext = context.captureContext();
             if (!sameContext()) return false;
@@ -184,8 +185,9 @@
             if (!sameContext()) return;
             if (!confirm(`Blochezi ora ${ora} pentru terenul ${numeTeren}?`)) return;
 
-            const { data: verif } = await db.from('rezervari').select('id').eq('teren', numeTeren).eq('data_str', dataFormata).eq('ora', ora).neq('stare', 'anulata');
+            const { data: verif, error: availabilityError } = await db.from('rezervari').select('id').eq('teren', numeTeren).eq('data_str', dataFormata).eq('ora', ora).neq('stare', 'anulata');
             if (!sameContext()) return;
+            if (availabilityError) return alert('Rezervările existente nu pot fi verificate. Încearcă din nou.');
             if (verif && verif.length > 0) {
                 alert("Eroare: Ora a fost rezervata intre timp de altcineva!");
                 window.incarcaTabelProgram();
@@ -278,50 +280,65 @@
 
         window.salveazaRezervareInlineAdmin = async function(teren, data, ora) {
             const request = state.programGeneration;
+            const sameSession = context.captureContext();
             const oraId = ora.replace(':', '');
             const nameInput = document.getElementById('inline-nume-' + oraId);
             const priceInput = document.getElementById('inline-pret-' + oraId);
-            if (!nameInput || !priceInput) return;
-            const nume = nameInput.value.trim().replace(/\.$/, '');
-            const pret = priceInput.value.trim().replace(/\.$/, '');
-            const sameContext = () => request === state.programGeneration && nameInput.isConnected && priceInput.isConnected
+            const form = document.getElementById('form-inline-' + oraId);
+            if (!nameInput || !priceInput || !form || pendingInlineSaves.has(nameInput)) return;
+            const nameValue = nameInput.value;
+            const priceValue = priceInput.value;
+            const nume = nameValue.trim().replace(/\.$/, '');
+            const pret = priceValue.trim().replace(/\.$/, '');
+            const sameContext = () => sameSession() && request === state.programGeneration && nameInput.isConnected && priceInput.isConnected
+                && nameInput.value === nameValue && priceInput.value === priceValue && form.style.display === 'flex'
                 && document.getElementById('modal-tabel-program').style.display === 'flex';
+            if (!sameContext()) return;
 
             if (!nume) {
                 alert('Introdu un Nume / Telefon pentru a rezerva!');
                 return;
             }
 
-            const allowed = await adminHourIsAllowed(teren, ora);
-            if (!sameContext()) return;
-            if (!allowed) { window.incarcaTabelProgram(); return; }
+            const saveButton = form.querySelector('button');
+            const buttonText = saveButton?.innerText;
+            pendingInlineSaves.add(nameInput);
+            if (saveButton) { saveButton.disabled = true; saveButton.innerText = 'Se verifică...'; }
+            try {
+                const allowed = await adminHourIsAllowed(teren, ora);
+                if (!sameContext()) return;
+                if (!allowed) { window.incarcaTabelProgram(); return; }
 
-            const { data: verif, error: availabilityError } = await db.from('rezervari').select('id').eq('teren', teren).eq('data_str', data).eq('ora', ora).neq('stare', 'anulata');
-            if (!sameContext()) return;
-            if (availabilityError) return alert('Rezervările existente nu pot fi verificate. Încearcă din nou.');
-            if (verif && verif.length > 0) {
-                alert('Eroare: Ora a fost rezervata intre timp!');
-                window.incarcaTabelProgram();
-                return;
-            }
+                const { data: verif, error: availabilityError } = await db.from('rezervari').select('id').eq('teren', teren).eq('data_str', data).eq('ora', ora).neq('stare', 'anulata');
+                if (!sameContext()) return;
+                if (availabilityError) return alert('Rezervările existente nu pot fi verificate. Încearcă din nou.');
+                if (verif && verif.length > 0) {
+                    alert('Eroare: Ora a fost rezervata intre timp!');
+                    window.incarcaTabelProgram();
+                    return;
+                }
 
-            const { error } = await db.from('rezervari').insert([{
-                sport: '-',
-                teren: teren,
-                data_str: data,
-                ora: ora,
-                pret_total: pret ? pret : 'Platit / Custom',
-                email_client: nume,
-                stare: 'activa',
-                timestamp_start: Date.now()
-            }]);
+                const { error } = await db.from('rezervari').insert([{
+                    sport: '-',
+                    teren: teren,
+                    data_str: data,
+                    ora: ora,
+                    pret_total: pret ? pret : 'Platit / Custom',
+                    email_client: nume,
+                    stare: 'activa',
+                    timestamp_start: Date.now()
+                }]);
 
-            if (!sameContext()) return;
-            if (!error) {
-                window.incarcaTabelProgram();
-                if (typeof window.reincarcaIstoricAdmin === 'function') window.reincarcaIstoricAdmin();
-            } else {
-                alert('Eroare: ' + error.message);
+                if (!sameContext()) return;
+                if (!error) {
+                    window.incarcaTabelProgram();
+                    if (typeof window.reincarcaIstoricAdmin === 'function') window.reincarcaIstoricAdmin();
+                } else {
+                    alert('Eroare: ' + error.message);
+                }
+            } finally {
+                pendingInlineSaves.delete(nameInput);
+                if (saveButton?.isConnected) { saveButton.innerText = buttonText; saveButton.disabled = false; }
             }
         };
 

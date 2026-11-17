@@ -110,7 +110,7 @@ async function fits(page,selector,label){
 }
 
 (async()=>{
-  const fixture=await createFixture({throughVersion:42});let browser;
+  const fixture=await createFixture({throughVersion:43});let browser;
   const {pg,root,requests}=fixture;
   const ids={first:uid(701),second:uid(702),other:uid(703)};
   try{

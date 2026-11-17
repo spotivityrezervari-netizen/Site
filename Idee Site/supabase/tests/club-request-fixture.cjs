@@ -13,7 +13,7 @@ const ident = value => {assert.match(value,/^[a-zA-Z_][a-zA-Z0-9_]*$/);return `"
 const jsonResponse = (status,data,extra={}) => new Response(data===undefined?null:JSON.stringify(data),{status,headers:{'content-type':'application/json','access-control-allow-origin':'*','access-control-expose-headers':'X-Supabase-Api-Version,Content-Range','x-supabase-api-version':'2024-01-01',...extra}});
 
 async function createFixture({throughVersion=27}={}) {
-  assert.ok(Number.isInteger(throughVersion)&&throughVersion>=20&&throughVersion<=42,'A supported fixture migration boundary is required');
+  assert.ok(Number.isInteger(throughVersion)&&throughVersion>=20&&throughVersion<=43,'A supported fixture migration boundary is required');
   const pg = new PGlite();
   await pg.exec(readFileSync(join(__dirname,'schema.sql'),'utf8'));
   if(throughVersion>=21)await pg.exec("alter table auth.users add column created_at timestamptz not null default '2000-01-01'");

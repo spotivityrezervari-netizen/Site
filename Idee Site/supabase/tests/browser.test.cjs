@@ -443,7 +443,15 @@ async function openProfile(page) {
     await page.locator('#guest-email').fill('browser-guest@example.test');
     await page.locator('#guest-phone').fill('+40 733 222 111');
     await page.locator('#guest-booking-submit').click();
-    await page.locator('#modal-rezervare-vizitator').waitFor({state:'hidden'});
+    try {
+      await page.locator('#modal-rezervare-vizitator').waitFor({state:'hidden'});
+    } catch (error) {
+      console.error('Guest workflow diagnostic:',await page.evaluate(()=>({
+        status:document.querySelector('#modal-rezervare-vizitator .workflow-status')?.textContent,
+        controls:[...document.querySelectorAll('#modal-rezervare-vizitator input')].map(input=>({name:input.name,valid:input.validity.valid,disabled:input.disabled}))
+      })),requests.slice(-5).map(({path,method,status})=>({path,method,status})));
+      throw error;
+    }
     await page.locator('#modal-rezervare').waitFor({state:'hidden'});
     await serial(async () => {
       await pg.exec("reset role; select set_config('request.jwt.claim.sub','',false)");
@@ -1276,10 +1284,14 @@ async function openProfile(page) {
       const originalScroll=await mobile.evaluate(()=>window.scrollY);
       assert.ok(originalScroll>0,`The stacked homepage must scroll to basketball at ${width}px`);
       const chooserUrl=mobile.url();
+      // Playwright may scroll a partially visible target again before clicking.
+      // The lock must preserve the position at activation, before the app opens it.
+      await lowerSport.evaluate(node=>{window.chooserActivationScroll=null;node.addEventListener('click',()=>{window.chooserActivationScroll=window.scrollY;},{capture:true,once:true});});
       await lowerSport.click();
       await mobile.locator('#modal-terenuri').waitFor({state:'visible'});
       assert.equal(mobile.url(),chooserUrl,'The homepage basketball action opens the chooser directly');
-      const categoryScroll=originalScroll;
+      const categoryScroll=await mobile.evaluate(()=>window.chooserActivationScroll);
+      assert.ok(Number.isFinite(categoryScroll)&&categoryScroll>0,'The chooser records the real click position');
       await mobile.waitForFunction(()=>document.body.classList.contains('fara-scroll'));
       await assertBackdrop(mobile,'modal-terenuri');
       await mobile.mouse.wheel(0,300);

@@ -123,7 +123,7 @@
 
                 let textClientAfisat = r.email_client;
                 const isGuest = !!(r.guest_name || r.guest_phone);
-                let contGasit = isGuest ? null : totiClientii.find(c => c.email === r.email_client);
+                const contGasit = !isGuest && r.client_user_id ? totiClientii.find(c => c.user_id === r.client_user_id) : null;
 
                 if (isGuest) {
                     textClientAfisat = [r.guest_name ? `Nume: ${window.escapeHtml(r.guest_name)}` : '',
