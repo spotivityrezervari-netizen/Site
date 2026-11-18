@@ -114,7 +114,7 @@ async function ownerTouchScrolling(page){
   await touch.detach();
 }
 (async()=>{
-  const fixture=await createFixture();let browser;
+  const fixture=await createFixture({throughVersion:46}); // 044–046: new sports go through a superadmin requestlet browser;
   const {pg,root,requests}=fixture;
   const ids={first:uid(8101),second:uid(8102),other:uid(8103)};
   const contexts=[],errors=[],navigations=[];
@@ -359,12 +359,20 @@ async function ownerTouchScrolling(page){
     await admin.locator('#owner-court-sport').selectOption('Baschet');
     for(const checkbox of await admin.locator('#owner-court-hours input[type=checkbox]').all())await checkbox.uncheck();
     await admin.locator('#owner-court-hours input[value="09:00"]').check();await admin.locator('#owner-court-hours input[value="10:00"]').check();
+    assert.match(await admin.locator('#owner-court-submit').innerText(),/Trimite cerere/,'A sport new to the base becomes a request for the superadmin');
     const createCount=createRequests().length;
     await admin.locator('#owner-court-submit').click();
-    await admin.evaluate(()=>{document.querySelector('#owner-court-submit')?.click();});
-    await admin.locator('#modal-owner-add-court').waitFor({state:'hidden'});await home(admin);
+    await admin.waitForFunction(()=>/Cererea a fost trimisă/.test(document.querySelector('#owner-court-status')?.textContent||''));
+    assert.equal(createRequests().length,createCount,'A new sport never creates a court directly');
+    assert.equal((await root(()=>pg.query("select count(*)::int total from public.terenuri where nume='Court Owner New'"))).rows[0].total,0);
+    const sportRequests=(await root(()=>pg.query("select * from public.cereri_teren_sport_nou where nume_teren='Court Owner New'"))).rows;
+    assert.equal(sportRequests.length,1);assert.equal(sportRequests[0].stare,'in_asteptare');assert.equal(sportRequests[0].baza_id,ids.first);assert.equal(sportRequests[0].sport,'Baschet');assert.equal(Number(sportRequests[0].pret),180);assert.deepEqual(sportRequests[0].ore_rezervabile,['09:00','10:00']);
+    const selfApproval=await admin.evaluate(async id=>db.rpc('approve_new_sport_court_request',{p_request_id:id}),sportRequests[0].id);
+    assert.ok(selfApproval.error,'An administrator cannot approve their own request');
+    await root(async()=>{await pg.query("select set_config('request.jwt.claim.sub',$1,false)",[uid(4)]);await pg.exec('set role authenticated');try{await pg.query('select public.approve_new_sport_court_request($1::uuid)',[sportRequests[0].id]);}finally{await pg.exec('reset role');}});
+    await admin.keyboard.press('Escape');await admin.locator('#modal-owner-add-court').waitFor({state:'hidden'});
+    await admin.evaluate(()=>window.refreshSpotivityAdminAccess({force:true}));await admin.waitForLoadState('networkidle');await home(admin);
     await admin.waitForFunction(()=>document.querySelector('#owner-home')?.textContent.includes('Court Owner New'));
-    assert.equal(createRequests().length,createCount+1);
     const created=(await root(()=>pg.query("select * from public.terenuri where nume='Court Owner New'"))).rows[0];
     assert.equal(created.baza_sportiva_id,ids.first);assert.equal(created.sport,'Baschet');assert.equal(Number(created.pret),180);assert.deepEqual(created.ore_rezervabile,['09:00','10:00']);
     const newSport=admin.locator('.owner-sport-section[data-owner-sport="Baschet"]');
@@ -373,7 +381,7 @@ async function ownerTouchScrolling(page){
     const allocations=(await root(()=>pg.query('select * from public.users_admin where user_id=$1',[uid(3)]))).rows[0];assert.ok(allocations.terenuri.split(',').map(value=>value.trim()).includes('Court Owner New'));assert.equal(allocations.is_super,false);
     const preserved=await root(async()=>({courts:(await pg.query("select to_jsonb(t) value from public.terenuri t where nume<>'Court Owner New' order by id")).rows,otherAdmin:(await pg.query('select to_jsonb(t) value from public.users_admin t where user_id<>$1 order by id',[uid(3)])).rows}));
     assert.deepEqual(preserved,beforeCreate);
-    pass('the main other-sport action creates a first basketball court through the real scoped RPC, adds its sport with PLUS first, and preserves existing data');
+    pass('the main other-sport action sends a new-sport request; after superadmin approval the first basketball court appears with PLUS first and existing data is preserved');
     const deniedCreate=await admin.evaluate(async baseId=>db.rpc('create_managed_court',{p_base_id:baseId,p_name:'Cross Base Attack',p_sport:'Fotbal',p_price:1,p_hours:['12:00']}),ids.other);
     assert.ok(deniedCreate.error);assert.equal((await root(()=>pg.query("select count(*)::int total from public.terenuri where nume='Cross Base Attack'"))).rows[0].total,0);
     pass('a direct creation request cannot add or allocate a court in another base');

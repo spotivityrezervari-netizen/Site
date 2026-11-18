@@ -115,7 +115,7 @@ let checks=0;
       const input=publicPage.locator(selector).first(),original=await input.inputValue();await input.fill(value);await publicPage.locator('#club-request-submit').click();assert.equal(edgeWrites().length,beforeValidation);await input.fill(original);
     }
     await publicPage.locator('#club-request-consent').uncheck();await publicPage.locator('#club-request-submit').click();assert.equal(edgeWrites().length,beforeValidation);await publicPage.locator('#club-request-consent').check();
-    const png=readFileSync(join(__dirname,'../../assets/imagini/avatar2.png'));
+    const png=readFileSync(join(__dirname,'fixtures','photo-256.png')); // below the shrink threshold, so uploads stay byte-identical
     for(const file of [{name:'bad.svg',mimeType:'image/svg+xml',buffer:Buffer.from('<svg/>')},{name:'broken.png',mimeType:'image/png',buffer:Buffer.from('broken')},{name:'huge.png',mimeType:'image/png',buffer:Buffer.alloc(5242881)}]){
       await publicPage.locator('#club-request-photo').setInputFiles(file);await publicPage.waitForFunction(()=>document.getElementById('club-request-photo').files.length===0);assert.equal(edgeWrites().length,beforeValidation);
     }

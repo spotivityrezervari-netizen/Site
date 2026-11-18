@@ -217,7 +217,7 @@ async function fits(page,selector,label){
     for(const key of ['bookings','chat'])assert.ok(attacks[key].data.every(row=>['Court A','Court B'].includes(row.teren)),key);
     pass('server policies reject cross-court/base writes, role grants, court relinking/renaming and global operations even with direct SDK requests');
 
-    const png=readFileSync(join(__dirname,'../../assets/imagini/avatar2.png'));
+    const png=readFileSync(join(__dirname,'fixtures','photo-256.png')); // below the shrink threshold, so uploads stay byte-identical
     await admin.locator('#container-meniu-terenuri .admin-court-card').click();const settings=`#modal-setari-${seeded.courtA.id}`;await admin.locator(settings).waitFor({state:'visible'});
     await fits(admin,`${settings} .modal-continut`,'court-settings');
     await admin.locator(`#pret-${seeded.courtA.id}`).fill('135');

@@ -13,7 +13,7 @@ const ident = value => {assert.match(value,/^[a-zA-Z_][a-zA-Z0-9_]*$/);return `"
 const jsonResponse = (status,data,extra={}) => new Response(data===undefined?null:JSON.stringify(data),{status,headers:{'content-type':'application/json','access-control-allow-origin':'*','access-control-expose-headers':'X-Supabase-Api-Version,Content-Range','x-supabase-api-version':'2024-01-01',...extra}});
 
 async function createFixture({throughVersion=27}={}) {
-  assert.ok(Number.isInteger(throughVersion)&&throughVersion>=20&&throughVersion<=43,'A supported fixture migration boundary is required');
+  assert.ok(Number.isInteger(throughVersion)&&throughVersion>=20&&throughVersion<=46,'A supported fixture migration boundary is required');
   const pg = new PGlite();
   await pg.exec(readFileSync(join(__dirname,'schema.sql'),'utf8'));
   if(throughVersion>=21)await pg.exec("alter table auth.users add column created_at timestamptz not null default '2000-01-01'");
@@ -37,10 +37,11 @@ async function createFixture({throughVersion=27}={}) {
   const rpc=async(path,body)=>{
     const name=path.split('/').pop();assert.ok(['get_admin_access','save_sports_base','submit_club_application','submit_club_request','approve_club_request','reject_club_request','consume_public_rate_limit',
       'get_booking_attendance','get_legacy_booking_attendance','set_booking_attendance','set_legacy_booking_attendance',
-      'list_late_cancellations','list_customer_booking_restrictions','set_customer_booking_restriction','revoke_customer_booking_restriction'].includes(name),name);
+      'list_late_cancellations','list_customer_booking_restrictions','set_customer_booking_restriction','revoke_customer_booking_restriction',
+      'request_new_sport_court','approve_new_sport_court_request','reject_new_sport_court_request'].includes(name),name);
     const keys=Object.keys(body);for(const key of keys)assert.match(key,/^p_[a-z_]+$/);
     const jsonKeys=new Set(['p_terenuri','p_prices']);
-    const casts={p_id:'::uuid',p_admin_ids:'::uuid[]',p_court_ids:'::text[]',p_booking_ids:'::uuid[]',p_reservation_ids:'::text[]',p_reservation_id:'::text',p_este_activa:'::boolean',p_days:'::integer',p_permanent:'::boolean',p_global:'::boolean',p_expected_revision:'::integer'};
+    const casts={p_id:'::uuid',p_hours:'::text[]',p_price:'::integer',p_admin_ids:'::uuid[]',p_court_ids:'::text[]',p_booking_ids:'::uuid[]',p_reservation_ids:'::text[]',p_reservation_id:'::text',p_este_activa:'::boolean',p_days:'::integer',p_permanent:'::boolean',p_global:'::boolean',p_expected_revision:'::integer'};
     const result=await pg.query(`select public.${ident(name)}(${keys.map((key,i)=>`${key} => $${i+1}${casts[key]||(jsonKeys.has(key)?'::jsonb':key.endsWith('_id')?'::uuid':key==='p_expected_updated_at'?'::timestamptz':'')}`).join(',')}) value`,keys.map(key=>jsonKeys.has(key)?JSON.stringify(body[key]):body[key]));
     return result.rows[0].value;
   };

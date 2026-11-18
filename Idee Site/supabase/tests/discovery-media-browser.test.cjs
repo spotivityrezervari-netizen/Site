@@ -225,7 +225,8 @@ let checks = 0;
       await page.waitForFunction(() => document.getElementById('admin-baza-photo-section').getAttribute('aria-busy') === 'false');
       await page.waitForLoadState('networkidle');
     };
-    const png = readFileSync(join(__dirname, '..', '..', 'assets/imagini/avatar2.png'));
+    // A small photo: uploads below the shrink threshold (image-compress.js) stay byte-identical.
+    const png = readFileSync(join(__dirname, 'fixtures', 'photo-256.png'));
     const admin = await pageFor();
     await admin.goto(base, {waitUntil: 'networkidle'});
     await admin.locator('#btn-top-cont').click();

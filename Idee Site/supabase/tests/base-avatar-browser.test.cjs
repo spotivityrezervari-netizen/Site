@@ -64,7 +64,7 @@ async function fits(page,selector,label){
   const {pg,root,objects,requests}=fixture;
   const ids={own:uid(1801),other:uid(1802),cover:uid(1811),avatar:uid(1812),otherCover:uid(1813),otherAvatar:uid(1814)};
   const paths={cover:`${ids.own}/${ids.cover}.png`,avatar:`${ids.own}/${ids.avatar}.png`,otherCover:`${ids.other}/${ids.otherCover}.png`,otherAvatar:`${ids.other}/${ids.otherAvatar}.png`};
-  const png=readFileSync(join(__dirname,'../../assets/imagini/avatar2.png'));
+  const png=readFileSync(join(__dirname,'fixtures','photo-256.png')); // below the shrink threshold, so uploads stay byte-identical
   const controls={loseNextPatch:false,userGate:null};
   const errors=[],contexts=[];
   const pass=label=>{checks++;console.log('PASS',label);};

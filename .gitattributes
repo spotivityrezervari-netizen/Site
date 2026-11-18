@@ -1,0 +1,11 @@
+# Same line endings on every machine (Windows, Linux, CI). SQL migrations
+# compare function bodies by checksum, so CRLF copies would break them.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary

@@ -19,7 +19,7 @@ const slugs={Fotbal:'fotbal',Baschet:'baschet',Tenis:'tenis',Volei:'volei','Teni
  const tag=html.match(/<script src="(https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@[^\"]+)" integrity="(sha384-[^\"]+)"/);assert.ok(tag);
  const sdk=execFileSync('curl',['--fail','--location','--silent','--show-error','--max-time','30',tag[1]],{maxBuffer:2*1024*1024});
  assert.equal('sha384-'+createHash('sha384').update(sdk).digest('base64'),tag[2]);
- const launch={executablePath:'/usr/bin/chromium',headless:true};
+ const launch={executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true};
  const proxy=process.env.HTTPS_PROXY||process.env.https_proxy;if(proxy)launch.proxy={server:new URL(proxy).origin,bypass:'127.0.0.1,localhost'};
  const browser=await chromium.launch(launch);
  const errors=[],failed=[],bad=[],results=[];
@@ -81,8 +81,8 @@ const slugs={Fotbal:'fotbal',Baschet:'baschet',Tenis:'tenis',Volei:'volei','Teni
   // Keyboard activation uses the same existing sport action.
   await clickAndClose('Fotbal','keyboard');
   // Correct visual sport and action survive slow custom sources and stale requests.
-  await context.route('https://images.example.test/gallery-slow.jpg',async route=>{await new Promise(resolve=>setTimeout(resolve,2400));await route.fulfill({status:200,contentType:'image/jpeg',body:readFileSync(root+'/assets/imagini/TenisFINAL.jpeg')});});
-  await page.evaluate(()=>window.spotivitySportAppearance.Tenis.fundal_url='https://images.example.test/gallery-slow.jpg');
+  await context.route('https://ndubcdwohqzgxpuiowye.supabase.co/storage/v1/object/public/poze_terenuri/fixture/gallery-slow.jpg',async route=>{await new Promise(resolve=>setTimeout(resolve,2400));await route.fulfill({status:200,contentType:'image/jpeg',body:readFileSync(root+'/assets/imagini/TenisFINAL.jpeg')});});
+  await page.evaluate(()=>window.spotivitySportAppearance.Tenis.fundal_url='https://ndubcdwohqzgxpuiowye.supabase.co/storage/v1/object/public/poze_terenuri/fixture/gallery-slow.jpg');
   await page.locator('[data-welcome-sport="Tenis"]').click();await page.locator('[data-welcome-sport="Volei"]').click();
   await page.waitForFunction(()=>document.querySelector('.welcome-cover').dataset.gallerySport==='Volei');await page.waitForTimeout(2700);await assertCard('Volei',1440,'ro');
   await page.evaluate(()=>{window.spotivitySportAppearance.Volei.fundal_url='assets/imagini/BackgroundFootball.avif';dispatchEvent(new CustomEvent('spotivity:sport-appearance'));});

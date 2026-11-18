@@ -24,9 +24,12 @@ let passed=0;
   assert.ok(sdkTag,'The application must pin the real SDK with SRI');
   const sdk=execFileSync('curl',['--fail','--location','--silent','--show-error','--max-time','30',sdkTag[1]],{maxBuffer:2*1024*1024});
   assert.equal('sha384-'+createHash('sha384').update(sdk).digest('base64'),sdkTag[2]);
+  const leakedPasswords=['parola-compromisa'];
   async function fixture({delayApp=false}={}){
    const context=await browser.newContext({timezoneId:'Europe/Bucharest'});contexts.push(context);
    await context.route(sdkTag[1],route=>route.fulfill({status:200,contentType:'application/javascript',body:sdk,headers:{'access-control-allow-origin':'*'}}));
+   // Offline stand-in for the Have I Been Pwned range API (k-anonymity: only a 5-character SHA-1 prefix is sent).
+   const hibp=[];await context.route('https://api.pwnedpasswords.com/**',route=>{const prefix=new URL(route.request().url()).pathname.split('/').pop();hibp.push({prefix,padding:route.request().headers()['add-padding']});const lines=leakedPasswords.map(p=>createHash('sha1').update(p).digest('hex').toUpperCase()).filter(h=>h.startsWith(prefix)).map(h=>h.slice(5)+':42');lines.push('00000000000000000000000000000000000:0');return route.fulfill({status:200,contentType:'text/plain',body:lines.join('\r\n'),headers:{'access-control-allow-origin':'*'}});});
    const writes=[];const alerts=[];let userGate=null;
    let initialUserResolve;const initialUser=new Promise(resolve=>{initialUserResolve=resolve});
    if(context.routeWebSocket)await context.routeWebSocket(url=>url.hostname===host,ws=>ws.close());
@@ -75,7 +78,7 @@ let passed=0;
    if(delayApp)await context.route('**/js/app.js*',async route=>{await initialUser;await route.continue()});
    const page=await context.newPage();page.on('dialog',async d=>{alerts.push(d.message());await d.dismiss()});page.on('pageerror',e=>errors.push(e.message));
    const pauseUser=()=>{let enter,release;const entered=new Promise(resolve=>enter=resolve),wait=new Promise(resolve=>release=resolve);userGate={enter,wait};return{entered,release}};
-   return{page,writes,alerts,pauseUser};
+   return{page,writes,alerts,pauseUser,hibp};
   }
   const valid=await fixture({delayApp:true});await valid.page.goto(recoveryUrl(),{waitUntil:'networkidle'});
   await valid.page.locator('#modal-parola-noua').waitFor({state:'visible'});
@@ -83,6 +86,11 @@ let passed=0;
   assert.ok(!valid.page.url().includes('access_token'));
   await valid.page.locator('#input-noua-parola-js').fill('12345');await valid.page.locator('#btn-salveaza-parola-js').click();
   assert.match(await valid.page.locator('#mesaj-resetare-parola').innerText(),/minim 6/);assert.equal(valid.writes.length,0);
+  await valid.page.locator('#input-noua-parola-js').fill('parola-compromisa');await valid.page.locator('#btn-salveaza-parola-js').click();
+  await valid.page.waitForFunction(()=>/scurgeri de date/.test(document.querySelector('#mesaj-resetare-parola')?.textContent||''));
+  assert.equal(valid.writes.length,0,'A password found in public breaches is never saved');assert.equal(await valid.page.locator('#modal-parola-noua').count(),1);
+  assert.ok(valid.hibp.length>0&&valid.hibp.every(r=>/^[0-9A-F]{5}$/.test(r.prefix)&&r.padding==='true'),'Only an anonymous 5-character hash prefix leaves the browser');
+  console.log('PASS a password found in public breaches is refused before any write, sending only a padded 5-character hash prefix');passed++;
   await valid.page.locator('#input-noua-parola-js').fill('123456');await valid.page.locator('#btn-salveaza-parola-js').click();
   await valid.page.locator('#modal-parola-noua').waitFor({state:'detached'});
   assert.equal(valid.writes.length,1);assert.equal(valid.writes[0].person,1);assert.equal(valid.writes[0].body.password,'123456');
