@@ -49,7 +49,7 @@
         const asRequest = requestMode();
         byId('owner-court-submit').textContent = busy
             ? (asRequest ? 'Se trimite cererea…' : 'Se adaugă terenul…')
-            : (asRequest ? 'Trimite cererea către superadmin' : 'Adaugă terenul');
+            : (asRequest ? 'Trimite cerere' : 'Adaugă terenul');
         byId('owner-court-request-note').hidden = !asRequest;
         byId('owner-court-message-group').hidden = !asRequest;
         form.setAttribute('aria-busy', String(busy));
@@ -230,7 +230,7 @@
             // The database refused a sport new to this base: switch the form to a request.
             if (/aprobarea unui superadmin/i.test(error?.message || '')) {
                 forceRequest = true;
-                status('Acest sport este nou pentru bază. Completează mesajul (opțional) și trimite cererea către superadmin.', 'error');
+                status('Acest sport este nou pentru bază. Completează mesajul (opțional) și apasă „Trimite cerere”.', 'error');
                 return;
             }
             status(error?.message || 'Terenul nu a putut fi adăugat. Verifică datele și încearcă din nou.', 'error');
