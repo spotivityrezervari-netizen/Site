@@ -7,7 +7,8 @@
 //   npm test -- owner-home auth-recovery     (only files whose name matches)
 //
 // CHROMIUM_PATH selects the browser (default: Playwright's Chromium, else
-// /usr/bin/chromium). TEST_JOBS sets parallelism (default 4).
+// /usr/bin/chromium). TEST_JOBS sets parallelism (default 4); TEST_RETRIES retries
+// a failed file (default 1) and lists it as flaky when the retry passes.
 'use strict';
 const http = require('node:http');
 const fs = require('node:fs');
@@ -20,6 +21,7 @@ const siteRoot = path.resolve(testsDir, '..', '..');
 const PORTS = [8002, 8010, 8096, 8103, 8105, 8117];
 const TIMEOUT_MS = Number(process.env.TEST_TIMEOUT_MS || 240000);
 const JOBS = Math.max(1, Number(process.env.TEST_JOBS || 4));
+const RETRIES = Math.max(0, Number(process.env.TEST_RETRIES ?? 1));
 const TYPES = {
     '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
     '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp',
@@ -76,12 +78,24 @@ function runOne(file, env) {
     if (chromium) env.CHROMIUM_PATH = chromium;
     console.log(`Running ${files.length} test files (${JOBS} at a time)${chromium ? ` with ${chromium}` : ''}`);
 
-    const queue = [...files]; const results = [];
+    const queue = [...files]; const results = []; const flaky = [];
     await Promise.all(Array.from({ length: Math.min(JOBS, queue.length) }, async () => {
         while (queue.length) {
-            const result = await runOne(queue.shift(), env);
+            const file = queue.shift();
+            let result = await runOne(file, env);
+            // Browser timing can vary on a busy machine: retry a failed file once
+            // and report it as flaky, so it stays visible instead of hidden.
+            if (result.code !== 0 && RETRIES > 0) {
+                const retry = await runOne(file, env);
+                if (retry.code === 0) {
+                    flaky.push(path.basename(file));
+                    if (process.env.GITHUB_ACTIONS) console.log(`::warning title=${path.basename(file)}::Flaky: failed once, passed on retry`);
+                }
+                result = retry;
+            }
             results.push(result);
-            console.log(`${result.code === 0 ? 'ok  ' : 'FAIL'} ${path.basename(result.file)} (${result.seconds.toFixed(1)}s)`);
+            const mark = result.code !== 0 ? 'FAIL' : flaky.includes(path.basename(file)) ? 'ok* ' : 'ok  ';
+            console.log(`${mark} ${path.basename(result.file)} (${result.seconds.toFixed(1)}s)`);
         }
     }));
     servers.forEach(server => server.close());

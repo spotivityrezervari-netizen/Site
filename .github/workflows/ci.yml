@@ -68,5 +68,5 @@ jobs:
       - name: Toate testele
         run: npm test
         env:
-          TEST_JOBS: 4
+          TEST_JOBS: 3
           CHROMIUM_PATH: /usr/bin/google-chrome
