@@ -12,7 +12,7 @@ Pentru lansarea pe domeniul final, migrarea031 este pregătită separat în Git 
 2. Completează subiectul și mesajul. Poți atașa o fotografie JPG/PNG de maximum 5 MB. Imaginea se adaptează la lățimea emailului și își păstrează proporțiile.
 3. Apasă **Previzualizează și verifică destinatarii**. Se salvează mesajul și lista actuală; acest pas nu trimite emailuri.
 4. Verifică numărul și mesajul, bifează confirmarea, apoi apasă **Trimite emailurile**. Dacă grupul s-a schimbat, este necesară o previzualizare nouă. Aprobarea expiră după 24 de ore.
-5. Urmărește istoricul. „Acceptate de Gmail” arată succesul API, nu sosirea în inbox. „Rezultat incert” nu se retrimite automat. Poți opri destinatarii încă neprocesați; emailurile deja acceptate sau aflate în curs nu pot fi retrase.
+5. Urmărește istoricul. „Acceptate de serviciul de email” arată succesul trimiterii, nu sosirea în inbox. „Rezultat incert” nu se retrimite automat. Poți opri destinatarii încă neprocesați; emailurile deja acceptate sau aflate în curs nu pot fi retrase.
 
 Modificarea textului, grupului sau imaginii invalidează confirmarea. Un dublu click sau o reluare a aceleiași campanii nu resetează destinatarii procesați. După o eroare verifică istoricul înainte să creezi un anunț nou.
 
@@ -25,11 +25,11 @@ Se păstrează **două scenarii active**, fără schimbarea abonamentului:
 
 Cele două scenarii manuale 8377771/8377772 rămân inactive, disponibile pentru compatibilitate; utilizatorul nu mai trebuie să deschidă Make pentru compunerea unui anunț din panou. Nu se activează un al treilea scenariu.
 
-Webhookul primește numai tipul campaniei și UUID-ul. Adresa, subiectul și HTML-ul sunt obținute exclusiv din SQL, după verificarea aprobării și a rolului actual al destinatarului. Conexiunile HTTP existente 276701/276702 injectează separat cheile grupurilor. Gmail are un singur To, fără CC/BCC. Nu există tokenuri Make, chei private Supabase sau URL-uri webhook în codul public.
+Webhookul primește numai tipul campaniei și UUID-ul. Adresa, subiectul și HTML-ul sunt obținute exclusiv din SQL, după verificarea aprobării și a rolului actual al destinatarului. Conexiunile HTTP existente 276701/276702 injectează separat cheile grupurilor. Fiecare email are un singur To, fără CC/BCC. Nu există tokenuri Make, chei private Supabase sau URL-uri webhook în codul public.
 
-Rutele campaniilor folosesc **Ignore pentru bundle-ul cu eroare**, fără retry Gmail: continuă celelalte persoane, iar registrul SQL păstrează rezultatul incert. O eroare de campanie nu trebuie să dezactiveze scenariul notificărilor tranzacționale. Destinatarii încă `pending` pot fi repuși în coadă de cron la două minute; cei `sending`/`sent` nu sunt niciodată revendicați din nou.
+Rutele campaniilor folosesc **Ignore pentru bundle-ul cu eroare**, fără retry de email: continuă celelalte persoane, iar registrul SQL păstrează rezultatul incert. O eroare de campanie nu trebuie să dezactiveze scenariul notificărilor tranzacționale. Destinatarii încă `pending` pot fi repuși în coadă de cron la două minute; cei `sending`/`sent` nu sunt niciodată revendicați din nou.
 
-Pentru rezervări/chat, identificatorul este rezervat în Data Store **înainte de Gmail**, cu execuție secvențială și `overwrite=false`. În caz de eroare, verificarea manuală este necesară; o înregistrare existentă în Data Store înseamnă ID rezervat/procesat, nu dovadă de livrare.
+Pentru rezervări/chat, identificatorul este rezervat în Data Store **înainte de trimiterea emailului**, cu execuție secvențială și `overwrite=false`. În caz de eroare, verificarea manuală este necesară; o înregistrare existentă în Data Store înseamnă ID rezervat/procesat, nu dovadă de livrare.
 
 ## Dublurile din fluxurile vechi
 
@@ -62,7 +62,7 @@ La o revenire, păstrează coada și registrul. Dezactivează numai `announcemen
 8. Anunț exclusiv pentru clienți.
 9. Anunț exclusiv pentru administratori.
 
-Separat de Make: recuperarea parolei și schimbarea emailului sunt în Supabase Auth. Verificarea din 6 noiembrie a confirmat lipsa SMTP extern, limita de două emailuri Auth/oră și confirmarea automată a înscrierilor. Aceste setări nu sunt modificate de panoul de anunțuri.
+Separat de Make: recuperarea parolei și schimbarea emailului sunt în Supabase Auth. Stare verificată pe 19.11.2026: Supabase Auth trimite prin **SMTP Resend** (`smtp.resend.com`, expeditor „Spotivity” <noreply@spotivity.ro>), iar **confirmarea emailului la înscriere este pornită**. (Verificarea din 6 noiembrie arăta încă serviciul implicit.) Aceste setări nu sunt modificate de panoul de anunțuri.
 
 ## Verificări locale
 

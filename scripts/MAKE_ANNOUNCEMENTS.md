@@ -1,5 +1,7 @@
 # Manual announcements in Make
 
+> **Note (19.11.2026):** these builders were written when Make sent mail through Gmail (`google-email:sendAnEmail`). Since 18.11.2026 the live scenarios use **Resend SMTP** (`email:ActionSendEmail`). The guards in the scripts look for the Gmail module, so they now refuse to run against the current scenarios instead of changing them. Pre-migration blueprints are kept outside the repository (`Modificari/Make/make-backup/`).
+
 `make-announcements.mjs` builds two local blueprints: `clients` and `admins`. It makes no network requests, creates no credentials, runs no scenario, and sends no email. Audience is literal in every RPC and cannot be changed in the first module. Existing notifications are separate.
 
 Provide the Supabase HTTPS origin, its **public anonymous key**, and numeric Make API-key keychain IDs. The keychain must inject `x-spotivity-announcement-key`; its dedicated random token is stored only by Make, with a hash in the private database credential table. Never copy an environment proxy credential into a blueprint or configuration file. Gmail uses existing connection `11897572` unless explicitly overridden.

@@ -32,6 +32,6 @@ Aceste acțiuni de producție sunt separate de push și se fac la autorizarea la
 
 ## Configurații externe codului
 
-Supabase Auth nu are SMTP extern, iar limita builtin verificată este două emailuri/oră. Recuperarea parolei există și este testată în cod, dar furnizorul pentru livrarea publică trebuie configurat și verificat separat. API-ul de backup raportează zero copii și PITR dezactivat; protecția datelor înaintea utilizatorilor reali se stabilește separat de buildul Netlify. Acestea nu sunt defecte ale frontendului și nu sunt remediate prin deploy static.
+Stare verificată pe 19.11.2026: Supabase Auth trimite prin **SMTP Resend** (`smtp.resend.com`, expeditor „Spotivity” <noreply@spotivity.ro>), iar **confirmarea emailului la înscriere este pornită**. Recuperarea parolei a fost livrată efectiv. Limita Resend Free (100/zi, comună cu Make) trebuie mărită înaintea lansării. API-ul de backup raportează zero copii și PITR dezactivat; protecția datelor înaintea utilizatorilor reali se stabilește separat de buildul Netlify. Acestea nu sunt defecte ale frontendului și nu sunt remediate prin deploy static.
 
 Nu este necesară adăugarea unor funcționalități noi sau câte unui webhook pentru fiecare email ca să publicăm această versiune.

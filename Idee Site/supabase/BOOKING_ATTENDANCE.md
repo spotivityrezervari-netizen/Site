@@ -26,7 +26,7 @@ Tipul privat `booking_attendance_client` are două modele: avertizare de nepreze
 
 Destinatarul unui cont este recitit din Auth confirmat, nu dintr-o adresă a browserului. Pentru un oaspete se folosește contactul rezervării, fără a fi atașat ulterior unui cont cu același email. Emailul include baza/terenul, data, intervalul și totalul abaterilor; nu include o capabilitate de anulare și nu comunică o închidere efectivă de cont.
 
-Notificările noi folosesc scenariul Make existent **7938404**, prin workerul `booking-notifications`. Transformarea reproductibilă este în `scripts/make-attendance.mjs`: adaugă doar filtrul nou, păstrând rutele, conexiunile Gmail, destinatarii dinamici, procesarea secvențială, confidențialitatea și deduplicarea existente. Nu este creat un webhook separat. Acceptarea webhookului reprezintă predarea către Make, nu confirmarea livrării în inbox.
+Notificările noi folosesc scenariul Make existent **7938404**, prin workerul `booking-notifications`. Transformarea reproductibilă este în `scripts/make-attendance.mjs`: adaugă doar filtrul nou, păstrând rutele, conexiunile de email (Resend SMTP din 18.11.2026), destinatarii dinamici, procesarea secvențială, confidențialitatea și deduplicarea existente. Nu este creat un webhook separat. Acceptarea webhookului reprezintă predarea către Make, nu confirmarea livrării în inbox.
 
 Anulările târzii noi păstrează numărul lor specific și primesc separat și totalul comun. Snapshoturile și notificările vechi rămân compatibile. Migrarea nu inventează prezența pentru rezervările existente și nu pune emailuri istorice în coadă.
 
@@ -38,17 +38,17 @@ Testele `booking-attendance.test.cjs` și `booking-attendance-browser.test.cjs` 
 
 | Email | Declanșare și traseu |
 |---|---|
-| Confirmare rezervare, client și administrator | Rezervare creată → outbox Supabase → `booking-notifications` → Make **7938404** → Gmail |
+| Confirmare rezervare, client și administrator | Rezervare creată → outbox Supabase → `booking-notifications` → Make **7938404** → Resend SMTP |
 | Anulare și avertizare de anulare târzie | Anulare confirmată → același traseu **7938404**; avertizarea și contoarele sunt generate de server |
 | Neprezentare / corectarea prezenței | Alegerea administratorului după încheiere → același traseu **7938404**, numai către client |
 | Bun venit | Prima activare eligibilă a unui cont → același traseu **7938404** |
-| Mesaj de chat către client sau administratorul terenului | Mesaj nou → outbox → Make **7938798** → Gmail; scenariul este **oprit** la verificare |
-| Anunț numai pentru clienți / numai pentru administratori | Superadmin → Setări → panoul de emailuri → rutele separate din **7938404** → Gmail |
+| Mesaj de chat către client sau administratorul terenului | Mesaj nou → outbox → Make **7938798** → Resend SMTP; scenariul este **oprit**, iar chatul este trimis de scenariul principal **7938404** |
+| Anunț numai pentru clienți / numai pentru administratori | Superadmin → Setări → panoul de emailuri → rutele separate din **7938404** → Resend SMTP |
 | Resetarea parolei și confirmarea schimbării emailului | **Supabase Auth**, separat de Make |
 
 Scenariul principal **7938404** este activ. Scenariile alternative vechi de anunț manual sunt **8377771** (clienți, activ) și **8377772** (administratori, oprit). Panoul superadminului folosește rutele din 7938404, nu depinde de aceste două scenarii alternative și nu trimite simultan prin ambele căi. Starea lor și starea chatului au fost păstrate.
 
-Supabase Auth folosește serviciul implicit, fără SMTP personalizat; limita configurată este de două emailuri Auth pe oră. Înscrierile sunt confirmate automat, deci nu există în prezent un email distinct de confirmare a înscrierii. Bunul venit din Make este un mesaj separat.
+Stare verificată pe 19.11.2026: Supabase Auth trimite prin **SMTP Resend** (`smtp.resend.com`, expeditor „Spotivity” <noreply@spotivity.ro>), iar **confirmarea emailului la înscriere este pornită**. Bunul venit din Make este un mesaj separat.
 
 
 ## Corecția 035 — rezervări vechi și manuale

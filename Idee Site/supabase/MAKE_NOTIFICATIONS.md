@@ -42,11 +42,11 @@ La prima activare, confirmările vechi pentru rezervări deja încheiate pot fi 
 
 `chat_client`, `booking_created_client`, `booking_cancelled_client` și `account_welcome` folosesc același antet cu logo, verde/gold, corp lizibil, butoane și contact, fără emojiuri. Confirmarea anulării descrie exact orele eliberate și, după caz, orele păstrate; valoarea afișată nu solicită o plată nouă.
 
-Aplică `024_client_chat_notifications.sql` înainte de publicarea workerului care procesează `chat_client`. În Make, filtrul rutei normalizate din scenariul chat acceptă atât `chat_owner`, cât și `chat_client`; modulele Gmail și Data Store rămân aceleași. Ruta Postgres veche este restrânsă în aceeași tranzacție cu instalarea noului eveniment, păstrând destinația și starea ei, astfel încât un răspuns către un cont autentificat să nu genereze două emailuri.
+Aplică `024_client_chat_notifications.sql` înainte de publicarea workerului care procesează `chat_client`. În Make, filtrul rutei normalizate din scenariul chat acceptă atât `chat_owner`, cât și `chat_client`; modulele de email (Resend SMTP din 18.11.2026) și Data Store rămân aceleași. Ruta Postgres veche este restrânsă în aceeași tranzacție cu instalarea noului eveniment, păstrând destinația și starea ei, astfel încât un răspuns către un cont autentificat să nu genereze două emailuri.
 
 Destinatarul mesajului nou se recitește din contul Auth confirmat indicat de `client_user_id`, nu dintr-o adresă liberă din webhook. Mesajele vechi nu sunt retrimise. Butonul folosește `#spotivity-action=chat&message=ID`; după autentificare, RPC-ul `get_email_chat_context(text)` verifică din nou identitatea clientului sau alocarea actuală a administratorului. Referințele numerice și UUID sunt acceptate, fără date de contact sau capabilități în link. Fereastra Google păstrează temporar numai referința opacă, cu aceeași limită de 15 minute.
 
-În configurația Make verificată, procesarea secvențială și confidențialitatea sunt active, iar salvarea execuțiilor incomplete este dezactivată. Reîncercarea Supabase privește predarea webhookului; nu reprezintă o confirmare a primirii în inbox și nu garantează recuperarea unei erori Gmail ulterioare acceptării acelui webhook.
+În configurația Make verificată, procesarea secvențială și confidențialitatea sunt active, iar salvarea execuțiilor incomplete este dezactivată. Reîncercarea Supabase privește predarea webhookului; nu reprezintă o confirmare a primirii în inbox și nu garantează recuperarea unei erori de email ulterioare acceptării acelui webhook.
 
 ## Anulare târzie cu total — activare 10 noiembrie 2026
 

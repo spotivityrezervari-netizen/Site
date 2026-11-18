@@ -52,7 +52,7 @@ Acest fixture folosește PGlite și o singură conexiune; testul nu demonstreaz�
 
 ## Configurația de livrare verificată
 
-Scenariul Make `7938404` rămâne activ. Ruta existentă acceptă `booking_cancelled_client`, iar modulul Gmail folosește din webhook `to.email`, `subject` și `html`. Subiectul și corpul emailului de anulare târzie sunt pregătite de server; nu este necesar un webhook separat sau un al doilea email pentru aceeași anulare. Cheia de deduplicare rămâne `notification_id`, cu procesarea secvențială și confidențialitatea existente.
+Scenariul Make `7938404` rămâne activ. Ruta existentă acceptă `booking_cancelled_client`, iar modulul de email (Resend SMTP din 18.11.2026) folosește din webhook `to.email`, `subject` și `html`. Subiectul și corpul emailului de anulare târzie sunt pregătite de server; nu este necesar un webhook separat sau un al doilea email pentru aceeași anulare. Cheia de deduplicare rămâne `notification_id`, cu procesarea secvențială și confidențialitatea existente.
 
 Setarea de server `BOOKING_SITE_URL` indică momentan `https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/`, astfel încât linkurile funcționează pe site-ul folosit acum. Valoarea implicită din Git rămâne domeniul final `https://spotivity.ro/`. La lansarea pe domeniul final, actualizează și această setare; workerul validează destinația înainte de generarea capabilității de anulare. Nici cheile, nici webhookurile nu intră în fișierele publice.
 

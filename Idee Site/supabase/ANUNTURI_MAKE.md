@@ -29,9 +29,9 @@ Scenariile au programare **on-demand** și sunt lăsate inactive pentru activare
 
 ## Erori și prevenirea dublurilor
 
-La eroare scenariul se oprește, fără retry automat Gmail. Registrul privat Supabase păstrează separat `pending`, `sending`, `sent` și `skipped`. `sending` indică un rezultat de reconciliat manual, nu permisiunea de a retrimite: Gmail ar fi putut accepta deja mesajul înainte de pierderea răspunsului. Nu relua direct de la Gmail și nu crea o nouă campanie doar pentru a forța o retrimitere incertă. Un rezultat de succes Gmail confirmă acceptarea trimiterii, nu ajungerea în inbox.
+Din 18.11.2026 modulul de trimitere este **Resend SMTP** (`email:ActionSendEmail`), în locul Gmail; regulile de mai jos rămân aceleași. La eroare scenariul se oprește, fără retry automat de email. Registrul privat Supabase păstrează separat `pending`, `sending`, `sent` și `skipped`. `sending` indică un rezultat de reconciliat manual, nu permisiunea de a retrimite: serviciul de email ar fi putut accepta deja mesajul înainte de pierderea răspunsului. Nu relua direct de la modulul de email și nu crea o nouă campanie doar pentru a forța o retrimitere incertă. Un rezultat de succes al trimiterii confirmă acceptarea trimiterii, nu ajungerea în inbox.
 
-Make a păstrat `confidential=true` și `dlq=false` la citirea configurației salvate; stocarea execuțiilor incomplete nu este prezentată ca activată. Anunțurile folosesc registrul SQL și oprirea la eroare. Conexiunile Gmail folosite de scenariile existente au trecut operațiunea Make **Verify connection**; aceasta nu a trimis mesaje.
+Make a păstrat `confidential=true` și `dlq=false` la citirea configurației salvate; stocarea execuțiilor incomplete nu este prezentată ca activată. Anunțurile folosesc registrul SQL și oprirea la eroare. Conexiunile de email folosite atunci (Gmail) au trecut operațiunea Make **Verify connection**; aceasta nu a trimis mesaje.
 
 ## Toate tipurile de email din Make
 
@@ -51,7 +51,7 @@ Primele șapte rămân în cele două scenarii automate: **Spotivity — Rezerv�
 
 ## Emailurile de autentificare sunt separate
 
-Recuperarea parolei și confirmarea schimbării emailului sunt gestionate de **Supabase Auth**, nu de Make/Gmail. La verificare nu există SMTP extern configurat, iar limita Auth este de două emailuri pe oră. Înregistrările sunt confirmate automat, deci nu este activ un email separat de confirmare a înscrierii. Nu confunda aceste mesaje cu emailul de bun venit din Make sau cu validitatea conexiunilor Gmail.
+Recuperarea parolei și confirmarea schimbării emailului sunt gestionate de **Supabase Auth**, nu de Make. Stare verificată pe 19.11.2026: Supabase Auth trimite prin **SMTP Resend** (`smtp.resend.com`, expeditor „Spotivity” <noreply@spotivity.ro>), iar **confirmarea emailului la înscriere este pornită**. Nu confunda aceste mesaje cu emailul de bun venit din Make.
 
 ## Verificări și reproducere
 

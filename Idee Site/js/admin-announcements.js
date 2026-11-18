@@ -39,7 +39,7 @@
 <button type="button" class="btn-cont" id="ann-send" disabled>Trimite emailurile</button></section></div>
 <p id="ann-status" role="status" aria-live="polite"></p>
 <section class="ann-history" aria-labelledby="ann-history-title"><div class="announcements-heading"><h3 id="ann-history-title">Istoricul anunțurilor</h3><button type="button" class="btn-cont" id="ann-refresh">Reîncarcă</button></div>
-<p class="ann-help">„Acceptate de Gmail” nu confirmă sosirea în inbox. O trimitere cu rezultat incert rămâne pentru verificare și nu este retrimisă automat.</p><p id="ann-history-status" role="status"></p><div id="ann-history-list"></div><button type="button" class="btn-cont" id="ann-more" hidden>Încarcă mai multe</button></section></section>`;
+<p class="ann-help">„Acceptate de serviciul de email” nu confirmă sosirea în inbox. O trimitere cu rezultat incert rămâne pentru verificare și nu este retrimisă automat.</p><p id="ann-history-status" role="status"></p><div id="ann-history-list"></div><button type="button" class="btn-cont" id="ann-more" hidden>Încarcă mai multe</button></section></section>`;
         workspace.append(modal);
         const get = id => modal.querySelector('#ann-' + id);
         const panel = modal.firstElementChild;
@@ -104,7 +104,7 @@
                 card.append(node('h4', '', item.subject), node('p', 'ann-help', `${label(item.audience)} · ${Number(item.count) || 0} destinatari · ${Number.isFinite(date.getTime()) ? date.toLocaleString('ro-RO', { timeZone: 'Europe/Bucharest' }) : ''}`));
                 const stage = item.stage || {};
                 const state = item.cancelled_at ? 'Oprit' : item.status === 'preview' ? 'Previzualizare · fără trimitere' : item.expired ? 'Aprobare expirată' : Number(stage.sending) ? 'Necesită verificare pentru rezultate incerte' : Number(stage.pending) ? 'În coadă' : 'Procesat';
-                card.append(node('p', '', `${state}. Acceptate de Gmail: ${Number(stage.sent) || 0}; în așteptare: ${Number(stage.pending) || 0}; rezultat incert: ${Number(stage.sending) || 0}; omise: ${Number(stage.skipped) || 0}.`));
+                card.append(node('p', '', `${state}. Acceptate de serviciul de email: ${Number(stage.sent) || 0}; în așteptare: ${Number(stage.pending) || 0}; rezultat incert: ${Number(stage.sending) || 0}; omise: ${Number(stage.skipped) || 0}.`));
                 if (item.status === 'approved' && !item.expired && !item.cancelled_at && stage.pending > 0) {
                     const resume = node('button', 'btn-cont', 'Continuă destinatarii rămași'); resume.type = 'button';
                     resume.addEventListener('click', () => resumeCampaign(item)); card.append(resume);

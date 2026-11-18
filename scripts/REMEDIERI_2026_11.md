@@ -54,7 +54,7 @@ Nu este necesar un al treilea scenariu activ. Scenariul central **7938404** prim
 
 `scripts/make-chat.mjs` este transformarea pură, testată, care adaugă tipurile `chat_owner` și `chat_client` la ruta existentă. Nu conține webhookuri sau credențiale și nu face apeluri de provider. Destinația de chat din configurația privată Supabase se aliniază cu webhookul central după verificarea blueprintului. Scenariul vechi de chat poate rămâne oprit. Scenariile manuale vechi nu trebuie confundate cu trimiterea din panoul superadminului.
 
-Un răspuns acceptat de Make nu garantează livrarea în inbox. Nu relua manual execuția direct de la Gmail după un rezultat incert; verifică mai întâi starea din registrul privat de livrări.
+Un răspuns acceptat de Make nu garantează livrarea în inbox. Nu relua manual execuția direct de la modulul de email (Resend SMTP) după un rezultat incert; verifică mai întâi starea din registrul privat de livrări.
 
 ## Verificare
 
