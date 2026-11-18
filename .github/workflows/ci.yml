@@ -19,7 +19,7 @@ concurrency:
 jobs:
   build-and-scripts:
     name: Sintaxă, build public și teste scripturi
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -42,7 +42,7 @@ jobs:
 
   database-and-browser:
     name: Teste bază de date și browser
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     defaults:
       run:
@@ -55,9 +55,11 @@ jobs:
           cache: npm
           cache-dependency-path: Idee Site/supabase/tests/package-lock.json
       - run: npm ci
-      - name: Chromium pentru Playwright
-        run: npx playwright install --with-deps chromium
+      # GitHub runners already ship Google Chrome; no browser download needed.
+      - name: Browser
+        run: google-chrome --version
       - name: Toate testele
         run: npm test
         env:
           TEST_JOBS: 4
+          CHROMIUM_PATH: /usr/bin/google-chrome
