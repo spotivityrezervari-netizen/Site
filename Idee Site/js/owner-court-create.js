@@ -12,6 +12,16 @@
     let identityGeneration = 0;
     let observedUserId;
     let role = null;
+    // Sports the selected base already has. A sport outside this set needs a
+    // superadmin-approved request (migration 044); the database enforces it too.
+    let baseSports = null;
+    let forceRequest = false;
+    const requestStates = { in_asteptare: 'În așteptare', aprobata: 'Aprobată', respinsa: 'Respinsă' };
+    const sportLabel = sport => sport === 'Tenis Picior' ? 'Tenis de picior' : sport;
+    const requestMode = () => {
+        const sport = byId('owner-court-sport')?.value;
+        return !!sport && (forceRequest || (Array.isArray(baseSports) && !baseSports.includes(sport)));
+    };
 
     const sameId = (left, right) => String(left ?? '') === String(right ?? '');
     const hours = () => Array.isArray(window.bookingHourOptions)
@@ -35,9 +45,42 @@
     function controls() {
         if (!form) return;
         const busy = !!operation;
-        form.querySelectorAll('input, select, button[type="submit"]').forEach(node => { node.disabled = busy; });
-        byId('owner-court-submit').textContent = busy ? 'Se adaugă terenul…' : 'Adaugă terenul';
+        form.querySelectorAll('input, select, textarea, button[type="submit"]').forEach(node => { node.disabled = busy; });
+        const asRequest = requestMode();
+        byId('owner-court-submit').textContent = busy
+            ? (asRequest ? 'Se trimite cererea…' : 'Se adaugă terenul…')
+            : (asRequest ? 'Trimite cererea către superadmin' : 'Adaugă terenul');
+        byId('owner-court-request-note').hidden = !asRequest;
+        byId('owner-court-message-group').hidden = !asRequest;
         form.setAttribute('aria-busy', String(busy));
+    }
+
+    // Shows this admin's requests for the open base, newest first.
+    async function loadRequests(context) {
+        const list = byId('owner-court-requests');
+        if (!list) return;
+        const { data, error } = await db.from('cereri_teren_sport_nou')
+            .select('id,created_at,nume_teren,sport,stare,motiv_decizie')
+            .eq('baza_id', context.base.id).eq('solicitant_user_id', context.userId)
+            .order('created_at', { ascending: false }).limit(10);
+        if (current !== context) return;
+        list.replaceChildren();
+        byId('owner-court-requests-group').hidden = !!error || !data?.length;
+        for (const item of data || []) {
+            const row = element('li', { class: 'owner-court-request', 'data-state': item.stare });
+            row.append(element('strong', {}, `${item.nume_teren} · ${sportLabel(item.sport)}`),
+                element('span', { class: 'owner-court-request-state' }, requestStates[item.stare] || item.stare));
+            if (item.stare === 'respinsa' && item.motiv_decizie) row.append(element('span', { class: 'owner-court-hint' }, `Motiv: ${item.motiv_decizie}`));
+            list.append(row);
+        }
+    }
+
+    async function loadBaseSports(context) {
+        baseSports = null;
+        const { data, error } = await db.from('terenuri').select('sport').eq('baza_sportiva_id', context.base.id);
+        if (current !== context) return;
+        baseSports = error ? null : [...new Set((data || []).map(row => row.sport))];
+        controls();
     }
 
     function close({ restoreFocus = true } = {}) {
@@ -47,10 +90,12 @@
         operation?.client?.auth.stopAutoRefresh();
         operation = null;
         current = null;
+        baseSports = null;
+        forceRequest = false;
         if (modal) modal.style.display = 'none';
         if (form) form.reset();
         status();
-        controls();
+        if (form) controls();
         if (restoreFocus && previousFocus?.isConnected && previousFocus.getClientRects().length) {
             previousFocus.focus({ preventScroll: true });
         }
@@ -137,6 +182,26 @@
             if (scope.error || !allowedScope(scope.data, snapshot.context)) {
                 throw new Error('Nu mai ai permisiunea de a adăuga terenuri în această bază sportivă.');
             }
+            if (requestMode()) {
+                status('Se trimite cererea…');
+                const message = byId('owner-court-message').value.trim();
+                const request = await client.rpc('request_new_sport_court', {
+                    p_base_id: snapshot.context.base.id,
+                    p_name: name,
+                    p_sport: sport,
+                    p_price: price,
+                    p_hours: hours().filter(hour => selectedHours.includes(hour)),
+                    p_message: message || null
+                }).abortSignal(snapshot.controller.signal);
+                check(snapshot);
+                if (request.error) throw request.error;
+                byId('owner-court-name').value = '';
+                byId('owner-court-price').value = '';
+                byId('owner-court-message').value = '';
+                status('Cererea a fost trimisă. Terenul apare după ce superadminul o aprobă; vezi starea mai jos.', 'success');
+                loadRequests(snapshot.context);
+                return;
+            }
             status('Se adaugă terenul…');
             const result = await client.rpc('create_managed_court', {
                 p_base_id: snapshot.context.base.id,
@@ -162,6 +227,12 @@
             window.dispatchEvent(new CustomEvent('spotivity:owner-court-created', { detail: saved }));
         } catch (error) {
             if (!contextCurrent(snapshot)) return;
+            // The database refused a sport new to this base: switch the form to a request.
+            if (/aprobarea unui superadmin/i.test(error?.message || '')) {
+                forceRequest = true;
+                status('Acest sport este nou pentru bază. Completează mesajul (opțional) și trimite cererea către superadmin.', 'error');
+                return;
+            }
             status(error?.message || 'Terenul nu a putut fi adăugat. Verifică datele și încearcă din nou.', 'error');
         } finally {
             snapshot.client?.auth.stopAutoRefresh();
@@ -216,10 +287,22 @@
         });
         hourField.append(hourGrid);
         fields.append(hourField);
+        fields.append(element('p', { id: 'owner-court-request-note', class: 'owner-court-request-note', hidden: '' },
+            'Sport nou pentru această bază: terenul nu se publică imediat. Cererea ajunge la superadmin, care o aprobă sau o respinge.'));
+        const messageGroup = field('Mesaj pentru superadmin (opțional)', element('textarea', {
+            id: 'owner-court-message', maxlength: '1000', rows: '3', placeholder: 'Ex: Am amenajat un teren nou de tenis în spatele sălii.'
+        }));
+        messageGroup.id = 'owner-court-message-group';
+        messageGroup.hidden = true;
+        fields.append(messageGroup);
         form.append(fields, element('p', { id: 'owner-court-status', role: 'status', 'aria-live': 'polite' }));
         form.append(element('button', { id: 'owner-court-submit', type: 'submit', class: 'buton-rezervare' }, 'Adaugă terenul'));
         form.append(element('p', { class: 'owner-court-hint' }, 'Terenul va fi publicat în baza selectată. Fotografia și celelalte setări se pot modifica după adăugare.'));
+        const requestsGroup = element('section', { id: 'owner-court-requests-group', class: 'owner-court-requests-group', hidden: '' });
+        requestsGroup.append(element('h3', {}, 'Cererile tale pentru sporturi noi'), element('ul', { id: 'owner-court-requests' }));
+        form.append(requestsGroup);
         form.addEventListener('submit', save);
+        sportSelect.addEventListener('change', () => { forceRequest = false; controls(); });
         panel.append(form);
         modal.append(panel);
         workspace.append(modal);
@@ -245,6 +328,8 @@
         controls();
         modal.style.display = 'flex';
         byId('owner-court-name').focus({ preventScroll: true });
+        loadBaseSports(current).catch(() => {});
+        loadRequests(current).catch(() => {});
         return true;
     };
 

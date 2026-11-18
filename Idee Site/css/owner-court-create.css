@@ -48,3 +48,15 @@
     #modal-owner-add-court .titlu-modal { font-size: 21px; }
     #owner-court-hours .owner-court-hours-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+/* 2026-11-18: cerere pentru un sport nou în bază (aprobată de superadmin). */
+#owner-court-form textarea { box-sizing: border-box; width: 100%; max-width: 100%; min-height: 84px; padding: 10px 12px; border: 1px solid rgba(216, 182, 106, .3); border-radius: 10px; color: #f5f0e3; background: #1c2c21; font: inherit; resize: vertical; }
+#owner-court-form textarea:focus-visible { outline: 2px solid #edca82; outline-offset: 3px; }
+#owner-court-form .owner-court-request-note { margin: 0; padding: 12px 14px; border: 1px solid rgba(216, 182, 106, .45); border-radius: 12px; background: rgba(216, 182, 106, .1); color: #f3dfb0; font-size: 14px; line-height: 1.55; }
+#owner-court-status[data-kind="success"] { color: #b9efc6; }
+#owner-court-form .owner-court-requests-group { margin-top: 22px; padding-top: 16px; border-top: 1px solid rgba(216, 182, 106, .2); }
+#owner-court-form .owner-court-requests-group h3 { margin: 0 0 10px; color: #edca82; font-size: 16px; }
+#owner-court-requests { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+#owner-court-requests .owner-court-request { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid rgba(216, 182, 106, .2); border-radius: 10px; background: rgba(255, 255, 255, .03); overflow-wrap: anywhere; }
+#owner-court-requests .owner-court-request-state { font-size: 13px; color: #edca82; }
+#owner-court-requests .owner-court-request[data-state="aprobata"] .owner-court-request-state { color: #b9efc6; }
+#owner-court-requests .owner-court-request[data-state="respinsa"] .owner-court-request-state { color: #ffc2bc; }
