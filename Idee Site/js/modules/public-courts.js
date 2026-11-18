@@ -5,6 +5,15 @@
     const modules = window.SpotivityModules ||= {};
     modules.publicCourts = function(context) {
         const { db, state, services } = context;
+        // Sport photo behind the court list and inside its dialog.
+        function aplicaFundalSport() {
+            const bgDiv = document.getElementById('fundal-imagine-sport');
+            if (!bgDiv || !state.sport) return;
+            services.ui.setSportBackground(bgDiv, state.sport);
+            bgDiv.style.opacity = '1';
+            const modalContinut = document.querySelector('#modal-terenuri .modal-continut');
+            if (modalContinut) services.ui.setSportBackground(modalContinut, state.sport, true);
+        }
         let filterRequest = 0, baseCourtRequest = 0, catalogRefresh = 0;
         let citiesInitialized = false;
         async function incarcaTerenuri() {
@@ -187,20 +196,7 @@
             document.getElementById('modal-terenuri').dataset.sport = state.sport;
             document.getElementById('modal-terenuri').style.display = 'flex';
 
-            // Schimba fundalul cu imaginea sportului
-            const bgDiv = document.getElementById('fundal-imagine-sport');
-            if(bgDiv && state.sport) {
-
-                // Punem background-ul pe ecranul principal (in spatele modalului)
-                services.ui.setSportBackground(bgDiv, state.sport);
-                bgDiv.style.opacity = '1';
-
-                // Punem background-ul STRICT IN FEREASTRA (modal-continut)
-                const modalContinut = document.querySelector('#modal-terenuri .modal-continut');
-                if (modalContinut) {
-                    services.ui.setSportBackground(modalContinut, state.sport, true);
-                }
-            }
+            aplicaFundalSport();
 
             const aziFormatStandard = window.siteDate();
             const filtruData = document.getElementById('filtru-data');
@@ -251,20 +247,7 @@
             document.getElementById('inapoi-la-terenuri')?.addEventListener('click', () => { document.getElementById('modal-rezervare').style.display = 'none'; document.getElementById('modal-terenuri').style.display = 'flex';
                     window.dispatchEvent(new CustomEvent('spotivity:public-court-closed', { detail: { toList: true } }));
 
-                    // Schimba fundalul cu imaginea sportului
-                    const bgDiv = document.getElementById('fundal-imagine-sport');
-                    if(bgDiv && state.sport) {
-
-                        // Punem background-ul pe ecranul principal (in spatele modalului)
-                        services.ui.setSportBackground(bgDiv, state.sport);
-                        bgDiv.style.opacity = '1';
-
-                        // Punem background-ul STRICT IN FEREASTRA (modal-continut)
-                        const modalContinut = document.querySelector('#modal-terenuri .modal-continut');
-                        if (modalContinut) {
-                            services.ui.setSportBackground(modalContinut, state.sport, true);
-                        }
-                    } });
+                    aplicaFundalSport(); });
 
             window.openCourtReservation = openCourtReservation;
             window.dispatchEvent(new Event('spotivity:booking-ready'));

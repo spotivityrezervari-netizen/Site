@@ -6,34 +6,14 @@
         const { db, state } = context;
         let historyRequest = 0, expiryTimer = null, snapshot = null;
         const hourMs = 60 * 60 * 1000;
-        const bucharestParts = new Intl.DateTimeFormat('en-GB', {
-            timeZone: 'Europe/Bucharest', year: 'numeric', month: '2-digit', day: '2-digit',
-            hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
-        });
         function stopExpiryTimer() { clearTimeout(expiryTimer); expiryTimer = null; }
         function historyIsOpen() {
             const modal = document.getElementById('modal-istoric');
             return !!modal && !modal.hidden && modal.getClientRects().length > 0
                 && ['flex', 'block'].includes(modal.style.display);
         }
-        function slotEnd(row) {
-            const startsAt = Date.parse(row.starts_at || '');
-            if (Number.isFinite(startsAt)) return startsAt + hourMs;
-            const day = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(row.data_str || ''));
-            const time = /^(\d{2}):(\d{2})$/.exec(String(row.ora || ''));
-            if (!day || !time || Number(time[1]) > 23 || Number(time[2]) > 59) return NaN;
-            // Legacy civil dates must use Romania's clock, not the browser's.
-            const wanted = Date.UTC(Number(day[1]), Number(day[2]) - 1, Number(day[3]), Number(time[1]), Number(time[2]));
-            let instant = wanted;
-            for (let i = 0; i < 3; i++) {
-                const parts = bucharestParts.formatToParts(new Date(instant));
-                const part = type => Number(parts.find(value => value.type === type).value);
-                const local = Date.UTC(part('year'), part('month') - 1, part('day'), part('hour'), part('minute'));
-                if (local === wanted) return instant + hourMs;
-                instant += wanted - local;
-            }
-            return NaN;
-        }
+        // Shared with the other history/schedule views (js/security.js).
+        const slotEnd = row => window.bookingSlotEnd(row);
         function refreshCachedStatus() {
             stopExpiryTimer();
             if (!snapshot?.isCurrent() || !historyIsOpen() || document.hidden) return;

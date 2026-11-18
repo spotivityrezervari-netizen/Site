@@ -95,6 +95,40 @@ window.getCourtBookingHours = court => {
 // Preserve hosting subdirectories for Auth confirmation and password recovery.
 window.siteHomeUrl = () => spotivityAppRoot || new URL('./', window.location.href).href;
 
+// End (epoch ms) of a one-hour booking slot, shared by the client history and the
+// staff history/schedule. Rows with starts_at use it directly; legacy rows
+// (data_str + ora) are civil Europe/Bucharest times, resolved with DST and
+// independently of the browser timezone. NaN when the row has no valid time.
+const spotivityBucharestParts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Bucharest', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+});
+window.bookingSlotEnd = row => {
+    const hourMs = 60 * 60 * 1000;
+    // setUTCFullYear keeps years 0–99 literal (Date.UTC would map them to 19xx).
+    const utc = (year, month, dayOfMonth, hour, minute) => {
+        const date = new Date(0);
+        date.setUTCFullYear(year, month - 1, dayOfMonth);
+        date.setUTCHours(hour, minute, 0, 0);
+        return date.getTime();
+    };
+    const startsAt = Date.parse(row?.starts_at || '');
+    if (Number.isFinite(startsAt)) return startsAt + hourMs;
+    const day = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(row?.data_str || ''));
+    const time = /^(\d{2}):(\d{2})$/.exec(String(row?.ora || ''));
+    if (!day || !time || Number(time[1]) > 23 || Number(time[2]) > 59) return NaN;
+    const wanted = utc(Number(day[1]), Number(day[2]), Number(day[3]), Number(time[1]), Number(time[2]));
+    let instant = wanted;
+    for (let i = 0; i < 3; i++) {
+        const parts = spotivityBucharestParts.formatToParts(new Date(instant));
+        const part = type => Number(parts.find(value => value.type === type).value);
+        const local = utc(part('year'), part('month'), part('day'), part('hour'), part('minute'));
+        if (local === wanted) return instant + hourMs;
+        instant += wanted - local;
+    }
+    return NaN;
+};
+
 // Hide old rows only in default history lists; the dated staff calendar keeps
 // the full stored history. The boundary is 30 days after the hourly slot ends.
 window.bookingInRecentHistory = (row, now = Date.now()) => {

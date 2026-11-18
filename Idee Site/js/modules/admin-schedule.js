@@ -5,41 +5,14 @@
     modules.adminSchedule = function(context) {
         const { db, state } = context;
         let expiryTimer = null, snapshot = null;
-        const hourMs = 60 * 60 * 1000;
-        const bucharestParts = new Intl.DateTimeFormat('en-GB', {
-            timeZone: 'Europe/Bucharest', year: 'numeric', month: '2-digit', day: '2-digit',
-            hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
-        });
         function stopExpiryTimer() { clearTimeout(expiryTimer); expiryTimer = null; }
         function scheduleIsOpen() {
             const modal = document.getElementById('modal-tabel-program');
             return !!modal && !modal.hidden && modal.getClientRects().length > 0
                 && ['flex', 'block'].includes(modal.style.display);
         }
-        function utcTime(year, month, day, hour, minute) {
-            const date = new Date(0);
-            date.setUTCFullYear(year, month - 1, day);
-            date.setUTCHours(hour, minute, 0, 0);
-            return date.getTime();
-        }
-        function slotEnd(row) {
-            const startsAt = Date.parse(row.starts_at || '');
-            if (Number.isFinite(startsAt)) return startsAt + hourMs;
-            const day = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(row.data_str || ''));
-            const time = /^(\d{2}):(\d{2})$/.exec(String(row.ora || ''));
-            if (!day || !time || Number(time[1]) > 23 || Number(time[2]) > 59) return NaN;
-            const wanted = utcTime(Number(day[1]), Number(day[2]), Number(day[3]), Number(time[1]), Number(time[2]));
-            let instant = wanted;
-            // Legacy reservations use Romania's civil clock in every browser time zone.
-            for (let i = 0; i < 3; i++) {
-                const parts = bucharestParts.formatToParts(new Date(instant));
-                const part = type => Number(parts.find(value => value.type === type).value);
-                const local = utcTime(part('year'), part('month'), part('day'), part('hour'), part('minute'));
-                if (local === wanted) return instant + hourMs;
-                instant += wanted - local;
-            }
-            return NaN;
-        }
+        // Shared with the other history/schedule views (js/security.js).
+        const slotEnd = row => window.bookingSlotEnd(row);
         function refreshCachedStatus() {
             stopExpiryTimer();
             if (!snapshot?.isCurrent() || !scheduleIsOpen() || document.hidden) return;
