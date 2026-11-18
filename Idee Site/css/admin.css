@@ -75,7 +75,8 @@
 }
 .program-tabel th { position: sticky; top: 0; z-index: 2; background: #172033; }
 .program-col-ora { width: 64px; text-align: center; font-weight: bold; }
-.program-col-stare { width: 106px; text-align: center; }
+/* Fits the bold 16px "OCUPAT" option plus the native arrow on every platform font. */
+.program-col-stare { width: 110px; text-align: center; }
 .program-tabel td:not(:last-child) { border-right: 1px solid rgba(255,255,255,0.05); }
 .program-tabel select {
     min-width: 0;

@@ -58,6 +58,9 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: Idee Site/supabase/tests/package-lock.json
+      - name: Pachetul public (dist), folosit de testele de publicare
+        working-directory: .
+        run: node scripts/build-public.mjs
       - run: npm ci
       # GitHub runners already ship Google Chrome; no browser download needed.
       - name: Browser

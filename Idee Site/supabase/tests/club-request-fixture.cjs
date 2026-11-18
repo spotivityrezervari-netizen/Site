@@ -124,7 +124,7 @@ async function createFixture({throughVersion=27}={}) {
         if(request.method==='DELETE'&&!path){const body=await request.json(),removed=[];for(const name of body.prefixes){const matches=(await pg.query('delete from storage.objects where bucket_id=$1 and name=$2 returning name',[bucket,name])).rows;for(const row of matches){objects.delete(bucket+'/'+row.name);removed.push(row);}}return reply(200,removed);}
         return reply(405,{message:'Unexpected Storage method'});
       }
-      const table=url.pathname.split('/').pop();assert.ok(['clienti','users_admin','terenuri','rezervari','rezervari_disponibilitate','mesaje_chat','site_sporturi','baze_sportive','baze_sportive_admini','cereri_baze_sportive'].includes(table),`Unexpected table ${table}`);
+      const table=url.pathname.split('/').pop();assert.ok(['clienti','users_admin','terenuri','rezervari','rezervari_disponibilitate','mesaje_chat','site_sporturi','baze_sportive','baze_sportive_admini','cereri_baze_sportive','cereri_teren_sport_nou'].includes(table),`Unexpected table ${table}`);
       const params=[],conditions=[];
       for(const [field,value]of url.searchParams){
         if(['select','order','limit','offset','columns'].includes(field))continue;

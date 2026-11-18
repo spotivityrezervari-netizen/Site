@@ -178,7 +178,7 @@ async function openProfile(page) {
           return reply(200,result.rows[0].id);
         }
         const table=url.pathname.split('/').pop();
-        assert.ok(['clienti','users_admin','terenuri','rezervari','rezervari_disponibilitate','mesaje_chat','site_sporturi','baze_sportive','baze_sportive_admini','cereri_baze_sportive'].includes(table));
+        assert.ok(['clienti','users_admin','terenuri','rezervari','rezervari_disponibilitate','mesaje_chat','site_sporturi','baze_sportive','baze_sportive_admini','cereri_baze_sportive','cereri_teren_sport_nou'].includes(table));
         await pg.exec(`set role ${person ? 'authenticated' : 'anon'}`);
         const params=[], conditions=[];
         for (const [field,value] of url.searchParams) {
