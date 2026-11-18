@@ -29,6 +29,8 @@
             if (title) {
                 if (!title.id) title.id = `${modal.id}-titlu`;
                 panel.setAttribute('aria-labelledby', title.id);
+            } else if (modal.id === 'modal-auth') {
+                panel.setAttribute('aria-label', 'Autentificare sau creare cont');
             }
         }
         if (!panel.hasAttribute('tabindex')) panel.tabIndex = -1;
