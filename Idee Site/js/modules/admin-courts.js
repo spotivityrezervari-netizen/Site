@@ -79,7 +79,10 @@
                 URL.revokeObjectURL(preview);
             }
             operation.check();
-            const path = `${operation.userId}/${crypto.randomUUID()}.${extension}`;
+            // Lighter copy for visitors; the original is kept if it cannot be made smaller.
+            file = await (window.spotivityShrinkImage?.(file) || file);
+            operation.check();
+            const path = `${operation.userId}/${crypto.randomUUID()}.${photoTypes[file.type] || extension}`;
             operation.path = path;
             inFlightPhotos.add(path);
             queuePhoto(operation.userId, path);

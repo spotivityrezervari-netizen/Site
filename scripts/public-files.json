@@ -73,6 +73,7 @@
     "js/home-gallery.js",
     "js/home-motion.js",
     "js/home.js",
+    "js/image-compress.js",
     "js/modules/admin-allocations.js",
     "js/modules/admin-bookings.js",
     "js/modules/admin-chat.js",

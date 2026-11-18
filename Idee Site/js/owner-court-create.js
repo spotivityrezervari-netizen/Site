@@ -42,7 +42,8 @@
         } catch {
             throw new Error('Fișierul nu poate fi afișat ca imagine. Alege o altă fotografie.');
         } finally { URL.revokeObjectURL(url); }
-        return file;
+        // Lighter copy for visitors; the original is kept if it cannot be made smaller.
+        return await (window.spotivityShrinkImage?.(file) || file);
     }
     const sportLabel = sport => sport === 'Tenis Picior' ? 'Tenis de picior' : sport;
     const requestMode = () => {
@@ -220,10 +221,15 @@
                     status('Se încarcă fotografia…');
                     photoPath = `${snapshot.context.userId}/${crypto.randomUUID()}.${photoTypes[file.type]}`;
                     const upload = await client.storage.from(photoBucket).upload(photoPath, file, { contentType: file.type, upsert: false });
-                    check(snapshot);
                     if (upload.error) throw new Error('Fotografia nu a putut fi încărcată: ' + upload.error.message);
                     photoUrl = client.storage.from(photoBucket).getPublicUrl(photoPath)?.data?.publicUrl || null;
-                    if (!photoUrl) throw new Error('Adresa fotografiei nu poate fi verificată.');
+                    // The request was not sent yet: a closed form or an unverifiable address
+                    // must not leave the uploaded photo unused in Storage.
+                    if (!photoUrl || !contextCurrent(snapshot)) {
+                        await client.storage.from(photoBucket).remove([photoPath]).catch(() => {});
+                        check(snapshot);
+                        throw new Error('Adresa fotografiei nu poate fi verificată.');
+                    }
                 }
                 status('Se trimite cererea…');
                 const request = await client.rpc('request_new_sport_court', {
@@ -236,8 +242,11 @@
                     p_photo: photoUrl
                 }).abortSignal(snapshot.controller.signal);
                 if (request.error) {
-                    // Do not leave an unused photo behind when the request is refused.
-                    if (photoPath) await client.storage.from(photoBucket).remove([photoPath]).catch(() => {});
+                    // Remove the photo only when the server answered with a refusal. After an
+                    // interrupted call the request may already be saved and still need its photo.
+                    const answered = !snapshot.controller.signal.aborted && request.error.name !== 'AbortError'
+                        && typeof request.error.code === 'string' && request.error.code !== '';
+                    if (photoPath && answered) await client.storage.from(photoBucket).remove([photoPath]).catch(() => {});
                     check(snapshot);
                     throw request.error;
                 }

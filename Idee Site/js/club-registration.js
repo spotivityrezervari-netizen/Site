@@ -251,7 +251,10 @@
             if (!fileValid) { busy = false; render(); showStatus('invalidPhoto', 'error'); photo.focus(); return; }
             const captured = { generation, controller: new AbortController() };
             controller = captured.controller;
-            if (!attempt) attempt = { id: uuid(), payload, file: chosenPhoto, uncertain: false };
+            // A first attempt sends a lighter copy; retries reuse exactly the same file.
+            const uploadPhoto = !attempt && chosenPhoto ? await (window.spotivityShrinkImage?.(chosenPhoto) || chosenPhoto) : chosenPhoto;
+            if (preflightGeneration !== generation) return;
+            if (!attempt) attempt = { id: uuid(), payload, file: uploadPhoto, uncertain: false };
             const active = attempt;
             active.uncertain = false;
             render(); showStatus('sending');

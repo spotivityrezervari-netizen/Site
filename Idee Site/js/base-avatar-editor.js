@@ -187,10 +187,14 @@
                 checkContext(context);
                 let nextPath = null;
                 if (!remove) {
-                    nextPath = `${context.baseId}/${crypto.randomUUID()}.${selected.extension}`;
+                    // Lighter copy for visitors; the original is kept if it cannot be made smaller.
+                    const upload = await (window.spotivityShrinkImage?.(selected.file) || selected.file);
+                    checkContext(context);
+                    const extension = types[upload.type]?.[0] || selected.extension;
+                    nextPath = `${context.baseId}/${crypto.randomUUID()}.${extension}`;
                     uploadedPath = nextPath;
-                    const { data, error } = await client.storage.from(bucket).upload(nextPath, selected.file, {
-                        contentType: selected.file.type, upsert: false, cacheControl: '3600'
+                    const { data, error } = await client.storage.from(bucket).upload(nextPath, upload, {
+                        contentType: upload.type, upsert: false, cacheControl: '3600'
                     });
                     checkContext(context);
                     if (error || data?.path !== nextPath) throw new Error('Fotografia nu a putut fi încărcată. Verifică permisiunile și încearcă din nou.');

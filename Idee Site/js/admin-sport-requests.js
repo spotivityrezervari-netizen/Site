@@ -79,9 +79,12 @@
     async function refreshCount() {
         if (!role?.isSuper) return;
         const token = generation;
-        const { count, error } = await db.from(table).select('id', { count: 'exact', head: true }).eq('stare', 'in_asteptare');
-        if (token !== generation) return;
         const badge = byId('admin-sport-cereri-badge');
+        let count = 0, error = null;
+        // A network failure only hides the badge; it must not surface as an unhandled error.
+        try { ({ count, error } = await db.from(table).select('id', { count: 'exact', head: true }).eq('stare', 'in_asteptare')); }
+        catch (failure) { error = failure; }
+        if (token !== generation || !badge) return;
         badge.textContent = String(count || 0);
         badge.setAttribute('aria-label', `${count || 0} cereri în așteptare`);
         badge.hidden = !!error || !(count > 0);
@@ -193,7 +196,8 @@
         // A rejected request's photo is not used anywhere; remove it (the database refuses if it is referenced).
         if (!approve && photoObject(record.poza)) await db.storage.from('poze_terenuri').remove([photoObject(record.poza)]).catch(() => {});
         await load();
-        status(approve ? `Aprobat: terenul „${record.nume_teren}” a fost publicat.` : `Cererea pentru „${record.nume_teren}” a fost respinsă.`);
+        // Refreshing admin access here would close this dialog, so the court lists update on the next panel load.
+        status(approve ? `Aprobat: terenul „${record.nume_teren}” a fost publicat pe site. În lista ta de terenuri apare după reîncărcarea panoului.` : `Cererea pentru „${record.nume_teren}” a fost respinsă.`);
     }
 
     function open() {

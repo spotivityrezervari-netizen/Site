@@ -1,4 +1,12 @@
 // Shared UI helpers. Authorization is enforced by Supabase RLS and SQL triggers.
+
+// Anti-framing (clickjacking) for hosts that cannot send X-Frame-Options or
+// CSP frame-ancestors, such as GitHub Pages. Netlify also sends both headers.
+// Inside a foreign frame the page is hidden and the top window is asked to open it directly.
+if (window.top !== window.self) {
+    document.documentElement.style.setProperty('display', 'none', 'important');
+    try { window.top.location.replace(window.location.href); } catch { /* the hidden page stays unusable when framed */ }
+}
 window.escapeHtml = value => String(value ?? '').replace(/[&<>"']/g,
     char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 window.escapeJs = value => window.escapeHtml(JSON.stringify(String(value ?? '')).slice(1,-1).replace(/'/g,'\\u0027'));
