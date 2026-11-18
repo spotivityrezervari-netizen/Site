@@ -1294,6 +1294,10 @@ body.fara-scroll {
     .filtre-terenuri { padding: 12px; gap: 12px; margin-bottom: 20px; }
     #modal-auth .tab-auth { font-size: 13px; padding-inline: 4px; }
 }
+/* 320 px phones: "Autentificare" / "Creare Cont" must fit their tab with any system font. */
+@media (max-width: 360px) {
+    #modal-auth .tab-auth { font-size: 12px; padding-inline: 2px; }
+}
 
 .card-teren-poza, .info-teren-poza { min-width: 0; }
 .info-teren-poza h3, .info-teren-poza p { max-width: 100%; overflow-wrap: anywhere; }
