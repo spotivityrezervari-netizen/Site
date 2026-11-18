@@ -50,6 +50,23 @@ Procesele trebuie repornite în fiecare mediu nou. Folosește checkout-ul existe
 
 ## Verificare
 
+### Teste automate (recomandat)
+
+Toate testele (SQL pe o bază PostgreSQL în memorie, PGlite, și testele de browser cu Playwright) rulează cu o singură comandă și nu ating proiectul Supabase real:
+
+```bash
+cd "Idee Site/supabase/tests"
+npm ci
+npm test                      # toate testele
+npm test -- owner-home        # doar fișierele care conțin „owner-home” în nume
+```
+
+Pe Windows, indică browserul instalat: `CHROMIUM_PATH="C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe" npm test`. Testele cu symlink din `scripts/tests` nu pot rula pe Windows fără drepturi de administrator; rulează-le pe Linux sau lasă-le în seama CI.
+
+La fiecare push pe `main`, GitHub Actions (`.github/workflows/ci.yml`) rulează automat sintaxa, ESLint (`eslint.config.cjs`), testele din `scripts/tests`, pachetul public, verificarea paginilor SEO generate și toată suita de mai sus. Rezultatul apare în fila **Actions** a repository-ului. CI nu publică nimic.
+
+### Verificări manuale
+
 Verifică sintaxa fișierelor JavaScript:
 
 ```bash
