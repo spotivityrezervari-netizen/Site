@@ -3,7 +3,11 @@
 (() => {
     'use strict';
     const table = 'cereri_teren_sport_nou';
-    const fields = 'id,created_at,solicitant_email,baza_id,nume_teren,sport,pret,ore_rezervabile,mesaj,stare,motiv_decizie,decis_la,baze_sportive(nume,oras)';
+    const fields = 'id,created_at,solicitant_email,baza_id,nume_teren,sport,pret,ore_rezervabile,mesaj,poza,stare,motiv_decizie,decis_la,baze_sportive(nume,oras)';
+    // Only photos from the project's public court bucket are shown (migration 045 checks this too).
+    const photoPrefix = () => `${String(window.supabaseUrl || (typeof supabaseUrl === 'string' ? supabaseUrl : '')).replace(/\/+$/, '')}/storage/v1/object/public/poze_terenuri/`;
+    const trustedPhoto = url => typeof url === 'string' && url.length <= 500 && photoPrefix().length > 40 && url.startsWith(photoPrefix());
+    const photoObject = url => trustedPhoto(url) ? decodeURIComponent(url.slice(photoPrefix().length).split(/[?#]/)[0]) : '';
     const states = { in_asteptare: 'În așteptare', aprobata: 'Aprobată', respinsa: 'Respinsă' };
     const byId = id => document.getElementById(id);
     let role = null;
@@ -83,6 +87,34 @@
         badge.hidden = !!error || !(count > 0);
     }
 
+    // A small copy of the public court card (same classes as the homepage), so the
+    // superadmin sees how the court will look on the site after approval.
+    function preview(record) {
+        const wrap = el('div', undefined, 'admin-sport-request-preview');
+        wrap.append(el('span', 'Cum va arăta pe site', 'admin-sport-request-preview-label'));
+        const cardNode = el('div', undefined, 'home-court-card');
+        cardNode.setAttribute('aria-hidden', 'true');
+        const image = el('img', undefined, 'home-court-photo');
+        image.alt = '';
+        image.width = 240; image.height = 160;
+        image.src = trustedPhoto(record.poza) ? record.poza
+            : (window.appAssetUrl?.('assets/imagini/spotivity-256.webp') || 'assets/imagini/spotivity-256.webp');
+        const info = el('span', undefined, 'home-court-details');
+        const city = record.baze_sportive?.oras || '';
+        info.append(el('strong', record.nume_teren), el('span', [sportLabel(record.sport), city].filter(Boolean).join(' · '), 'home-court-meta'),
+            el('span', `${new Intl.NumberFormat('ro-RO').format(Number(record.pret))} Lei/oră`, 'home-court-price'));
+        cardNode.append(image, info);
+        wrap.append(cardNode);
+        if (trustedPhoto(record.poza)) {
+            const link = el('a', 'Deschide fotografia mărită', 'admin-sport-request-photo-link');
+            link.href = record.poza;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            wrap.append(link);
+        } else wrap.append(el('span', 'Fără fotografie: pe site se va afișa sigla Spotivity.', 'admin-sport-request-preview-note'));
+        return wrap;
+    }
+
     function card(record) {
         const item = el('article', undefined, 'admin-sport-request');
         item.dataset.state = record.stare;
@@ -101,7 +133,7 @@
             add('Decisă la', date(record.decis_la));
             if (record.motiv_decizie) add(record.stare === 'respinsa' ? 'Motiv' : 'Notă', record.motiv_decizie);
         }
-        item.append(head, details);
+        item.append(head, preview(record), details);
         if (record.stare === 'in_asteptare') {
             const reason = el('textarea', undefined, 'admin-sport-request-reason');
             reason.maxLength = 1000;
@@ -158,6 +190,8 @@
             byId('admin-sport-cereri-list').querySelectorAll('button, textarea').forEach(node => { node.disabled = false; });
             return;
         }
+        // A rejected request's photo is not used anywhere; remove it (the database refuses if it is referenced).
+        if (!approve && photoObject(record.poza)) await db.storage.from('poze_terenuri').remove([photoObject(record.poza)]).catch(() => {});
         await load();
         status(approve ? `Aprobat: terenul „${record.nume_teren}” a fost publicat.` : `Cererea pentru „${record.nume_teren}” a fost respinsă.`);
     }

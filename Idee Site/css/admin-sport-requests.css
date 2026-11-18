@@ -41,3 +41,10 @@
     .admin-sport-request-details { grid-template-columns: minmax(0, 1fr); }
     .admin-sport-request-details dd { margin-bottom: 6px; }
 }
+/* 2026-11-18: fotografia cererii și cardul de previzualizare, identic cu cel de pe site. */
+.admin-sport-request-preview { display: grid; justify-items: start; gap: 8px; }
+.admin-sport-request-preview-label { color: #bdcaba; font-size: 13px; }
+.admin-sport-request-preview .home-court-card { flex: 0 0 auto; width: 220px; max-width: 100%; cursor: default; }
+.admin-sport-request-preview .home-court-photo { display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: cover; }
+.admin-sport-request-photo-link { color: #edca82; font-size: 14px; text-underline-offset: 3px; }
+.admin-sport-request-preview-note { color: #bdcaba; font-size: 13px; }

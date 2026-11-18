@@ -17,6 +17,33 @@
     let baseSports = null;
     let forceRequest = false;
     const requestStates = { in_asteptare: 'În așteptare', aprobata: 'Aprobată', respinsa: 'Respinsă' };
+    // Request photos use the same public court bucket and per-admin folder as court photos.
+    const photoBucket = 'poze_terenuri';
+    const photoTypes = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/avif': 'avif', 'image/gif': 'gif' };
+    let photoPreviewUrl = '';
+    function clearPhotoPreview() {
+        if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
+        photoPreviewUrl = '';
+        const preview = byId('owner-court-photo-preview');
+        if (preview) { preview.removeAttribute('src'); preview.hidden = true; }
+    }
+    async function checkedPhoto() {
+        const file = byId('owner-court-photo')?.files?.[0];
+        if (!file) return null;
+        if (!photoTypes[file.type] || !Number.isFinite(file.size) || file.size < 1 || file.size > 5242880) {
+            throw new Error('Alege o imagine JPG, PNG, WebP, AVIF sau GIF de maximum 5 MB.');
+        }
+        const url = URL.createObjectURL(file);
+        try {
+            const image = new Image();
+            image.src = url;
+            await image.decode();
+            if (!image.naturalWidth || !image.naturalHeight) throw new Error('invalid');
+        } catch {
+            throw new Error('Fișierul nu poate fi afișat ca imagine. Alege o altă fotografie.');
+        } finally { URL.revokeObjectURL(url); }
+        return file;
+    }
     const sportLabel = sport => sport === 'Tenis Picior' ? 'Tenis de picior' : sport;
     const requestMode = () => {
         const sport = byId('owner-court-sport')?.value;
@@ -52,6 +79,7 @@
             : (asRequest ? 'Trimite cerere' : 'Adaugă terenul');
         byId('owner-court-request-note').hidden = !asRequest;
         byId('owner-court-message-group').hidden = !asRequest;
+        byId('owner-court-photo-group').hidden = !asRequest;
         form.setAttribute('aria-busy', String(busy));
     }
 
@@ -94,6 +122,7 @@
         forceRequest = false;
         if (modal) modal.style.display = 'none';
         if (form) form.reset();
+        clearPhotoPreview();
         status();
         if (form) controls();
         if (restoreFocus && previousFocus?.isConnected && previousFocus.getClientRects().length) {
@@ -183,21 +212,41 @@
                 throw new Error('Nu mai ai permisiunea de a adăuga terenuri în această bază sportivă.');
             }
             if (requestMode()) {
-                status('Se trimite cererea…');
                 const message = byId('owner-court-message').value.trim();
+                const file = await checkedPhoto();
+                check(snapshot);
+                let photoUrl = null, photoPath = null;
+                if (file) {
+                    status('Se încarcă fotografia…');
+                    photoPath = `${snapshot.context.userId}/${crypto.randomUUID()}.${photoTypes[file.type]}`;
+                    const upload = await client.storage.from(photoBucket).upload(photoPath, file, { contentType: file.type, upsert: false });
+                    check(snapshot);
+                    if (upload.error) throw new Error('Fotografia nu a putut fi încărcată: ' + upload.error.message);
+                    photoUrl = client.storage.from(photoBucket).getPublicUrl(photoPath)?.data?.publicUrl || null;
+                    if (!photoUrl) throw new Error('Adresa fotografiei nu poate fi verificată.');
+                }
+                status('Se trimite cererea…');
                 const request = await client.rpc('request_new_sport_court', {
                     p_base_id: snapshot.context.base.id,
                     p_name: name,
                     p_sport: sport,
                     p_price: price,
                     p_hours: hours().filter(hour => selectedHours.includes(hour)),
-                    p_message: message || null
+                    p_message: message || null,
+                    p_photo: photoUrl
                 }).abortSignal(snapshot.controller.signal);
+                if (request.error) {
+                    // Do not leave an unused photo behind when the request is refused.
+                    if (photoPath) await client.storage.from(photoBucket).remove([photoPath]).catch(() => {});
+                    check(snapshot);
+                    throw request.error;
+                }
                 check(snapshot);
-                if (request.error) throw request.error;
                 byId('owner-court-name').value = '';
                 byId('owner-court-price').value = '';
                 byId('owner-court-message').value = '';
+                byId('owner-court-photo').value = '';
+                clearPhotoPreview();
                 status('Cererea a fost trimisă. Terenul apare după ce superadminul o aprobă; vezi starea mai jos.', 'success');
                 loadRequests(snapshot.context);
                 return;
@@ -295,6 +344,21 @@
         messageGroup.id = 'owner-court-message-group';
         messageGroup.hidden = true;
         fields.append(messageGroup);
+        const photoInput = element('input', { id: 'owner-court-photo', type: 'file', accept: Object.keys(photoTypes).join(',') });
+        const photoGroup = field('Fotografia terenului (opțional, max. 5 MB)', photoInput);
+        photoGroup.id = 'owner-court-photo-group';
+        photoGroup.hidden = true;
+        const photoPreview = element('img', { id: 'owner-court-photo-preview', class: 'owner-court-photo-preview', alt: 'Previzualizarea fotografiei', hidden: '' });
+        photoGroup.append(photoPreview);
+        photoInput.addEventListener('change', () => {
+            clearPhotoPreview();
+            const file = photoInput.files?.[0];
+            if (!file || !photoTypes[file.type]) return;
+            photoPreviewUrl = URL.createObjectURL(file);
+            photoPreview.src = photoPreviewUrl;
+            photoPreview.hidden = false;
+        });
+        fields.append(photoGroup);
         form.append(fields, element('p', { id: 'owner-court-status', role: 'status', 'aria-live': 'polite' }));
         form.append(element('button', { id: 'owner-court-submit', type: 'submit', class: 'buton-rezervare' }, 'Adaugă terenul'));
         form.append(element('p', { class: 'owner-court-hint' }, 'Terenul va fi publicat în baza selectată. Fotografia și celelalte setări se pot modifica după adăugare.'));

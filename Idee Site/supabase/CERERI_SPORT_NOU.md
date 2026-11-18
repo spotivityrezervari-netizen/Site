@@ -25,5 +25,12 @@
 - `js/admin-sport-requests.js` + `css/admin-sport-requests.css`: lista superadminului, cu butoanele Aprobă / Respinge.
 - `index.html`: cardul `#btn-cereri-sport-admin` și fișierele noi.
 
+## Fotografia din cerere (migrarea 045)
+- Administratorul poate atașa o fotografie la cerere (JPG, PNG, WebP, AVIF sau GIF, maximum 5 MB) și o vede înainte de trimitere.
+- Fotografia se încarcă în bucketul public existent `poze_terenuri`, în folderul administratorului (`<user_id>/<uuid>.<ext>`), cu aceleași reguli ca pozele obișnuite ale terenurilor. Coloana nouă `cereri_teren_sport_nou.poza` păstrează adresa.
+- `request_new_sport_court` are acum al 7-lea argument opțional, `p_photo`. Acceptă doar o fotografie care există în `poze_terenuri`, în folderul celui care trimite cererea.
+- La aprobare, fotografia devine poza terenului. La respingere, panoul superadminului încearcă să șteargă fotografia nefolosită.
+- Superadminul vede la fiecare cerere un card mic „Cum va arăta pe site”, cu aceleași clase ca pe pagina principală (`home-court-card`): poza, numele, sportul · orașul și „X Lei/oră”. Are și un link „Deschide fotografia mărită”. Fără fotografie, cardul arată sigla Spotivity, ca pe site.
+
 ## Neinclus (încă)
 - Nu se trimite email la cerere sau la decizie. Se poate adăuga ulterior prin Make, pe modelul `016_notification_outbox`.

@@ -60,3 +60,6 @@
 #owner-court-requests .owner-court-request-state { font-size: 13px; color: #edca82; }
 #owner-court-requests .owner-court-request[data-state="aprobata"] .owner-court-request-state { color: #b9efc6; }
 #owner-court-requests .owner-court-request[data-state="respinsa"] .owner-court-request-state { color: #ffc2bc; }
+/* 2026-11-18: fotografia din cerere (migrarea 045). */
+#owner-court-form input[type="file"] { width: 100%; padding: 10px; border: 1px dashed rgba(216, 182, 106, .45); border-radius: 10px; background: #1c2c21; color: #f5f0e3; }
+#owner-court-form .owner-court-photo-preview { display: block; width: 100%; max-width: 240px; aspect-ratio: 3 / 2; margin-top: 10px; object-fit: cover; border: 1px solid rgba(216, 182, 106, .3); border-radius: 12px; }
