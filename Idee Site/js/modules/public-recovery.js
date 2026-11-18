@@ -56,6 +56,15 @@
                 const status = modal.querySelector('#mesaj-resetare-parola');
                 if (password.length < 6) { status.textContent = 'Parola trebuie să aibă minim 6 caractere.'; return; }
                 button.disabled = true;
+                // A new password that appeared in public data breaches is refused (fails open if the check is unavailable).
+                status.textContent = 'Se verifică parola...';
+                if (await window.spotivityPasswordLeaked?.(password)) {
+                    if (activeRecovery !== session) return;
+                    status.textContent = window.spotivityLeakedPasswordMessage;
+                    button.disabled = false;
+                    return;
+                }
+                if (activeRecovery !== session) return;
                 status.textContent = 'Se salvează...';
                 // A separate in-memory client binds this request to the recovery user,
                 // even if another tab signs the shared client into a different account.

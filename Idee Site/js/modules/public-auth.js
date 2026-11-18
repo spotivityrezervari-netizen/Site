@@ -81,6 +81,12 @@
                 const btn = document.getElementById('btn-executa-register');
                 btn.innerText = "⏳..."; btn.disabled = true;
 
+                // A new password that appeared in public data breaches is refused (fails open if the check is unavailable).
+                if (await window.spotivityPasswordLeaked?.(parola)) {
+                    btn.innerText = window.dict[window.lang]['btn_creare_cont']; btn.disabled = false;
+                    return alert(window.spotivityLeakedPasswordMessage);
+                }
+
                 // 1. Înregistrare în seiful Supabase Auth (Securitate)
                 const { data: authData, error: authError } = await db.auth.signUp({
                     email: email,

@@ -93,6 +93,7 @@
     "js/modules/public-ui.js",
     "js/owner-court-create.js",
     "js/owner-home.js",
+    "js/password-check.js",
     "js/profile-editor.js",
     "js/public-navigation.js",
     "js/security.js",
