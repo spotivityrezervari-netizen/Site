@@ -42,10 +42,10 @@ test('fresh settings replace cached base/ball prices and PRICE_CHANGED requires 
  });
  await page.locator('.btn-ora').first().click();
  await page.locator('#checkbox-minge').check();
- assert.equal(await page.locator('#buton-confirma').innerText(),'Rezervă (225)');
+ assert.equal(await page.locator('#buton-confirma').innerText(),'Rezervă (225\u00a0Lei)');
  assert.match(await page.locator('#text-label-minge').innerText(),/25/);
  await page.locator('#buton-confirma').click();
- await page.waitForFunction(()=>document.querySelector('#buton-confirma').innerText==='Rezervă (275)');
+ await page.waitForFunction(()=>document.querySelector('#buton-confirma').innerText==='Rezervă (275\u00a0Lei)');
  const first=await page.evaluate(()=>window.attempts);
  assert.equal(first.length,1,'The new price must not be submitted without another click');
  assert.equal(first[0].expected_total,225);

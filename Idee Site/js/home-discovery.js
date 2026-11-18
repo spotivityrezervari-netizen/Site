@@ -2,9 +2,9 @@
 (() => {
     'use strict';
     const labels = {
-        ro: { home_search: 'Caută un teren', home_search_hint: 'Caută după nume, sport sau oraș, în toate orașele.', home_search_placeholder: 'Nume, sport sau oraș', loading: 'Se încarcă…', error: 'Terenurile nu au putut fi încărcate.', basesError: 'Bazele sportive nu au putut fi încărcate.', retry: 'Încearcă din nou', empty: 'Nu sunt terenuri disponibile în acest oraș.', noResults: 'Nu am găsit terenuri. Încearcă alt nume, sport sau oraș.', noBases: 'Nu sunt baze sportive disponibile în acest oraș.', hour: 'Lei/oră', results: 'terenuri găsite', reserve: 'Rezervă', booking: 'Se deschide terenul…', bookingError: 'Terenul nu mai este disponibil sau nu a putut fi deschis. Încearcă din nou.', close: 'Închide', singleCourt: 'teren', courts: 'terenuri' },
-        hu: { home_search: 'Pálya keresése', home_search_hint: 'Keress név, sport vagy város alapján, minden városban.', home_search_placeholder: 'Név, sport vagy város', loading: 'Betöltés…', error: 'A pályákat nem sikerült betölteni.', basesError: 'A sportközpontokat nem sikerült betölteni.', retry: 'Újrapróbálkozás', empty: 'Ebben a városban nincsenek elérhető pályák.', noResults: 'Nincs találat. Próbálj más nevet, sportot vagy várost.', noBases: 'Ebben a városban nincsenek elérhető sportközpontok.', hour: 'Lej/óra', results: 'talált pálya', reserve: 'Foglalás', booking: 'Pálya megnyitása…', bookingError: 'A pálya nem érhető el. Próbáld újra.', close: 'Bezárás', singleCourt: 'pálya', courts: 'pálya' },
-        en: { home_search: 'Find a court', home_search_hint: 'Search by name, sport or city, across all cities.', home_search_placeholder: 'Name, sport or city', loading: 'Loading…', error: 'Courts could not be loaded.', basesError: 'Sports centres could not be loaded.', retry: 'Try again', empty: 'No courts are available in this city.', noResults: 'No courts found. Try another name, sport or city.', noBases: 'No sports centres are available in this city.', hour: 'RON/hour', results: 'courts found', reserve: 'Book', booking: 'Opening court…', bookingError: 'The court is unavailable or could not be opened. Please try again.', close: 'Close', singleCourt: 'court', courts: 'courts' }
+        ro: { home_search: 'Caută un teren', home_search_hint: 'Caută după nume, sport sau oraș, în toate orașele.', home_search_placeholder: 'Nume, sport sau oraș', loading: 'Se încarcă…', error: 'Terenurile nu au putut fi încărcate.', basesError: 'Bazele sportive nu au putut fi încărcate.', retry: 'Încearcă din nou', empty: 'Nu sunt terenuri disponibile în acest oraș.', emptyAll: 'Curând disponibil — încă nu sunt terenuri publicate pentru acest sport.', noBasesAll: 'Curând disponibil — încă nu sunt baze sportive publicate.',noResults: 'Nu am găsit terenuri. Încearcă alt nume, sport sau oraș.', noBases: 'Nu sunt baze sportive disponibile în acest oraș.', hour: 'Lei/oră', results: 'terenuri găsite', reserve: 'Rezervă', booking: 'Se deschide terenul…', bookingError: 'Terenul nu mai este disponibil sau nu a putut fi deschis. Încearcă din nou.', close: 'Închide', singleCourt: 'teren', courts: 'terenuri' },
+        hu: { home_search: 'Pálya keresése', home_search_hint: 'Keress név, sport vagy város alapján, minden városban.', home_search_placeholder: 'Név, sport vagy város', loading: 'Betöltés…', error: 'A pályákat nem sikerült betölteni.', basesError: 'A sportközpontokat nem sikerült betölteni.', retry: 'Újrapróbálkozás', empty: 'Ebben a városban nincsenek elérhető pályák.', emptyAll: 'Hamarosan — ehhez a sporthoz még nincsenek közzétett pályák.', noBasesAll: 'Hamarosan — még nincsenek közzétett sportközpontok.',noResults: 'Nincs találat. Próbálj más nevet, sportot vagy várost.', noBases: 'Ebben a városban nincsenek elérhető sportközpontok.', hour: 'Lej/óra', results: 'talált pálya', reserve: 'Foglalás', booking: 'Pálya megnyitása…', bookingError: 'A pálya nem érhető el. Próbáld újra.', close: 'Bezárás', singleCourt: 'pálya', courts: 'pálya' },
+        en: { home_search: 'Find a court', home_search_hint: 'Search by name, sport or city, across all cities.', home_search_placeholder: 'Name, sport or city', loading: 'Loading…', error: 'Courts could not be loaded.', basesError: 'Sports centres could not be loaded.', retry: 'Try again', empty: 'No courts are available in this city.', emptyAll: 'Coming soon — no courts have been published for this sport yet.', noBasesAll: 'Coming soon — no sports centres have been published yet.',noResults: 'No courts found. Try another name, sport or city.', noBases: 'No sports centres are available in this city.', hour: 'RON/hour', results: 'courts found', reserve: 'Book', booking: 'Opening court…', bookingError: 'The court is unavailable or could not be opened. Please try again.', close: 'Close', singleCourt: 'court', courts: 'courts' }
     };
     for (const [language, copy] of Object.entries(labels)) {
         if (window.dict?.[language]) {
@@ -126,7 +126,7 @@
                 const feedback = strip.parentElement.querySelector('.home-courts-status') || node('p', 'home-courts-status');
                 feedback.setAttribute('role', 'status');
                 strip.after(feedback);
-                if (!visible.length) message(strip, t('empty'));
+                if (!visible.length) message(strip, t(selectedCity() === 'ALL' ? 'emptyAll' : 'empty'));
                 else visible.forEach(court => strip.append(courtCard(court, feedback)));
             }
         }
@@ -136,7 +136,7 @@
             if (basesState === 'error' || courtsState === 'error') return message(directory, t('basesError'), true);
             const visible = bases.filter(base => matchesCity(base) && courts.some(court => court.baza_sportiva_id === base.id));
             directory.replaceChildren();
-            if (!visible.length) return message(directory, t('noBases'));
+            if (!visible.length) return message(directory, t(selectedCity() === 'ALL' ? 'noBasesAll' : 'noBases'));
             for (const base of visible) {
                 const card = node('a', 'sports-base-card');
                 card.href = window.SpotivityNavigation.baseUrl(base);

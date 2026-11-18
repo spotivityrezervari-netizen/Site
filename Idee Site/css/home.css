@@ -576,3 +576,25 @@ body.pagina-publica {
     .pagina-publica .home-search-results { grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); }
 }
 .pagina-publica .home-booking-court { margin: 0 0 18px; font-size: 16px; text-align: center; overflow-wrap: anywhere; color: #dedede; }
+
+/* 2026-11-18: formularul de rezervare mai lat pe ecrane mari. */
+@media (min-width: 768px) {
+    .pagina-publica #modal-rezervare .modal-continut { max-width: 600px; }
+}
+/* Patru coloane egale de ore; un text lung („10:00 (Trecut)”) nu mai lățește coloana. */
+.pagina-publica #container-ore { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+/* Cardurile bazelor au aceeași înălțime pe toate rândurile, cu sau fără fotografie de copertă. */
+.pagina-publica .sports-bases-grid { grid-auto-rows: 1fr; }
+/* Orele trecute: gri, fără tăietură roșie, ca să se citească ușor. Orele ocupate rămân roșii. */
+.pagina-publica .btn-ora.ocupat.trecut {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.14);
+    color: rgba(245, 245, 247, 0.55);
+    text-decoration: none;
+}
+/* Butonul X al formularului: zonă de apăsare de cel puțin 44px și contur vizibil la tastatură. */
+.pagina-publica #inchide-rezervare {
+    min-width: 44px; min-height: 44px; top: 10px; right: 12px;
+    display: inline-flex; align-items: center; justify-content: center; border-radius: 12px;
+}
+.pagina-publica #inchide-rezervare:focus-visible { outline: 2px solid #edca82; outline-offset: 2px; opacity: 1; }

@@ -18,6 +18,7 @@
             || hash.has('spotivity-action') || url.searchParams.has('spotivity-action');
     }
     const initialProtectedIntent = protectedIntent(initialDocumentUrl);
+    const preLaunchNoindex = /noindex/i.test(document.querySelector('meta[name="robots"]')?.getAttribute('content') || '');
     let ready = false, initialized = false, restoring = false, goingBack = false;
     let generation = 0, controller = null, active = null, currentEntry = null;
     let previousView = null, baseOrigin = null, hasBaseOrigin = false, queuedEntity = null;
@@ -75,7 +76,8 @@
     }
     function captureMetadata() {
         const selectors = ['link[rel="canonical"]', 'meta[name="description"]', 'meta[name="robots"]',
-            'meta[property="og:title"]', 'meta[property="og:description"]', 'meta[property="og:url"]'];
+            'meta[property="og:title"]', 'meta[property="og:description"]', 'meta[property="og:url"]',
+            'meta[name="twitter:title"]', 'meta[name="twitter:description"]'];
         return { title: document.title, values: selectors.map(selector => {
             const node = document.querySelector(selector);
             return [selector, node?.getAttribute(node.tagName === 'LINK' ? 'href' : 'content') ?? null];
@@ -102,7 +104,9 @@
         document.title = title;
         for (const [selector, value] of [['link[rel="canonical"]', canonical], ['meta[name="description"]', description],
             ['meta[property="og:title"]', title], ['meta[property="og:description"]', description], ['meta[property="og:url"]', canonical],
-            ['meta[name="robots"]', indexed ? 'index,follow' : 'noindex,follow']]) {
+            ['meta[name="twitter:title"]', title], ['meta[name="twitter:description"]', description],
+            // Before launch the whole site is noindex; opening a court must not switch that off.
+            ['meta[name="robots"]', indexed && !preLaunchNoindex ? 'index,follow' : 'noindex,follow']]) {
             const node = document.querySelector(selector);
             if (node) node.setAttribute(node.tagName === 'LINK' ? 'href' : 'content', value);
         }

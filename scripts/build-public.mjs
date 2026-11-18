@@ -7,7 +7,8 @@ import { fileURLToPath } from 'node:url';
 import { SEO_PATHS, seoPaths as reviewedSeoPaths, generateSeoFiles, productionHome, PRODUCTION_BASE_URL, reconcileRouteHistory, netlifyAliasRedirects } from './seo-pages.mjs';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const assetPath = /^(?:index\.html|css\/[A-Za-z0-9_-]+\.css|js\/(?:modules\/)?[A-Za-z0-9_-]+\.js|assets\/imagini\/[A-Za-z0-9_-]+\.(?:png|jpe?g|webp|avif|gif|ico))$/;
+// 404.html is the reviewed static "page not found" screen (no scripts) served by Netlify.
+const assetPath = /^(?:index\.html|404\.html|css\/[A-Za-z0-9_-]+\.css|js\/(?:modules\/)?[A-Za-z0-9_-]+\.js|assets\/imagini\/[A-Za-z0-9_-]+\.(?:png|jpe?g|webp|avif|gif|ico))$/;
 
 async function readRegularFile(root, relative) {
   const parts = relative.split('/');

@@ -126,20 +126,26 @@ function withoutSports(template, sections) {
   for (const section of [...sections].sort((a, b) => b.start - a.start)) template = template.slice(0, section.start) + template.slice(section.end);
   return template;
 }
+// 1200x630 social preview (Facebook, WhatsApp, X), much lighter than the old 2 MB avatar.
+const SOCIAL_IMAGE = 'assets/imagini/spotivity-og.jpg';
 function metadata(html, { baseUrl, title, description, route = '' }) {
   const canonical = new URL(route, baseUrl).href;
   html = html.replace(/<title>[^<]*<\/title>/i, () => `<title>${escape(title)}</title>`);
-  const replacements = new Map([['name="description"', description], ['property="og:title"', title], ['property="og:description"', description], ['property="og:url"', canonical], ['property="og:image"', new URL('assets/imagini/avatar2.png', baseUrl).href]]);
+  const replacements = new Map([['name="description"', description], ['property="og:title"', title], ['property="og:description"', description], ['property="og:url"', canonical], ['property="og:image"', new URL(SOCIAL_IMAGE, baseUrl).href]]);
   for (const [attribute, value] of replacements) {
     const expression = new RegExp(`<meta\\s+${attribute}\\s+content="[^"]*"\\s*\\/?>`, 'i');
     if (!expression.test(html)) throw new Error(`SEO template is missing ${attribute}.`);
     html = html.replace(expression, () => `<meta ${attribute} content="${escape(value)}">`);
   }
+  // Twitter/X tags are optional in the template; when present they follow the page's own title and image.
+  for (const [attribute, value] of [['name="twitter:title"', title], ['name="twitter:description"', description], ['name="twitter:image"', new URL(SOCIAL_IMAGE, baseUrl).href]]) {
+    html = html.replace(new RegExp(`<meta\\s+${attribute}\\s+content="[^"]*"\\s*\\/?>`, 'i'), () => `<meta ${attribute} content="${escape(value)}">`);
+  }
   if (!/<link rel="canonical" href="[^"]*"\s*\/?>/i.test(html)) throw new Error('SEO template is missing its canonical link.');
   return html.replace(/<link rel="canonical" href="[^"]*"\s*\/?>/i, () => `<link rel="canonical" href="${escape(canonical)}">`);
 }
 export function productionHome(html) {
-  html = html.replace(/(<link rel="canonical" href=")[^"]*(")/i, `$1${PRODUCTION_BASE_URL}$2`).replace(/(<meta property="og:url" content=")[^"]*(")/i, `$1${PRODUCTION_BASE_URL}$2`).replace(/(<meta property="og:image" content=")[^"]*(")/i, `$1${new URL('assets/imagini/avatar2.png', PRODUCTION_BASE_URL).href}$2`);
+  html = html.replace(/(<link rel="canonical" href=")[^"]*(")/i, `$1${PRODUCTION_BASE_URL}$2`).replace(/(<meta property="og:url" content=")[^"]*(")/i, `$1${PRODUCTION_BASE_URL}$2`).replace(/(<meta property="og:image" content=")[^"]*(")/i, `$1${new URL(SOCIAL_IMAGE, PRODUCTION_BASE_URL).href}$2`).replace(/(<meta name="twitter:image" content=")[^"]*(")/i, `$1${new URL(SOCIAL_IMAGE, PRODUCTION_BASE_URL).href}$2`);
   return structuredData(html, { baseUrl: PRODUCTION_BASE_URL, kind: 'home' });
 }
 function structuredData(html, options) {
@@ -216,7 +222,7 @@ export function generateSeoFiles({ template, catalog: input, routeHistory, baseU
   files.set('js/seo-route-index.js', `// Generated from the reviewed anonymous public catalog. No account data.\nwindow.spotivitySeoRoutes = ${JSON.stringify(index)};\n`);
   files.set('js/seo-alias-redirect.js', `// Generated public alias navigation. No inline script is needed.\n(${redirectSeoAlias.toString()})();\n`);
   files.set('robots.txt', `User-agent: *\nAllow: /\n\nSitemap: ${new URL('sitemap.xml', baseUrl).href}\n`);
-  files.set('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${['', ...SPORTS.map(({ slug }) => `terenuri/${slug}/`), ...Object.values(index.courts), ...Object.values(index.bases)].map(route => `  <url><loc>${escape(new URL(route, baseUrl).href)}</loc></url>`).join('\n')}\n</urlset>\n`);
+  files.set('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${['', ...SPORTS.map(({ slug }) => `terenuri/${slug}/`), ...Object.values(index.courts), ...Object.values(index.bases)].map(route => `  <url><loc>${escape(new URL(route, baseUrl).href)}</loc><lastmod>${escape(catalog.refreshedAt.slice(0, 10))}</lastmod></url>`).join('\n')}\n</urlset>\n`);
   for (const { route, target } of seoAliases(catalog, routeHistory)) {
     const csp = template.match(/<meta\b[^>]*http-equiv="Content-Security-Policy"[^>]*>/i)?.[0];
     const referrer = template.match(/<meta\b[^>]*name="referrer"[^>]*>/i)?.[0];

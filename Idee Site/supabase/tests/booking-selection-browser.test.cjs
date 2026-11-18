@@ -53,7 +53,7 @@ const assert=require('node:assert/strict');
   assert.deepEqual(await selected(),['18:00']);
   await refresh();assert.deepEqual(await selected(),['18:00'],'Polling must preserve an explicit replacement of the filter hour');
   await refresh();assert.deepEqual(await selected(),['18:00'],'Repeated polling must not add an extra charged hour');
-  assert.equal(await page.locator('#buton-confirma').innerText(),'Rezervă (100)');
+  assert.equal(await page.locator('#buton-confirma').innerText(),'Rezervă (100\u00a0Lei)');
   console.log('PASS availability polling preserves the chosen hours and price');
 
   await page.getByRole('button',{name:'18:00',exact:true}).click();
@@ -76,7 +76,7 @@ const assert=require('node:assert/strict');
   await page.getByRole('button',{name:'17:00',exact:true}).click();
   await page.evaluate(()=>bookingApi.openCourt(courts[1]));await ready();
   assert.deepEqual(await selected(),['17:00'],'Opening a different court starts a new selection');
-  assert.equal(await page.locator('#buton-confirma').innerText(),'Rezervă (150)');
+  assert.equal(await page.locator('#buton-confirma').innerText(),'Rezervă (150\u00a0Lei)');
   await page.getByRole('button',{name:'18:00',exact:true}).click();
   await page.getByRole('button',{name:'17:00',exact:true}).click();await refresh();
   await page.locator('#buton-confirma').click();

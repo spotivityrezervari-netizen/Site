@@ -148,7 +148,9 @@
             wake();
         }, { threshold: .01 }) : null;
         const revealObserver = 'IntersectionObserver' in window ? new IntersectionObserver(entries => {
-            for (const entry of entries) if (entry.isIntersecting) reveal(entry.target);
+            // A section skipped above the viewport (fast jump to the footer) is revealed too,
+            // so it is never left transparent when the visitor scrolls back.
+            for (const entry of entries) if (entry.isIntersecting || entry.boundingClientRect.bottom < 0) reveal(entry.target);
         }, { rootMargin: '0px 0px -24px 0px', threshold: 0 }) : null;
         const resizeObserver = 'ResizeObserver' in window ? new ResizeObserver(() => scheduleMeasure()) : null;
 
@@ -239,6 +241,32 @@
         else reducedMotion.addListener(motionPreferenceChanged);
         updateBlocked();
         measure();
+        keepHashTarget();
+
+        // A direct link such as #sport-tenis must stay on its section while the
+        // court cards above it load and push the page down.
+        function keepHashTarget() {
+            let id = '';
+            try { id = decodeURIComponent(location.hash.slice(1)); } catch { return; }
+            if (!/^[A-Za-z][\w-]{0,80}$/.test(id)) return;
+            const target = document.getElementById(id);
+            if (!target || !roots.some(root => root.contains(target))) return;
+            let userMoved = false;
+            const stop = () => { userMoved = true; };
+            const events = ['wheel', 'touchstart', 'keydown', 'pointerdown'];
+            events.forEach(name => window.addEventListener(name, stop, { passive: true, once: true }));
+            const align = () => {
+                if (userMoved || !target.isConnected) return;
+                const margin = parseFloat(getComputedStyle(target).scrollMarginTop) || 0;
+                if (Math.abs(target.getBoundingClientRect().top - margin) > 2) target.scrollIntoView({ block: 'start', behavior: 'instant' });
+            };
+            const layoutObserver = 'ResizeObserver' in window ? new ResizeObserver(align) : null;
+            roots.forEach(root => layoutObserver?.observe(root));
+            setTimeout(() => {
+                layoutObserver?.disconnect();
+                events.forEach(name => window.removeEventListener(name, stop));
+            }, 5000);
+        }
     }
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });

@@ -23,8 +23,10 @@
             if (!court.optiune_minge) mingeBifata = false;
             document.getElementById('checkbox-minge').checked = mingeBifata;
             document.getElementById('container-minge').style.display = court.optiune_minge ? 'flex' : 'none';
-            document.getElementById('text-label-minge').innerText = `${window.dict[window.lang]['nevoie_minge']} (+${pretMingeCurent})`;
+            document.getElementById('text-label-minge').innerText = `${window.dict[window.lang]['nevoie_minge']} (+${pretMingeCurent}\u00a0${moneda()})`;
         }
+        // Prețurile afișate în formular au mereu moneda lângă sumă.
+        const moneda = () => ({ hu: 'lej', en: 'RON' })[window.lang] || 'Lei';
         const numeZileT_DB = ["Dum", "Lun", "Mar", "Mie", "Joi", "Vin", "Sâm"];
         function incarcaInterfataRezervare(terenDinDB) {
             bookingContextGeneration++;
@@ -163,6 +165,8 @@
 
                 if (oreOcupateArray.includes(oraTxt) || estePreaDinScurt) {
                     btnOra.classList.add('ocupat');
+                    // Orele trecute au un stil separat, mai ușor de citit decât cele ocupate.
+                    if (!oreOcupateArray.includes(oraTxt)) btnOra.classList.add('trecut');
                     btnOra.disabled = true;
                     btnOra.innerText += oreOcupateArray.includes(oraTxt) ? ` (${window.dict[window.lang]['ocupat']})` : ` (${window.dict[window.lang]['trecut']})`;
                 } else {
@@ -230,7 +234,7 @@
             } else {
                 bookingNote().textContent = 'O singură rezervare pe zi la același sport, cu una sau mai multe ore consecutive, indiferent de oraș.';
                 const pretTotal = quoteTotal();
-                butonConfirma.innerText = `${window.dict[window.lang]['rezerva']} (${pretTotal})`; butonConfirma.disabled = false; butonConfirma.style.opacity = '1';
+                butonConfirma.innerText = `${window.dict[window.lang]['rezerva']} (${pretTotal}\u00a0${moneda()})`; butonConfirma.disabled = false; butonConfirma.style.opacity = '1';
             }
         }
 
