@@ -1,0 +1,63 @@
+# Automatic checks on every push and pull request. Runs only tests: nothing is
+# deployed, and no request reaches the hosted Supabase project (SQL tests use
+# an in-memory PGlite database, browser tests a local static server).
+name: Teste
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-scripts:
+    name: Sintaxă, build public și teste scripturi
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Sintaxa tuturor fișierelor JavaScript
+        run: |
+          find "Idee Site/js" scripts -name '*.js' -o -name '*.mjs' | while read -r file; do
+            node --check "$file" || exit 1
+          done
+      - name: Teste pentru build, SEO și Make
+        run: node --test scripts/tests/*.test.mjs
+      - name: Pachetul public (dist)
+        run: node scripts/build-public.mjs
+      - name: Paginile SEO generate sunt la zi
+        run: |
+          node scripts/generate-seo-pages.mjs
+          git diff --exit-code -- "Idee Site" || (echo "Rulează node scripts/generate-seo-pages.mjs și salvează rezultatul." && exit 1)
+
+  database-and-browser:
+    name: Teste bază de date și browser
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: Idee Site/supabase/tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Idee Site/supabase/tests/package-lock.json
+      - run: npm ci
+      - name: Chromium pentru Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Toate testele
+        run: npm test
+        env:
+          TEST_JOBS: 4

@@ -7,3 +7,6 @@
 
 # Supabase CLI local state (project ref, versions); never commit
 **/supabase/.temp/
+
+# Test tool dependencies (installed with npm ci in Idee Site/supabase/tests)
+node_modules/
