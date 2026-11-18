@@ -4,3 +4,6 @@
 
 # Local Netlify folder
 .netlify
+
+# Supabase CLI local state (project ref, versions); never commit
+**/supabase/.temp/
