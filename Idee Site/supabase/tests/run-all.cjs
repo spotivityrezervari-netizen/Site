@@ -88,8 +88,15 @@ function runOne(file, env) {
 
     const failed = results.filter(result => result.code !== 0);
     for (const result of failed) {
+        const lines = result.output.split('\n').filter(line => !/^\s+at /.test(line) && line.trim());
         console.log(`\n===== ${path.basename(result.file)} =====`);
-        console.log(result.output.split('\n').filter(line => !/^\s+at /.test(line)).slice(-40).join('\n'));
+        console.log(lines.slice(-40).join('\n'));
+        // On GitHub Actions, also show the failure as an annotation on the run page.
+        if (process.env.GITHUB_ACTIONS) {
+            const reason = lines.filter(line => /Error|assert|expected|actual|Timeout|not ok/i.test(line)).slice(0, 6).join(' | ')
+                || lines.slice(-3).join(' | ');
+            console.log(`::error title=${path.basename(result.file)}::${reason.replace(/%/g, '%25').replace(/\r?\n/g, ' ').slice(0, 900)}`);
+        }
     }
     console.log(`\n${results.length - failed.length} passed, ${failed.length} failed`);
     process.exit(failed.length ? 1 : 0);
