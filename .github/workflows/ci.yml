@@ -31,6 +31,10 @@ jobs:
           find "Idee Site/js" scripts -name '*.js' -o -name '*.mjs' | while read -r file; do
             node --check "$file" || exit 1
           done
+      - name: ESLint (greșeli reale în codul din browser)
+        run: |
+          npm install --no-save --no-audit --no-fund eslint@9.17.0 globals@15.14.0
+          npx eslint
       - name: Teste pentru build, SEO și Make
         run: node --test scripts/tests/*.test.mjs
       - name: Pachetul public (dist)

@@ -6,6 +6,7 @@ exclude:
   - deploy
   - dist
   - netlify.toml
+  - eslint.config.cjs
   - Gemfile
   - Gemfile.lock
   - node_modules

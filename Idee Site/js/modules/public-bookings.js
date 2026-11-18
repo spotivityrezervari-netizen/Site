@@ -27,7 +27,6 @@
         }
         // Prețurile afișate în formular au mereu moneda lângă sumă.
         const moneda = () => ({ hu: 'lej', en: 'RON' })[window.lang] || 'Lei';
-        const numeZileT_DB = ["Dum", "Lun", "Mar", "Mie", "Joi", "Vin", "Sâm"];
         function incarcaInterfataRezervare(terenDinDB) {
             bookingContextGeneration++;
             mingeBifata = false;
@@ -69,7 +68,6 @@
 
                 let ziTextVizual = i === 0 ? window.dict[window.lang]['azi'] : (i === 1 ? window.dict[window.lang]['maine'] : window.dict[window.lang]['zile'][dataCurenta.getUTCDay()]);
 
-                let ziTextDB = numeZileT_DB[dataCurenta.getUTCDay()];
                 let ziNumar = String(dataCurenta.getUTCDate()).padStart(2, '0');
                 let lunaNumar = String(dataCurenta.getUTCMonth() + 1).padStart(2, '0');
 
@@ -135,10 +133,6 @@
             let suntemPeZiuaCautata = false;
             const filtruDataInput = document.getElementById('filtru-data');
             if (filtruDataInput && filtruDataInput.value) {
-                const dataC = new Date(filtruDataInput.value);
-                const ziTextDB = numeZileT_DB[dataC.getDay()];
-                const ziNumar = String(dataC.getDate()).padStart(2, '0');
-                const lunaNumar = String(dataC.getMonth() + 1).padStart(2, '0');
                 if (filtruDataInput.value === dataSelectataStr) {
                     suntemPeZiuaCautata = true;
                 }

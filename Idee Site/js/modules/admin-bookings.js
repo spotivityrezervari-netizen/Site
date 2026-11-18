@@ -68,8 +68,6 @@
             if (!sameContext() || !dateElement) return;
             const dataInput = dateElement.value;
             if (!dataInput) return alert("Alege o dată din calendar mai întâi!");
-            const d = new Date(dataInput);
-            const zile = ["Dum", "Lun", "Mar", "Mie", "Joi", "Vin", "Sâm"];
             const dataFormata = dataInput;
             const { data: court, error: courtError } = await db.from('terenuri').select('*').eq('nume', numeTeren).single();
             if (!sameContext()) return;
@@ -111,8 +109,6 @@
             if (!sameContext() || !dateElement) return;
             const dataInput = dateElement.value;
             if (!dataInput) return alert("Alege o dată!");
-            const d = new Date(dataInput);
-            const zile = ["Dum", "Lun", "Mar", "Mie", "Joi", "Vin", "Sâm"];
             const dataFormata = dataInput;
             if (!confirm(`Deblochezi terenul ${numeTeren} pe ${dataFormata}?`)) return;
 
