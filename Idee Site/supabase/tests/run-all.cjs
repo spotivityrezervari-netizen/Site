@@ -22,6 +22,7 @@ const PORTS = [8002, 8010, 8096, 8103, 8105, 8117];
 const TIMEOUT_MS = Number(process.env.TEST_TIMEOUT_MS || 240000);
 const JOBS = Math.max(1, Number(process.env.TEST_JOBS || 4));
 const RETRIES = Math.max(0, Number(process.env.TEST_RETRIES ?? 1));
+const SOLO = new Set(['browser.test.cjs']);
 const TYPES = {
     '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
     '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp',
@@ -78,26 +79,30 @@ function runOne(file, env) {
     if (chromium) env.CHROMIUM_PATH = chromium;
     console.log(`Running ${files.length} test files (${JOBS} at a time)${chromium ? ` with ${chromium}` : ''}`);
 
-    const queue = [...files]; const results = []; const flaky = [];
-    await Promise.all(Array.from({ length: Math.min(JOBS, queue.length) }, async () => {
-        while (queue.length) {
-            const file = queue.shift();
-            let result = await runOne(file, env);
-            // Browser timing can vary on a busy machine: retry a failed file once
-            // and report it as flaky, so it stays visible instead of hidden.
-            if (result.code !== 0 && RETRIES > 0) {
-                const retry = await runOne(file, env);
-                if (retry.code === 0) {
-                    flaky.push(path.basename(file));
-                    if (process.env.GITHUB_ACTIONS) console.log(`::warning title=${path.basename(file)}::Flaky: failed once, passed on retry`);
-                }
-                result = retry;
+    const results = []; const flaky = [];
+    const runWithRetry = async file => {
+        let result = await runOne(file, env);
+        // Browser timing can vary on a busy machine: retry a failed file once
+        // and report it as flaky, so it stays visible instead of hidden.
+        if (result.code !== 0 && RETRIES > 0) {
+            const retry = await runOne(file, env);
+            if (retry.code === 0) {
+                flaky.push(path.basename(file));
+                if (process.env.GITHUB_ACTIONS) console.log(`::warning title=${path.basename(file)}::Flaky: failed once, passed on retry`);
             }
-            results.push(result);
-            const mark = result.code !== 0 ? 'FAIL' : flaky.includes(path.basename(file)) ? 'ok* ' : 'ok  ';
-            console.log(`${mark} ${path.basename(result.file)} (${result.seconds.toFixed(1)}s)`);
+            result = retry;
         }
+        results.push(result);
+        const mark = result.code !== 0 ? 'FAIL' : flaky.includes(path.basename(file)) ? 'ok* ' : 'ok  ';
+        console.log(`${mark} ${path.basename(result.file)} (${result.seconds.toFixed(1)}s)`);
+    };
+    // The largest suites time out when they share a slow CI runner with other
+    // browser tests, so they run alone after the parallel batch.
+    const queue = files.filter(file => !SOLO.has(path.basename(file)));
+    await Promise.all(Array.from({ length: Math.min(JOBS, queue.length) }, async () => {
+        while (queue.length) await runWithRetry(queue.shift());
     }));
+    for (const file of files.filter(file => SOLO.has(path.basename(file)))) await runWithRetry(file);
     servers.forEach(server => server.close());
 
     const failed = results.filter(result => result.code !== 0);
