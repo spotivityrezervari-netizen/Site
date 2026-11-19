@@ -77,6 +77,18 @@ if(require.main===module)test('superadmin panel authorization, immutable images 
    assert.equal((await claim(c,recipients[0].recipient_id)).send,false);
    assert.equal((await pending(c)).recipients.length,1);
   });
+  await t.test('retry cron re-queues a stalled approved campaign (047)',async()=>{
+   await root("update spotivity_private.announcement_campaigns set last_queued_at=statement_timestamp()-interval '5 minutes' where id=$1",[c.campaign_id]);
+   await assert.rejects(()=>root('select spotivity_private.wake_panel_announcements()'),/not assigned yet/,'030 worker fails: loop variable shadows the table alias');
+   await root('select 1');await pg.exec(readFileSync(join(directory,'047_fix_announcement_retry_worker.sql'),'utf8'));
+   const before=Number((await root('select count(*) n from net.test_requests')).rows[0].n);
+   await root('select spotivity_private.wake_panel_announcements()');
+   const q=(await root('select body from net.test_requests order by id')).rows;assert.equal(q.length,before+1);
+   assert.deepEqual(q.at(-1).body,{kind:'announcement_campaign_clients',campaign_id:c.campaign_id});
+   await root('select spotivity_private.wake_panel_announcements()');
+   assert.equal(Number((await root('select count(*) n from net.test_requests')).rows[0].n),before+1,'recently queued campaign is not re-queued');
+   await assert.rejects(()=>as(4,'select spotivity_private.wake_panel_announcements()'));
+  });
   await t.test('recipient is rechecked for promotions and new account does not join frozen snapshot',async()=>{
    const p=await preview(3020);await send(p);const list=(await pending(p)).recipients;
    const recipient=(await root('select user_id from spotivity_private.announcement_recipients where id=$1',[list[0].recipient_id])).rows[0];

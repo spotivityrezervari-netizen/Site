@@ -31,6 +31,8 @@
     "baze-sportive/reghin-baza-a-05bb1b11-d4d7-4dfb-91e7-095bb1ad457b/index.html",
     "baze-sportive/targu-mures-baza-b-ab6d8804-bb31-418f-a455-7558b97eb142/index.html",
     "baze-sportive/targu-mures-siefei-ep-edopkf-2f8dee16-255d-4f3c-b8cb-8d59e7093f12/index.html",
+    "confidentialitate.html",
+    "cookies.html",
     "css/admin-announcements.css",
     "css/admin-club-requests.css",
     "css/admin-late-cancellations.css",
@@ -45,6 +47,7 @@
     "css/home-layout.css",
     "css/home-motion.css",
     "css/home.css",
+    "css/legal.css",
     "css/owner-court-create.css",
     "css/owner-home.css",
     "css/profile-editor.css",
@@ -116,6 +119,7 @@
     "terenuri/tenis/reghin-baza-a-exemplu2-10/index.html",
     "terenuri/tenis/reghin-baza-a-tenis-23/index.html",
     "terenuri/tenis/targu-mures-baza-b-exemplu3-11/index.html",
-    "terenuri/volei/index.html"
+    "terenuri/volei/index.html",
+    "termeni.html"
   ]
 }

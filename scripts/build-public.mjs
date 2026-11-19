@@ -8,7 +8,7 @@ import { SEO_PATHS, seoPaths as reviewedSeoPaths, generateSeoFiles, productionHo
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // 404.html is the reviewed static "page not found" screen (no scripts) served by Netlify.
-const assetPath = /^(?:index\.html|404\.html|css\/[A-Za-z0-9_-]+\.css|js\/(?:modules\/)?[A-Za-z0-9_-]+\.js|assets\/imagini\/[A-Za-z0-9_-]+\.(?:png|jpe?g|webp|avif|gif|ico))$/;
+const assetPath = /^(?:index\.html|404\.html|(?:termeni|confidentialitate|cookies)\.html|css\/[A-Za-z0-9_-]+\.css|js\/(?:modules\/)?[A-Za-z0-9_-]+\.js|assets\/imagini\/[A-Za-z0-9_-]+\.(?:png|jpe?g|webp|avif|gif|ico))$/;
 
 async function readRegularFile(root, relative) {
   const parts = relative.split('/');
