@@ -33,7 +33,7 @@ body.pagina-publica { background: var(--design-bg-deep); }
     z-index: -2;
     pointer-events: none;
     /* Almost flat on purpose: one teal tone everywhere, so bars, cards and photo edges match it. */
-    background: linear-gradient(180deg, #04201f 0%, var(--design-bg-teal) 45%, #031a19 100%);
+    background: linear-gradient(180deg, #041c1b 0%, #031817 40%, #031817 100%);
 }
 
 /* Layer 2: line-art illustrations (edges busy, centre clean). Fixed to the viewport so
@@ -151,14 +151,14 @@ body.pagina-publica { background: var(--design-bg-deep); }
  * olive-green / brown shades. Gold accents (buttons, borders, text) stay.
  * ------------------------------------------------------------------------- */
 .pagina-publica {
-    --design-bar: rgba(4, 28, 27, .94);
+    --design-bar: rgba(3, 24, 23, .94);
     --design-panel: linear-gradient(160deg, #07302d, #052321);
     --design-panel-hover: #0a3632;
     --design-field: #06292a;
 }
 .pagina-publica .home-city-region { background: var(--design-bar); }
 .pagina-publica .home-header { background: var(--design-bar); }
-.pagina-publica .home-mobile-menu:not([hidden]) { background: #041c1b; }
+.pagina-publica .home-mobile-menu:not([hidden]) { background: #031817; }
 .pagina-publica .home-footer { background: var(--design-bar); }
 .pagina-publica #filtru-oras-global,
 .pagina-publica #filtru-oras-global option,
@@ -182,7 +182,116 @@ body.pagina-publica { background: var(--design-bg-deep); }
 /* Welcome photo caption shade in the same tone. */
 .pagina-publica .welcome-photo-link { background: linear-gradient(to bottom, rgba(4, 28, 27, .62), rgba(4, 28, 27, .16) 42%, transparent 70%); }
 /* Phones paint the browser bar / overscroll area with this colour. */
-html { background-color: #041c1b; }
+html { background-color: #031817; }
+
+/* ---------------------------------------------------------------------------
+ * 2026-11-20 (5): colour palette from the owner (public pages only; admin unchanged).
+ *   background #031817 / main action (buttons, links) green #22C55E
+ *   labels and numbers (eyebrow, 01/02/03, city, price) light blue #38BDF8
+ *   headings white / body text light grey-green / surfaces dark teal, thin borders #1F3A3D
+ * Overrides only. Status colours (errors, confirmations) are left untouched.
+ * ------------------------------------------------------------------------- */
+.pagina-publica {
+    --design-green: #22c55e;
+    --design-green-hover: #4ade80;
+    --design-green-ink: #052e16;
+    --design-blue: #38bdf8;
+    --design-text: #c9dad5;
+    --design-line: #1f3a3d;
+    /* Shared theme variables, re-pointed for the public pages. */
+    --spotivity-gold: var(--design-green);
+    --spotivity-gold-light: var(--design-green-hover);
+    --spotivity-cream: #e8f1ee;
+    --spotivity-muted: #9fb7b0;
+    --spotivity-gold-border: var(--design-line);
+}
+
+/* Main actions: green buttons with dark text. */
+.pagina-publica :is(.welcome-primary, .welcome-slide-cta, .home-reserve-button, .club-registration-primary),
+.pagina-publica .sports-bases-action:not(.sports-bases-share),
+.pagina-publica .buton-rezervare:not(:disabled):not([style*="background"]),
+.pagina-publica #modal-editare-profil :is(#btn-profil-continua, #btn-profil-confirma):not(:disabled) {
+    background: var(--design-green);
+    border-color: var(--design-green);
+    color: var(--design-green-ink);
+    box-shadow: 0 4px 20px rgba(34, 197, 94, .18);
+}
+.pagina-publica :is(.welcome-primary, .home-reserve-button, .club-registration-primary):not(:disabled):hover,
+.pagina-publica .welcome-photo-link:hover .welcome-slide-cta,
+.pagina-publica .sports-bases-action:not(.sports-bases-share):hover,
+.pagina-publica .buton-rezervare:not(:disabled):not([style*="background"]):hover,
+.pagina-publica #modal-editare-profil :is(#btn-profil-continua, #btn-profil-confirma):not(:disabled):is(:hover, :focus-visible) {
+    background: var(--design-green-hover);
+    border-color: var(--design-green-hover);
+    color: var(--design-green-ink);
+}
+.pagina-publica .tab-auth.activ { background: var(--design-green); color: var(--design-green-ink); }
+
+/* Links and secondary actions: green. */
+.pagina-publica .welcome-secondary { color: var(--design-green); text-decoration-color: var(--design-green); }
+.pagina-publica .welcome-secondary:hover { color: var(--design-green-hover); }
+.pagina-publica .sports-bases-share { background: rgba(34, 197, 94, .06); border-color: var(--design-green); color: var(--design-green); }
+.pagina-publica .sports-bases-share:hover { background: rgba(34, 197, 94, .14); }
+.pagina-publica :is(.home-legal-link, .category-breadcrumb a, .category-related a, .category-cities a),
+.pagina-publica .entity-page a:not(.home-court-card) { color: var(--design-green); }
+.pagina-publica .club-registration-secondary { color: var(--design-green); border-color: var(--design-line); }
+.pagina-publica .club-registration-secondary:not(:disabled):hover { color: var(--design-green-hover); }
+.pagina-publica #modal-club-registration .buton-inchidere { color: var(--design-green); }
+.pagina-publica #club-request-consent { accent-color: var(--design-green); }
+
+/* Labels and numbers: light blue. */
+.pagina-publica :is(.welcome-eyebrow, .welcome-steps strong, .club-registration-eyebrow, .entity-eyebrow),
+.pagina-publica :is(.home-court-price, .sports-base-city, .sports-base-court-sport),
+.pagina-publica .club-request-court-heading { color: var(--design-blue); }
+
+/* Headings: white. */
+.pagina-publica :is(.home-welcome h1, .home-intro h1, .home-sport-heading h1, .home-sport-heading h2, .home-section-heading h2),
+.pagina-publica :is(.titlu-modal, .club-registration-copy h2, .category-cities h2, .category-faq h2, .category-faq summary, .entity-page h1),
+.pagina-publica #modal-club-registration .titlu-modal,
+.pagina-publica :is(#club-request-account-fields legend, .club-request-courts-heading h3),
+.pagina-publica .welcome-slide-title { color: #fff; }
+
+/* Body text: light grey-green. */
+.pagina-publica :is(.home-welcome p, .home-intro p, .welcome-steps li, .home-city-copy, .home-hero-subtitle),
+.pagina-publica :is(.category-breadcrumb, .category-intro, .category-related, .category-cities, .category-faq, .category-catalog-note),
+.pagina-publica :is(.entity-page, #public-navigation-status, #entity-navigation-status),
+.pagina-publica :is(.club-registration-copy p, .club-request-privacy, #club-request-account-fields p, #club-registration-form small),
+.pagina-publica .home-intro { color: var(--design-text); }
+.pagina-publica :is(.home-desktop-nav :is(button, a), .home-profile-button, .home-search-button) { color: #e8f1ee; }
+.pagina-publica :is(.home-desktop-nav :is(button, a), .home-profile-button, .home-search-button):hover,
+.pagina-publica .home-mobile-links :is(button, a):hover { color: var(--design-green); }
+.pagina-publica .home-mobile-links :is(button, a) { color: #e8f1ee; }
+.pagina-publica #club-registration-form label { color: #e8f1ee; }
+.pagina-publica #club-request-status { color: var(--design-green); }
+
+/* Surfaces: dark teal with thin #1F3A3D borders. */
+.pagina-publica :is(.home-city-region, .home-header) { box-shadow: inset 0 -1px 0 var(--design-line); }
+.pagina-publica .home-footer { box-shadow: inset 0 1px 0 var(--design-line); }
+.pagina-publica :is(#filtru-oras-global, .home-nav-search, #home-search-input, .grup-input input) { border-color: var(--design-line); }
+.pagina-publica :is(.grup-input input, #home-search-input):focus { border-color: var(--design-green); }
+.pagina-publica :is(.home-court-card, .sports-base-card, .sports-base-court) { border-color: var(--design-line); }
+.pagina-publica :is(.home-court-card, .sports-base-card):hover { border-color: #2f5a5e; }
+.pagina-publica :is(.welcome-photo-card, .home-sport-hero .home-hero-art) { border-color: var(--design-line); }
+.pagina-publica .club-registration-section { border-color: var(--design-line); background: var(--design-panel); }
+.pagina-publica :is(.modal-continut, #modal-club-registration .modal-continut) { border-color: var(--design-line); box-shadow: 0 20px 60px rgba(0, 0, 0, .7); }
+.pagina-publica #club-registration-form :is(input:not([type="checkbox"]), select, textarea) { border-color: var(--design-line); }
+.pagina-publica .club-request-court { border-color: var(--design-line); background: rgba(31, 58, 61, .25); }
+.pagina-publica #club-request-account-fields { border-top-color: var(--design-line); }
+.pagina-publica .category-faq details { border-top-color: var(--design-line); }
+.pagina-publica .category-faq details:last-child { border-bottom-color: var(--design-line); }
+.pagina-publica :is(.btn-cont, .buton-locatie, .buton-inapoi) { background: rgba(31, 58, 61, .35); border-color: var(--design-line); }
+.pagina-publica :is(.btn-cont, .buton-locatie, .buton-inapoi):hover { background: rgba(31, 58, 61, .7); color: var(--design-green); }
+.pagina-publica .welcome-steps { border-top-color: var(--design-line); }
+.pagina-publica .home-courts-strip { scrollbar-color: #2f5a5e transparent; }
+.pagina-publica .home-courts-strip::-webkit-scrollbar-thumb { background: #2f5a5e; }
+.pagina-publica .home-brand img { filter: none; }
+
+/* Gallery dots and focus rings in the action green. */
+.pagina-publica .welcome-gallery-controls button { color: var(--design-green); }
+.pagina-publica .welcome-gallery-controls button > span { border-color: var(--design-green); }
+.pagina-publica .welcome-gallery-controls button[aria-pressed="true"] > span { background: var(--design-green); }
+.pagina-publica .welcome-gallery-controls button:hover { border-color: var(--design-line); }
+.pagina-publica :is(button, a, input, select, textarea):focus-visible { outline-color: var(--design-green) !important; }
 
 @media print {
     .pagina-publica .home-shell::before,

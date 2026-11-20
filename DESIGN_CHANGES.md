@@ -3,6 +3,23 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-20 (5): Colour palette from the owner
+
+All changes are in `Idee Site/css/design-background.css` (section "(5)"). The `<link>` went to `?v=5` and the SEO pages were regenerated. Public pages only: admin pages, status colours (errors, confirmations) and the legal pages (`termeni`/`confidentialitate`/`cookies`, which don't load this file) are unchanged.
+
+- **Background:** `#031817`. The base gradient, html background, header/city bar and mobile menu are now in this tone.
+- **Main action, green `#22C55E` (hover `#4ADE80`, dark text `#052e16`):**
+  - all buttons: welcome "Rezervă un teren", gallery and sport-card buttons, "Vezi bazele sportive", the club sign-up button, booking buttons, the active login tab, and the profile editor buttons;
+  - links, "Descoperă sporturile", the share button, gallery dots, nav hover, and focus rings.
+- **Labels and numbers, light blue `#38BDF8`:** the welcome eyebrow, steps 01/02/03, the club eyebrow, city and price on cards, and entity eyebrows.
+- **Text:**
+  - headings are white: the home title, sport titles, section titles, dialog titles, and SEO page headings;
+  - body text is light grey-green `#C9DAD5`. Nav and menu text is `#E8F1EE`.
+- **Surfaces:**
+  - fields, header, city bar, footer, cards, dialogs, the club box and the photo cards keep their dark-teal fill and now have thin `#1F3A3D` borders (they were gold);
+  - the shared theme variables (`--spotivity-gold*`, `--spotivity-cream`, `--spotivity-muted`) are re-pointed inside `.pagina-publica` only.
+- **Revert only this step:** `git revert` the commit "Design: owner colour palette", then run `node scripts/generate-seo-pages.mjs`.
+
 ## 2026-11-20 (4): Sport photos as framed landscape cards (no blur)
 
 Asked by the owner: no blur on the sport photos. They should look like the welcome gallery at the top: all landscape, same size, not zoomed in too much. All changes are in `Idee Site/css/design-background.css`. The `<link>` went to `?v=4` and the SEO pages were regenerated.
