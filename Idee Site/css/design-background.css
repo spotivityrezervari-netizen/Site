@@ -32,11 +32,8 @@ body.pagina-publica { background: var(--design-bg-deep); }
     inset: 0;
     z-index: -2;
     pointer-events: none;
-    background:
-        radial-gradient(ellipse 60% 45% at 8% 12%, rgba(31, 174, 134, .10), transparent 70%),
-        radial-gradient(ellipse 55% 40% at 95% 70%, rgba(63, 227, 196, .07), transparent 70%),
-        radial-gradient(ellipse 70% 55% at 50% 45%, rgba(2, 10, 10, .55), transparent 75%),
-        linear-gradient(160deg, #021312 0%, var(--design-bg-deep) 35%, var(--design-bg-teal) 65%, #062624 100%);
+    /* Almost flat on purpose: one teal tone everywhere, so bars, cards and photo edges match it. */
+    background: linear-gradient(180deg, #04201f 0%, var(--design-bg-teal) 45%, #031a19 100%);
 }
 
 /* Layer 2: line-art illustrations (edges busy, centre clean). Fixed to the viewport so
@@ -87,7 +84,7 @@ body.pagina-publica { background: var(--design-bg-deep); }
 /* Photo area: a soft dark-teal veil behind the photo softens the line art around it
    and acts as a placeholder while the photo downloads on a slow connection. */
 .pagina-publica .home-sport-hero .home-hero-art {
-    background: radial-gradient(ellipse 80% 75% at 50% 50%, rgba(3, 24, 23, .92) 30%, rgba(3, 24, 23, .6) 58%, rgba(3, 24, 23, 0) 82%);
+    background: radial-gradient(ellipse 85% 80% at 50% 50%, rgba(4, 28, 27, .9) 25%, rgba(4, 28, 27, .78) 40%, rgba(4, 28, 27, .55) 55%, rgba(4, 28, 27, .3) 68%, rgba(4, 28, 27, .1) 80%, rgba(4, 28, 27, 0) 92%);
 }
 /* The old edge treatment blurred the page behind the photo (very costly while scrolling
    on phones) and painted the edges forest green. Replace both with a mask that fades the
@@ -95,8 +92,19 @@ body.pagina-publica { background: var(--design-bg-deep); }
 .pagina-publica .home-sport-hero .home-hero-art::before { content: none; }
 .pagina-publica .home-sport-hero .home-hero-art::after { background: none; }
 .pagina-publica .home-sport-hero .home-hero-art img {
-    --design-fade-y: linear-gradient(to bottom, transparent, rgba(0, 0, 0, .55) calc(var(--home-edge-top) * .45), #000 var(--home-edge-top), #000 calc(100% - var(--home-edge-bottom)), rgba(0, 0, 0, .55) calc(100% - var(--home-edge-bottom) * .45), transparent);
-    --design-fade-x: linear-gradient(to right, transparent, #000 var(--home-side-fade), #000 calc(100% - var(--home-side-fade)), transparent);
+    --design-t: var(--home-edge-top);
+    --design-b: var(--home-edge-bottom);
+    --design-s: var(--home-side-fade);
+    --design-fade-y: linear-gradient(to bottom,
+        transparent 0, rgba(0, 0, 0, .07) calc(var(--design-t) * .2), rgba(0, 0, 0, .26) calc(var(--design-t) * .4),
+        rgba(0, 0, 0, .55) calc(var(--design-t) * .6), rgba(0, 0, 0, .84) calc(var(--design-t) * .8), #000 var(--design-t),
+        #000 calc(100% - var(--design-b)), rgba(0, 0, 0, .84) calc(100% - var(--design-b) * .8), rgba(0, 0, 0, .55) calc(100% - var(--design-b) * .6),
+        rgba(0, 0, 0, .26) calc(100% - var(--design-b) * .4), rgba(0, 0, 0, .07) calc(100% - var(--design-b) * .2), transparent 100%);
+    --design-fade-x: linear-gradient(to right,
+        transparent 0, rgba(0, 0, 0, .07) calc(var(--design-s) * .2), rgba(0, 0, 0, .26) calc(var(--design-s) * .4),
+        rgba(0, 0, 0, .55) calc(var(--design-s) * .6), rgba(0, 0, 0, .84) calc(var(--design-s) * .8), #000 var(--design-s),
+        #000 calc(100% - var(--design-s)), rgba(0, 0, 0, .84) calc(100% - var(--design-s) * .8), rgba(0, 0, 0, .55) calc(100% - var(--design-s) * .6),
+        rgba(0, 0, 0, .26) calc(100% - var(--design-s) * .4), rgba(0, 0, 0, .07) calc(100% - var(--design-s) * .2), transparent 100%);
     -webkit-mask-image: var(--design-fade-y), var(--design-fade-x);
     mask-image: var(--design-fade-y), var(--design-fade-x);
     -webkit-mask-composite: source-in;
@@ -119,6 +127,55 @@ body.pagina-publica { background: var(--design-bg-deep); }
     .pagina-publica .welcome-photo-frame { height: auto; padding-block: 4px; }
     .pagina-publica .welcome-photo-card { width: 100%; }
 }
+
+/* Phones and tablets: same look as desktop. The photo sits slightly inset with wider,
+   softer side fades instead of running hard into the screen edges. */
+@media (max-width: 1023px) {
+    .pagina-publica .home-sport-hero {
+        --home-side-fade: clamp(36px, 10vw, 72px);
+        --home-edge-bottom: clamp(170px, 26vw, 240px);
+    }
+    .pagina-publica .home-sport-hero .home-hero-art { width: calc(100% - 12px); justify-self: center; }
+}
+
+/* ---------------------------------------------------------------------------
+ * 2026-11-20 (3): one teal colour everywhere (public pages only).
+ * Bars, cards, fields and dialogs use the background tone instead of the old
+ * olive-green / brown shades. Gold accents (buttons, borders, text) stay.
+ * ------------------------------------------------------------------------- */
+.pagina-publica {
+    --design-bar: rgba(4, 28, 27, .94);
+    --design-panel: linear-gradient(160deg, #07302d, #052321);
+    --design-panel-hover: #0a3632;
+    --design-field: #06292a;
+}
+.pagina-publica .home-city-region { background: var(--design-bar); }
+.pagina-publica .home-header { background: var(--design-bar); }
+.pagina-publica .home-mobile-menu:not([hidden]) { background: #041c1b; }
+.pagina-publica .home-footer { background: var(--design-bar); }
+.pagina-publica #filtru-oras-global,
+.pagina-publica #filtru-oras-global option,
+.pagina-publica .home-nav-search,
+.pagina-publica #home-search-input { background: var(--design-field); }
+.pagina-publica .home-court-card,
+.pagina-publica .sports-base-card,
+.pagina-publica .sports-base-court { background: var(--design-panel); }
+.pagina-publica .home-court-card:hover,
+.pagina-publica .sports-base-card:hover { background: var(--design-panel-hover); }
+.pagina-publica img.sports-base-photo { background: #052321; }
+.pagina-publica .club-registration-section {
+    background: radial-gradient(ellipse at right top, rgba(216, 182, 106, .1), transparent 70%), var(--design-panel);
+}
+.pagina-publica .club-registration-secondary { background: var(--design-field); }
+.pagina-publica .club-registration-secondary:not(:disabled):hover { background: var(--design-panel-hover); }
+.pagina-publica .modal-continut { background-color: rgba(5, 32, 30, .97); }
+.pagina-publica #modal-club-registration .modal-continut { background: #052321; }
+.pagina-publica #club-registration-form :is(input:not([type="checkbox"]), select, textarea) { background: var(--design-field); }
+.pagina-publica .grup-input input { background: rgba(2, 16, 15, .6); }
+/* Welcome photo caption shade in the same tone. */
+.pagina-publica .welcome-photo-link { background: linear-gradient(to bottom, rgba(4, 28, 27, .62), rgba(4, 28, 27, .16) 42%, transparent 70%); }
+/* Phones paint the browser bar / overscroll area with this colour. */
+html { background-color: #041c1b; }
 
 @media print {
     .pagina-publica .home-shell::before,

@@ -3,6 +3,21 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-20 (3): One teal colour everywhere, smoother photo fades on mobile
+
+Asked by the owner: mobile looked worse than desktop (mixed green/blue/brown shades, hard photo edges). All changes are in `Idee Site/css/design-background.css`. The `<link>` went to `?v=3` and the SEO pages were regenerated.
+
+- **Base background:** now almost flat (`#04201f` to `#041c1b` to `#031a19`). The coloured radial glows that created patches are gone.
+- **Same tone everywhere on public pages:**
+  - city bar, header, mobile menu, footer, city select, search field, court and base cards, the club sign-up box and its dialog, and the welcome photo caption shade now use that teal tone;
+  - before, they used olive-green `#142219`/`#1b2d20`/`#203226` or brown `#242017`/`#1b1812`;
+  - gold accents (buttons, borders, text) are unchanged, and admin pages are not affected.
+- **Photo fades:**
+  - the photo-edge masks now use eased (S-curve) stops, so there is no visible line where a fade starts or ends;
+  - the veil behind each photo is exactly the background tone, with eased stops;
+  - phones and tablets (≤1023px) get the desktop look: the photo is slightly inset, side fades are 36–72px (were 24px) and the bottom fade is longer.
+- **Revert only this step:** `git revert` the commit "Design: one teal colour everywhere ...", then run `node scripts/generate-seo-pages.mjs`.
+
 ## 2026-11-20 (2): Smooth scrolling, photo edges, landscape welcome photos
 
 All of this is in `Idee Site/css/design-background.css` (new section at the end). No other CSS file was edited. The `<link>` went from `?v=1` to `?v=2` in `index.html`, and the SEO pages were regenerated (that version number is the only change in them).
