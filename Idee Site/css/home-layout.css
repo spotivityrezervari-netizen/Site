@@ -339,6 +339,17 @@ body.pagina-publica { background: #101a14; }
 .pagina-publica[data-category-sport] .home-sport-heading h1 { font-size: clamp(32px, 5vw, 58px); line-height: 1.15; overflow-wrap: anywhere; }
 .pagina-publica[data-category-sport] .home-hero-copy { padding-top: 32px; }
 .pagina-publica[data-category-sport] .category-intro { font-size: 17px; text-shadow: 0 1px 4px #000; }
+.pagina-publica .category-cities { max-width: 760px; margin: 20px auto; padding-inline: 20px; color: #e7dcc5; text-align: center; line-height: 1.7; }
+.pagina-publica .category-cities h2 { margin: 0 0 8px; font-size: 20px; color: #f8edcf; }
+.pagina-publica .category-cities ul { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 20px; margin: 0; padding: 0; list-style: none; }
+.pagina-publica .category-cities a { color: #f3d58e; text-underline-offset: 4px; }
+.pagina-publica .category-faq { max-width: 760px; margin: 32px auto; padding-inline: 20px; color: #e7dcc5; line-height: 1.7; }
+.pagina-publica .category-faq h2 { margin: 0 0 12px; font-size: 22px; color: #f8edcf; text-align: center; }
+.pagina-publica .category-faq details { border-top: 1px solid rgb(243 213 142 / 25%); padding: 12px 0; }
+.pagina-publica .category-faq details:last-child { border-bottom: 1px solid rgb(243 213 142 / 25%); }
+.pagina-publica .category-faq summary { cursor: pointer; font-weight: 600; color: #f8edcf; min-height: 24px; }
+.pagina-publica .category-faq summary:focus-visible { outline: 2px solid #f3d58e; outline-offset: 3px; }
+.pagina-publica .category-faq details p { margin: 8px 0 0; }
 @media (max-width: 767px) {
     .pagina-publica[data-category-sport] .home-hero-copy { padding-top: 24px; }
     .pagina-publica[data-category-sport] .category-intro { font-size: 15px; margin-block: 14px; }

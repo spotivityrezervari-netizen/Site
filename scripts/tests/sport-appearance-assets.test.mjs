@@ -8,7 +8,7 @@ const sources = await Promise.all(['js/security.js', 'js/sport-appearance.js'].m
 const current = {
   Fotbal: 'assets/imagini/BackgroundFootball.avif',
   Baschet: 'assets/imagini/BackgroundBasketball.avif',
-  Tenis: 'assets/imagini/TenisFINAL.jpeg',
+  Tenis: 'assets/imagini/TenisFINAL.webp',
   Volei: 'assets/imagini/BackgroundVoleyball.avif',
   'Tenis Picior': 'assets/imagini/BackgroundLavolei.avif'
 };

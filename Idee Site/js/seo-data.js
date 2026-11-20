@@ -10,6 +10,7 @@
         'https://spotivity.ro/'
     ]);
     const homeTitle = 'Spotivity — Rezervări terenuri de sport';
+    const logoPath = 'assets/imagini/spotivity-256.webp';
     const sportLabels = Object.freeze({ fotbal: 'fotbal', baschet: 'baschet', tenis: 'tenis', volei: 'volei', 'tenis-de-picior': 'tenis de picior' });
     const text = value => typeof value === 'string' ? value.trim() : '';
     const city = value => text(value).replace(/\.+$/, '');
@@ -22,6 +23,7 @@
         const candidate = route === undefined ? fallback : route;
         if (typeof candidate !== 'string' || !/^(?:[a-z0-9-]+\/)*$/.test(candidate) || candidate.includes('//') ||
             (kind === 'home' ? candidate !== '' : kind === 'sport' ? candidate !== `terenuri/${sportSlug}/` :
+                kind === 'city' ? candidate !== fallback :
                 kind === 'court' ? !new RegExp(`^terenuri/${sportSlug}/[a-z0-9-]+/$`).test(candidate) : !/^baze-sportive\/[a-z0-9-]+\/$/.test(candidate))) {
             throw new TypeError('Invalid structured data route.');
         }
@@ -39,8 +41,8 @@
     function graphFor(options) {
         if (!paths || !options || !roots.includes(options.baseUrl)) throw new TypeError('Unreviewed structured data deployment origin.');
         const { baseUrl, kind } = options;
-        if (!['home', 'sport', 'court', 'base'].includes(kind)) throw new TypeError('Unknown structured data page kind.');
-        let court, base, sportSlug = '', defaultRoute = '', defaultTitle = homeTitle;
+        if (!['home', 'sport', 'city', 'court', 'base'].includes(kind)) throw new TypeError('Unknown structured data page kind.');
+        let court, base, cityName = '', sportSlug = '', defaultRoute = '', defaultTitle = homeTitle;
         if (kind === 'court') {
             court = publicPlace(options.court);
             sportSlug = paths.sportSlug(options.court.sport);
@@ -58,21 +60,29 @@
             if (!sportSlug) throw new TypeError('Unknown structured data sport.');
             defaultRoute = `terenuri/${sportSlug}/`;
             defaultTitle = `Terenuri de ${sportLabels[sportSlug]} – Rezervări online | Spotivity`;
+        } else if (kind === 'city') {
+            sportSlug = paths.sportSlug(options.sport);
+            cityName = city(options.city);
+            defaultRoute = paths.cityPath(options.sport, cityName);
+            if (!sportSlug || !cityName || !defaultRoute) throw new TypeError('Structured data requires a public sport and city.');
+            defaultTitle = `Terenuri de ${sportLabels[sportSlug]} în ${cityName} – Rezervări online | Spotivity`;
         }
         const route = routeFor(options.route, defaultRoute, kind, sportSlug);
         if ((kind === 'court' || kind === 'base') && !route.endsWith(`-${(court || base).id}/`)) throw new TypeError('Structured data route does not match its public entity ID.');
         const canonical = new URL(route, baseUrl).href;
         const organizationId = baseUrl + '#organization', websiteId = baseUrl + '#website';
-        const page = { '@type': kind === 'sport' ? 'CollectionPage' : 'WebPage', '@id': canonical + '#webpage',
+        const page = { '@type': kind === 'sport' || kind === 'city' ? 'CollectionPage' : 'WebPage', '@id': canonical + '#webpage',
             url: canonical, name: text(options.title) || defaultTitle, inLanguage: 'ro', isPartOf: reference(websiteId) };
         const graph = [
-            { '@type': 'Organization', '@id': organizationId, name: 'Spotivity', url: baseUrl },
+            { '@type': 'Organization', '@id': organizationId, name: 'Spotivity', url: baseUrl,
+                logo: { '@type': 'ImageObject', url: new URL(logoPath, baseUrl).href, width: 256, height: 256 } },
             { '@type': 'WebSite', '@id': websiteId, url: baseUrl, name: 'Spotivity', inLanguage: 'ro', publisher: reference(organizationId) },
             page
         ];
         if (kind !== 'home') {
             const crumbs = [{ name: 'Acasă', item: baseUrl }];
             if (sportSlug) crumbs.push({ name: `Terenuri de ${sportLabels[sportSlug]}`, item: new URL(`terenuri/${sportSlug}/`, baseUrl).href });
+            if (kind === 'city') crumbs.push({ name: cityName, item: canonical });
             if (kind === 'court' && base) crumbs.push({ name: base.nume, item: new URL(paths.basePath(base), baseUrl).href });
             if (kind === 'court' || kind === 'base') crumbs.push({ name: (court || base).nume, item: canonical });
             const breadcrumbId = canonical + '#breadcrumb';
@@ -91,6 +101,13 @@
                 const baseRoute = baseReferenceRoute(options.baseRoute, options.court.baza_sportiva_id);
                 if (baseRoute) place.containedInPlace = reference(new URL(baseRoute, baseUrl).href + '#place');
             }
+        }
+        // Questions and answers must be the same text that is visible on the page.
+        if (Array.isArray(options.faq) && options.faq.length) {
+            const questions = options.faq.map(item => ({ question: text(item?.question), answer: text(item?.answer) }));
+            if (questions.some(item => !item.question || !item.answer)) throw new TypeError('Structured data FAQ requires visible questions and answers.');
+            graph.push({ '@type': 'FAQPage', '@id': canonical + '#faq', url: canonical, inLanguage: 'ro',
+                mainEntity: questions.map(item => ({ '@type': 'Question', name: item.question, acceptedAnswer: { '@type': 'Answer', text: item.answer } })) });
         }
         return { '@context': 'https://schema.org', '@graph': graph };
     }

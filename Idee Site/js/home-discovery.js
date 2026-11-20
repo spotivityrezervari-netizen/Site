@@ -44,8 +44,17 @@
         let bookingBusy = false, previousFocus = null;
         const isOpen = () => modal.style.display === 'flex';
         const translatedSport = court => window.dict?.[window.lang]?.[window.normalizeSportName(court.sport).toLowerCase()] || court.sport;
-        const selectedCity = () => document.getElementById('filtru-oras-global')?.value || 'ALL';
-        const matchesCity = court => selectedCity() === 'ALL' || cityName(court.oras) === selectedCity();
+        // A city page (terenuri/<sport>/<oras>/) shows only its own city until
+        // the visitor picks another city in the header filter.
+        const pageCity = document.body.dataset.categoryCity || '';
+        let visitorChoseCity = false;
+        const selectedCity = () => {
+            const value = document.getElementById('filtru-oras-global')?.value || 'ALL';
+            return pageCity && !visitorChoseCity && value === 'ALL' ? pageCity : value;
+        };
+        const sameCity = (a, b) => window.SpotivityEntityPaths?.citySlug
+            ? window.SpotivityEntityPaths.citySlug(a) === window.SpotivityEntityPaths.citySlug(b) : cityName(a) === cityName(b);
+        const matchesCity = court => selectedCity() === 'ALL' || sameCity(court.oras, selectedCity());
 
         function message(container, text, retry = false) {
             container.replaceChildren(node('p', 'home-discovery-message', text));
@@ -58,8 +67,35 @@
             bookingBusy = false;
             document.querySelectorAll('[data-discovery-court]').forEach(button => { button.disabled = false; button.removeAttribute('aria-disabled'); });
         }
+        // A search has its own shareable address (?q=...). Search results are
+        // never indexed: robots becomes noindex while the search is open.
+        const robots = document.querySelector('meta[name="robots"]');
+        let robotsBefore = null, searchPath = null;
+        function syncSearchAddress(open) {
+            // An administrator's site preview keeps the management session address.
+            const preview = document.getElementById('admin-site-preview');
+            if (preview && !preview.hidden) return;
+            const url = new URL(location.href);
+            const query = open ? input.value.trim().slice(0, 100) : '';
+            if (!open && searchPath !== null && url.pathname !== searchPath) {
+                // A court opened from the results now owns the address and metadata.
+                robotsBefore = null; searchPath = null;
+                return;
+            }
+            if (query) url.searchParams.set('q', query); else url.searchParams.delete('q');
+            if (url.href !== location.href) history.replaceState(history.state, '', url.href);
+            if (open) {
+                searchPath = url.pathname;
+                if (robots && robotsBefore === null) robotsBefore = robots.getAttribute('content');
+                robots?.setAttribute('content', 'noindex,follow');
+            } else {
+                if (robots && robotsBefore !== null) robots.setAttribute('content', robotsBefore);
+                robotsBefore = null; searchPath = null;
+            }
+        }
         function close(restoreFocus = true) {
             cancelBooking();
+            if (isOpen()) syncSearchAddress(false);
             modal.style.display = 'none';
             if (restoreFocus && previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
         }
@@ -262,10 +298,11 @@
             cancelBooking();
             input.value = String(query);
             modal.style.display = 'flex';
+            syncSearchAddress(true);
             renderSearch();
             input.focus({ preventScroll: true });
         };
-        input.addEventListener('input', () => { cancelBooking(); renderSearch(); });
+        input.addEventListener('input', () => { cancelBooking(); syncSearchAddress(true); renderSearch(); });
         document.getElementById('inchide-cautare-terenuri').addEventListener('click', () => close());
         modal.addEventListener('click', event => { if (event.target === modal) close(); });
         modal.addEventListener('keydown', event => {
@@ -276,7 +313,10 @@
             if (event.shiftKey && document.activeElement === items[0]) { event.preventDefault(); items.at(-1)?.focus(); }
             else if (!event.shiftKey && document.activeElement === items.at(-1)) { event.preventDefault(); items[0]?.focus(); }
         });
-        document.getElementById('filtru-oras-global')?.addEventListener('change', () => { cancelBooking(); render(); });
+        document.getElementById('filtru-oras-global')?.addEventListener('change', event => {
+            if (!event.spotivityPreset) visitorChoseCity = true;
+            cancelBooking(); render();
+        });
         window.addEventListener('spotivity:language', render);
         window.addEventListener('spotivity:base-updated', event => {
             if (!event.detail?.id) return;
@@ -295,6 +335,11 @@
             }
         });
         window.spotivityDiscoveryReady = load();
+        // Opening a shared search address (?q=...) shows the same search again.
+        const sharedQuery = new URL(location.href).searchParams.get('q');
+        if (sharedQuery !== null && !window.isSpotivityAuthCallback?.() && !window.isSpotivityRecoveryCallback?.()) {
+            window.openCourtSearch(sharedQuery.slice(0, 100));
+        }
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
     else init();

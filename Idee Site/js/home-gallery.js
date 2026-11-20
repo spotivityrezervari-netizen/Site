@@ -15,7 +15,7 @@
         const photos = [
             { sport: 'Fotbal', slug: 'fotbal', file: 'BackgroundFootball.avif' },
             { sport: 'Baschet', slug: 'baschet', file: 'BackgroundBasketball.avif' },
-            { sport: 'Tenis', slug: 'tenis', file: 'TenisFINAL.jpeg' },
+            { sport: 'Tenis', slug: 'tenis', file: 'TenisFINAL.webp' },
             { sport: 'Volei', slug: 'volei', file: 'BackgroundVoleyball.avif' },
             { sport: 'Tenis Picior', slug: 'tenis-de-picior', file: 'BackgroundLavolei.avif' }
         ];

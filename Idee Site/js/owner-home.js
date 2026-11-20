@@ -14,7 +14,7 @@
     const sportImages = [
         { file: 'BackgroundFootball.avif', width: 1149, height: 786 },
         { file: 'BackgroundBasketball.avif', width: 1170, height: 780 },
-        { file: 'TenisFINAL.jpeg', width: 1000, height: 1333 },
+        { file: 'TenisFINAL.webp', width: 1000, height: 1333 },
         { file: 'BackgroundVoleyball.avif', width: 600, height: 401 },
         { file: 'BackgroundLavolei.avif', width: 600, height: 852 }
     ];

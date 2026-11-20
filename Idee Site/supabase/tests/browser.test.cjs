@@ -1088,7 +1088,7 @@ async function openProfile(page) {
     const currentSportBackgrounds={
       Fotbal:'assets/imagini/BackgroundFootball.avif',
       Baschet:'assets/imagini/BackgroundBasketball.avif',
-      Tenis:'assets/imagini/TenisFINAL.jpeg',
+      Tenis:'assets/imagini/TenisFINAL.webp',
       Volei:'assets/imagini/BackgroundVoleyball.avif',
       'Tenis Picior':'assets/imagini/BackgroundLavolei.avif'
     };
@@ -1502,7 +1502,7 @@ async function openProfile(page) {
     await basesPage.locator('#container-zile .btn-zi').nth(1).click();
     await basesPage.locator('.btn-ora').filter({hasText:/^09:00$/}).waitFor();
     assert.equal(await basesPage.locator('.btn-ora').count(),3);
-    assert.match(await basesPage.locator('#modal-rezervare .modal-continut').evaluate(node=>getComputedStyle(node).backgroundImage),/TenisFINAL\.jpeg/);
+    assert.match(await basesPage.locator('#modal-rezervare .modal-continut').evaluate(node=>getComputedStyle(node).backgroundImage),/TenisFINAL\.webp/);
     assert.ok(requests.some(item=>item.path==='/rest/v1/terenuri' && new URLSearchParams(item.search).get('id')===`eq.${baseCourts.a2}`));
     await basesPage.locator('.btn-ora').filter({hasText:/^09:00$/}).click();
     await basesPage.locator('#buton-confirma').click();

@@ -55,8 +55,38 @@ test('five categories keep one static H1, original booking controls and real cra
       assert.match(html, /<a[^>]*class="home-court-card"[^>]*data-entity-court-id="1"/);
     } else assert.ok(html.includes('Momentan nu sunt terenuri publicate pentru acest sport.'));
   }
-  assert.equal((generated.get('sitemap.xml').match(/<loc>/g) || []).length, 8);
+  // home + 5 sports + 1 city page + 1 court + 1 base
+  assert.equal((generated.get('sitemap.xml').match(/<loc>/g) || []).length, 9);
   assert.ok(generated.get('robots.txt').includes(`${PAGES_BASE_URL}sitemap.xml`));
+});
+
+test('each sport and city with courts gets its own listing page with title, H1, text and FAQ', () => {
+  const input = structuredClone(catalog);
+  input.courts.push({ id: 41, nume: 'Arena Nord', sport: 'Fotbal', oras: 'Târgu Mureș.', pret: 90, baza_sportiva_id: null },
+    { id: 42, nume: 'Arena Sud', sport: 'Fotbal', oras: 'targu mures', pret: 120, baza_sportiva_id: null },
+    { id: 43, nume: 'Teren Tenis', sport: 'Tenis', oras: 'Târgu Mureș', pret: null, baza_sportiva_id: null });
+  const generated = generateSeoFiles({ template, catalog: input });
+  const city = generated.get('terenuri/fotbal/targu-mures/index.html');
+  assert.ok(city, 'Spellings of the same city share one page');
+  assert.equal((city.match(/<h1\b/g) || []).length, 1);
+  assert.ok(city.includes('<title>Terenuri de fotbal în Târgu Mureș – Rezervări online | Spotivity</title>'));
+  assert.ok(city.includes('>Terenuri de fotbal în Târgu Mureș</h1>'));
+  assert.ok(city.includes('găsești 2 terenuri de fotbal') && city.includes('începe de la 90 Lei/oră'));
+  assert.ok(city.includes('data-category-sport="Fotbal" data-category-city="Târgu Mureș"'));
+  assert.ok(city.includes(`<link rel="canonical" href="${PAGES_BASE_URL}terenuri/fotbal/targu-mures/">`));
+  assert.ok(city.includes('Arena Nord') && city.includes('Arena Sud') && !city.includes('Court &amp; One'));
+  assert.ok(city.includes('href="../../../terenuri/tenis/targu-mures/"'), 'Links the same city in other sports');
+  assert.ok(city.includes('href="../../../terenuri/fotbal/reghin/"'), 'Links the same sport in other cities');
+  const sport = generated.get('terenuri/fotbal/index.html');
+  assert.ok(sport.includes('href="../../terenuri/fotbal/targu-mures/">Târgu Mureș (2)</a>'));
+  assert.ok(sport.includes('<section class="category-faq"'));
+  const decode = html => JSON.parse(html.match(/<script id="spotivity-seo-data" type="application\/ld\+json">([\s\S]*?)<\/script>/)[1]);
+  const faq = decode(sport)['@graph'].find(item => item['@type'] === 'FAQPage');
+  const fotbal = SPORTS.find(item => item.sport === 'Fotbal');
+  assert.deepEqual(faq.mainEntity.map(item => item.name), fotbal.faq.map(item => item.question));
+  for (const item of fotbal.faq) assert.ok(sport.includes(`<summary>${item.question}</summary>`), 'FAQ schema text must be visible');
+  assert.equal(decode(city)['@graph'].find(item => item['@type'] === 'CollectionPage').url, `${PAGES_BASE_URL}terenuri/fotbal/targu-mures/`);
+  assert.ok(generated.get('sitemap.xml').includes(`<loc>${PAGES_BASE_URL}terenuri/fotbal/targu-mures/</loc>`));
 });
 
 test('desktop picture sources resolve from category URLs before JavaScript runs', () => {
@@ -106,7 +136,9 @@ test('every sport and identical or unusual names have safe unique stable-ID rout
   input.courts = SPORTS.flatMap((sport, index) => [1, 2].map(copy => ({ id: index * 2 + copy, nume: 'Ștrand / .. / Ștefănești', sport: sport.sport, oras: 'Reghin', pret: null, baza_sportiva_id: baseId })));
   input.courts.push({ id: '00000000-0000-0000-0000-000000000099', nume: '<script>same name</script>', sport: 'Tenis de picior', oras: 'Reghin', pret: 0, baza_sportiva_id: null });
   const files = generateSeoFiles({ template, catalog: input });
-  const routes = seoPaths(input).filter(relative => relative.startsWith('terenuri/') && relative.split('/').length === 4);
+  const cityPages = seoPaths(input).filter(relative => /^terenuri\/[a-z-]+\/reghin\/index\.html$/.test(relative));
+  assert.equal(cityPages.length, 5);
+  const routes = seoPaths(input).filter(relative => relative.startsWith('terenuri/') && relative.split('/').length === 4 && !cityPages.includes(relative));
   assert.equal(routes.length, 11);
   assert.equal(new Set(routes).size, routes.length);
   for (const relative of routes) {

@@ -12,13 +12,27 @@ const seoData = require('../Idee Site/js/seo-data.js');
 export const PAGES_BASE_URL = 'https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/';
 export const PRODUCTION_BASE_URL = 'https://spotivity.ro/';
 export const GENERATED_MARKER = '<!-- Spotivity generated public page; edit the shared shell/catalog instead. -->';
+// Shared answers describe the real booking rules (hourly slots, published price,
+// cancellation until the slot starts, late cancellation under 60 minutes).
+const commonFaq = label => [
+  { question: `Cum rezerv un teren de ${label} pe Spotivity?`, answer: `Alege un teren de ${label} din listă, selectează data și una sau mai multe ore libere consecutive, apoi confirmă rezervarea. Confirmarea o primești pe email.` },
+  { question: `Cât costă închirierea unui teren de ${label}?`, answer: 'Fiecare teren are un tarif pe oră stabilit de administrator și afișat pe card și în formularul de rezervare. Totalul se calculează înainte să confirmi.' },
+  { question: 'Pot anula o rezervare?', answer: 'Da, din istoricul rezervărilor din contul tău, până la începutul orei rezervate. O anulare făcută cu mai puțin de 60 de minute înainte este înregistrată ca anulare târzie.' }
+];
+const sportFaq = {
+  Fotbal: { question: 'Pot primi și o minge la terenul de fotbal?', answer: 'La unele terenuri administratorul oferă opțiunea de minge. Dacă este disponibilă, o vezi în formularul de rezervare, împreună cu costul suplimentar.' },
+  Baschet: { question: 'Pot rezerva mai multe ore la rând pentru baschet?', answer: 'Da. În formular poți selecta mai multe ore libere consecutive, iar ele sunt rezervate împreună, ca o singură rezervare.' },
+  Tenis: { question: 'Cât durează o rezervare pentru tenis?', answer: 'Rezervările se fac pe ore întregi: o oră care începe la 10:00 se termină la 11:00. Pentru un meci mai lung alegi mai multe ore consecutive.' },
+  Volei: { question: 'Pot vorbi cu administratorul terenului de volei?', answer: 'Da. Din contul tău poți trimite mesaje administratorilor terenului în secțiunea de chat, de exemplu pentru detalii despre echipament sau acces.' },
+  'Tenis Picior': { question: 'Ce este tenisul de picior?', answer: 'Tenisul de picior este un joc cu mingea peste fileu, în care mingea se lovește cu piciorul sau cu capul, ca la fotbal, pe un teren asemănător celui de tenis.' }
+};
 export const SPORTS = Object.freeze([
   { sport: 'Fotbal', slug: 'fotbal', label: 'fotbal', intro: 'Găsește terenuri de fotbal pentru meciurile cu prietenii. Compară terenurile și orașele, apoi verifică programul și alege ora potrivită pentru echipa ta.' },
   { sport: 'Baschet', slug: 'baschet', label: 'baschet', intro: 'Descoperă terenuri de baschet pentru antrenamente și meciuri între prieteni. Alege terenul din orașul tău și verifică intervalele de rezervare în formular.' },
   { sport: 'Tenis', slug: 'tenis', label: 'tenis', intro: 'Caută terenuri de tenis pentru partide de simplu, dublu sau antrenamente. Vezi terenurile și tarifele publicate, apoi selectează data și ora în formularul de rezervare.' },
   { sport: 'Volei', slug: 'volei', label: 'volei', intro: 'Alege un teren de volei pentru următorul joc cu echipa. Consultă terenurile pe orașe și verifică programul de rezervare înainte de a stabili întâlnirea.' },
   { sport: 'Tenis Picior', slug: 'tenis-de-picior', label: 'tenis de picior', intro: 'Găsește terenuri de tenis de picior pentru jocuri cu prietenii și antrenamente. Alege locația potrivită și consultă intervalele din formularul de rezervare.' }
-].map(sport => Object.freeze({ ...sport, title: `Terenuri de ${sport.label} – Rezervări online | Spotivity`, description: `Descoperă terenuri de ${sport.label} pe Spotivity. Compară locațiile și tarifele publicate, verifică programul și rezervă online un teren.` })));
+].map(sport => Object.freeze({ ...sport, faq: Object.freeze([...commonFaq(sport.label), sportFaq[sport.sport]].map(item => Object.freeze(item))), title: `Terenuri de ${sport.label} – Rezervări online | Spotivity`, description: `Descoperă terenuri de ${sport.label} pe Spotivity. Compară locațiile și tarifele publicate, verifică programul și rezervă online un teren.` })));
 export const SEO_PATHS = Object.freeze([...SPORTS.map(({ slug }) => `terenuri/${slug}/index.html`), 'js/seo-route-index.js', 'js/seo-alias-redirect.js', 'robots.txt', 'sitemap.xml']);
 const escape = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
 const normalizeSport = value => value === 'Tenis de picior' ? 'Tenis Picior' : value;
@@ -48,11 +62,23 @@ export function validateCatalog(catalog) {
   return { version: 2, refreshedAt: catalog.refreshedAt, bases, courts };
 }
 
+// One listing per sport and city that has published courts. Different spellings
+// of the same city (diacritics, case) share one page and its first spelling.
+export function cityListings(catalog) {
+  const listings = new Map();
+  for (const court of catalog.courts) {
+    const route = paths.cityPath(court.sport, court.oras);
+    if (!route) continue;
+    if (!listings.has(route)) listings.set(route, { route, sport: court.sport, city: court.oras, courts: [] });
+    listings.get(route).courts.push(court);
+  }
+  return [...listings.values()].sort((a, b) => a.route.localeCompare(b.route, 'en'));
+}
 function indexFor(catalog) {
   const bases = new Map(catalog.bases.map(base => [String(base.id), base]));
   const courts = Object.fromEntries(catalog.courts.map(court => [String(court.id), paths.courtPath(court, bases.get(court.baza_sportiva_id))]));
   const basePaths = Object.fromEntries(catalog.bases.map(base => [String(base.id), paths.basePath(base)]));
-  const all = [...Object.values(courts), ...Object.values(basePaths)];
+  const all = [...Object.values(courts), ...Object.values(basePaths), ...cityListings(catalog).map(listing => listing.route)];
   if (all.some(relative => !relative || relative.includes('..') || !/^[a-z0-9/-]+\/$/.test(relative)) || new Set(all).size !== all.length) throw new Error('Duplicate or invalid public entity route.');
   return { courts, bases: basePaths };
 }
@@ -85,7 +111,7 @@ export function seoAliases(input, history) {
 }
 export function seoPaths(input, history) {
   const catalog = validateCatalog(input), index = indexFor(catalog);
-  return [...SEO_PATHS, ...Object.values(index.courts).map(route => route + 'index.html'), ...Object.values(index.bases).map(route => route + 'index.html'), ...seoAliases(catalog, history).map(alias => alias.route + 'index.html')];
+  return [...SEO_PATHS, ...cityListings(catalog).map(listing => listing.route + 'index.html'), ...Object.values(index.courts).map(route => route + 'index.html'), ...Object.values(index.bases).map(route => route + 'index.html'), ...seoAliases(catalog, history).map(alias => alias.route + 'index.html')];
 }
 export function netlifyAliasRedirects(catalog, history) {
   return seoAliases(catalog, history).flatMap(({ route, target }) => [`/${route} /${target} 301!`, `/${route.slice(0, -1)} /${target} 301!`]).join('\n') + '\n';
@@ -161,13 +187,13 @@ function courtCards(courts, index) {
 }
 function breadcrumb(items) { return `<nav class="category-breadcrumb" aria-label="Navigare">${items.map(({ route, label, attributes }) => route ? link(route, label, attributes) : `<span aria-current="page">${escape(label)}</span>`).join(' ')}</nav>`; }
 function snapshotNote(catalog) { return `<p class="category-catalog-note">Catalog public actualizat la ${escape(catalog.refreshedAt.slice(0, 10))}. Tariful și disponibilitatea se verifică în formularul de rezervare.</p>`; }
-function finish(html, { baseUrl, route, title, description, sport, bodyAttribute, kind, court, base }) {
+function finish(html, { baseUrl, route, title, description, sport, bodyAttribute, kind, court, base, city, faq }) {
   html = html.replace(/<body\b([^>]*)>/i, (_, attributes) => `<body${attributes}${sport ? ` data-category-sport="${escape(sport)}"` : ''}${bodyAttribute || ''}>`);
   html = html.replace(/(<a\b[^>]*\bid="home-brand"[^>]*\bhref=")[^"]*(")/i, '$1./$2');
   if (sport) html = html.replace(/<a\b[^>]*\bdata-sport-target="[^"]*"[^>]*>/gi, tag => tag.includes(`data-sport-target="${sport}"`) ? tag.replace(/\saria-current="[^"]*"/gi, '').replace(/>$/, ' aria-current="page">') : tag);
   html = html.replace('</main>', '<noscript><p class="category-catalog-note">Activează JavaScript pentru programul actualizat și rezervarea unui teren.</p></noscript>\n</main>');
   html = metadata(html, { baseUrl, title, description, route });
-  html = structuredData(html, { baseUrl, route, title, kind, sport, court, base });
+  html = structuredData(html, { baseUrl, route, title, kind, sport, court, base, city, faq });
   const prefix = '../'.repeat(route.split('/').filter(Boolean).length);
   html = html.replace(/\b(src|href)="([^"]*)"/gi, (attribute, name, value) => {
     if (/^(?:[A-Za-z][A-Za-z\d+.-]*:|\/\/|#|\/)/.test(value)) return attribute;
@@ -184,21 +210,49 @@ export function generateSeoFiles({ template, catalog: input, routeHistory, baseU
   const catalog = validateCatalog(input), index = indexFor(catalog), sections = sportSections(template), files = new Map();
   const stripped = withoutSports(template, sections);
   const bases = new Map(catalog.bases.map(base => [String(base.id), base]));
-  for (const sport of SPORTS) {
+  const listings = cityListings(catalog);
+  function listingPage(sport, { city = '', courts, route, title, description, intro, crumbs, extra = '', related, faq }) {
     const source = sections.find(section => section.sport === sport.sport);
     let section = template.slice(source.start, source.end);
-    section = section.replace(/<h[12]\b([^>]*)>[^<]*<\/h[12]>/i, (_, attributes) => `<h1${attributes.replace(/\sdata-i18n="[^"]*"/gi, '')}>Terenuri de ${sport.label}</h1>`);
-    section = section.replace(/(<\/h1>\s*<\/div>)/, (_, opening) => `${opening}\n<p class="category-intro">${escape(sport.intro)}</p>`);
+    const heading = `Terenuri de ${sport.label}${city ? ` în ${city}` : ''}`;
+    section = section.replace(/<h[12]\b([^>]*)>[^<]*<\/h[12]>/i, (_, attributes) => `<h1${attributes.replace(/\sdata-i18n="[^"]*"/gi, '')}>${escape(heading)}</h1>`);
+    section = section.replace(/(<\/h1>\s*<\/div>)/, (_, opening) => `${opening}\n<p class="category-intro">${escape(intro)}</p>`);
     section = section.replace(/<a\b([^>]*\bclass="[^"]*\bcard-sport\b[^"]*"[^>]*)>([\s\S]*?)<\/a>/i, (_, attributes, text) => `<button type="button"${attributes.replace(/\s(?:href|aria-current)="[^"]*"/gi, '')}>${text}</button>`);
     section = section.replace(/\bloading="lazy"/, 'loading="eager" fetchpriority="high"');
-    const courts = catalog.courts.filter(court => court.sport === sport.sport);
     const strip = /(<div\b[^>]*\bdata-home-courts="[^"]+"[^>]*>)[\s\S]*?(<\/div>)/;
     if (!strip.test(section)) throw new Error(`Missing public court strip: ${sport.slug}`);
     section = section.replace(strip, (_, opening, closing) => `${opening.replace(/aria-busy="true"/, 'aria-busy="false"')}${courts.length ? courtCards(courts, index) : '<p class="home-discovery-message">Momentan nu sunt terenuri publicate pentru acest sport.</p>'}${closing}${snapshotNote(catalog)}`);
-    const intro = breadcrumb([{ route: './', label: 'Acasă' }, { label: `Terenuri de ${sport.label}` }]);
+    const faqSection = faq ? `<section class="category-faq" aria-labelledby="faq-title"><h2 id="faq-title">Întrebări frecvente despre terenurile de ${escape(sport.label)}</h2>${faq.map(item => `<details><summary>${escape(item.question)}</summary><p>${escape(item.answer)}</p></details>`).join('')}</section>` : '';
+    const html = stripped.replace(/(<main\b[^>]*>)/i, (_, opening) => `${opening}\n${breadcrumb(crumbs)}${section}${extra}${faqSection}${related}`);
+    const bodyAttribute = city ? ` data-category-city="${escape(city)}"` : '';
+    return finish(html, { baseUrl, route, title, description, sport: sport.sport, bodyAttribute, kind: city ? 'city' : 'sport', city, faq });
+  }
+  const cityList = (items, heading) => items.length ? `<nav class="category-cities" aria-labelledby="${heading.id}"><h2 id="${heading.id}">${escape(heading.text)}</h2><ul>${items.map(item => `<li>${link(item.route, item.label)}</li>`).join('')}</ul></nav>` : '';
+  const sportLabel = value => SPORTS.find(item => item.sport === value).label;
+  for (const sport of SPORTS) {
+    const courts = catalog.courts.filter(court => court.sport === sport.sport);
+    const cities = listings.filter(listing => listing.sport === sport.sport);
+    const route = `terenuri/${sport.slug}/`;
     const related = `<nav class="category-related" aria-label="Alte sporturi">${SPORTS.filter(other => other !== sport).map(other => link(`terenuri/${other.slug}/`, `Terenuri de ${other.label}`)).join(' ')}</nav>`;
-    const html = stripped.replace(/(<main\b[^>]*>)/i, (_, opening) => `${opening}\n${intro}${section}${related}`);
-    files.set(`terenuri/${sport.slug}/index.html`, finish(html, { baseUrl, route: `terenuri/${sport.slug}/`, ...sport, kind: 'sport' }));
+    files.set(route + 'index.html', listingPage(sport, { courts, route, title: sport.title, description: sport.description, intro: sport.intro,
+      crumbs: [{ route: './', label: 'Acasă' }, { label: `Terenuri de ${sport.label}` }],
+      extra: cityList(cities.map(listing => ({ route: listing.route, label: `${listing.city} (${listing.courts.length})` })), { id: 'category-cities-title', text: `Terenuri de ${sport.label} pe orașe` }),
+      related, faq: sport.faq }));
+  }
+  for (const listing of listings) {
+    const sport = SPORTS.find(item => item.sport === listing.sport), count = listing.courts.length;
+    const baseNames = [...new Set(listing.courts.map(court => bases.get(court.baza_sportiva_id)?.nume).filter(Boolean))];
+    const prices = listing.courts.map(court => court.pret).filter(price => price !== null);
+    const intro = `În ${listing.city} găsești ${count === 1 ? 'un teren' : `${count} terenuri`} de ${sport.label} pe Spotivity${baseNames.length ? `, la ${baseNames.join(', ')}` : ''}.${prices.length ? ` Tariful publicat începe de la ${Math.min(...prices)} Lei/oră.` : ''} Alege terenul, verifică programul și rezervă online ora potrivită.`;
+    const otherCities = listings.filter(other => other.sport === listing.sport && other !== listing);
+    const otherSports = listings.filter(other => other.sport !== listing.sport && paths.citySlug(other.city) === paths.citySlug(listing.city));
+    const related = `<nav class="category-related" aria-label="Pagini apropiate">${[link(`terenuri/${sport.slug}/`, `Toate terenurile de ${sport.label}`), ...otherSports.map(other => link(other.route, `Terenuri de ${sportLabel(other.sport)} în ${other.city}`))].join(' ')}</nav>`;
+    files.set(listing.route + 'index.html', listingPage(sport, { city: listing.city, courts: listing.courts, route: listing.route,
+      title: `Terenuri de ${sport.label} în ${listing.city} – Rezervări online | Spotivity`,
+      description: `Terenuri de ${sport.label} în ${listing.city}: vezi ${count === 1 ? 'terenul publicat' : `cele ${count} terenuri publicate`} și tarifele, verifică programul și rezervă online pe Spotivity.`,
+      intro, crumbs: [{ route: './', label: 'Acasă' }, { route: `terenuri/${sport.slug}/`, label: `Terenuri de ${sport.label}` }, { label: listing.city }],
+      extra: cityList(otherCities.map(other => ({ route: other.route, label: other.city })), { id: 'category-cities-title', text: `Terenuri de ${sport.label} în alte orașe` }),
+      related }));
   }
   for (const court of catalog.courts) {
     const base = bases.get(court.baza_sportiva_id), sport = SPORTS.find(item => item.sport === court.sport), route = index.courts[String(court.id)];
@@ -222,7 +276,7 @@ export function generateSeoFiles({ template, catalog: input, routeHistory, baseU
   files.set('js/seo-route-index.js', `// Generated from the reviewed anonymous public catalog. No account data.\nwindow.spotivitySeoRoutes = ${JSON.stringify(index)};\n`);
   files.set('js/seo-alias-redirect.js', `// Generated public alias navigation. No inline script is needed.\n(${redirectSeoAlias.toString()})();\n`);
   files.set('robots.txt', `User-agent: *\nAllow: /\n\nSitemap: ${new URL('sitemap.xml', baseUrl).href}\n`);
-  files.set('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${['', ...SPORTS.map(({ slug }) => `terenuri/${slug}/`), ...Object.values(index.courts), ...Object.values(index.bases)].map(route => `  <url><loc>${escape(new URL(route, baseUrl).href)}</loc><lastmod>${escape(catalog.refreshedAt.slice(0, 10))}</lastmod></url>`).join('\n')}\n</urlset>\n`);
+  files.set('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${['', ...SPORTS.map(({ slug }) => `terenuri/${slug}/`), ...listings.map(listing => listing.route), ...Object.values(index.courts), ...Object.values(index.bases)].map(route => `  <url><loc>${escape(new URL(route, baseUrl).href)}</loc><lastmod>${escape(catalog.refreshedAt.slice(0, 10))}</lastmod></url>`).join('\n')}\n</urlset>\n`);
   for (const { route, target } of seoAliases(catalog, routeHistory)) {
     const csp = template.match(/<meta\b[^>]*http-equiv="Content-Security-Policy"[^>]*>/i)?.[0];
     const referrer = template.match(/<meta\b[^>]*name="referrer"[^>]*>/i)?.[0];

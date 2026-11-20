@@ -41,10 +41,19 @@
             });
 
             selectOras.innerHTML = html;
+            // A city page (terenuri/<sport>/<oras>/) starts filtered on its own city.
+            const pageCity = document.body.dataset.categoryCity;
+            const citySlug = window.SpotivityEntityPaths?.citySlug;
+            if (!citiesInitialized && pageCity && citySlug) {
+                selectedCity = Array.from(selectOras.options).find(option => option.value !== 'ALL'
+                    && citySlug(option.value) === citySlug(pageCity))?.value || selectedCity;
+            }
             selectOras.value = Array.from(selectOras.options).some(option => option.value === selectedCity)
                 ? selectedCity : 'ALL';
             citiesInitialized = true;
-            selectOras.dispatchEvent(new Event('change'));
+            const change = new Event('change');
+            change.spotivityPreset = true;
+            selectOras.dispatchEvent(change);
         }
         window.refreshSpotivityPublicCatalog = async function() {
             const refresh = ++catalogRefresh;
@@ -222,6 +231,8 @@
                 card.addEventListener('click', () => openCourtList(card.getAttribute('data-sport')));
             });
             document.getElementById('filtru-oras-global')?.addEventListener('change', event => {
+                // Remember only the visitor's own choice, not a list refresh or city-page preset.
+                if (event.spotivityPreset) return;
                 try { window.sessionStorage.setItem('spotivity-city', event.target.value); }
                 catch { /* Navigating by sport remains available without storage. */ }
             });

@@ -29,7 +29,8 @@ test('brand and category graphs have canonical IDs, explicit language and real b
   for (const baseUrl of [PAGES_BASE_URL, PRODUCTION_BASE_URL]) {
     const graph = seo.graphFor({ baseUrl, kind: 'home' });
     assert.equal(graph['@context'], 'https://schema.org');
-    assert.deepEqual(node(graph, 'Organization'), { '@type': 'Organization', '@id': baseUrl + '#organization', name: 'Spotivity', url: baseUrl });
+    assert.deepEqual(node(graph, 'Organization'), { '@type': 'Organization', '@id': baseUrl + '#organization', name: 'Spotivity', url: baseUrl,
+      logo: { '@type': 'ImageObject', url: baseUrl + 'assets/imagini/spotivity-256.webp', width: 256, height: 256 } });
     assert.equal(node(graph, 'WebSite').url, baseUrl);
     assert.equal(node(graph, 'WebSite').publisher['@id'], baseUrl + '#organization');
     assert.equal(node(graph, 'WebPage').url, baseUrl);
@@ -44,6 +45,20 @@ test('brand and category graphs have canonical IDs, explicit language and real b
         { '@type': 'ListItem', position: 2, name: `Terenuri de ${sport.label}`, item: url }
       ]);
     }
+  }
+});
+
+test('city listings use their sport and city route, breadcrumb and optional visible FAQ', () => {
+  const graph = seo.graphFor({ baseUrl: PRODUCTION_BASE_URL, kind: 'city', sport: 'Tenis Picior', city: 'Târgu Mureș.', faq: [{ question: 'Q?', answer: 'A.' }] });
+  const url = PRODUCTION_BASE_URL + 'terenuri/tenis-de-picior/targu-mures/';
+  assert.equal(node(graph, 'CollectionPage').url, url);
+  assert.equal(node(graph, 'CollectionPage').name, 'Terenuri de tenis de picior în Târgu Mureș – Rezervări online | Spotivity');
+  assert.deepEqual(node(graph, 'BreadcrumbList').itemListElement.map(item => [item.name, item.item]), [
+    ['Acasă', PRODUCTION_BASE_URL], ['Terenuri de tenis de picior', PRODUCTION_BASE_URL + 'terenuri/tenis-de-picior/'], ['Târgu Mureș', url]]);
+  assert.deepEqual(node(graph, 'FAQPage').mainEntity, [{ '@type': 'Question', name: 'Q?', acceptedAnswer: { '@type': 'Answer', text: 'A.' } }]);
+  assert.equal(node(seo.graphFor({ baseUrl: PRODUCTION_BASE_URL, kind: 'home' }), 'FAQPage'), undefined);
+  for (const options of [{ city: '' }, { sport: 'Other' }, { route: 'terenuri/fotbal/reghin/' }, { faq: [{ question: 'Q?', answer: '' }] }]) {
+    assert.throws(() => seo.graphFor({ baseUrl: PRODUCTION_BASE_URL, kind: 'city', sport: 'Tenis Picior', city: 'Târgu Mureș', ...options }), /structured data|Structured data/);
   }
 });
 

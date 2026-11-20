@@ -3,7 +3,7 @@
     const defaults = {
         Fotbal: { sport: 'Fotbal', icona_url: 'assets/imagini/fotbalrealist.png', fundal_url: 'assets/imagini/BackgroundFootball.avif', ordine: 1 },
         Baschet: { sport: 'Baschet', icona_url: 'assets/imagini/baschetrealist.png', fundal_url: 'assets/imagini/BackgroundBasketball.avif', ordine: 2 },
-        Tenis: { sport: 'Tenis', icona_url: 'assets/imagini/tenisrealist.png', fundal_url: 'assets/imagini/TenisFINAL.jpeg', ordine: 3 },
+        Tenis: { sport: 'Tenis', icona_url: 'assets/imagini/tenisrealist.png', fundal_url: 'assets/imagini/TenisFINAL.webp', ordine: 3 },
         Volei: { sport: 'Volei', icona_url: 'assets/imagini/voleirealist.png', fundal_url: 'assets/imagini/BackgroundVoleyball.avif', ordine: 4 },
         'Tenis Picior': { sport: 'Tenis Picior', icona_url: 'assets/imagini/fotbalrealist.png', fundal_url: 'assets/imagini/BackgroundLavolei.avif', ordine: 5 }
     };
@@ -21,7 +21,7 @@
     const retiredBackgrounds = {
         Fotbal: ['fundal-fotbal.webp', 'RealistFotbal.png', 'RealistFotbal1.png', 'FotbalFinal.jpeg', 'BackgroundFootball.avif'],
         Baschet: ['fundal-baschet.webp', 'RealisBaschet.png', 'BaschetFinal.jpeg', 'BackgroundBasketball.avif'],
-        Tenis: ['fundal-tenis.webp', 'RealistTenis.png', 'TenisFINAL.jpeg', 'TenisVFinal.jpg'],
+        Tenis: ['fundal-tenis.webp', 'RealistTenis.png', 'TenisFINAL.jpeg', 'TenisVFinal.jpg', 'TenisFINAL.webp'],
         Volei: ['fundal-volei.webp', 'RealistVolei.png', 'VoleiVFinal.jpg', 'BackgroundVoleyball.avif'],
         'Tenis Picior': ['fundal-tenis-picior.webp', 'RealistTenispicior.png', 'BackgroundLavolei.avif']
     };
@@ -30,8 +30,8 @@
     // Keep the small original photos on phones. Only the two low-resolution
     // bundled sources have restored desktop copies; custom settings take priority.
     const desktopBackgrounds = {
-        Volei: 'assets/imagini/BackgroundVoleyball-desktop.jpg',
-        'Tenis Picior': 'assets/imagini/BackgroundLavolei-desktop.jpg'
+        Volei: 'assets/imagini/BackgroundVoleyball-desktop.webp',
+        'Tenis Picior': 'assets/imagini/BackgroundLavolei-desktop.webp'
     };
     const desktop = window.matchMedia?.('(min-width: 1024px)');
     const desktopBackground = (key, source) => desktopBackgrounds[key]

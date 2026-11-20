@@ -64,3 +64,10 @@ test('the reviewed helper has identical browser and Node output', () => {
     assert.equal(browser.basePath({ id: uuid, nume: 'Club', oras: 'Reghin' }), paths.basePath({ id: uuid, nume: 'Club', oras: 'Reghin' }));
     assert.equal(Object.isFrozen(browser), true);
 });
+
+test('city listing paths combine a known sport with a simplified city', () => {
+  assert.equal(paths.cityPath('Fotbal', 'Târgu Mureș.'), 'terenuri/fotbal/targu-mures/');
+  assert.equal(paths.cityPath('Tenis de picior', 'Reghin'), 'terenuri/tenis-de-picior/reghin/');
+  assert.equal(paths.cityPath('Other', 'Reghin'), '');
+  assert.equal(paths.cityPath('Fotbal', '...'), '');
+});

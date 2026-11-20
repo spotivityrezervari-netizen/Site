@@ -44,5 +44,10 @@
         const city = citySlug(base?.oras);
         return id ? `baze-sportive/${city ? `${city}-` : ''}${slug(base?.nume, 'baza')}-${id}/` : '';
     }
-    return Object.freeze({ validId, normalizedId, slug, citySlug, sportSlug, courtPath, basePath });
+    // One public listing per sport and city, e.g. terenuri/fotbal/targu-mures/.
+    function cityPath(sport, city) {
+        const sportPart = sportSlug(sport), cityPart = citySlug(city);
+        return sportPart && cityPart ? `terenuri/${sportPart}/${cityPart}/` : '';
+    }
+    return Object.freeze({ validId, normalizedId, slug, citySlug, sportSlug, courtPath, basePath, cityPath });
 });
