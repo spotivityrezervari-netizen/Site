@@ -3,6 +3,29 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-20 (2): Smooth scrolling, photo edges, landscape welcome photos
+
+All of this is in `Idee Site/css/design-background.css` (new section at the end). No other CSS file was edited. The `<link>` went from `?v=1` to `?v=2` in `index.html`, and the SEO pages were regenerated (that version number is the only change in them).
+
+- **Scroll stutter:**
+  - the illustration layer is now `position: fixed`, so it is no longer repainted on every scroll;
+  - the `backdrop-filter: blur(16px)` on the sport-photo edges (mobile) is switched off (`.home-hero-art::before { content: none }`). Re-blurring on every scrolled frame is what made phones stutter.
+- **"Background first, photo later":**
+  - the sport sections were kept at `opacity: 0` until scrolled into view and then faded in over 0.8s;
+  - `.home-section-pending` is now overridden to `opacity: 1; transform: none`, so the photos appear immediately (the JS in `home-motion.js` is untouched).
+- **Photo edges show the new background:**
+  - the forest-green overlay (`.home-hero-art::after`) and the section/art backgrounds `#101a14` are made transparent;
+  - each sport photo now fades to transparent with a CSS `mask-image` (same edge sizes as before: `--home-edge-top/bottom`, `--home-side-fade`);
+  - a soft dark-teal radial veil behind each photo softens the line art around it and fills the space while the photo downloads on a slow connection. A real blur of the illustrations would bring the stutter back, so it was not used.
+- **Welcome gallery (the auto-sliding photos):**
+  - every photo uses the same 3:2 landscape frame with `object-fit: cover`, so photos are cropped, never squashed;
+  - Tenis is centred at `50% 82%` and Tenis de picior at `50% 30%` (portrait sources);
+  - on mobile the frame hugs the card (no empty space above or below).
+- **Low bandwidth:**
+  - the heavy photos were already well-compressed WebP/AVIF. Re-encoding saved only 3–4% at a quality cost, so they were not changed;
+  - the large PNG icons are not loaded on the home page.
+- **Revert only this step:** `git revert <commit "Design: smooth scroll, photo edges ...">`, then run `node scripts/generate-seo-pages.mjs`.
+
 ## 2026-11-20 18:07: Premium dark sports background (teal / emerald)
 
 **Files created**

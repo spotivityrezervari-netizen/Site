@@ -39,10 +39,11 @@ body.pagina-publica { background: var(--design-bg-deep); }
         linear-gradient(160deg, #021312 0%, var(--design-bg-deep) 35%, var(--design-bg-teal) 65%, #062624 100%);
 }
 
-/* Layer 2: line-art illustrations that scroll with the whole page (edges busy, centre clean). */
+/* Layer 2: line-art illustrations (edges busy, centre clean). Fixed to the viewport so
+   scrolling never repaints it: the content glides over it, which keeps phones smooth. */
 .pagina-publica .home-shell::after {
     content: "";
-    position: absolute;
+    position: fixed;
     inset: 0;
     z-index: -1;
     pointer-events: none;
@@ -69,6 +70,54 @@ body.pagina-publica { background: var(--design-bg-deep); }
         background-position: left -30px top, right -30px top 260px;
         opacity: .8;
     }
+}
+
+/* ---------------------------------------------------------------------------
+ * 2026-11-20 (2): smooth scrolling, photos fade into the new background,
+ * landscape welcome photos. Overrides only; the original rules stay untouched.
+ * ------------------------------------------------------------------------- */
+
+/* Sport sections: show the teal background instead of the old forest green. */
+.pagina-publica .home-sport-hero { background: transparent; }
+
+/* Sport sections were hidden (opacity 0) until scrolled into view and then faded in,
+   so the background showed first and the photo popped in late. Show them at once. */
+.pagina-publica .home-section-pending { opacity: 1; transform: none; }
+
+/* Photo area: a soft dark-teal veil behind the photo softens the line art around it
+   and acts as a placeholder while the photo downloads on a slow connection. */
+.pagina-publica .home-sport-hero .home-hero-art {
+    background: radial-gradient(ellipse 80% 75% at 50% 50%, rgba(3, 24, 23, .92) 30%, rgba(3, 24, 23, .6) 58%, rgba(3, 24, 23, 0) 82%);
+}
+/* The old edge treatment blurred the page behind the photo (very costly while scrolling
+   on phones) and painted the edges forest green. Replace both with a mask that fades the
+   photo itself to transparent, so the new background continues under the edges. */
+.pagina-publica .home-sport-hero .home-hero-art::before { content: none; }
+.pagina-publica .home-sport-hero .home-hero-art::after { background: none; }
+.pagina-publica .home-sport-hero .home-hero-art img {
+    --design-fade-y: linear-gradient(to bottom, transparent, rgba(0, 0, 0, .55) calc(var(--home-edge-top) * .45), #000 var(--home-edge-top), #000 calc(100% - var(--home-edge-bottom)), rgba(0, 0, 0, .55) calc(100% - var(--home-edge-bottom) * .45), transparent);
+    --design-fade-x: linear-gradient(to right, transparent, #000 var(--home-side-fade), #000 calc(100% - var(--home-side-fade)), transparent);
+    -webkit-mask-image: var(--design-fade-y), var(--design-fade-x);
+    mask-image: var(--design-fade-y), var(--design-fade-x);
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
+}
+
+/* Welcome gallery: every photo in the same 3:2 landscape frame, cropped (not squashed). */
+.pagina-publica .welcome-photo-card {
+    width: min(calc(100% - 24px), calc((var(--welcome-stage-height) - 96px) * 1.5));
+    aspect-ratio: 3 / 2;
+}
+@media (min-width: 1024px) {
+    .pagina-publica .welcome-photo-card { width: min(calc((100% - 24px) * .9), calc((var(--welcome-stage-height) - 96px) * 1.35)); }
+}
+.pagina-publica .welcome-photo-card img { object-fit: cover; object-position: 50% 50%; }
+.pagina-publica .welcome-photo-card:has(.welcome-photo-link[data-sport="Tenis"]) img { object-position: 50% 82%; }
+.pagina-publica .welcome-photo-card:has(.welcome-photo-link[data-sport="Tenis Picior"]) img { object-position: 50% 30%; }
+@media (max-width: 767px) {
+    /* The frame no longer needs room for tall photos: hug the landscape card. */
+    .pagina-publica .welcome-photo-frame { height: auto; padding-block: 4px; }
+    .pagina-publica .welcome-photo-card { width: 100%; }
 }
 
 @media print {
