@@ -3,6 +3,18 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-20 (6): Legal pages and base initials circles in the new palette
+
+- **New file `Idee Site/css/design-legal.css`:** the legal pages (`termeni.html`, `confidentialitate.html`, `cookies.html`) now use the same palette:
+  - background `#031817`, white headings, light grey-green text, green links `#22C55E`;
+  - `#1F3A3D` borders on the header, tables and the bottom nav;
+  - the "[de completat]" placeholders are highlighted in light blue.
+- **Existing files edited:**
+  - each of the three legal pages got one `<link rel="stylesheet" href="css/design-legal.css?v=1">` line, right after `legal.css`;
+  - `scripts/public-files.json` got one line, `"css/design-legal.css"`.
+- **Initials circles:** the base initials circles ("BB", "S") on public pages now have a dark-teal fill, a `#1F3A3D` border and light-blue letters `#38BDF8`. This is section "(6)" in `design-background.css`; the `<link>` went to `?v=6` and the SEO pages were regenerated.
+- **Revert only this step:** `git revert` the commit "Design: legal pages and base initials", then run `node scripts/generate-seo-pages.mjs`.
+
 ## 2026-11-20 (5): Colour palette from the owner
 
 All changes are in `Idee Site/css/design-background.css` (section "(5)"). The `<link>` went to `?v=5` and the SEO pages were regenerated. Public pages only: admin pages, status colours (errors, confirmations) and the legal pages (`termeni`/`confidentialitate`/`cookies`, which don't load this file) are unchanged.

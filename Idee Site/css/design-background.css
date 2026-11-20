@@ -293,6 +293,13 @@ html { background-color: #031817; }
 .pagina-publica .welcome-gallery-controls button:hover { border-color: var(--design-line); }
 .pagina-publica :is(button, a, input, select, textarea):focus-visible { outline-color: var(--design-green) !important; }
 
+/* 2026-11-20 (6): base initials circles in the same palette (dark teal, blue letters). */
+.pagina-publica .sports-base-avatar {
+    border-color: var(--design-line);
+    background: linear-gradient(145deg, #0b3b37, #062826);
+    color: var(--design-blue);
+}
+
 @media print {
     .pagina-publica .home-shell::before,
     .pagina-publica .home-shell::after { content: none; }

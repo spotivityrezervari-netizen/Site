@@ -1,0 +1,20 @@
+/*
+ * Spotivity design layer for the legal pages (termeni, confidentialitate, cookies).
+ * Same palette as css/design-background.css: background #031817, green actions #22C55E,
+ * blue labels #38BDF8, white headings, light grey-green text, #1F3A3D borders.
+ * Loaded after css/legal.css and only overrides colours. Undo: delete this file, its
+ * <link> in the three legal pages and its line in scripts/public-files.json.
+ */
+body {
+    background: linear-gradient(180deg, #041c1b 0%, #031817 320px) #031817;
+    color: #c9dad5;
+}
+header { border-bottom-color: #1f3a3d; background: rgba(3, 24, 23, .94); }
+header a, h1, h2, th { color: #fff; }
+.actualizat { color: #9fb7b0; }
+a { color: #22c55e; }
+a:hover { color: #4ade80; }
+a:focus-visible { outline-color: #22c55e; }
+th, td { border-color: #1f3a3d; }
+.de-completat { background: rgba(56, 189, 248, .14); color: #e8f1ee; }
+nav.legal { border-top-color: #1f3a3d; }
