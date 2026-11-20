@@ -73,7 +73,7 @@ test('courts describe their actual containing sports base and public city only',
   assert.deepEqual(place.address, { '@type': 'PostalAddress', addressLocality: 'Reghin' });
   assert.deepEqual(sportsBase.address, { '@type': 'PostalAddress', addressLocality: 'Reghin' });
   assert.equal(node(graph, 'WebPage').mainEntity['@id'], place['@id']);
-  assert.deepEqual(node(graph, 'BreadcrumbList').itemListElement.map(item => item.name), ['Acasă', 'Terenuri de fotbal', base.nume, court.nume]);
+  assert.deepEqual(node(graph, 'BreadcrumbList').itemListElement.map(item => item.name), ['Acasă', 'Terenuri de fotbal', 'Reghin', base.nume, court.nume]);
   const standalone = seo.graphFor({ baseUrl, kind: 'court', court: { ...court, baza_sportiva_id: null }, base });
   assert.equal(node(standalone, 'Place').containedInPlace, undefined);
   assert.equal(node(standalone, 'SportsActivityLocation'), undefined);

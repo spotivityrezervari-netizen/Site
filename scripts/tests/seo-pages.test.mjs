@@ -107,12 +107,13 @@ test('individual court and base documents contain real details, unique metadata,
   const court = generated.get(courtRoute + 'index.html'), base = generated.get(baseRoute + 'index.html');
   assert.match(court, /data-court-id="1"/);
   assert.match(court, /<h1 id="entity-title">Court &amp; One — Reghin<\/h1>/);
-  assert.ok(courtRoute.startsWith('terenuri/fotbal/reghin-'));
+  assert.ok(courtRoute.startsWith('teren/fotbal/reghin/'));
   const courtTitle = court.match(/<title>([^<]*)<\/title>/)?.[1] || '';
   for (const label of ['Court &amp; One', 'Bază Ștefănești', 'Reghin']) assert.ok(courtTitle.includes(label));
   assert.ok(court.includes('150 Lei/oră') && court.includes('Reghin') && court.includes('Bază Ștefănești'));
-  assert.ok(court.includes(`href="../../../${baseRoute}"`) && court.includes('data-entity-booking="1"'));
-  assert.ok(court.includes(`href="${PAGES_BASE_URL}${courtRoute}"`) && court.includes('src="../../../js/main.js"'));
+  assert.ok(court.includes(`href="../../../../${baseRoute}"`) && court.includes('data-entity-booking="1"'));
+  assert.ok(court.includes(`href="${PAGES_BASE_URL}${courtRoute}"`) && court.includes('src="../../../../js/main.js"'));
+  assert.ok(court.includes('<a href="../../../../terenuri/fotbal/reghin/">Reghin</a>'), 'The court breadcrumb links its city listing');
   assert.ok(base.includes(`data-base-id="${baseId}"`) && base.includes('data-entity-base='));
   assert.match(base, /<h1 id="entity-title">Bază Ștefănești — Reghin<\/h1>/);
   assert.ok(baseRoute.startsWith('baze-sportive/reghin-'));
@@ -138,13 +139,12 @@ test('every sport and identical or unusual names have safe unique stable-ID rout
   const files = generateSeoFiles({ template, catalog: input });
   const cityPages = seoPaths(input).filter(relative => /^terenuri\/[a-z-]+\/reghin\/index\.html$/.test(relative));
   assert.equal(cityPages.length, 5);
-  const routes = seoPaths(input).filter(relative => relative.startsWith('terenuri/') && relative.split('/').length === 4 && !cityPages.includes(relative));
+  const routes = seoPaths(input).filter(relative => relative.startsWith('teren/'));
   assert.equal(routes.length, 11);
   assert.equal(new Set(routes).size, routes.length);
   for (const relative of routes) {
-    assert.match(relative, /^terenuri\/[a-z-]+\/[a-z0-9-]+\/index\.html$/);
+    assert.match(relative, /^teren\/[a-z-]+\/reghin\/[a-z0-9-]+\/index\.html$/);
     assert.ok(!relative.includes('..') && !relative.includes('%'));
-    assert.ok(relative.split('/')[2].startsWith('reghin-'));
     assert.ok(files.has(relative));
   }
   assert.ok(routes.some(relative => relative.includes('tenis-de-picior/')));

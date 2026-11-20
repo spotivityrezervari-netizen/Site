@@ -23,7 +23,7 @@ function parseHeaders(source){
   return rules;
 }
 function parseRedirects(source){
-  const routes=new Map(),safe=/^\/(?:terenuri|baze-sportive)\/[a-z0-9/-]+\/?$/;
+  const routes=new Map(),safe=/^\/(?:terenuri|teren|baze-sportive)\/[a-z0-9/-]+\/?$/;
   for(const line of source.split(/\r?\n/)){
     if(!line.trim()||line.trimStart().startsWith('#'))continue;
     const match=line.trim().match(/^(\S+)\s+(\S+)\s+301!$/);

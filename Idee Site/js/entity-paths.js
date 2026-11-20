@@ -37,7 +37,8 @@
             ? `${slug(base.nume, 'baza', 40)}-${slug(court.nume, 'teren', 55)}`
             : slug(court?.nume);
         const city = citySlug(court?.oras) || citySlug(base?.oras);
-        return `terenuri/${sport}/${city ? `${city}-` : ''}${name}-${id}/`;
+        // "terenuri/" is reserved for listings; one court lives under "teren/".
+        return `teren/${sport}/${city ? `${city}/` : ''}${name}-${id}/`;
     }
     function basePath(base) {
         const id = normalizedId(base?.id);

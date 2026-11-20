@@ -24,6 +24,7 @@ async function managedPages(root) {
     }
   }
   await walk('terenuri');
+  await walk('teren');
   await walk('baze-sportive');
   return result;
 }
@@ -85,7 +86,7 @@ export async function generateSourcePages({ repoRoot = repositoryRoot, check = f
       if (!current.includes(GENERATED_MARKER)) throw new Error('Obsolete SEO source changed during generation.');
       await unlink(path.join(repoRoot, 'Idee Site', relative));
       let parent = path.posix.dirname(relative);
-      while (parent !== 'terenuri' && parent !== 'baze-sportive' && parent !== '.') {
+      while (parent !== 'terenuri' && parent !== 'teren' && parent !== 'baze-sportive' && parent !== '.') {
         try { await rmdir(path.join(repoRoot, 'Idee Site', parent)); }
         catch (error) { if (['ENOTEMPTY', 'EEXIST', 'ENOENT'].includes(error.code)) break; throw error; }
         parent = path.posix.dirname(parent);

@@ -24,7 +24,7 @@
         if (typeof candidate !== 'string' || !/^(?:[a-z0-9-]+\/)*$/.test(candidate) || candidate.includes('//') ||
             (kind === 'home' ? candidate !== '' : kind === 'sport' ? candidate !== `terenuri/${sportSlug}/` :
                 kind === 'city' ? candidate !== fallback :
-                kind === 'court' ? !new RegExp(`^terenuri/${sportSlug}/[a-z0-9-]+/$`).test(candidate) : !/^baze-sportive\/[a-z0-9-]+\/$/.test(candidate))) {
+                kind === 'court' ? !new RegExp(`^teren/${sportSlug}/(?:[a-z0-9-]+/)?[a-z0-9-]+/$`).test(candidate) : !/^baze-sportive\/[a-z0-9-]+\/$/.test(candidate))) {
             throw new TypeError('Invalid structured data route.');
         }
         return candidate;
@@ -83,6 +83,7 @@
             const crumbs = [{ name: 'Acasă', item: baseUrl }];
             if (sportSlug) crumbs.push({ name: `Terenuri de ${sportLabels[sportSlug]}`, item: new URL(`terenuri/${sportSlug}/`, baseUrl).href });
             if (kind === 'city') crumbs.push({ name: cityName, item: canonical });
+            if (kind === 'court' && paths.cityPath(options.court.sport, court.oras)) crumbs.push({ name: court.oras, item: new URL(paths.cityPath(options.court.sport, court.oras), baseUrl).href });
             if (kind === 'court' && base) crumbs.push({ name: base.nume, item: new URL(paths.basePath(base), baseUrl).href });
             if (kind === 'court' || kind === 'base') crumbs.push({ name: (court || base).nume, item: canonical });
             const breadcrumbId = canonical + '#breadcrumb';

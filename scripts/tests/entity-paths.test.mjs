@@ -29,19 +29,19 @@ test('diacritics and markup become bounded readable slugs without path or query 
 
 test('court paths include city, sport, base, court and full ID, with collision-resistant identity', () => {
     const court = { id: 12, sport: 'Fotbal', nume: 'Teren sintetic', oras: 'Târgu Mureș.' };
-    assert.equal(paths.courtPath(court, { nume: 'Baza Transilvania', oras: 'Reghin' }), 'terenuri/fotbal/targu-mures-baza-transilvania-teren-sintetic-12/');
-    assert.equal(paths.courtPath(court), 'terenuri/fotbal/targu-mures-teren-sintetic-12/');
+    assert.equal(paths.courtPath(court, { nume: 'Baza Transilvania', oras: 'Reghin' }), 'teren/fotbal/targu-mures/baza-transilvania-teren-sintetic-12/');
+    assert.equal(paths.courtPath(court), 'teren/fotbal/targu-mures/teren-sintetic-12/');
     assert.notEqual(paths.courtPath(court), paths.courtPath({ ...court, id: 13 }));
     assert.notEqual(paths.courtPath(court), paths.courtPath({ ...court, oras: 'Reghin' }));
-    assert.equal(paths.courtPath({ ...court, sport: 'Tenis Picior', id: uuid }), `terenuri/tenis-de-picior/targu-mures-teren-sintetic-${uuid.toLowerCase()}/`);
+    assert.equal(paths.courtPath({ ...court, sport: 'Tenis Picior', id: uuid }), `teren/tenis-de-picior/targu-mures/teren-sintetic-${uuid.toLowerCase()}/`);
     assert.equal(paths.courtPath({ ...court, sport: 'constructor' }), '');
     assert.equal(paths.courtPath({ ...court, id: '../../private' }), '');
     const longPath = paths.courtPath({ ...court, id: uuid, sport: 'Tenis Picior', nume: 'A'.repeat(200), oras: 'C'.repeat(120) }, { nume: 'B'.repeat(200) });
     assert.ok(longPath.length < 240); assert.ok(longPath.endsWith(`-${uuid.toLowerCase()}/`));
-    assert.ok(longPath.split('/')[2].startsWith('c'.repeat(40) + '-'));
-    assert.equal(paths.courtPath({ ...court, oras: '' }, { nume: 'Bază', oras: 'Ștefănești' }), 'terenuri/fotbal/stefanesti-baza-teren-sintetic-12/');
-    for (const absent of ['   ', '...', '💙']) assert.equal(paths.courtPath({ ...court, oras: absent }, { nume: 'Bază', oras: 'Ștefănești' }), 'terenuri/fotbal/stefanesti-baza-teren-sintetic-12/');
-    assert.equal(paths.courtPath({ ...court, oras: undefined }), 'terenuri/fotbal/teren-sintetic-12/');
+    assert.equal(longPath.split('/')[2], 'c'.repeat(40));
+    assert.equal(paths.courtPath({ ...court, oras: '' }, { nume: 'Bază', oras: 'Ștefănești' }), 'teren/fotbal/stefanesti/baza-teren-sintetic-12/');
+    for (const absent of ['   ', '...', '💙']) assert.equal(paths.courtPath({ ...court, oras: absent }, { nume: 'Bază', oras: 'Ștefănești' }), 'teren/fotbal/stefanesti/baza-teren-sintetic-12/');
+    assert.equal(paths.courtPath({ ...court, oras: undefined }), 'teren/fotbal/teren-sintetic-12/');
 });
 
 test('base paths and supported sport aliases never return inherited object properties', () => {

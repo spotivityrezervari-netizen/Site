@@ -95,7 +95,8 @@ export function reconcileRouteHistory(input, history = { version: 1, courts: {},
       if (!Array.isArray(previous) || previous.length > 1000 || new Set(previous).size !== previous.length) throw new Error('Invalid SEO route history routes.');
       const routes = [...new Set([...previous, ...(index[kind][id] ? [index[kind][id]] : [])])].sort();
       for (const route of routes) {
-        const prefix = kind === 'courts' ? /^terenuri\/(?:fotbal|baschet|tenis|volei|tenis-de-picior)\/[a-z0-9-]+\/$/ : /^baze-sportive\/[a-z0-9-]+\/$/;
+        // Older court routes (terenuri/<sport>/<slug>-<id>/) stay as 301 aliases.
+        const prefix = kind === 'courts' ? /^(?:teren\/(?:fotbal|baschet|tenis|volei|tenis-de-picior)\/(?:[a-z0-9-]+\/)?[a-z0-9-]+|terenuri\/(?:fotbal|baschet|tenis|volei|tenis-de-picior)\/[a-z0-9-]+)\/$/ : /^baze-sportive\/[a-z0-9-]+\/$/;
         if (typeof route !== 'string' || route.length > 240 || !prefix.test(route) || !route.endsWith(`-${id}/`) || occupied.has(route)) throw new Error('Unsafe or duplicate SEO historical route.');
         occupied.set(route, `${kind}:${id}`);
       }
@@ -259,6 +260,8 @@ export function generateSeoFiles({ template, catalog: input, routeHistory, baseU
     const title = `${court.nume}${base ? `, ${base.nume}` : ''} – ${sport.label} în ${court.oras} | Spotivity`;
     const description = `Rezervă terenul ${court.nume} pentru ${sport.label} în ${court.oras}${base ? `, la ${base.nume}` : ''}. Consultă tariful publicat și verifică programul actualizat pe Spotivity.`;
     const crumbs = [{ route: './', label: 'Acasă' }, { route: `terenuri/${sport.slug}/`, label: `Terenuri de ${sport.label}` }];
+    const cityRoute = paths.cityPath(court.sport, court.oras);
+    if (cityRoute) crumbs.push({ route: cityRoute, label: court.oras });
     if (base) crumbs.push({ route: index.bases[String(base.id)], label: base.nume, attributes: ` data-entity-base-id="${escape(base.id)}"` });
     crumbs.push({ label: court.nume });
     const detail = `${breadcrumb(crumbs)}<section class="entity-page" aria-labelledby="entity-title"><p class="entity-eyebrow">Teren de ${escape(sport.label)} · ${escape(court.oras)}</p><h1 id="entity-title">${escape(court.nume)} — ${escape(court.oras)}</h1><p class="entity-intro">Teren de ${escape(sport.label)} în ${escape(court.oras)}${base ? `, în baza sportivă ${link(index.bases[String(base.id)], base.nume, ` data-entity-base-id="${escape(base.id)}"`)}` : ''}.</p>${court.pret === null ? '' : `<p class="entity-price">Tarif publicat: ${escape(court.pret)} Lei/oră</p>`}<button type="button" class="home-reserve-button" data-entity-booking="${escape(court.id)}">Verifică programul și rezervă</button>${snapshotNote(catalog)}<nav class="category-related" aria-label="Terenuri de ${escape(sport.label)}">${link(`terenuri/${sport.slug}/`, `Vezi toate terenurile de ${sport.label}`)}</nav></section>`;

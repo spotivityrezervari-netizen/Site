@@ -2,27 +2,35 @@
   "version": 1,
   "courts": {
     "9": [
+      "teren/fotbal/reghin/baza-a-exemplu-9/",
       "terenuri/fotbal/reghin-baza-a-exemplu-9/"
     ],
     "10": [
+      "teren/tenis/reghin/baza-a-exemplu2-10/",
       "terenuri/tenis/reghin-baza-a-exemplu2-10/"
     ],
     "11": [
+      "teren/tenis/targu-mures/baza-b-exemplu3-11/",
       "terenuri/tenis/targu-mures-baza-b-exemplu3-11/"
     ],
     "12": [
+      "teren/baschet/targu-mures/baza-b-exemplu4-12/",
       "terenuri/baschet/targu-mures-baza-b-exemplu4-12/"
     ],
     "13": [
+      "teren/fotbal/suceava/bernabeu-13/",
       "terenuri/fotbal/suceava-bernabeu-13/"
     ],
     "18": [
+      "teren/fotbal/targu-mures/siefei-ep-edopkf-siefei-ep-edopkf-transil-199b041b-1-18/",
       "terenuri/fotbal/targu-mures-siefei-ep-edopkf-siefei-ep-edopkf-transil-199b041b-1-18/"
     ],
     "23": [
+      "teren/tenis/reghin/baza-a-tenis-23/",
       "terenuri/tenis/reghin-baza-a-tenis-23/"
     ],
     "24": [
+      "teren/fotbal/reghin/baza-a-jj-24/",
       "terenuri/fotbal/reghin-baza-a-jj-24/"
     ]
   },

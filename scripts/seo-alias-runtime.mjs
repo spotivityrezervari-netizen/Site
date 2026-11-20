@@ -11,7 +11,7 @@ export function redirectSeoAlias() {
     if (destination.origin !== location.origin || destination.origin !== root.origin
       || !destination.pathname.startsWith(root.pathname)) return;
     const relative = destination.pathname.slice(root.pathname.length);
-    if (!/^(?:terenuri\/(?:fotbal|baschet|tenis|volei|tenis-de-picior)\/[a-z0-9-]+|baze-sportive\/[a-z0-9-]+)\/$/.test(relative)) return;
+    if (!/^(?:(?:teren\/(?:fotbal|baschet|tenis|volei|tenis-de-picior)\/(?:[a-z0-9-]+\/)?[a-z0-9-]+|terenuri\/(?:fotbal|baschet|tenis|volei|tenis-de-picior)\/[a-z0-9-]+)|baze-sportive\/[a-z0-9-]+)\/$/.test(relative)) return;
     // Auth/recovery and signed cancellation intents must survive an old slug.
     destination.search = location.search;
     destination.hash = location.hash;

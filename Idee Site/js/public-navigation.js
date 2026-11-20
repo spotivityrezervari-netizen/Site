@@ -39,7 +39,7 @@
         const value = window.spotivitySeoRoutes?.[kind === 'court' ? 'courts' : 'bases']?.[id];
         if (typeof value !== 'string' || value.length > 240 || !value.endsWith(`-${id}/`)) return '';
         const pattern = kind === 'court'
-            ? /^terenuri\/(?:fotbal|baschet|tenis|volei|tenis-de-picior)\/[a-z0-9-]+\/$/
+            ? /^(?:teren\/(?:fotbal|baschet|tenis|volei|tenis-de-picior)\/(?:[a-z0-9-]+\/)?[a-z0-9-]+|terenuri\/(?:fotbal|baschet|tenis|volei|tenis-de-picior)\/[a-z0-9-]+)\/$/
             : /^baze-sportive\/[a-z0-9-]+\/$/;
         return pattern.test(value) ? value : '';
     }
