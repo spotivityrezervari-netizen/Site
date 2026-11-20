@@ -81,34 +81,51 @@ body.pagina-publica { background: var(--design-bg-deep); }
    so the background showed first and the photo popped in late. Show them at once. */
 .pagina-publica .home-section-pending { opacity: 1; transform: none; }
 
-/* Photo area: a soft dark-teal veil behind the photo softens the line art around it
-   and acts as a placeholder while the photo downloads on a slow connection. */
-.pagina-publica .home-sport-hero .home-hero-art {
-    background: radial-gradient(ellipse 85% 80% at 50% 50%, rgba(4, 28, 27, .9) 25%, rgba(4, 28, 27, .78) 40%, rgba(4, 28, 27, .55) 55%, rgba(4, 28, 27, .3) 68%, rgba(4, 28, 27, .1) 80%, rgba(4, 28, 27, 0) 92%);
+/* 2026-11-20 (4): sport photos as framed landscape cards, like the welcome gallery.
+   No blur, no fade, no veil. Every photo uses the same 3:2 frame and width, cropped with
+   object-fit: cover (no extra zoom), and the title and button sit on a light top shade. */
+.pagina-publica .home-sport-hero {
+    grid-template-rows: auto auto;
+    --design-card-position: 50% 50%;
 }
-/* The old edge treatment blurred the page behind the photo (very costly while scrolling
-   on phones) and painted the edges forest green. Replace both with a mask that fades the
-   photo itself to transparent, so the new background continues under the edges. */
+.pagina-publica .home-hero-tenis { --design-card-position: 50% 80%; }
+.pagina-publica .home-hero-tenis-picior { --design-card-position: 50% 32%; }
+.pagina-publica .home-sport-hero .home-hero-art {
+    width: min(calc(100% - 32px), 900px);
+    height: auto;
+    aspect-ratio: 3 / 2;
+    justify-self: center;
+    align-self: start;
+    margin: 24px 0 0;
+    border: 1px solid rgba(216, 182, 106, .25);
+    border-radius: 22px;
+    overflow: hidden;
+    background: #052321;
+}
 .pagina-publica .home-sport-hero .home-hero-art::before { content: none; }
-.pagina-publica .home-sport-hero .home-hero-art::after { background: none; }
+.pagina-publica .home-sport-hero .home-hero-art::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background: linear-gradient(to bottom, rgba(4, 28, 27, .62), rgba(4, 28, 27, .16) 42%, transparent 70%);
+}
 .pagina-publica .home-sport-hero .home-hero-art img {
-    --design-t: var(--home-edge-top);
-    --design-b: var(--home-edge-bottom);
-    --design-s: var(--home-side-fade);
-    --design-fade-y: linear-gradient(to bottom,
-        transparent 0, rgba(0, 0, 0, .07) calc(var(--design-t) * .2), rgba(0, 0, 0, .26) calc(var(--design-t) * .4),
-        rgba(0, 0, 0, .55) calc(var(--design-t) * .6), rgba(0, 0, 0, .84) calc(var(--design-t) * .8), #000 var(--design-t),
-        #000 calc(100% - var(--design-b)), rgba(0, 0, 0, .84) calc(100% - var(--design-b) * .8), rgba(0, 0, 0, .55) calc(100% - var(--design-b) * .6),
-        rgba(0, 0, 0, .26) calc(100% - var(--design-b) * .4), rgba(0, 0, 0, .07) calc(100% - var(--design-b) * .2), transparent 100%);
-    --design-fade-x: linear-gradient(to right,
-        transparent 0, rgba(0, 0, 0, .07) calc(var(--design-s) * .2), rgba(0, 0, 0, .26) calc(var(--design-s) * .4),
-        rgba(0, 0, 0, .55) calc(var(--design-s) * .6), rgba(0, 0, 0, .84) calc(var(--design-s) * .8), #000 var(--design-s),
-        #000 calc(100% - var(--design-s)), rgba(0, 0, 0, .84) calc(100% - var(--design-s) * .8), rgba(0, 0, 0, .55) calc(100% - var(--design-s) * .6),
-        rgba(0, 0, 0, .26) calc(100% - var(--design-s) * .4), rgba(0, 0, 0, .07) calc(100% - var(--design-s) * .2), transparent 100%);
-    -webkit-mask-image: var(--design-fade-y), var(--design-fade-x);
-    mask-image: var(--design-fade-y), var(--design-fade-x);
-    -webkit-mask-composite: source-in;
-    mask-composite: intersect;
+    object-fit: cover;
+    object-position: var(--design-card-position);
+    transform: none;
+    -webkit-mask-image: none;
+    mask-image: none;
+}
+/* Title and button sit inside the top of the card, like the welcome photos. */
+.pagina-publica .home-sport-hero .home-hero-copy { padding-top: calc(24px + clamp(22px, 4vw, 48px)); }
+.pagina-publica .home-sport-hero .home-courts-wrap { margin-top: 20px; }
+@media (max-width: 767px) {
+    .pagina-publica .home-sport-hero .home-hero-art { border-radius: 18px; }
+    .pagina-publica .home-sport-hero .home-hero-copy { padding-top: 40px; }
+    .pagina-publica .home-sport-hero .home-sport-heading :is(h1, h2) { font-size: clamp(28px, 8.5vw, 36px); }
+    .pagina-publica .home-sport-hero .home-hero-actions { margin-top: 14px; }
 }
 
 /* Welcome gallery: every photo in the same 3:2 landscape frame, cropped (not squashed). */
@@ -126,16 +143,6 @@ body.pagina-publica { background: var(--design-bg-deep); }
     /* The frame no longer needs room for tall photos: hug the landscape card. */
     .pagina-publica .welcome-photo-frame { height: auto; padding-block: 4px; }
     .pagina-publica .welcome-photo-card { width: 100%; }
-}
-
-/* Phones and tablets: same look as desktop. The photo sits slightly inset with wider,
-   softer side fades instead of running hard into the screen edges. */
-@media (max-width: 1023px) {
-    .pagina-publica .home-sport-hero {
-        --home-side-fade: clamp(36px, 10vw, 72px);
-        --home-edge-bottom: clamp(170px, 26vw, 240px);
-    }
-    .pagina-publica .home-sport-hero .home-hero-art { width: calc(100% - 12px); justify-self: center; }
 }
 
 /* ---------------------------------------------------------------------------

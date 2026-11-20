@@ -3,6 +3,20 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-20 (4): Sport photos as framed landscape cards (no blur)
+
+Asked by the owner: no blur on the sport photos. They should look like the welcome gallery at the top: all landscape, same size, not zoomed in too much. All changes are in `Idee Site/css/design-background.css`. The `<link>` went to `?v=4` and the SEO pages were regenerated.
+
+- **Removed:**
+  - the edge masks (fades) and the teal veil behind the sport photos;
+  - the earlier phone-only inset/fade block.
+- **Photo cards:** each sport photo is now a card.
+  - Frame: same 3:2 frame and width, `min(100% - 32px, 900px)`, with rounded corners (22px; 18px on phones) and the same thin gold border as the welcome photos.
+  - Crop: `object-fit: cover` with no extra zoom (`transform: none`). Tenis is centred at `50% 80%` and Tenis de picior at `50% 32%`, because those two sources are portrait.
+  - Title: the title and button sit at the top of the card on a light shade, as in the gallery. On phones the title is 28–36px so it fits.
+  - Spacing: the court cards below start 20px under the photo; they used to overlap it by 28px.
+- **Revert only this step:** `git revert` the commit "Design: sport photos as framed landscape cards", then run `node scripts/generate-seo-pages.mjs`.
+
 ## 2026-11-20 (3): One teal colour everywhere, smoother photo fades on mobile
 
 Asked by the owner: mobile looked worse than desktop (mixed green/blue/brown shades, hard photo edges). All changes are in `Idee Site/css/design-background.css`. The `<link>` went to `?v=3` and the SEO pages were regenerated.
