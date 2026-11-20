@@ -102,6 +102,18 @@ const pass=message=>{checks++;console.log('PASS',message);};
     await page.keyboard.press('Escape');await page.locator('#modal-rezervare').waitFor({state:'hidden'});await page.evaluate(()=>window.SpotivityNavigation?.whenSettled());
     pass('the real built modules and images initialize under CSP, language listeners work, and the court/booking dialogs still open');
 
+    // Netlify serves 404.html with the same strict headers (style-src-elem 'self'),
+    // so the page must not rely on an inline <style> block.
+    const notFound=await context.newPage(),notFoundFailures=[];
+    notFound.on('response',response=>{if(response.status()>=400)notFoundFailures.push(response.status()+' '+response.url());});
+    await notFound.goto(new URL('404.html',site.url).href,{waitUntil:'load'});
+    const notFoundState=await notFound.evaluate(()=>({csp:window.__deploymentCSP,background:getComputedStyle(document.body).backgroundColor,logo:document.querySelector('img').naturalWidth,h1:document.querySelector('h1')?.textContent}));
+    assert.deepEqual(notFoundState.csp,[],'404.html must render without CSP violations');assert.deepEqual(notFoundFailures,[]);
+    assert.equal(notFoundState.background,'rgb(16, 26, 20)','404.html stylesheet must apply under the enforced CSP');
+    assert.ok(notFoundState.logo>0,'404.html logo must load');assert.equal(notFoundState.h1,'Pagina nu a fost găsită');
+    await notFound.close();
+    pass('the static 404 page renders its stylesheet and logo under the enforced Netlify CSP');
+
     for(const width of [390,1440]){
       await page.setViewportSize({width,height:width<768?844:1000});
       const size=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth}));assert.ok(size.scroll<=size.width+1);
