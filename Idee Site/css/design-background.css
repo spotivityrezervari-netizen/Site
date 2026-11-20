@@ -99,7 +99,7 @@ body.pagina-publica { background: var(--design-bg-deep); }
     margin: 24px 0 0;
     border: 1px solid rgba(216, 182, 106, .25);
     border-radius: 22px;
-    overflow: hidden;
+    overflow: clip; /* clip, not hidden: no nested scroll container, so a touch swipe on the photo scrolls the page */
     background: #052321;
 }
 .pagina-publica .home-sport-hero .home-hero-art::before { content: none; }

@@ -92,12 +92,14 @@ async function ownerTouchScrolling(page){
   }
   for(const hero of await page.locator('#owner-home .owner-sport-section').all()){
     for(const distance of [-140,140]){
-      await hero.evaluate(node=>scrollTo({top:scrollY+node.getBoundingClientRect().top+150,behavior:'instant'}));
+      // Middle of the photograph near y=200 (whatever its framed size), keeping room to scroll both ways.
+      await hero.evaluate(node=>{const art=node.querySelector('.home-hero-art').getBoundingClientRect();scrollTo({top:Math.max(150,scrollY+art.top+art.height/2-200),behavior:'instant'});});
       await page.waitForTimeout(850);
-      assert.equal(await hero.evaluate(node=>document.elementFromPoint(190,200)===node.querySelector('.home-hero-art')),true,
-        'A swipe starts on the photograph, without a clipping layer intercepting it');
+      const finger=await hero.evaluate(node=>{const box=node.querySelector('.home-hero-art').getBoundingClientRect();return {x:Math.round(box.left+box.width/2),y:Math.round(Math.min(box.bottom-20,Math.max(box.top+20,200)))};});
+      const target=await hero.evaluate((node,{x,y})=>{const hit=document.elementFromPoint(x,y);return {onArt:hit===node.querySelector('.home-hero-art'),hit:hit&&`${hit.tagName}.${[...hit.classList].join('.')}`};},finger);
+      assert.equal(target.onArt,true,`A swipe starts on the photograph, without a clipping layer intercepting it: ${JSON.stringify({finger,...target})}`);
       const before=await page.evaluate(()=>scrollY);
-      await swipe({x:190,y:200},{x:190,y:200+distance});
+      await swipe(finger,{x:finger.x,y:finger.y+distance});
       const after=await page.evaluate(()=>scrollY);
       assert.ok(distance<0?after>before+60:after<before-60,`Owner background swipe ${distance}: ${before} → ${after}`);
     }
