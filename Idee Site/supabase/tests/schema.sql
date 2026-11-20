@@ -10,7 +10,7 @@ create function auth.uid() returns uuid language sql stable as $$
 $$;
 create table auth.users (
   id uuid primary key, email text unique not null,
-  email_confirmed_at timestamptz,
+  email_confirmed_at timestamptz, phone text,
   raw_user_meta_data jsonb not null default '{}'
 );
 create table public.clienti(id uuid primary key default gen_random_uuid(), nume text, email text, telefon text);

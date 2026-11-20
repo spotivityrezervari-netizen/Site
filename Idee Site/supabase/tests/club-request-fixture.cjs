@@ -21,6 +21,9 @@ async function createFixture({throughVersion=27}={}) {
   const migrations = readdirSync(join(__dirname,'..')).filter(name=>/^0\d{2}_.*\.sql$/.test(name)&&!/^00[02]_/.test(name)).sort();
   assert.ok(migrations.length>=11);
   for(const name of migrations.filter(name=>Number(name.slice(0,3))<=throughVersion))await pg.exec(readFileSync(join(__dirname,'..',name),'utf8'));
+  // auth.users has a phone column (as in Supabase), so 037's restriction guard needs
+  // 048's fix. Only the function is taken: the version row would mark replays superseded.
+  if(throughVersion>=37){await pg.exec(readFileSync(join(__dirname,'..','048_fix_booking_restriction_phone.sql'),'utf8'));await pg.exec('delete from spotivity_private.migrations where version=48');}
   // Bucket configuration is read internally by the Storage transport, while object RLS remains real.
   await pg.exec('grant select on storage.buckets to anon,authenticated,service_role');
   const tokens=new Map(),accounts=new Map(),objects=new Map(),signed=new Map(),requests=[],createdAt=new Map();

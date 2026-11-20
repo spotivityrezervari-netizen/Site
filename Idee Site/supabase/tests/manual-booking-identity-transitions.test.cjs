@@ -16,6 +16,10 @@ async function fixture(){
  await pg.exec(schema);
  await pg.exec("alter table auth.users add column created_at timestamptz not null default '2000-01-01',add column deleted_at timestamptz,add column banned_until timestamptz,add column is_anonymous boolean not null default false");
  for(const file of readdirSync(directory).filter(file=>/^\d{3}_.*\.sql$/.test(file)&&Number(file.slice(0,3))>=1&&Number(file.slice(0,3))<=42).sort())await pg.exec(readFileSync(join(directory,file),'utf8'));
+ // Real auth.users has a phone column, so 037's guard needs 048's fix. Only the
+ // function is taken here: the version row would mark this replayed migration superseded.
+ await pg.exec(readFileSync(join(directory,'048_fix_booking_restriction_phone.sql'),'utf8'));
+ await pg.exec('delete from spotivity_private.migrations where version=48');
  const root=async(q,p=[])=>{
   await pg.exec("reset role;select set_config('request.jwt.claim.sub','',false),set_config('request.jwt.claims','{}',false)");
   return pg.query(q,p);

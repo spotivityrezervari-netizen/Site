@@ -37,7 +37,7 @@ for(const integer of [false,true])test(`manual cancellation uses normal mail/cou
   await root('select 1');await pg.exec(file('036_manual_booking_cancellations.sql'));
   await root('select 1');await pg.exec(file('036_manual_booking_cancellations.sql'));assert.deepEqual(await snapshot(),before,'Installing/rerunning the migration never rewrites bookings or queues historical mail');
   assert.equal((await root("select prosrc from pg_proc where oid=to_regprocedure('spotivity_private.create_booking_group_internal(uuid,text,date,text[],boolean,uuid,text,text,text,numeric)')")).rows[0].prosrc,priceBody,'The reviewed live pricing/quota implementation is preserved exactly');
-  for(const next of ['037_client_restrictions.sql','038_guest_email_validation.sql','039_court_photo_cleanup.sql']){
+  for(const next of ['037_client_restrictions.sql','038_guest_email_validation.sql','039_court_photo_cleanup.sql','048_fix_booking_restriction_phone.sql']){
    await root('select 1');await pg.exec(file(next));
   }
   await root('select 1');await pg.exec(file('036_manual_booking_cancellations.sql'));

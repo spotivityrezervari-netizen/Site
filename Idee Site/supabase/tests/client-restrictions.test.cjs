@@ -39,6 +39,9 @@ test('manual booking restrictions are scoped, audited and enforced without cance
   await pg.exec(readFileSync(join(directory,'037_client_restrictions.sql'),'utf8'));
   assert.deepEqual((await root('select (select count(*)from public.rezervari)::int bookings,(select count(*)from spotivity_private.notification_outbox)::int jobs')).rows[0],before);
   await pg.exec(readFileSync(join(directory,'037_client_restrictions.sql'),'utf8'));
+  // 048 renames the guard's phone variable (it clashed with auth.users.phone).
+  await pg.exec(readFileSync(join(directory,'048_fix_booking_restriction_phone.sql'),'utf8'));
+  await pg.exec(readFileSync(join(directory,'048_fix_booking_restriction_phone.sql'),'utf8'));
   const alice=[];for(let offset=0;offset<3;offset++){const b=await create({offset});await incident(b);alice.push(b);}
   const bob=await create({owner:2,court:'Court B'});await incident(bob);
   const future=await create({offset:5,hour:'17:00'});
