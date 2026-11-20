@@ -3,6 +3,9 @@
 -- EXISTS subquery read the unassigned PL/pgSQL record instead of the row and
 -- every run failed with "record c is not assigned yet". The retry of approved
 -- panel campaigns therefore never ran. Same logic, loop variable renamed.
+-- Safe to re-run. Apply as postgres.
+begin;
+
 create or replace function spotivity_private.wake_panel_announcements()
 returns void language plpgsql security definer set search_path='' as $$
 declare v_campaign record;
@@ -16,3 +19,6 @@ begin
  end loop;
 end $$;
 revoke all on function spotivity_private.wake_panel_announcements() from public, anon, authenticated, service_role;
+
+insert into spotivity_private.migrations(version) values(47) on conflict(version) do nothing;
+commit;
