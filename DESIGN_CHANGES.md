@@ -3,6 +3,22 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-21 (8): Fundal Final fixed again, cleaner line art (done by Claude, at the owner's request)
+
+- **Fixed again:** the owner wants the background to stay still while the content scrolls over it. The `position: absolute` override was removed, so `.home-shell::after` is `position: fixed` again, as it was originally.
+- **Icons redrawn** in `scripts/design/fundal-final.mjs` with clean geometry, one stroke weight and true symmetry:
+  - soccer ball: a real pentagon/hexagon layout with filled pentagons;
+  - basketball: seams are proper curves;
+  - volleyball: three seams 120 deg apart, each with a parallel panel line;
+  - trophy: a smooth bowl, a two-step base and a proper 5-point star;
+  - whistle: the body joins the mouthpiece, with a slot and an attached ring;
+  - stopwatch: 12 ticks and a crown;
+  - jersey: a collar, sleeve cuffs and a cleaner "10";
+  - racket: tidier strings and a wrapped handle.
+  - Whistles and the top trophy are slightly bigger, as in the photo.
+- `<link>` went to `?v=10` and the SEO pages were regenerated.
+- **Check sheet:** `node scripts/design/fundal-final.mjs --sheet out.svg` draws every icon large.
+
 ## 2026-11-21 (7): "Fundal Final" background from the owner (done by Claude, at the owner's request)
 
 - **Reference:** `Desktop\Spotivity\FundalFinal.jpeg` (547x1600): near-black green base `#011012`, emerald light ribbons, and sport line art (balls, trophies, whistles, stopwatch, jersey "10", racket, plus/x/circle marks, dot grids).

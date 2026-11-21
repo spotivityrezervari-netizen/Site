@@ -15,48 +15,62 @@ const GLOW = '#0f8a6a';      // brightest emerald of the light ribbons
 const f = (n) => Number(n.toFixed(1));
 let uid = 0;
 
-// ---------- icons (local coordinates, roughly 100 units across) ----------
-const ballPentagon = (r) => Array.from({ length: 5 }, (_, i) => {
-  const a = -Math.PI / 2 + i * 2 * Math.PI / 5;
-  return [r * Math.cos(a), r * Math.sin(a)];
-});
-function soccer() {
-  const p = ballPentagon(17);
-  const spokes = ballPentagon(32);
-  let d = `M${p.map(([x, y]) => `${f(x)} ${f(y)}`).join('L')}Z`;
-  const outer = [];
-  p.forEach(([x, y], i) => {
-    const [sx, sy] = spokes[i];
-    d += `M${f(x)} ${f(y)}L${f(sx)} ${f(sy)}`;
-    const a = -Math.PI / 2 + i * 2 * Math.PI / 5;
-    for (const s of [-1, 1]) {
-      const b = a + s * 0.62;
-      d += `M${f(sx)} ${f(sy)}L${f(50 * Math.cos(b))} ${f(50 * Math.sin(b))}`;
-    }
-    outer.push(a + Math.PI / 5);
-  });
-  // dark outer patches between the spokes (like the filled pentagons in the photo)
-  let patches = '';
-  outer.forEach((a) => {
-    const pts = [[38 * Math.cos(a), 38 * Math.sin(a)]];
-    for (const s of [-1, 1]) pts.push([50 * Math.cos(a + s * 0.3), 50 * Math.sin(a + s * 0.3)]);
-    patches += `M${f(pts[1][0])} ${f(pts[1][1])}L${f(pts[0][0])} ${f(pts[0][1])}L${f(pts[2][0])} ${f(pts[2][1])}Z`;
-  });
-  const centre = `M${p.map(([x, y]) => `${f(x)} ${f(y)}`).join('L')}Z`;
-  return `<circle r='50' fill='url(%23ballFill)' stroke='none'/><path d='${centre}${patches}' fill='${ICON}' fill-opacity='.1' stroke='none'/><circle r='50'/><path d='${d}'/>`;
+// ---------- icons (local coordinates, a 100-unit circle = ball size) ----------
+// Drawn on a clean geometric grid: one stroke weight, round joins, true symmetry.
+const P = (x, y) => `${f(x)} ${f(y)}`;
+const polar = (r, deg) => [r * Math.cos(deg * Math.PI / 180), r * Math.sin(deg * Math.PI / 180)];
+const poly = (pts) => `M${pts.map(([x, y]) => P(x, y)).join('L')}Z`;
+function star(cx, cy, r) {
+  const pts = [];
+  for (let i = 0; i < 10; i++) { const [x, y] = polar(i % 2 ? r * 0.42 : r, -90 + i * 36); pts.push([cx + x, cy + y]); }
+  return poly(pts);
 }
-const basketball = () => `<circle r='50' fill='url(%23ballFill)' stroke='none'/><circle r='50'/><path d='M0 -50V50M-50 0H50M-34 -36Q-12 0 -34 36M34 -36Q12 0 34 36'/>`;
-const volleyball = () => `<circle r='50' fill='url(%23ballFill)' stroke='none'/><circle r='50'/><path d='M0 0Q4 -30 -10 -49M0 0Q-28 12 -46 4M0 0Q26 18 30 40M-10 -49Q30 -40 46 -18M-46 4Q-42 36 -16 47M30 40Q46 20 46 -18M-4 -24Q20 -26 38 -8M-24 8Q-20 30 2 42M14 14Q32 6 44 18'/>`;
-const trophy = () => `<path d='M-28 -46H28V-22Q28 10 0 15Q-28 10 -28 -22Z'/><path d='M-28 -38Q-48 -38 -46 -20Q-43 -4 -24 -1M28 -38Q48 -38 46 -20Q43 -4 24 -1M-5 15V31M5 15V31M-16 31H16V39H-16ZM-24 39H24V51H-24ZM-12 45H12'/><path d='M0 -34L3.5 -25.5H12.5L5.3 -20.2L8 -11.5L0 -16.8L-8 -11.5L-5.3 -20.2L-12.5 -25.5H-3.5Z'/>`;
-const whistle = () => `<path d='M-12 -12L38 -12L38 2L5.5 2A18 18 0 1 1 -12 -12Z'/><circle cx='-12' cy='6' r='6'/><circle cx='-30' cy='-14' r='5'/><path d='M44 -20L52 -29M48 -10L59 -12M36 -24L38 -35'/>`;
-const stopwatch = () => `<circle r='40'/><circle r='33' stroke-opacity='.5'/><path d='M-7 -52H7V-45H-7ZM0 -45V-40M27 -33L33 -39M30 -42L38 -34M0 0L-8 20M0 -33V-28M33 0H28M0 33V28M-33 0H-28'/><circle r='2.5'/>`;
-const jersey = () => `<path d='M-20 -50L-50 -38L-68 -5L-48 5L-40 -10V55H40V-10L48 5L68 -5L50 -38L20 -50Q0 -36 -20 -50Z'/><path d='M-20 -50Q0 -28 20 -50M-22 -2L-14 -9V28M-14 28H-6M-22 28H-14'/><ellipse cx='12' cy='9' rx='10' ry='19'/>`;
+
+// Soccer ball seen from a pentagon: centre pentagon, five hexagon seams, five rim pentagons.
+function soccer() {
+  const id = `sb${uid++}`;
+  const a = 15; const junction = 29; const b = 13; const dist = junction + b;
+  const centre = [0, 1, 2, 3, 4].map((i) => polar(a, -90 + 72 * i));
+  let seams = ''; let patches = poly(centre);
+  const outer = [0, 1, 2, 3, 4].map((i) => {
+    const th = -90 + 72 * i;
+    const [cx, cy] = polar(dist, th);
+    return [0, 1, 2, 3, 4].map((k) => { const [x, y] = polar(b, th + 180 + 72 * k); return [cx + x, cy + y]; });
+  });
+  outer.forEach((pent, i) => {
+    const th = -90 + 72 * i;
+    patches += poly(pent);
+    seams += `M${P(...centre[i])}L${P(...pent[0])}`;                 // centre vertex -> rim pentagon
+    seams += `M${P(...pent[4])}L${P(...outer[(i + 1) % 5][1])}`;      // hexagon outer edge
+    for (const k of [2, 3]) {                                          // rim pentagon -> edge of ball
+      const [x, y] = pent[k]; const [ex, ey] = polar(60, th + (k === 2 ? -28 : 28));
+      seams += `M${P(x, y)}L${P(ex, ey)}`;
+    }
+  });
+  return `<clipPath id='${id}'><circle r='49'/></clipPath><circle r='50' fill='url(%23ballFill)' stroke='none'/><g clip-path='url(%23${id})'><path d='${patches}' fill='${ICON}' fill-opacity='.2'/><path d='${seams}'/></g><circle r='50'/>`;
+}
+const basketball = () => `<circle r='50' fill='url(%23ballFill)' stroke='none'/><circle r='50'/><path d='M0 -50V50M-50 0H50M-36 -34.7C-17 -14 -17 14 -36 34.7M36 -34.7C17 -14 17 14 36 34.7'/>`;
+// Volleyball: three seams from the centre (120 deg apart), each with one parallel panel line.
+function volleyball() {
+  const unit = `M0 0C10 14 26 22 43.3 25M-19.4 5.6C-6 22 14 34 36 34.7`;
+  const seams = [0, 120, 240].map((r) => `<path d='${unit}' transform='rotate(${r})'/>`).join('');
+  return `<circle r='50' fill='url(%23ballFill)' stroke='none'/><circle r='50'/>${seams}`;
+}
+const trophy = () => `<path d='M-26 -44H26V-26C26 -6 14 8 0 10C-14 8 -26 -6 -26 -26Z'/><path d='M-26 -36H-34C-41 -36 -44 -30 -42 -23C-40 -15 -33 -9 -23 -7M26 -36H34C41 -36 44 -30 42 -23C40 -15 33 -9 23 -7M-4 10V24M4 10V24M-11 24H11V31H-11ZM-21 31H21V45H-21ZM-10 38H10'/><path d='${star(0, -22, 9)}'/>`;
+const whistle = () => `<path d='M0 -10H42Q46 -10 46 -6V2Q46 6 42 6H19.6A20 20 0 1 1 0 -10Z'/><path d='M10 -10V-5H18V-10'/><circle cx='0' cy='10' r='7'/><circle cx='-17.6' cy='-7.6' r='5'/><path d='M53 -14L59 -21M55 -2H63M48 -20L50 -28'/>`;
+function stopwatch() {
+  let ticks = '';
+  for (let i = 0; i < 12; i++) { const r1 = i % 3 ? 31 : 28; const [x1, y1] = polar(r1, i * 30); const [x2, y2] = polar(34, i * 30); ticks += `M${P(x1, y1)}L${P(x2, y2)}`; }
+  const [bx1, by1] = polar(40, -45); const [bx2, by2] = polar(47, -45);
+  return `<circle r='40'/><path d='${ticks}' stroke-opacity='.7'/><path d='M-8 -53H8V-46H-8ZM0 -46V-40M${P(bx1, by1)}L${P(bx2, by2)}M0 0L-11 18M0 0V-22'/><circle r='3'/>`;
+}
+const jersey = () => `<path d='M-18 -48Q0 -40 18 -48L44 -38L64 -10L48 0L40 -10V52Q40 56 36 56H-36Q-40 56 -40 52V-10L-48 0L-64 -10L-44 -38Z'/><path d='M-18 -48Q0 -28 18 -48M-56 -21L-41 -12M56 -21L41 -12'/><path d='M-24 -2L-15 -9V27M2 -9H12A6 6 0 0 1 18 -3V21A6 6 0 0 1 12 27H2A6 6 0 0 1 -4 21V-3A6 6 0 0 1 2 -9Z'/>`;
 function racket() {
   const id = `rk${uid++}`;
   let strings = '';
-  for (let x = -36; x <= 36; x += 8) strings += `M${x} -84V24`;
-  for (let y = -80; y <= 20; y += 8) strings += `M-44 ${y}H44`;
-  return `<clipPath id='${id}'><ellipse cx='0' cy='-30' rx='40' ry='50'/></clipPath><path d='${strings}' clip-path='url(%23${id})' stroke-opacity='.55' stroke-width='1.1'/><ellipse cx='0' cy='-30' rx='44' ry='54'/><ellipse cx='0' cy='-30' rx='40' ry='50' stroke-opacity='.5'/><path d='M-14 20L-6 42M14 20L6 42M-14 20Q0 30 14 20'/><path d='M-7 42H7V100H-7ZM-7 52L7 60M-7 64L7 72M-7 76L7 84M-7 88L7 96'/>`;
+  for (let x = -32; x <= 32; x += 8) strings += `M${x} -84V24`;
+  for (let y = -76; y <= 16; y += 8) strings += `M-44 ${y}H44`;
+  return `<clipPath id='${id}'><ellipse cx='0' cy='-30' rx='38' ry='48'/></clipPath><path d='${strings}' clip-path='url(%23${id})' stroke-opacity='.5' stroke-width='1'/><ellipse cx='0' cy='-30' rx='44' ry='54'/><path d='M-16 19C-10 30 -7 36 -6 44M16 19C10 30 7 36 6 44M-6 44H6V98Q6 102 2 102H-2Q-6 102 -6 98ZM-6 58H6M-6 72H6M-6 86H6'/>`;
 }
 const plus = (s = 9) => `<path d='M-${s} 0H${s}M0 -${s}V${s}'/>`;
 const cross = (s = 8) => `<path d='M-${s} -${s}L${s} ${s}M${s} -${s}L-${s} ${s}'/>`;
@@ -71,10 +85,10 @@ function dots(cols, rows, gap = 14) {
 const icons = [
   [soccer, 95, 62, 1.78, -8, 92],
   [() => dots(3, 3), 470, 40, 1, 0, 30],
-  [trophy, 402, 168, 1.28, -4, 72],
+  [trophy, 402, 166, 1.45, -4, 80],
   [() => plus(), 222, 183, 1, 0, 10],
   [() => ring(7), 332, 240, 1, 0, 9],
-  [whistle, 222, 282, 1.15, -28, 70],
+  [whistle, 218, 282, 1.4, -28, 80],
   [() => ring(7), 44, 358, 1, 0, 9],
   [() => cross(), 98, 346, 1, 0, 10],
   [basketball, 476, 366, 1.58, 18, 82],
@@ -95,7 +109,7 @@ const icons = [
   [() => cross(), 182, 1134, 1, 0, 10],
   [() => dots(4, 3, 15), 455, 1050, 1, 0, 50],
   [volleyball, 22, 1196, 2.05, 30, 104],
-  [whistle, 336, 1182, 1.15, -28, 70],
+  [whistle, 330, 1182, 1.4, -28, 80],
   [() => ring(18), 488, 1188, 1, 0, 20],
   [soccer, 480, 1332, 1.72, 12, 88],
   [() => ring(12), 208, 1380, 1, 0, 14],
@@ -209,4 +223,13 @@ const out = process.argv.indexOf('--svg');
 if (out > 0) {
   writeFileSync(`${process.argv[out + 1]}-wide.svg`, variants['--design-bg-final'].replace(/%23/g, '#'));
   writeFileSync(`${process.argv[out + 1]}-phone.svg`, variants['--design-bg-final-phone'].replace(/%23/g, '#'));
+}
+
+// Optional check sheet: every icon drawn large and bright (node ... --sheet out.svg).
+const sheetAt = process.argv.indexOf('--sheet');
+if (sheetAt > 0) {
+  const list = [soccer, basketball, volleyball, trophy, whistle, stopwatch, jersey, racket];
+  const cells = list.map((draw, i) => `<g transform='translate(${130 + (i % 4) * 260} ${150 + Math.floor(i / 4) * 300}) scale(2)' stroke-width='1.15'>${draw()}</g>`).join('');
+  const sheet = `<svg xmlns='http://www.w3.org/2000/svg' width='1040' height='600'><defs><radialGradient id='ballFill' cx='.38' cy='.32' r='.75'><stop offset='0' stop-color='${ICON}' stop-opacity='.3'/><stop offset='1' stop-color='${ICON}' stop-opacity='.05'/></radialGradient></defs><rect width='1040' height='600' fill='#011012'/><g fill='none' stroke='#3fd1a8' stroke-opacity='.85' stroke-linecap='round' stroke-linejoin='round'>${cells}</g></svg>`;
+  writeFileSync(process.argv[sheetAt + 1], sheet.replace(/%23/g, '#'));
 }
