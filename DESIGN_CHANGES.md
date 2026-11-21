@@ -11,8 +11,9 @@ Restore point: git tag `design-before-background` (commit 304a439, before any de
   - `--design-bg-final-phone` (phones): it wraps only top and bottom, and one tile spans the width exactly like the photo.
   - They are base64 because the gradients use `url(#id)` internally, which the public build scanner reads as a file reference.
 - **It scrolls with the page:** `.home-shell::after` changed from `position: fixed` to `absolute`, so the drawing moves with the content. The shell is already `position: relative`.
-- **Sizes:** desktop tile 600 px wide, tablet 520 px, phones 100% of the width.
-- **Override block:** new section "2026-11-21" at the end of `design-background.css`. The old layer variables are left in place but no longer shown. `<link>` went to `?v=8` and the SEO pages were regenerated. All 92 tests pass.
+- **Wide screens:** a double panel (2 x 547 wide). The right half is the same drawing moved down (the script picks the shift with the least overlap at the joins, currently 656 px), so the repeats never form identical rows. It is drawn once and placed with `<use>`, so it is no bigger than the phone version.
+- **Sizes:** desktop panel 1160 px wide, tablet 1000 px, phones 100% of the width.
+- **Override block:** new section "2026-11-21" at the end of `design-background.css`. The old layer variables are left in place but no longer shown. `<link>` went to `?v=9` and the SEO pages were regenerated. All 92 tests pass.
 - **Revert only this step:** delete the "2026-11-21" block and the two `--design-bg-final*` variables, or `git revert` the commit "Design: Fundal Final background", then run `node scripts/generate-seo-pages.mjs`.
 
 ## 2026-11-20 (6): Legal pages and base initials circles in the new palette

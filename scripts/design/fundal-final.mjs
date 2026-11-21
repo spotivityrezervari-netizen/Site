@@ -164,7 +164,38 @@ const toUri = (svg) => `data:image/svg+xml;base64,${Buffer.from(svg.replace(/%23
 
 // Wide screens: tiles sit side by side, so edges wrap both ways (seamless).
 // Phones: one tile spans the width, so only top/bottom wrap (exactly like the photo).
-const variants = { '--design-bg-final': build(true), '--design-bg-final-phone': build(false) };
+// Wide screens: a double panel (2W x H). The right half is the same drawing moved down by
+// SHIFT, so side-by-side repeats never line up in identical rows. Elements cut at an edge
+// continue into the neighbouring half. SHIFT is chosen so those continuations overlap
+// the other half's drawings as little as possible.
+function overlapCost(shift) {
+  let cost = 0;
+  for (const [, x1, y1, , , r1] of icons) {
+    for (const [, x2, y2, , , r2] of icons) {
+      for (const dx of [W, -W]) {
+        for (const wy of [-H, 0, H]) {
+          const d = Math.hypot(x1 - (x2 + dx), y1 - (y2 + shift + wy));
+          cost += Math.max(0, r1 + r2 + 12 - d);
+        }
+      }
+    }
+  }
+  return cost;
+}
+let SHIFT = 800; let best = Infinity;
+for (let s = 560; s <= 1040; s += 4) { const c = overlapCost(s); if (c < best) { best = c; SHIFT = s; } }
+function buildWide() {
+  const base = build(false);
+  const inner = base.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
+  const defsEnd = inner.indexOf('</defs>') + '</defs>'.length;
+  const defs = inner.slice(0, defsEnd);
+  const art = inner.slice(defsEnd);
+  const uses = [[0, 0], [2 * W, 0], [W, SHIFT], [-W, SHIFT], [W, SHIFT - H], [-W, SHIFT - H]]
+    .map(([x, y]) => `<use href='%23art' x='${x}' y='${y}'/>`).join('');
+  return `<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' width='${2 * W}' height='${H}' viewBox='0 0 ${2 * W} ${H}'>${defs.replace('</defs>', `<g id='art'>${art}</g></defs>`)}${uses}</svg>`;
+}
+const variants = { '--design-bg-final': buildWide(), '--design-bg-final-phone': build(false) };
+console.log(`fundal-final: wide panel shift ${SHIFT}px (overlap score ${best.toFixed(0)})`);
 const cssPath = fileURLToPath(new URL('../../Idee Site/css/design-background.css', import.meta.url));
 let css = readFileSync(cssPath, 'utf8');
 for (const [name, svg] of Object.entries(variants)) {
