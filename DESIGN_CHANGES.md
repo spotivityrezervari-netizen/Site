@@ -3,6 +3,18 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-21 (7): "Fundal Final" background from the owner (done by Claude, at the owner's request)
+
+- **Reference:** `Desktop\Spotivity\FundalFinal.jpeg` (547x1600): near-black green base `#011012`, emerald light ribbons, and sport line art (balls, trophies, whistles, stopwatch, jersey "10", racket, plus/x/circle marks, dot grids).
+- **Not used as a photo:** at 547 px wide it would be stretched about 3.5x on desktop and look blurry. It was redrawn 1:1 as a vector tile by `scripts/design/fundal-final.mjs`. That script writes two base64 SVG data URIs into `design-background.css`:
+  - `--design-bg-final` (wide screens): it wraps on all four edges, so tiles join seamlessly side by side;
+  - `--design-bg-final-phone` (phones): it wraps only top and bottom, and one tile spans the width exactly like the photo.
+  - They are base64 because the gradients use `url(#id)` internally, which the public build scanner reads as a file reference.
+- **It scrolls with the page:** `.home-shell::after` changed from `position: fixed` to `absolute`, so the drawing moves with the content. The shell is already `position: relative`.
+- **Sizes:** desktop tile 600 px wide, tablet 520 px, phones 100% of the width.
+- **Override block:** new section "2026-11-21" at the end of `design-background.css`. The old layer variables are left in place but no longer shown. `<link>` went to `?v=8` and the SEO pages were regenerated. All 92 tests pass.
+- **Revert only this step:** delete the "2026-11-21" block and the two `--design-bg-final*` variables, or `git revert` the commit "Design: Fundal Final background", then run `node scripts/generate-seo-pages.mjs`.
+
 ## 2026-11-20 (6): Legal pages and base initials circles in the new palette
 
 - **New file `Idee Site/css/design-legal.css`:** the legal pages (`termeni.html`, `confidentialitate.html`, `cookies.html`) now use the same palette:
