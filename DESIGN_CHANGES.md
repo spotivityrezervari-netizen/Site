@@ -3,6 +3,22 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-22 (12): "Arena" background replaces "Fundal Final" (done by Claude, at the owner's request)
+
+Owner: "still looks clumsy and copied; make it authentic, beautiful, eye-catching and well made". The old background was a repeated stock-style icon wallpaper (whistles, trophies, jerseys, dots) that also sat behind the hero text.
+
+- **New generator** `scripts/design/fundal-arena.mjs` (the old `fundal-final.mjs` is removed; it is in git history). It writes `--design-bg-arena` (wide), `--design-bg-arena-phone` (portrait) and `--design-bg-grain` in `css/design-background.css`. Never edit those lines by hand; change the scene configs at the end of the script and re-run it.
+- **One composed scene per screen shape** instead of a tile, because the layer is `position: fixed` (only one screen of it is ever seen):
+  - a football pitch in perspective (real dimensions: halfway line, centre circle, boxes, arcs, spots, mowing stripes), fading into the dark towards the horizon, with a floodlight pool;
+  - 3D balls (projected spheres): opaque dark body, seams, form shadow, a bright top rim light and a sheen; the soccer ball sits on the pitch with a contact shadow, the volleyball is slightly out of focus;
+  - light trails: twisted "silk" bands (filled sheet + strands + a lit crest + a halo). On desktop the main trail ends under the tennis ball, on phones under the basketball, so they read as balls in flight;
+  - soft floodlight glows and beams, an edge vignette, and a calm zone (mask) that dims the trails behind the hero text;
+  - a 180px grain tile on top removes banding in the dark gradients.
+- **CSS** (block "2026-11-22 (2): Arena", replacing the "Fundal Final" block): wide screens `background-size: cover`; portrait screens and ≤640px use the tall picture full width from the top (no jump when the phone address bar hides); portrait tablets (aspect ≥ 3/5) show its middle (`center 55%`).
+- The unused old art variables (`--design-bg-left/right/scatter/final/final-phone`) are removed; the two old rules that used them now say `none`. The background now weighs ~87 KB instead of ~140 KB.
+- `design-background.css?v=14`; SEO pages regenerated. Checked with screenshots at 1440×900, 1920×1080, 768×1024 and 390×844.
+- **Revert:** `git revert` this commit then `node scripts/generate-seo-pages.mjs`, or restore from tag `design-before-arena`.
+
 ## 2026-11-22 (11): Home title is the brand "Spotivity", with a tagline (done by Claude, at the owner's request)
 
 - `index.html`: the eyebrow span was removed. The h1 is now `<h1 id="home-intro-title" class="welcome-brand">Spotivity</h1>`, with no i18n key because the brand never changes. It is followed by `<p class="welcome-tagline" data-i18n="home_welcome_tagline">`.
