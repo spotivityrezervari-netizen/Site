@@ -3,6 +3,14 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-22 (20): No dark band at the bottom of the phone page (done by Claude, at the owner's request)
+
+Owner: "the line at the bottom on the phone is back".
+
+- **Cause:** the footer gradient from (14) ended in a solid band of the base colour `#011012`. Over the now brighter background (bottom glow and bright icons since (18)/(19)), that band read as a dark strip at the very bottom.
+- **Fix:** the footer is fully transparent (`css/design-background.css`). Instead, the background picture fades softly into the base colour along its own bottom edge (`bottomFade` in `layout()`, from 80% to 100% of the height), so whatever a phone shows below the page (overscroll, toolbar area) matches it with no edge. The phone's bottom-left glow moved up and was softened.
+- `design-background.css?v=22`; SEO pages regenerated. Checked at the bottom of the page and while scrolling at 390×844.
+
 ## 2026-11-22 (19): Reference layout spread evenly and centred on desktop; softening only right behind text (done by Claude, at the owner's request)
 
 Owner: "on desktop it looks ugly; on the phone it is better but you can do better; on desktop centre them a bit more".

@@ -520,6 +520,10 @@ function layout({ W, H, glows, sparkles = 0, calm, groups }) {
   }
   defs += `<radialGradient id='vig' cx='.5' cy='.45' r='.75'><stop offset='.6' stop-color='${BASE}' stop-opacity='0'/><stop offset='1' stop-color='${BASE}' stop-opacity='.5'/></radialGradient>`;
   body += `<rect width='100%' height='100%' fill='url(#vig)'/>`;
+  // soft fade into the page base along the bottom edge (no hard edge against the phone's
+  // toolbar or overscroll area, which show the plain base colour)
+  defs += `<linearGradient id='bottomFade' x1='0' y1='0' x2='0' y2='1'><stop offset='.8' stop-color='${BASE}' stop-opacity='0'/><stop offset='.93' stop-color='${BASE}' stop-opacity='.55'/><stop offset='1' stop-color='${BASE}' stop-opacity='.9'/></linearGradient>`;
+  body += `<rect width='100%' height='100%' fill='url(#bottomFade)'/>`;
   return `<svg xmlns='http://www.w3.org/2000/svg' width='100%' height='100%'><defs>${defs}</defs>${body}</svg>`;
 }
 
@@ -621,7 +625,7 @@ const P2 = (x, y) => [x, PY(y)];
 const behindPhone = (x, y) => x > 70 && x < 470 && y > 250 && y < 970;
 const phone = layout({
   W: 547, H: PH,
-  glows: [[500, -60, 520, 520, '#11936f', 0.26], [40, 1150, 480, 360, '#0e8064', 0.16], [280, 640, 380, 280, '#0a5e4b', 0.1]],
+  glows: [[500, -60, 520, 520, '#11936f', 0.26], [60, 980, 460, 320, '#0e8064', 0.12], [280, 640, 380, 280, '#0a5e4b', 0.1]],
   sparkles: 50,
   calm: [273, 560, 300, 330],
   groups: [
