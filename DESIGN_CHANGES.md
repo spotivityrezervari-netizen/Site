@@ -3,6 +3,14 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-22 (23): "SPOTIVITY" bigger than the tagline (done by Claude, at the owner's request)
+
+Owner: "make the text a bit smaller and Spotivity bigger, the title should be bigger than the tagline".
+
+- Blue uppercase title: `clamp(42px, 4.2vw, 62px)`, weight 750, letter spacing .05em (phone `clamp(34px, 10vw, 42px)`).
+- White tagline: `clamp(22px, 1.9vw, 28px)`, weight 600 (phone `clamp(19px, 5.2vw, 22px)`).
+- `design-background.css?v=25`; SEO pages regenerated. Checked at 1440×900 and 390×844.
+
 ## 2026-11-22 (22): Title back to the blue label style; no darkening at the bottom; fewer, tidier icons on the phone (done by Claude, at the owner's request)
 
 Owner: "the title is too big, make it like before in blue but a bit bigger; the picture still has the black bar; too many icons on the phone, make the arrangement nicer".
