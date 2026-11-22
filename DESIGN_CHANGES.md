@@ -3,6 +3,15 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-22 (18): Arena icons laid out like the owner's reference photo (done by Claude, at the owner's request)
+
+Owner: "not good, you cut the icons down drastically; look at the example I sent and lay them out the same way, but with your icons; the ones from the previous push look good".
+
+- `REF` / `REF_RIBBONS` in `scripts/design/fundal-arena.mjs` hold the positions measured from `Desktop\Spotivity\FundalFinal.jpeg` (547×1600, taken from the old `fundal-final.mjs`): 16 icons, the small marks (dots, rings, crosses, plus signs) and the 10 light ribbons. `refGroup()` maps them into a group and draws them with the 3D icons. The second trophy became the medal, the second whistle the pin and the second jersey the calendar, so the icon set from the previous push stays.
+- **Desktop:** the photo's column is split in two. Its top half runs down the left edge (x×0.62), its bottom half down the right edge. The drawing starts below the two header bars. Pieces that reach in under the text or the photo card are softened (`dim: 0.32`). The scoreboard, the hoop shot and the pin from the previous push stay in the middle.
+- **Phone:** the whole column across the full width, as in the photo, fitted into 547×1184 (upper half glued to the top, lower half to the bottom, scaled to fit), so nothing is cut. Softened (0.55 / 0.6) because the text covers the whole width.
+- `decor()` draws the small marks; layout groups take a `decor` list. `design-background.css?v=20`; SEO pages regenerated. Checked at 1440×900, 1920×1080 and 390×844 (plus phone scroll).
+
 ## 2026-11-22 (17): Arena icons rearranged on a clear structure (done by Claude, at the owner's request)
 
 Owner: "I like the icons but they are arranged very badly on the page, on both desktop and phone".

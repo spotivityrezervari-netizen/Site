@@ -515,7 +515,7 @@ function layout({ W, H, glows, sparkles = 0, calm, groups }) {
     let paths = '';
     for (const [x1, y1, cx, cy, x2, y2] of g.arcs || []) paths += `M${P(x1, y1)}Q${P(cx, cy)} ${P(x2, y2)}`;
     if (rib || paths) inner += `<g mask='url(#calm)'>${rib}${paths ? `<path d='${paths}' fill='none' stroke='#7dffd6' stroke-opacity='.7' stroke-width='2.2' stroke-dasharray='1 8' stroke-linecap='round'/>` : ''}</g>`;
-    inner += (g.props || []).map(prop).join('') + (g.balls || []).map(ball).join('');
+    inner += (g.decor || []).map((d) => decor(d, d[5])).join('') + (g.props || []).map(prop).join('') + (g.balls || []).map(ball).join('');
     body += box(g.align, 'meet', g.dim ? `<g opacity='${g.dim}'>${inner}</g>` : inner);
   }
   defs += `<radialGradient id='vig' cx='.5' cy='.45' r='.75'><stop offset='.6' stop-color='${BASE}' stop-opacity='0'/><stop offset='1' stop-color='${BASE}' stop-opacity='.5'/></radialGradient>`;
@@ -523,56 +523,107 @@ function layout({ W, H, glows, sparkles = 0, calm, groups }) {
   return `<svg xmlns='http://www.w3.org/2000/svg' width='100%' height='100%'><defs>${defs}</defs>${body}</svg>`;
 }
 
-// Wide screens (coordinates 1600 x 1000). Composition: one column on each side margin with
-// even spacing and a gentle zigzag, big pieces in opposite corners (basketball top left,
-// soccer ball bottom right), and a few pieces only where the page leaves room (scoreboard in
-// the top band, jersey between the text and the photo, hoop shot and pin in the bottom band).
+// ---------------------------------------------------------------- the owner's reference layout
+// Positions measured from the owner's photo Desktop\Spotivity\FundalFinal.jpeg (547 x 1600),
+// drawn with the 3D icons above. [kind, x, y, scale (old 100-unit icon), rotation, variant]
+const REF = [
+  ['soccer', 95, 62, 1.78, 0], ['dots', 470, 40, 3, 3], ['trophy', 402, 166, 1.45, -4], ['plus', 222, 183],
+  ['ring', 332, 240, 7], ['whistle', 218, 282, 1.15, -22], ['ring', 44, 358, 7], ['cross', 98, 346],
+  ['basketball', 476, 366, 1.58, 0], ['stopwatch', 100, 452, 1.05, 0], ['cross', 226, 406],
+  ['dots', 16, 516, 4, 4], ['dots', 310, 540, 4, 3], ['volleyball', 187, 636, 1.36, 0], ['jersey', 468, 684, 1.15, 6],
+  ['ring', 35, 688, 8], ['ring', 325, 698, 11], ['cross', 368, 756], ['plus', 515, 815],
+  ['racket', 402, 905, 1.25, 38], ['medal', 140, 978, 1.5, 6], ['ring', 45, 1026, 7], ['ring', 248, 1088, 12],
+  ['cross', 182, 1134], ['dots', 455, 1050, 4, 3], ['volleyball', 40, 1196, 1.92, 0, 2], ['pin', 330, 1180, 1.15, 0],
+  ['ring', 488, 1188, 18], ['soccer', 480, 1332, 1.72, 0, 2], ['ring', 208, 1380, 12], ['plus', 362, 1386],
+  ['dots', 356, 1276, 2, 2], ['calendar', 78, 1468, 0.95, -10], ['cross', 226, 1470], ['dots', 330, 1462, 4, 6],
+];
+// light ribbons of the photo: [start, end, outer control, inner control, strength, peak]
+const REF_RIBBONS = [
+  [[-20, 318], [345, -20], [130, 150], [160, 190], 0.5, 0.35],
+  [[-20, 250], [210, 110], [60, 150], [80, 170], 0.25, 0.4],
+  [[282, 252], [560, 70], [300, 110], [340, 150], 0.3, 0.4],
+  [[560, 240], [560, 520], [20, 400], [170, 385], 1, 0.5],
+  [[-30, 840], [560, 470], [220, 770], [240, 720], 0.85, 0.2],
+  [[150, 845], [-20, 1070], [-10, 860], [50, 905], 0.55, 0.45],
+  [[560, 860], [560, 1125], [140, 1000], [300, 995], 0.8, 0.4],
+  [[130, 1250], [560, 1140], [300, 1090], [330, 1170], 0.35, 0.5],
+  [[-30, 1390], [270, 1290], [70, 1290], [100, 1320], 0.35, 0.35],
+  [[170, 1620], [560, 1380], [250, 1420], [330, 1480], 0.85, 0.45],
+];
+const BALL_POSE = { soccer: [[18, -14, 8], [-24, 10, -6]], basketball: [[-40, 15, -50]], volleyball: [[45, 35, 0], [45, -35, 15]], tennis: [[20, 30, 10]] };
+const PROP_SIZE = { trophy: 92, whistle: 100, stopwatch: 84, jersey: 100, racket: 92, medal: 70, pin: 90, calendar: 92, hoop: 100, scoreboard: 100 };
+const DECOR = new Set(['dots', 'ring', 'cross', 'plus']);
+// small line marks of the photo, in the same emerald glow
+function decor([kind, x, y, a = 0, b = 0], k = 1) {
+  const st = `stroke='${SEAM}' stroke-opacity='.55' stroke-width='${f(1.6 * k)}' stroke-linecap='round' fill='none'`;
+  if (kind === 'ring') return `<circle cx='${f(x)}' cy='${f(y)}' r='${f(a * k)}' ${st}/>`;
+  if (kind === 'plus') { const s = 9 * k; return `<path d='M${P(x - s, y)}H${f(x + s)}M${P(x, y - s)}V${f(y + s)}' ${st}/>`; }
+  if (kind === 'cross') { const s = 7 * k; return `<path d='M${P(x - s, y - s)}L${P(x + s, y + s)}M${P(x + s, y - s)}L${P(x - s, y + s)}' ${st}/>`; }
+  let d = ''; const g = 14 * k;
+  for (let i = 0; i < a; i++) for (let j = 0; j < b; j++) d += `<circle cx='${f(x + i * g)}' cy='${f(y + j * g)}' r='${f(1.8 * k)}'/>`;
+  return `<g fill='${SEAM}' fill-opacity='.6'>${d}</g>`;
+}
+// Maps the reference into one group. map(x, y) -> [x', y'], k = size factor, box = [W, H] for clamping.
+function refGroup(items, ribbons, map, k, box, extra = {}) {
+  const g = { props: [], balls: [], decor: [], ribbons: [], ...extra };
+  const clamp = (x, y, r) => [Math.min(Math.max(x, r + 4), box[0] - r - 4), Math.min(Math.max(y, r + 4), box[1] - r - 4)];
+  for (const [kind, x0, y0, s, rot, v] of items) {
+    const [x, y] = map(x0, y0);
+    if (DECOR.has(kind)) { g.decor.push([kind, x, y, s, rot, k]); continue; }
+    if (BALL_POSE[kind]) {
+      const r = 50 * s * k; const [cx, cy] = clamp(x, y, r);
+      const pose = BALL_POSE[kind][(v || 1) - 1];
+      g.balls.push([kind, cx, cy, r, ...pose]);
+    } else {
+      const size = PROP_SIZE[kind] * s * k; const [cx, cy] = clamp(x, y, size * 0.55);
+      g.props.push([kind, cx, cy, size, rot]);
+    }
+  }
+  const cub = (p0, c, p3) => [p0, [p0[0] + 2 / 3 * (c[0] - p0[0]), p0[1] + 2 / 3 * (c[1] - p0[1])], [p3[0] + 2 / 3 * (c[0] - p3[0]), p3[1] + 2 / 3 * (c[1] - p3[1])], p3];
+  for (const [a, b, co, ci, strength, peak] of ribbons) {
+    const [A, B, CO, CI] = [a, b, co, ci].map(([x, y]) => map(x, y));
+    g.ribbons.push({ a: cub(A, CO, B), b: cub(A, CI, B), n: 30, strength, peak: Math.max(peak, 0.3), width: 70 * k, twist: 0.75 });
+  }
+  return g;
+}
+
+// Wide screens (coordinates 1600 x 1000): the photo's column split in two. Its top half runs
+// down the left edge, its bottom half down the right edge; pieces that reach in under the text
+// or the photo card are softened. Middle: scoreboard on top, the hoop shot and the pin below.
+const leftItems = REF.filter((i) => i[2] < 800); const rightItems = REF.filter((i) => i[2] >= 800);
+// the drawing starts below the two header bars (~150 units)
+const L = (x, y) => [20 + x * 0.62, 165 + y * 1.0];
+const R = (x, y) => [1600 - 20 - 547 * 0.62 + x * 0.62, 165 + (y - 800) * 1.0];
+const split = (items, map, inner) => [items.filter((i) => !inner(map(i[1], i[2])[0])), items.filter((i) => inner(map(i[1], i[2])[0]))];
+const [lOut, lIn] = split(leftItems, L, (x) => x > 120);
+const [rOut, rIn] = split(rightItems, R, (x) => x < 1400);
 const wide = layout({
   W: 1600, H: 1000,
   glows: [[140, -80, 950, 720, '#11936f', 0.24], [1480, -60, 760, 620, '#0e8064', 0.16], [1180, 640, 620, 380, '#0a5e4b', 0.1], [760, 1060, 820, 300, '#0e8064', 0.14]],
-  sparkles: 80,
+  sparkles: 70,
   calm: [450, 470, 500, 300],
   groups: [
-    { align: 'xMinYMid',   // left column, top to bottom every ~165 units
-      ribbons: [{ a: [[-60, 200], [240, 110], [520, 90], [840, -60]], b: [[-60, 290], [320, 200], [580, 110], [880, -10]], n: 26, strength: 0.6, peak: 0.42, width: 60, twist: 0.7 }],
-      props: [['medal', 66, 398, 62, -8], ['stopwatch', 96, 562, 112, 12, 40], ['calendar', 72, 728, 64, -8], ['trophy', 92, 886, 108, -4]],
-      balls: [['basketball', 92, 226, 62, -40, 15, -50]] },
-    { align: 'xMaxYMid',   // right column, same rhythm, mirrored zigzag
-      ribbons: [{ a: [[1700, 450], [1440, 580], [1360, 820], [1230, 1070]], b: [[1700, 590], [1520, 720], [1480, 900], [1400, 1070]], n: 30, strength: 0.6, peak: 0.45, width: 70, twist: 0.75 }],
-      props: [['stopwatch', 1512, 206, 58, -16, 300], ['racket', 1526, 384, 84, 14], ['whistle', 1508, 742, 82, -14, 'M30 -30C44 -80 0 -110 24 -160']],
-      balls: [['volleyball', 1504, 562, 36, 45, 35, 0], ['soccer', 1494, 894, 86, 18, -12, 8]] },
-    { align: 'xMidYMin',   // top band: scoreboard, tennis ball with its light trail
-      ribbons: [{ a: [[-80, 700], [380, 560], [900, 470], [1320, 244]], b: [[-80, 900], [520, 760], [1060, 390], [1334, 288]], n: 46, strength: 1, peak: 0.9, endOp: 0.75, width: 110, twist: 0.8 }],
-      props: [['scoreboard', 700, 200, 64, 0, '21']],
-      balls: [['tennis', 1338, 264, 28, 20, 30, 10]] },
-    { align: 'xMidYMid',   // between the text and the photo
-      props: [['jersey', 757, 500, 84, -8]] },
-    { align: 'xMidYMax',   // bottom band: the hoop shot and the location pin
-      arcs: [[380, 1030, 450, 820, 554, 928]],
-      props: [['hoop', 560, 950, 110], ['pin', 1000, 936, 76]],
-      balls: [['basketball', 485, 891, 20, -30, 25, -40]] },
+    { align: 'xMinYMid', ...refGroup(lOut, REF_RIBBONS.filter((r) => r[0][1] < 800), L, 0.72, [1600, 1000]) },
+    { align: 'xMinYMid', dim: 0.32, ...refGroup(lIn, [], L, 0.72, [1600, 1000]) },
+    { align: 'xMaxYMid', ...refGroup(rOut, REF_RIBBONS.filter((r) => r[0][1] >= 800), R, 0.72, [1600, 1000]) },
+    { align: 'xMaxYMid', dim: 0.32, ...refGroup(rIn, [], R, 0.72, [1600, 1000]) },
+    { align: 'xMidYMin', props: [['scoreboard', 760, 205, 64, 0, '21']] },
+    { align: 'xMidYMax', arcs: [[460, 1030, 530, 820, 634, 928]], props: [['hoop', 640, 950, 110], ['pin', 1000, 936, 76]], balls: [['basketball', 565, 891, 20, -30, 25, -40]] },
   ],
 });
-// Portrait screens (coordinates 600 x 1400). Top: pieces only in the free spots next to the
-// text (right of the title, right of the green button, after the "discover" link). Bottom
-// (glued to the bottom edge, ~100 units free for the browser bar): one tidy row of three.
+// Portrait screens: the photo's column across the full width, as in the photo. It is fitted to
+// a phone-shaped box (547 x 1184): its upper half is glued to the top, its lower half to the
+// bottom, both scaled to fit, so nothing is ever cut at an edge on any phone.
+const PH = 1184; const PY = (y) => 215 + y * 0.6;
+const P2 = (x, y) => [x, PY(y)];
 const phone = layout({
-  W: 600, H: 1400,
-  glows: [[540, -60, 560, 560, '#11936f', 0.26], [40, 1360, 520, 400, '#0e8064', 0.16], [300, 760, 420, 300, '#0a5e4b', 0.1]],
+  W: 547, H: PH,
+  glows: [[500, -60, 520, 520, '#11936f', 0.26], [40, 1150, 480, 360, '#0e8064', 0.16], [280, 640, 380, 280, '#0a5e4b', 0.1]],
   sparkles: 50,
-  calm: [300, 650, 380, 420],
+  calm: [273, 540, 340, 360],
   groups: [
-    { align: 'xMinYMin',
-      ribbons: [{ a: [[-40, 250], [120, 190], [260, 130], [430, -40]], b: [[-40, 320], [170, 260], [310, 160], [470, -10]], n: 22, strength: 0.5, peak: 0.45, width: 50, twist: 0.7 }] },
-    { align: 'xMaxYMin',   // right of the title: the basketball and its light trail
-      ribbons: [{ a: [[-60, 960], [170, 820], [370, 590], [452, 318]], b: [[-60, 1120], [260, 940], [470, 540], [462, 384]], n: 40, strength: 1, peak: 0.88, endOp: 0.7, width: 90, twist: 0.8 }],
-      balls: [['basketball', 506, 346, 56, -40, 15, -50]] },
-    { align: 'xMaxYMin',   // right of the green button: the hoop, with a shot from the link line
-      arcs: [[360, 862, 400, 680, 486, 716]],
-      props: [['hoop', 492, 736, 80]],
-      balls: [['basketball', 404, 760, 16, -30, 25, -40]] },
-    { align: 'xMidYMax',   // bottom: one tidy row of three, below the text area
-      props: [['stopwatch', 105, 1252, 84, 10, 40], ['trophy', 300, 1250, 84, 0], ['racket', 495, 1244, 80, 18]] },
+    { align: 'xMidYMin', dim: 0.55, ...refGroup(REF.filter((i) => i[2] < 800), REF_RIBBONS.filter((r) => r[0][1] < 800), P2, 0.66, [547, PH]) },
+    { align: 'xMidYMax', dim: 0.6, ...refGroup(REF.filter((i) => i[2] >= 800), REF_RIBBONS.filter((r) => r[0][1] >= 800), P2, 0.66, [547, PH]) },
   ],
 });
 
