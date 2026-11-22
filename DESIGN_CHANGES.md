@@ -3,6 +3,16 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-22 (22): Title back to the blue label style; no darkening at the bottom; fewer, tidier icons on the phone (done by Claude, at the owner's request)
+
+Owner: "the title is too big, make it like before in blue but a bit bigger; the picture still has the black bar; too many icons on the phone, make the arrangement nicer".
+
+- **Title:** "Spotivity" (the h1) is back in the blue label style it had before (11): `--design-blue`, uppercase, letter spacing .16em, but larger: `clamp(17px, 1.35vw, 21px)` (was 12px; phone 15px, was 10px). The tagline is the white headline: `clamp(32px, 3.1vw, 46px)`, weight 650 (phone `clamp(28px, 7.6vw, 34px)`).
+- **Black bar:** the darkening at the bottom of the picture is gone. `bottomFade` from (20) was removed, and the vignette is now sides-only (a linear left/right gradient, nothing at the top or bottom edge), so on a real phone, where the toolbar hides part of the 100lvh layer, no darker band shows near the bottom.
+- **Phone:** its own calm layout instead of the full reference column. At the top: the basketball with its light trail right of the title, the racket right of the green button, and a few small marks. At the bottom (seen between sections while scrolling): two staggered rows, soccer ball / stopwatch / trophy, then whistle / volleyball, kept clear of the footer text. 7 icons instead of 16.
+- **Desktop:** the top-left soccer ball moved left and got smaller (`REF` 62,62 at 1.5), so it no longer touches the label.
+- `design-background.css?v=24`; SEO pages regenerated. Checked at 1440×900 and 390×844 (top, bottom of the page).
+
 ## 2026-11-22 (21): Smaller "Spotivity" title (done by Claude, at the owner's request)
 
 Owner: "you made Spotivity too big; same style as before but a bit smaller, it is exaggerated now".

@@ -518,12 +518,11 @@ function layout({ W, H, glows, sparkles = 0, calm, groups }) {
     inner += (g.decor || []).map((d) => decor(d, d[5])).join('') + (g.props || []).map(prop).join('') + (g.balls || []).map(ball).join('');
     body += box(g.align, 'meet', g.dim ? `<g opacity='${g.dim}'>${inner}</g>` : inner);
   }
-  defs += `<radialGradient id='vig' cx='.5' cy='.45' r='.75'><stop offset='.6' stop-color='${BASE}' stop-opacity='0'/><stop offset='1' stop-color='${BASE}' stop-opacity='.5'/></radialGradient>`;
+  // side vignette only (nothing darkens the top or bottom edge, so no band appears there)
+  defs += `<linearGradient id='vig' x1='0' y1='0' x2='1' y2='0'><stop offset='0' stop-color='${BASE}' stop-opacity='.35'/><stop offset='.12' stop-color='${BASE}' stop-opacity='0'/><stop offset='.88' stop-color='${BASE}' stop-opacity='0'/><stop offset='1' stop-color='${BASE}' stop-opacity='.35'/></linearGradient>`;
   body += `<rect width='100%' height='100%' fill='url(#vig)'/>`;
   // soft fade into the page base along the bottom edge (no hard edge against the phone's
   // toolbar or overscroll area, which show the plain base colour)
-  defs += `<linearGradient id='bottomFade' x1='0' y1='0' x2='0' y2='1'><stop offset='.8' stop-color='${BASE}' stop-opacity='0'/><stop offset='.93' stop-color='${BASE}' stop-opacity='.55'/><stop offset='1' stop-color='${BASE}' stop-opacity='.9'/></linearGradient>`;
-  body += `<rect width='100%' height='100%' fill='url(#bottomFade)'/>`;
   return `<svg xmlns='http://www.w3.org/2000/svg' width='100%' height='100%'><defs>${defs}</defs>${body}</svg>`;
 }
 
@@ -531,7 +530,7 @@ function layout({ W, H, glows, sparkles = 0, calm, groups }) {
 // Positions measured from the owner's photo Desktop\Spotivity\FundalFinal.jpeg (547 x 1600),
 // drawn with the 3D icons above. [kind, x, y, scale (old 100-unit icon), rotation, variant]
 const REF = [
-  ['soccer', 95, 62, 1.78, 0], ['dots', 470, 40, 3, 3], ['trophy', 402, 166, 1.45, -4], ['plus', 222, 183],
+  ['soccer', 62, 62, 1.5, 0], ['dots', 470, 40, 3, 3], ['trophy', 402, 166, 1.45, -4], ['plus', 222, 183],
   ['ring', 332, 240, 7], ['whistle', 218, 282, 1.15, -22], ['ring', 44, 358, 7], ['cross', 98, 346],
   ['basketball', 476, 366, 1.58, 0], ['stopwatch', 100, 452, 1.05, 0], ['cross', 226, 406],
   ['dots', 16, 516, 4, 4], ['dots', 310, 540, 4, 3], ['volleyball', 187, 636, 1.36, 0], ['jersey', 468, 684, 1.15, 6],
@@ -617,20 +616,30 @@ const wide = layout({
     ...zoned(REF.filter((i) => i[2] >= 800), REF_RIBBONS.filter((r) => r[0][1] >= 800), WR, 0.8, [1600, 1000], behindWide, 'xMaxYMid', 0.2),
   ],
 });
-// Portrait screens: the whole photo across the full width, fitted into 547 x 1184 (upper
-// half glued to the top, lower half to the bottom), so nothing is cut. Pieces at the edges
-// stay bright; only the ones right behind the text block are softened.
-const PH = 1184; const PY = (y) => 235 + y * 0.585;
-const P2 = (x, y) => [x, PY(y)];
-const behindPhone = (x, y) => x > 70 && x < 470 && y > 250 && y < 970;
+// Portrait screens (547 x 1184, the phone's shape). Fewer pieces, placed with care:
+// top (glued to the top, below the header): the basketball with its light trail right of
+// the title and the racket right of the green button; bottom (glued to the bottom, seen in
+// the gaps between sections while scrolling): two staggered rows, big pieces on the outside.
 const phone = layout({
-  W: 547, H: PH,
-  glows: [[500, -60, 520, 520, '#11936f', 0.26], [60, 980, 460, 320, '#0e8064', 0.12], [280, 640, 380, 280, '#0a5e4b', 0.1]],
-  sparkles: 50,
-  calm: [273, 560, 300, 330],
+  W: 547, H: 1184,
+  glows: [[500, -60, 520, 520, '#11936f', 0.24], [60, 980, 460, 320, '#0e8064', 0.12], [280, 640, 380, 280, '#0a5e4b', 0.1]],
+  sparkles: 34,
+  calm: [250, 560, 300, 330],
   groups: [
-    ...zoned(REF.filter((i) => i[2] < 800), REF_RIBBONS.filter((r) => r[0][1] < 800), P2, 0.7, [547, PH], behindPhone, 'xMidYMin', 0.35),
-    ...zoned(REF.filter((i) => i[2] >= 800), REF_RIBBONS.filter((r) => r[0][1] >= 800), P2, 0.7, [547, PH], behindPhone, 'xMidYMax', 0.35),
+    { align: 'xMidYMin',
+      ribbons: [
+        { a: [[-40, 520], [140, 470], [330, 420], [452, 266]], b: [[-40, 600], [200, 540], [400, 400], [466, 330]], n: 34, strength: 0.9, peak: 0.86, endOp: 0.6, width: 70, twist: 0.8 },
+      ],
+      decor: [['dots', 498, 470, 3, 3, 0.8], ['ring', 512, 560, 7, 0, 0.8], ['plus', 380, 236, 0, 0, 0.8], ['cross', 28, 236, 0, 0, 0.8]],
+      props: [['racket', 470, 658, 84, 22]],
+      balls: [['basketball', 478, 292, 44, -40, 15, -50]] },
+    { align: 'xMidYMax',
+      ribbons: [
+        { a: [[-40, 1070], [160, 1030], [360, 960], [600, 820]], b: [[-40, 1110], [200, 1070], [400, 1000], [600, 880]], n: 26, strength: 0.6, peak: 0.5, width: 60, twist: 0.75 },
+      ],
+      decor: [['ring', 275, 900, 9, 0, 0.8], ['dots', 252, 1040, 3, 2, 0.8], ['plus', 40, 975, 0, 0, 0.8], ['cross', 510, 975, 0, 0, 0.8]],
+      props: [['stopwatch', 290, 965, 62, 10, 40], ['trophy', 462, 912, 76, 0], ['whistle', 120, 1040, 66, -16, 'M30 -30C50 -70 30 -110 70 -150']],
+      balls: [['soccer', 90, 912, 44, 18, -14, 8], ['volleyball', 455, 1036, 30, 45, 35, 0]] },
   ],
 });
 
