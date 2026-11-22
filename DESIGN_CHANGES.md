@@ -3,6 +3,18 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-22 (13): Arena: scroll fix, stopwatches, whistle, trophy, cones, goals and corner flags (done by Claude, at the owner's request)
+
+Owner: "the idea is good but make it much better; there are bugs when I scroll; add the stopwatches and the whistle and a few more things in the same artwork".
+
+- **Scroll fix** (`css/design-background.css`, Arena block): the fixed layer is now `inset: 0 0 auto 0; height: 100lvh` (fallback `100vh`), so it no longer resizes when a phone's address bar slides in or out (each resize re-rasterised the whole picture: stutter or a jump). It is also promoted to its own GPU layer (`transform: translateZ(0)`, `will-change: transform`, `contain: strict`).
+- **No SVG filters left** in the generator (the Gaussian blurs on beams and out-of-focus balls were the expensive part of every re-raster). Beams are now three nested gradient cones; balls are sharp.
+- Measured in Edge (phone emulation, CPU slowed 4x): scrolling with the background is as smooth as with no background at all. The rare ~120 ms frames that remain also happen without it, so they come from the rest of the page.
+- **New objects** in the same back-lit 3D style (`objects` in `scripts/design/fundal-arena.mjs`): a stopwatch (crown, pushers, rim-lit case, dial with 60 ticks, sub-dial, glowing hand, glass sheen), a whistle with a lanyard cord and sound waves, a trophy with a glowing star, and training cones standing on the pitch in perspective. The pitch now also has goals with nets and corner flags.
+- Placement: desktop has a big stopwatch at the left edge, a small one top right, the whistle above the photo card, the trophy bottom left and a cone slalom near the centre circle. Phone has the stopwatches at the edges and the whistle, trophy and cones low on the right.
+- Cones are placed by screen position (`cones: [[x, y], ...]`, converted to the grass by `unproject`). `design-background.css?v=15`; SEO pages regenerated.
+- **Revert:** `git revert` this commit then `node scripts/generate-seo-pages.mjs`; tag `design-before-arena` = before Arena.
+
 ## 2026-11-22 (12): "Arena" background replaces "Fundal Final" (done by Claude, at the owner's request)
 
 Owner: "still looks clumsy and copied; make it authentic, beautiful, eye-catching and well made". The old background was a repeated stock-style icon wallpaper (whistles, trophies, jerseys, dots) that also sat behind the hero text.

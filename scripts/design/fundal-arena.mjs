@@ -110,8 +110,8 @@ const seams = {
 };
 
 // A ball: opaque dark body (hides what is behind), seams, form shadow, top rim light.
-// [kind, cx, cy, r, yaw, pitch, roll, blur, contactShadow]
-function ball([kind, cx, cy, r, yaw, pitch, roll, blur = 0, shadow = false]) {
+// [kind, cx, cy, r, yaw, pitch, roll, contactShadow]
+function ball([kind, cx, cy, r, yaw, pitch, roll, shadow = false]) {
   const s = r / 50;
   const { panels = '', lines } = seams[kind](rotator(yaw, pitch, roll));
   const sw = (px) => f(px / s * 100) / 100;     // screen px -> local units
@@ -122,8 +122,7 @@ function ball([kind, cx, cy, r, yaw, pitch, roll, blur = 0, shadow = false]) {
     + `<circle r='${f(50 - sw(0.6))}' fill='none' stroke='url(#ballRim)' stroke-width='${sw(2.2)}'/>`
     + `<circle r='50' fill='url(#ballSheen)'/>`;
   const contact = shadow ? `<ellipse cx='${f(cx + r * 0.1)}' cy='${f(cy + r * 0.96)}' rx='${f(r * 1.05)}' ry='${f(r * 0.2)}' fill='url(#contact)'/>` : '';
-  const filter = blur ? ` filter='url(#blur${blur})'` : '';
-  return `${contact}<g transform='translate(${f(cx)} ${f(cy)}) scale(${f(s * 1000) / 1000})'${filter}>${body}</g>`;
+  return `${contact}<g transform='translate(${f(cx)} ${f(cy)}) scale(${f(s * 1000) / 1000})'>${body}</g>`;
 }
 
 // ---------------------------------------------------------------- the pitch in perspective
@@ -136,6 +135,13 @@ function pitch(cam, H) {
     const X = dx * Math.cos(yaw) - dz * Math.sin(yaw);
     const Z = dx * Math.sin(yaw) + dz * Math.cos(yaw);
     return Z < 1.5 ? null : [cam.cx + cam.focal * X / Z, cam.horizon + cam.focal * cam.height / Z];
+  };
+  // a point h metres above the grass, plus the screen size of 1 metre at that spot
+  const projectH = ([x, z], h) => {
+    const dx = x - cam.x; const dz = z - cam.z;
+    const X = dx * Math.cos(yaw) - dz * Math.sin(yaw);
+    const Z = dx * Math.sin(yaw) + dz * Math.cos(yaw);
+    return Z < 1.5 ? null : [cam.cx + cam.focal * X / Z, cam.horizon + cam.focal * (cam.height - h) / Z, cam.focal / Z];
   };
   const path = (pts, closed) => {
     let d = ''; let open = false;
@@ -176,7 +182,31 @@ function pitch(cam, H) {
     + `<path d='${lines}' fill='none' stroke='${GLOW}' stroke-opacity='.05' stroke-width='7' stroke-linejoin='round'/>`
     + `<path d='${lines}' fill='none' stroke='url(#pitchFade)' stroke-width='1.3' stroke-linejoin='round' stroke-linecap='round'/>`
     + `<g fill='url(#pitchFade)'>${spots}</g>`;
-  return { defs: fade, svg };
+  // goals (posts, crossbar, net) and corner flags standing up from the grass
+  let frames = ''; let nets = ''; let flags = '';
+  const up = (pts) => { const q = pts.map(([x, z, h]) => projectH([x, z], h)); return q.some((v) => !v || v[1] > H + 200) ? '' : polyline(q); };
+  for (const e of [1, -1]) {
+    const gz = e * L; const bz = e * (L + 2);
+    frames += up([[-3.66, gz, 0], [-3.66, gz, 2.44], [3.66, gz, 2.44], [3.66, gz, 0]]);
+    nets += up([[-3.66, gz, 2.44], [-3.66, bz, 1.6], [-3.66, bz, 0]]) + up([[3.66, gz, 2.44], [3.66, bz, 1.6], [3.66, bz, 0]]) + up([[-3.66, bz, 1.6], [3.66, bz, 1.6]]);
+    for (let i = 1; i < 12; i++) { const x = -3.66 + i * 7.32 / 12; nets += up([[x, gz, 2.44], [x, bz, 1.6], [x, bz, 0]]); }
+    for (let j = 1; j < 5; j++) { const h = j * 0.4; nets += up([[-3.66, bz, h], [3.66, bz, h]]); }
+    for (const sx of [1, -1]) {
+      const b0 = projectH([sx * Wd, gz], 0); const t0 = projectH([sx * Wd, gz], 1.5);
+      if (!b0 || !t0 || b0[1] > H + 50) continue;
+      const m = t0[2];
+      flags += `<path d='M${P(b0[0], b0[1])}L${P(t0[0], t0[1])}' stroke='#4fe0b6' stroke-opacity='.55' stroke-width='${f(Math.max(0.8, m * 0.05))}'/>`
+        + `<path d='M${P(t0[0], t0[1])}l${f(m * 0.55 * -sx)} ${f(m * 0.18)}l${f(m * 0.55 * sx)} ${f(m * 0.2)}Z' fill='#4fe0b6' fill-opacity='.45'/>`;
+    }
+  }
+  const furniture = `<path d='${nets}' fill='none' stroke='${GLOW}' stroke-opacity='.22' stroke-width='.6'/>`
+    + `<path d='${frames}' fill='none' stroke='#5fe8bf' stroke-opacity='.6' stroke-width='1.4' stroke-linejoin='round'/>${flags}`;
+  // screen point on the grass -> ground point (used to place props by eye)
+  const unproject = ([sx, sy]) => {
+    const Z = cam.focal * cam.height / (sy - cam.horizon); const X = (sx - cam.cx) * Z / cam.focal;
+    return [cam.x + X * Math.cos(yaw) + Z * Math.sin(yaw), cam.z - X * Math.sin(yaw) + Z * Math.cos(yaw)];
+  };
+  return { defs: fade, svg: svg + furniture, project, projectH, unproject };
 }
 
 // ---------------------------------------------------------------- silk light ribbons
@@ -208,6 +238,67 @@ function ribbon(rb, id) {
   return { defs: g + gh, svg: `<g fill='none' stroke='url(#${id})' stroke-linecap='round'><path d='${sheet}' fill='url(#${id})' fill-opacity='.22' stroke='none'/>${halo}<g stroke-width='1'>${strands}</g>${crest}</g>` };
 }
 
+// ---------------------------------------------------------------- props (same back-lit 3D style)
+const rim = (w) => `stroke='url(#ballRim)' stroke-width='${w}'`;
+const objects = {
+  // stopwatch: crown, two pushers, metal case with rim light, dark dial, ticks, glowing hand
+  stopwatch(a = 42) {
+    let ticks = '';
+    for (let i = 0; i < 60; i++) {
+      const big = i % 5 === 0; const ang = i * 6 * Math.PI / 180;
+      const r1 = big ? 30 : 34.5; const r2 = 38;
+      ticks += `M${P(r1 * Math.sin(ang), -r1 * Math.cos(ang))}L${P(r2 * Math.sin(ang), -r2 * Math.cos(ang))}`;
+    }
+    const hx = 33 * Math.sin(a * Math.PI / 180); const hy = -33 * Math.cos(a * Math.PI / 180);
+    const hand = `M${P(-hx * 0.22, -hy * 0.22)}L${P(hx, hy)}`;
+    const pusher = (deg) => `<g transform='rotate(${deg})'><rect x='-6' y='-61' width='12' height='11' rx='2' fill='url(#objBody)' ${rim(1.2)}/></g>`;
+    return `<rect x='-6' y='-62' width='12' height='14' rx='2' fill='url(#objBody)' ${rim(1.2)}/><rect x='-14' y='-73' width='28' height='12' rx='5' fill='url(#objBody)' ${rim(1.4)}/>${pusher(-42)}${pusher(42)}`
+      + `<circle r='50' fill='url(#ballBody)'/><circle r='50' fill='url(#ballShade)'/><circle r='49' fill='none' ${rim(2)}/>`
+      + `<circle r='41.5' fill='#010d0c' stroke='${SEAM}' stroke-opacity='.45' stroke-width='1.2'/>`
+      + `<path d='${ticks}' stroke='${SEAM}' stroke-opacity='.6' stroke-width='1.1' stroke-linecap='round'/>`
+      + `<circle cy='15' r='8.5' fill='none' stroke='${SEAM}' stroke-opacity='.4' stroke-width='1'/><path d='M0 15L4 10' stroke='${SEAM}' stroke-opacity='.6' stroke-width='1.2' stroke-linecap='round'/>`
+      + `<path d='${hand}' stroke='#7dffd6' stroke-opacity='.18' stroke-width='6' stroke-linecap='round'/><path d='${hand}' stroke='#8dffdc' stroke-width='2' stroke-linecap='round'/><circle r='3.4' fill='#8dffdc'/>`
+      + `<path d='M-31 -16A35 35 0 0 1 4 -37' fill='none' stroke='#c8fff0' stroke-opacity='.3' stroke-width='3' stroke-linecap='round'/><circle r='50' fill='url(#ballSheen)'/>`;
+  },
+  // whistle in side view: mouthpiece, round chamber, sound hole, lanyard ring + cord, sound waves
+  whistle(cord = 'M30 -30C70 -95 150 -30 210 -120') {
+    const body = 'M-52 -16L4 -22A27 27 0 1 1 -4 20Q-8 8 -14 4L-52 2Q-57 -7 -52 -16Z';
+    const waves = [-112, -82, -52].map((d) => { const r = d * Math.PI / 180; return `M${P(8 + 12 * Math.cos(r), -30 + 12 * Math.sin(r))}L${P(8 + 22 * Math.cos(r), -30 + 22 * Math.sin(r))}`; }).join('');
+    return `<path d='${cord}' fill='none' stroke='url(#cordFade)' stroke-width='2.2' stroke-linecap='round'/><path d='${cord}' fill='none' stroke='url(#cordFade)' stroke-width='.8' stroke-linecap='round' transform='translate(3 2)'/>`
+      + `<circle cx='28' cy='-25' r='6.5' fill='none' ${rim(2)}/>`
+      + `<path d='${body}' fill='url(#objBody)'/><path d='${body}' fill='url(#objShade)'/><path d='${body}' fill='none' ${rim(1.8)} stroke-linejoin='round'/>`
+      + `<path d='M-49 -9L2 -14' stroke='${SEAM}' stroke-opacity='.35' stroke-width='1.1'/><path d='M-47 -14L0 -19.5' stroke='#c8fff0' stroke-opacity='.4' stroke-width='1.4' stroke-linecap='round'/>`
+      + `<path d='M-2 -21.5L13 -23.5' stroke='#000' stroke-opacity='.7' stroke-width='3.5' stroke-linecap='round'/>`
+      + `<circle cx='18' cy='4' r='15' fill='none' stroke='${SEAM}' stroke-opacity='.25' stroke-width='1'/>`
+      + `<path d='${waves}' stroke='#8dffdc' stroke-opacity='.75' stroke-width='2' stroke-linecap='round'/>`;
+  },
+  // trophy cup: bowl, handles, stem, base plinth, glowing star
+  trophy() {
+    const bowl = 'M-28 -44H28C28 -20 18 -2 4 3C3 12 4 19 12 26H-12C-4 19 -3 12 -4 3C-18 -2 -28 -20 -28 -44Z';
+    const handles = 'M-27 -37C-44 -40 -50 -26 -42 -16C-37 -10 -29 -8 -21 -10M27 -37C44 -40 50 -26 42 -16C37 -10 29 -8 21 -10';
+    const base = 'M-15 26H15L20 42H-20Z';
+    const st = []; for (let i = 0; i < 10; i++) { const r = i % 2 ? 4 : 9.5; const t = (-90 + i * 36) * Math.PI / 180; st.push([r * Math.cos(t), -24 + r * Math.sin(t)]); }
+    return `<path d='${handles}' fill='none' stroke='#0b3a33' stroke-width='6' stroke-linecap='round'/><path d='${handles}' fill='none' ${rim(1.4)} stroke-linecap='round'/>`
+      + `<path d='${bowl}' fill='url(#objBody)'/><path d='${bowl}' fill='url(#objShade)'/><path d='${bowl}' fill='none' ${rim(1.8)}/>`
+      + `<ellipse cy='-44' rx='28' ry='5' fill='#021412' ${rim(1.6)}/>`
+      + `<path d='${base}' fill='url(#objBody)' ${rim(1.4)}/><rect x='-26' y='42' width='52' height='10' rx='1.5' fill='url(#objBody)' ${rim(1.4)}/><path d='M-9 47H9' stroke='${SEAM}' stroke-opacity='.5' stroke-width='1.4'/>`
+      + `<path d='${poly(st)}' fill='#8dffdc' fill-opacity='.18'/><path d='${poly(st)}' fill='none' stroke='#8dffdc' stroke-opacity='.85' stroke-width='1.3' stroke-linejoin='round'/>`
+      + `<path d='M-20 -38C-20 -24 -14 -12 -6 -6' fill='none' stroke='#c8fff0' stroke-opacity='.3' stroke-width='2.5' stroke-linecap='round'/>`;
+  },
+  // training cone (stands on the grass at 0,0; local height 100)
+  cone() {
+    const body = 'M-7 -100Q0 -104 7 -100L38 -10Q0 4 -38 -10Z';
+    return `<path d='M-50 -8Q0 10 50 -8L46 -2Q0 16 -46 -2Z' fill='url(#objBody)' ${rim(1.2)}/><path d='${body}' fill='url(#objBody)'/><path d='${body}' fill='url(#objShade)'/>`
+      + `<path d='M-21 -55Q0 -50 21 -55L27 -38Q0 -31 -27 -38Z' fill='#8dffdc' fill-opacity='.28'/><path d='${body}' fill='none' ${rim(1.6)} stroke-linejoin='round'/>`;
+  },
+};
+// [kind, cx, cy, size (local 100 units -> size px), rotation, arg, contact shadow]
+function prop([kind, cx, cy, size, rot = 0, arg, shadow = false]) {
+  const s = size / 100;
+  const contact = shadow ? `<ellipse cx='${f(cx)}' cy='${f(cy + size * 0.5)}' rx='${f(size * 0.42)}' ry='${f(size * 0.07)}' fill='url(#contact)'/>` : '';
+  return `${contact}<g transform='translate(${f(cx)} ${f(cy)}) rotate(${rot}) scale(${f(s * 1000) / 1000})'>${objects[kind](arg)}</g>`;
+}
+
 // ---------------------------------------------------------------- scenes
 const commonDefs = `
 <radialGradient id='ballBody' cx='.36' cy='.3' r='.78'><stop offset='0' stop-color='#1a6a57'/><stop offset='.45' stop-color='#0b3a33'/><stop offset='1' stop-color='#031b18'/></radialGradient>
@@ -215,16 +306,16 @@ const commonDefs = `
 <linearGradient id='ballRim' x1='.2' y1='0' x2='.55' y2='1'><stop offset='0' stop-color='#8dffdc' stop-opacity='1'/><stop offset='.35' stop-color='${GLOW}' stop-opacity='.55'/><stop offset='.7' stop-color='${GLOW}' stop-opacity='0'/></linearGradient>
 <radialGradient id='ballSheen' cx='.3' cy='.22' r='.32'><stop offset='0' stop-color='#b5ffe8' stop-opacity='.26'/><stop offset='1' stop-color='#9ff5dc' stop-opacity='0'/></radialGradient>
 <radialGradient id='contact'><stop offset='0' stop-color='#000' stop-opacity='.75'/><stop offset='1' stop-color='#000' stop-opacity='0'/></radialGradient>
-<filter id='blur2' x='-30%' y='-30%' width='160%' height='160%'><feGaussianBlur stdDeviation='2'/></filter>
-<filter id='blur5' x='-30%' y='-30%' width='160%' height='160%'><feGaussianBlur stdDeviation='5'/></filter>
-<filter id='blur9' x='-40%' y='-40%' width='180%' height='180%'><feGaussianBlur stdDeviation='9'/></filter>`.replace(/\n/g, '');
+<linearGradient id='objBody' x1='.15' y1='0' x2='.85' y2='1'><stop offset='0' stop-color='#1a6a57'/><stop offset='.45' stop-color='#0b3a33'/><stop offset='1' stop-color='#031b18'/></linearGradient>
+<linearGradient id='objShade' x1='0' y1='0' x2='0' y2='1'><stop offset='.35' stop-color='#000' stop-opacity='0'/><stop offset='1' stop-color='#000' stop-opacity='.5'/></linearGradient>
+<linearGradient id='cordFade' x1='0' y1='1' x2='1' y2='0'><stop offset='0' stop-color='${SEAM}' stop-opacity='.7'/><stop offset='1' stop-color='${SEAM}' stop-opacity='0'/></linearGradient>`.replace(/\n/g, '');
 
 const glow = (id, cx, cy, rx, ry, color, op) => ({
   defs: `<radialGradient id='${id}' cx='${cx}' cy='${cy}' r='1' gradientUnits='userSpaceOnUse' gradientTransform='translate(${cx} ${cy}) scale(${rx} ${ry}) translate(${-cx} ${-cy})'><stop offset='0' stop-color='${color}' stop-opacity='${op}'/><stop offset='.45' stop-color='${color}' stop-opacity='${f(op * 0.35 * 1000) / 1000}'/><stop offset='1' stop-color='${color}' stop-opacity='0'/></radialGradient>`,
   svg: (W, H) => `<rect width='${W}' height='${H}' fill='url(#${id})'/>`,
 });
 
-function scene({ W, H, glows, beams = [], cam, ribbons, balls, calm }) {
+function scene({ W, H, glows, beams = [], cam, ribbons, balls, props = [], cones = [], calm }) {
   let defs = commonDefs; let body = `<rect width='${W}' height='${H}' fill='${BASE}'/>`;
   glows.forEach((g, i) => { const gl = glow(`gl${i}`, ...g); defs += gl.defs; body += gl.svg(W, H); });
   // floodlight beams: soft cones from lights above the screen
@@ -232,17 +323,24 @@ function scene({ W, H, glows, beams = [], cam, ribbons, balls, calm }) {
     const pt2 = (d, l) => [ax + l * Math.cos(d * Math.PI / 180), ay + l * Math.sin(d * Math.PI / 180)];
     const [ex, ey] = pt2(deg, len);
     defs += `<linearGradient id='bm${i}' gradientUnits='userSpaceOnUse' x1='${ax}' y1='${ay}' x2='${f(ex)}' y2='${f(ey)}'><stop offset='0' stop-color='#7dffd6' stop-opacity='${op}'/><stop offset='.5' stop-color='${GLOW}' stop-opacity='${f(op * 0.4 * 1000) / 1000}'/><stop offset='1' stop-color='${GLOW}' stop-opacity='0'/></linearGradient>`;
-    body += `<path d='${poly([[ax, ay], pt2(deg - spread / 2, len), pt2(deg + spread / 2, len)])}' fill='url(#bm${i})' filter='url(#blur9)'/>`;
+    for (const k of [1.6, 1, 0.5]) body += `<path d='${poly([[ax, ay], pt2(deg - spread * k / 2, len), pt2(deg + spread * k / 2, len)])}' fill='url(#bm${i})' fill-opacity='.45'/>`;
   });
   const pt = pitch(cam, H); defs += pt.defs;
   // floodlight pool on the grass
   defs += `<radialGradient id='pool' gradientUnits='userSpaceOnUse' cx='${cam.poolX}' cy='${H}' r='1' gradientTransform='translate(${cam.poolX} ${H}) scale(${W * 0.55} ${(H - cam.horizon) * 1.1}) translate(${-cam.poolX} ${-H})'><stop offset='0' stop-color='${GLOW}' stop-opacity='.09'/><stop offset='1' stop-color='${GLOW}' stop-opacity='0'/></radialGradient>`;
   body += `<rect y='${cam.horizon}' width='${W}' height='${H - cam.horizon}' fill='url(#pool)'/>` + pt.svg;
+  // training cones standing on the pitch (perspective size, contact shadow)
+  for (const c of cones) {
+    const q = pt.projectH(pt.unproject(c), 0); if (!q) continue;
+    const hgt = q[2] * 1.2;   // drawn a bit larger than life so they read
+    body += `<ellipse cx='${f(q[0])}' cy='${f(q[1])}' rx='${f(hgt * 0.6)}' ry='${f(hgt * 0.13)}' fill='url(#contact)'/><g transform='translate(${f(q[0])} ${f(q[1])}) scale(${f(hgt / 100 * 1000) / 1000})'>${objects.cone()}</g>`;
+  }
   // a calm zone behind the main text: ribbons are dimmed there
   defs += `<radialGradient id='calmG' gradientUnits='userSpaceOnUse' cx='${calm[0]}' cy='${calm[1]}' r='1' gradientTransform='translate(${calm[0]} ${calm[1]}) scale(${calm[2]} ${calm[3]}) translate(${-calm[0]} ${-calm[1]})'><stop offset='0' stop-color='#000' stop-opacity='.62'/><stop offset='1' stop-color='#000' stop-opacity='0'/></radialGradient><mask id='calm' maskUnits='userSpaceOnUse' x='0' y='0' width='${W}' height='${H}'><rect width='${W}' height='${H}' fill='#fff'/><rect width='${W}' height='${H}' fill='url(#calmG)'/></mask>`;
   let rib = '';
   ribbons.forEach((r, i) => { const rb = ribbon(r, `rb${i}`); defs += rb.defs; rib += rb.svg; });
   body += `<g mask='url(#calm)'>${rib}</g>`;
+  body += props.map(prop).join('');
   body += balls.map(ball).join('');
   // vignette: edges sink into the base colour
   defs += `<radialGradient id='vig' cx='.5' cy='.45' r='.75'><stop offset='.6' stop-color='${BASE}' stop-opacity='0'/><stop offset='1' stop-color='${BASE}' stop-opacity='.55'/></radialGradient>`;
@@ -263,11 +361,18 @@ const wide = scene({
     { a: [[-60, 200], [240, 110], [520, 90], [840, -60]], b: [[-60, 290], [320, 200], [580, 110], [880, -10]], n: 26, strength: 0.6, peak: 0.42, width: 60, twist: 0.7 },
     { a: [[1700, 450], [1440, 580], [1360, 820], [1230, 1070]], b: [[1700, 590], [1520, 720], [1480, 900], [1400, 1070]], n: 30, strength: 0.75, peak: 0.45, width: 70, twist: 0.75 },
   ],
+  cones: [[372, 905], [470, 935], [580, 966], [700, 1000]],   // screen positions on the grass
+  props: [
+    ['stopwatch', 58, 585, 180, 14, 40],
+    ['stopwatch', 1522, 196, 62, -16, 300],
+    ['whistle', 905, 272, 130, -12],
+    ['trophy', 92, 905, 140, -4, undefined, true],
+  ],
   balls: [
-    ['volleyball', 1540, 470, 40, 45, 35, 0, 2],
+    ['volleyball', 1545, 478, 40, 45, 35, 0],
     ['tennis', 1338, 264, 30, 20, 30, 10],
     ['basketball', 70, 215, 135, -40, 15, -50],
-    ['soccer', 1445, 840, 150, 18, -12, 8, 0, true],
+    ['soccer', 1445, 840, 150, 18, -12, 8, true],
   ],
 });
 // Portrait screens (drawn at 600x1400, shown full width from the top).
@@ -282,10 +387,17 @@ const phone = scene({
     { a: [[-60, 960], [170, 820], [360, 560], [482, 296]], b: [[-60, 1120], [260, 940], [470, 520], [494, 396]], n: 40, strength: 1, peak: 0.88, endOp: 0.7, width: 90, twist: 0.8 },
     { a: [[-40, 250], [120, 190], [260, 130], [430, -40]], b: [[-40, 320], [170, 260], [310, 160], [470, -10]], n: 22, strength: 0.55, peak: 0.45, width: 50, twist: 0.7 },
   ],
+  cones: [[300, 1255], [372, 1290], [452, 1330]],
+  props: [
+    ['stopwatch', -8, 770, 112, 12, 40],
+    ['stopwatch', 572, 618, 46, -16, 300],
+    ['whistle', 498, 1080, 92, -18, 'M30 -30C60 -80 20 -150 90 -200'],
+    ['trophy', 500, 1218, 100, 0, undefined, true],
+  ],
   balls: [
-    ['volleyball', 588, 905, 36, 45, 35, 0, 2],
+    ['volleyball', 590, 905, 36, 45, 35, 0],
     ['basketball', 585, 330, 112, -40, 15, -50],
-    ['soccer', 100, 1185, 125, 18, -12, 8, 0, true],
+    ['soccer', 100, 1185, 125, 18, -12, 8, true],
   ],
 });
 // Fine grain (tiny repeating tile): breaks up the banding of dark gradients.
