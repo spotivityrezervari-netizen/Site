@@ -599,62 +599,66 @@ function zoned(items, ribbons, map, k, box, inZone, align, soft) {
   return [{ align, ...refGroup(clear, ribbons, map, k, box) }, { align, dim: soft, ...refGroup(behind, [], map, k, box) }];
 }
 
-// Wide screens (coordinates 1600 x 1000). Every piece sits in a free area of the page (never
-// behind the text or the photo card) and belongs to a small "story":
-//   left column  - basketball shot into the hoop (dashed flight), volleyball, medal, trophy;
-//   right column - stopwatch, the racket with the tennis ball and its light trail, the
-//                  referee's whistle, the location pin, the soccer ball with its trail;
-//   top band     - the scoreboard; bottom band - the booking path: jersey -> calendar ->
-//                  pin -> stopwatch, linked by a dashed line.
-// Columns are glued to the side edges, bands to the top/bottom, so the free areas line up on
-// every desktop width (checked 1440 and 1920).
+// ---------------------------------------------------------------- reference layout, cleaned
+// The owner's reference photo (REF / REF_RIBBONS) placed as it is: zigzag of big pieces,
+// light ribbons sweeping between them, small marks in the gaps. Two rules on top of it:
+//   1. a piece never sits behind the page's text or photo card (it is left out there);
+//   2. pieces never touch each other (a later piece that would touch an earlier one is left out).
+function itemRadius(kind, s, k) {
+  if (kind === 'dots') return 14 * k * Math.max(s, 1);
+  if (DECOR.has(kind)) return 12 * k;
+  if (BALL_POSE[kind]) return 50 * s * k;
+  return PROP_SIZE[kind] * s * k * 0.6;
+}
+function cleanRef(items, map, k, zones, taken = []) {
+  const keep = [];
+  for (const it of items) {
+    const [kind, x0, y0, s] = it;
+    const [x, y] = map(x0, y0);
+    const r = itemRadius(kind, s || 1, k);
+    if (zones.some(([a, b, c, d]) => x + r > a && x - r < c && y + r > b && y - r < d)) continue;
+    if (taken.some(([tx, ty, tr]) => Math.hypot(tx - x, ty - y) < tr + r + 10)) continue;
+    taken.push([x, y, r]); keep.push(it);
+  }
+  return keep;
+}
+
+// Wide screens (1600 x 1000): the reference column drawn three times side by side, each
+// showing a different stretch of it (top / middle / bottom), so it reads like the photo,
+// not like a repeated tile. Columns are glued left / centre / right.
+const ZONES_WIDE = [[150, 260, 805, 830], [865, 315, 1435, 735], [1140, 800, 1420, 850], [0, 0, 1600, 150]];
+const COLS = [[0, 0, 'xMinYMid'], [533, 290, 'xMidYMid'], [1067, 580, 'xMaxYMid']];
+const KW = 0.78;
+const takenWide = [];
+const wideGroups = COLS.map(([x0, refTop, align]) => {
+  const map = (x, y) => [x0 + x * 0.975, 150 + (y - refTop) * 0.82];
+  const inView = REF.filter((i) => { const y = map(i[1], i[2])[1]; return y > 120 && y < 1000; });
+  const items = cleanRef(inView, map, KW, ZONES_WIDE, takenWide);
+  const ribbons = REF_RIBBONS.filter((r) => { const ys = [r[0][1], r[1][1]].map((y) => map(0, y)[1]); return Math.max(...ys) > 150 && Math.min(...ys) < 1000; });
+  return { align, ...refGroup(items, ribbons, map, KW, [1600, 1000]) };
+});
 const wide = layout({
   W: 1600, H: 1000,
   glows: [[140, -80, 950, 720, '#11936f', 0.22], [1480, -60, 760, 620, '#0e8064', 0.15], [1180, 640, 620, 380, '#0a5e4b', 0.1], [760, 1060, 820, 300, '#0e8064', 0.12]],
-  sparkles: 55,
-  calm: [470, 520, 420, 300],
-  groups: [
-    { align: 'xMinYMid',
-      arcs: [[118, 248, 170, 300, 104, 372]],
-      decor: [['dots', 26, 520, 2, 3, 1], ['ring', 140, 680, 6, 0, 1], ['plus', 30, 835, 0, 0, 1]],
-      props: [['hoop', 80, 440, 82], ['medal', 74, 770, 60, -6], ['trophy', 84, 912, 92, 0]],
-      balls: [['basketball', 78, 236, 46, -40, 15, -50], ['volleyball', 82, 612, 38, 45, 35, 0]] },
-    { align: 'xMaxYMid',
-      ribbons: [
-        { a: [[820, 330], [1050, 260], [1260, 220], [1446, 236]], b: [[820, 372], [1080, 300], [1290, 262], [1458, 262]], n: 34, strength: 0.9, peak: 0.85, endOp: 0.6, width: 70, twist: 0.8 },
-        { a: [[1110, 958], [1250, 948], [1370, 918], [1446, 892]], b: [[1110, 984], [1270, 976], [1390, 948], [1460, 926]], n: 26, strength: 0.7, peak: 0.8, endOp: 0.5, width: 44, twist: 0.75 },   // fades in from the left, fully on screen
-      ],
-      decor: [['dots', 1556, 470, 2, 3, 1], ['cross', 1440, 560, 0, 0, 1], ['ring', 1572, 790, 7, 0, 1]],
-      props: [['stopwatch', 1540, 196, 60, -14, 300], ['racket', 1522, 372, 84, 18], ['whistle', 1500, 604, 76, -12, 'M30 -30C44 -80 0 -110 24 -160'], ['pin', 1516, 748, 66]],
-      balls: [['tennis', 1460, 248, 22, 20, 30, 10], ['soccer', 1508, 884, 66, 18, -12, 8]] },
-    { align: 'xMidYMin',
-      decor: [['ring', 330, 212, 7, 0, 1], ['plus', 520, 186, 0, 0, 1], ['dots', 1010, 176, 3, 2, 1]],
-      props: [['scoreboard', 770, 205, 62, 0, '21']] },
-    { align: 'xMidYMax',
-      arcs: [[350, 870, 445, 830, 520, 872], [580, 872, 665, 830, 740, 880], [800, 880, 885, 830, 960, 872]],
-      props: [['jersey', 300, 905, 66, -6], ['calendar', 550, 908, 62, 4], ['pin', 770, 935, 62], ['stopwatch', 990, 910, 62, 10, 40]] },
-  ],
+  sparkles: 50,
+  calm: [470, 540, 400, 320],
+  groups: wideGroups,
 });
-// Portrait screens (547 x 1184, the phone's shape). Top: the basketball with its light trail
-// right of the title, the racket right of the green button. Bottom: one tidy row of three that
-// sits between the last section and the footer text, and peeks between sections while scrolling.
+// Portrait screens (547 x 1184): the whole reference column across the width, as in the
+// photo (upper half glued to the top, lower half to the bottom). Pieces that would sit
+// behind the text block are left out, so nothing overlaps.
+const PY = (y) => 235 + y * 0.585;
+const P2 = (x, y) => [x, PY(y)];
+const ZONES_PHONE = [[40, 240, 420, 900], [0, 0, 547, 215], [0, 790, 547, 890], [0, 1085, 547, 1184]];   // text block, header, steps row, footer text
+const takenPhone = [];
 const phone = layout({
   W: 547, H: 1184,
   glows: [[500, -60, 520, 520, '#11936f', 0.24], [60, 980, 460, 320, '#0e8064', 0.12], [280, 640, 380, 280, '#0a5e4b', 0.1]],
-  sparkles: 30,
+  sparkles: 34,
   calm: [250, 560, 300, 330],
   groups: [
-    { align: 'xMidYMin',
-      ribbons: [
-        { a: [[-40, 520], [140, 470], [330, 420], [452, 266]], b: [[-40, 600], [200, 540], [400, 400], [466, 330]], n: 34, strength: 0.9, peak: 0.86, endOp: 0.6, width: 70, twist: 0.8 },
-      ],
-      decor: [['dots', 498, 470, 3, 3, 0.8], ['ring', 512, 560, 7, 0, 0.8], ['cross', 28, 236, 0, 0, 0.8]],
-      props: [['racket', 470, 658, 84, 22]],
-      balls: [['basketball', 478, 292, 44, -40, 15, -50]] },
-    { align: 'xMidYMax',
-      decor: [['dots', 186, 1044, 2, 2, 0.8], ['dots', 350, 1044, 2, 2, 0.8]],
-      props: [['stopwatch', 273, 1058, 58, 10, 40], ['trophy', 440, 1052, 66, 0]],
-      balls: [['soccer', 106, 1054, 32, 18, -14, 8]] },
+    { align: 'xMidYMin', ...refGroup(cleanRef(REF.filter((i) => i[2] < 800), P2, 0.66, ZONES_PHONE, takenPhone), REF_RIBBONS.filter((r) => r[0][1] < 800), P2, 0.66, [547, 1184]) },
+    { align: 'xMidYMax', ...refGroup(cleanRef(REF.filter((i) => i[2] >= 800), P2, 0.66, ZONES_PHONE.slice(2), takenPhone), REF_RIBBONS.filter((r) => r[0][1] >= 800), P2, 0.66, [547, 1184]) },
   ],
 });
 

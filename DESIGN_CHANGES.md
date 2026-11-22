@@ -3,6 +3,16 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-22 (25): No bounce strip at the bottom; icons laid out like the reference with no overlaps (done by Claude, at the owner's request)
+
+Owner: "at the very bottom when I scroll there is an ugly bar; the icons are not placed nicely at all; look at the reference picture and place them that way".
+
+- **Bar at the bottom while scrolling:** phones rubber-band / stretch the page at its end, and the pull showed a flat strip under the footer. `overscroll-behavior-y: none` on `html` and `body.pagina-publica` stops that pull. `theme-color` in `index.html` was still the old forest green `#101a14` (the colour phones use for their browser bars); it is now the page base `#011012`. The SEO pages were regenerated, so they carry the new value too.
+- **Icons:** they follow the reference photo again (`REF` / `REF_RIBBONS`): a zigzag of big pieces, light ribbons sweeping between them, small marks in the gaps. `cleanRef()` adds two rules: a piece that would sit behind the text, the photo card, the steps row, the gallery dots, the header or the footer text is left out (no more dimmed icons under the text), and pieces never touch each other.
+  - **Desktop:** the reference column drawn three times (left / centre / right), each showing a different stretch of it (top / middle / bottom), at 0.78 size.
+  - **Phone:** the whole column across the width, as in the photo, with the same rules.
+- `design-background.css?v=27`; SEO pages regenerated. Checked at 1440×900, 1920×1080 and 390×844 (top and bottom of the page).
+
 ## 2026-11-22 (24): Icons arranged in small stories, nothing overlaps or is cut; title 15% smaller (done by Claude, at the owner's request)
 
 Owner: "title 15% smaller but still bigger than the text; the icons still overlap; give them a meaning, not random, it looks rather ugly"; then "extend it downward too, it looks ugly that it gets cut".
