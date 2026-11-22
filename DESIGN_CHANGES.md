@@ -3,6 +3,14 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-22 (26): Bottom of the screen fades into the page colour; more pieces on the left (done by Claude, at the owner's request)
+
+Owner: "it is not a black bar, it is a change of contrast; can't we make it the same colour?" and "add a whistle, a stopwatch etc. on the left".
+
+- **Contrast at the bottom:** the background layer (glows + grain + icons) met the flat page / browser-bar colour at the bottom of the screen. A new top background layer on `.home-shell::after` (desktop and portrait) is a long eased gradient from transparent at 60% to exactly `#011012` at 100%, so the bottom edge is the same colour as what the phone shows below / around it.
+- **Left side (desktop):** `LEFT_EXTRA` in `scripts/design/fundal-arena.mjs` adds a whistle (top), a volleyball, a medal and a trophy on the left edge. Together with the reference stopwatch they make an even column. They are placed first, so the reference pieces make room for them (`takenWide`).
+- `design-background.css?v=28`; SEO pages regenerated. Checked at 1440×900, 1920×1080 and the phone page bottom.
+
 ## 2026-11-22 (25): No bounce strip at the bottom; icons laid out like the reference with no overlaps (done by Claude, at the owner's request)
 
 Owner: "at the very bottom when I scroll there is an ugly bar; the icons are not placed nicely at all; look at the reference picture and place them that way".

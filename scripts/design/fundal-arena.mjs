@@ -629,14 +629,20 @@ function cleanRef(items, map, k, zones, taken = []) {
 const ZONES_WIDE = [[150, 260, 805, 830], [865, 315, 1435, 735], [1140, 800, 1420, 850], [0, 0, 1600, 150]];
 const COLS = [[0, 0, 'xMinYMid'], [533, 290, 'xMidYMid'], [1067, 580, 'xMaxYMid']];
 const KW = 0.78;
-const takenWide = [];
-const wideGroups = COLS.map(([x0, refTop, align]) => {
+// Extra pieces on the left edge (owner: "add a whistle, a stopwatch etc. on the left").
+// They are placed first, so the reference pieces make room for them.
+const LEFT_EXTRA = {
+  props: [['whistle', 84, 232, 70, -14, 'M30 -30C44 -70 10 -100 30 -140'], ['medal', 80, 690, 64, -6], ['trophy', 82, 872, 76, -4]],
+  balls: [['volleyball', 78, 395, 30, 45, 35, 0]],
+};
+const takenWide = [[84, 232, 50], [86, 690, 50], [82, 872, 52], [78, 395, 34]];
+const wideGroups = [{ align: 'xMinYMid', ...LEFT_EXTRA }, ...COLS.map(([x0, refTop, align]) => {
   const map = (x, y) => [x0 + x * 0.975, 150 + (y - refTop) * 0.82];
   const inView = REF.filter((i) => { const y = map(i[1], i[2])[1]; return y > 120 && y < 1000; });
   const items = cleanRef(inView, map, KW, ZONES_WIDE, takenWide);
   const ribbons = REF_RIBBONS.filter((r) => { const ys = [r[0][1], r[1][1]].map((y) => map(0, y)[1]); return Math.max(...ys) > 150 && Math.min(...ys) < 1000; });
   return { align, ...refGroup(items, ribbons, map, KW, [1600, 1000]) };
-});
+})];
 const wide = layout({
   W: 1600, H: 1000,
   glows: [[140, -80, 950, 720, '#11936f', 0.22], [1480, -60, 760, 620, '#0e8064', 0.15], [1180, 640, 620, 380, '#0a5e4b', 0.1], [760, 1060, 820, 300, '#0e8064', 0.12]],
