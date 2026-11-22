@@ -3,6 +3,14 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-22 (28): Desktop side pieces centred in the free margins; phone whistle and stopwatch further left (done by Claude, at the owner's request)
+
+Owner: "put them more to the left on the phone; on desktop put them more to the centre".
+
+- **Desktop:** all wide groups use `xMidYMid` (they used to be glued to the screen edges). The composition is now centred with the page content, so the side columns sit in the middle of the free side margins on every width: at 1920 they are well away from the screen edge, and at 1440, where the margin is narrow, they stay as far from the text as they can. The left extras moved to x≈96–100 accordingly.
+- **Phone:** the whistle and the stopwatch moved left, right after the "Descoperă sporturile" link (x 262 and 372).
+- `design-background.css?v=30`; SEO pages regenerated. Checked at 1440×900, 1920×1080 and 390×844.
+
 ## 2026-11-22 (27): Whistle and stopwatch on the phone too (done by Claude, at the owner's request)
 
 Owner: "but you didn't put the stopwatch or the whistle" (they were on desktop only).

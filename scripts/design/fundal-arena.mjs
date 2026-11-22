@@ -627,16 +627,16 @@ function cleanRef(items, map, k, zones, taken = []) {
 // showing a different stretch of it (top / middle / bottom), so it reads like the photo,
 // not like a repeated tile. Columns are glued left / centre / right.
 const ZONES_WIDE = [[150, 260, 805, 830], [865, 315, 1435, 735], [1140, 800, 1420, 850], [0, 0, 1600, 150]];
-const COLS = [[0, 0, 'xMinYMid'], [533, 290, 'xMidYMid'], [1067, 580, 'xMaxYMid']];
+const COLS = [[0, 0, 'xMidYMid'], [533, 290, 'xMidYMid'], [1067, 580, 'xMidYMid']];   // centred with the content
 const KW = 0.78;
 // Extra pieces on the left edge (owner: "add a whistle, a stopwatch etc. on the left").
 // They are placed first, so the reference pieces make room for them.
 const LEFT_EXTRA = {
-  props: [['whistle', 84, 236, 88, -14, 'M30 -30C44 -70 10 -100 30 -140'], ['medal', 80, 690, 64, -6], ['trophy', 82, 872, 76, -4]],
-  balls: [['volleyball', 78, 395, 30, 45, 35, 0]],
+  props: [['whistle', 100, 236, 88, -14, 'M30 -30C44 -70 10 -100 30 -140'], ['medal', 96, 690, 64, -6], ['trophy', 98, 872, 76, -4]],
+  balls: [['volleyball', 94, 395, 30, 45, 35, 0]],
 };
-const takenWide = [[84, 232, 50], [86, 690, 50], [82, 872, 52], [78, 395, 34]];
-const wideGroups = [{ align: 'xMinYMid', ...LEFT_EXTRA }, ...COLS.map(([x0, refTop, align]) => {
+const takenWide = [[100, 236, 54], [96, 690, 50], [98, 872, 52], [94, 395, 34]];
+const wideGroups = [{ align: 'xMidYMid', ...LEFT_EXTRA }, ...COLS.map(([x0, refTop, align]) => {
   const map = (x, y) => [x0 + x * 0.975, 150 + (y - refTop) * 0.82];
   const inView = REF.filter((i) => { const y = map(i[1], i[2])[1]; return y > 120 && y < 1000; });
   const items = cleanRef(inView, map, KW, ZONES_WIDE, takenWide);
@@ -658,8 +658,8 @@ const P2 = (x, y) => [x, PY(y)];
 const ZONES_PHONE = [[40, 240, 420, 900], [0, 0, 547, 215], [0, 790, 547, 890], [0, 1085, 547, 1184]];   // text block, header, steps row, footer text
 // Owner: whistle and stopwatch must be visible on the phone too: placed first, in the free
 // spot right of the "discover" link and below the jersey.
-const PHONE_EXTRA = { props: [['whistle', 330, 732, 62, -14, 'M30 -30C44 -70 10 -100 30 -140'], ['stopwatch', 482, 742, 58, 12, 40]] };
-const takenPhone = [[330, 732, 42], [482, 742, 44]];
+const PHONE_EXTRA = { props: [['whistle', 262, 732, 62, -14, 'M30 -30C44 -70 10 -100 30 -140'], ['stopwatch', 372, 740, 58, 12, 40]] };
+const takenPhone = [[262, 732, 42], [372, 740, 44]];
 const phone = layout({
   W: 547, H: 1184,
   glows: [[500, -60, 520, 520, '#11936f', 0.24], [60, 980, 460, 320, '#0e8064', 0.12], [280, 640, 380, 280, '#0a5e4b', 0.1]],
