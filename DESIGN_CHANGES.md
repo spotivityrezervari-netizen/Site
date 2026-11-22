@@ -3,6 +3,15 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-22 (15): Arena without the pitch and floodlights; hoop shot, jersey, light particles; racket fully visible (done by Claude, at the owner's request)
+
+Owner: "remove the pitch with the lighting, centre the tennis racket better, work a bit more on the design and play with the symbols". Asked to clarify: remove the whole pitch AND the floodlights.
+
+- Removed from both scenes: the perspective pitch (lines, stripes, goals, nets, flags), the training cones, the light pool on the grass, the floodlight masts and the corner light beams. `scene()` now draws the pitch only if a `cam` is given, so `pitch()` stays in the script and can come back. The contact shadows under the soccer ball and the trophy are gone (no floor any more).
+- **New:** a floating basketball `hoop` (backboard, target square, glowing rim, net) with a small basketball on a dashed flight path into it (`arcs`, desktop); the `jersey` with a lit 10 (desktop between the text and the photo, phone at the right edge); fine light particles (`sparkles`, fixed seed, dimmed behind the text); a soft glow low in the middle where the grass was.
+- **Racket:** desktop `[1548, 338]`, rotation 16, so the whole racket is on screen (it was cut by the right edge). On the phone it moved to the right edge next to the green button (it sat behind "01 Alegi terenul"). The medal was dropped on the phone to keep that edge calm.
+- `design-background.css?v=17`; SEO pages regenerated. Checked on the real page at 1440×900, 1920×1080, 768×1024 and 390×844, plus phone scroll positions.
+
 ## 2026-11-22 (14): Footer melts into the background; floodlights, location pin, LED scoreboard, booking calendar, racket, medal (done by Claude, at the owner's request)
 
 Owner: "at the very bottom on the phone there is a black line, get rid of it; I want more of those graphics, be inventive".

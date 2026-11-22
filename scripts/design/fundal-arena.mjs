@@ -387,6 +387,23 @@ Object.assign(objects, {
       + `<path d='M-30 10Q-22 30 -26 50M24 -8Q30 20 28 50' fill='none' stroke='#000' stroke-opacity='.25' stroke-width='3'/>`
       + `<g transform='translate(-2 0) scale(.75)'>${sevenSeg('10', -26, -12, 18, 40, 5, 12)}</g>`;
   },
+  // floating basketball hoop: backboard, target square, glowing rim, net
+  hoop() {
+    let net = '';
+    const top = (a) => [18 * Math.cos(a), -20 + 4.5 * Math.sin(a)];
+    const bot = (a) => [11 * Math.cos(a), 14 + 3 * Math.sin(a)];
+    for (let i = 0; i < 10; i++) {
+      const a = Math.PI * (i / 9);
+      const b = Math.PI * ((i + 1) / 9);
+      net += `M${P(...top(a))}L${P(...bot(b))}M${P(...top(b))}L${P(...bot(a))}`;
+    }
+    return `<rect x='-42' y='-74' width='84' height='54' rx='4' fill='#010d0c' fill-opacity='.85' ${rim(1.8)}/>`
+      + `<rect x='-15' y='-50' width='30' height='22' fill='none' stroke='${SEAM}' stroke-opacity='.55' stroke-width='1.3'/>`
+      + `<path d='M-4 -20V-26H4V-20' fill='none' stroke='${SEAM}' stroke-opacity='.5' stroke-width='1.4'/>`
+      + `<path d='${net}' stroke='${SEAM}' stroke-opacity='.5' stroke-width='.9'/><ellipse cy='14' rx='11' ry='3' fill='none' stroke='${SEAM}' stroke-opacity='.45' stroke-width='.9'/>`
+      + `<ellipse cy='-20' rx='18' ry='4.5' fill='none' stroke='#7dffd6' stroke-opacity='.25' stroke-width='5'/><ellipse cy='-20' rx='18' ry='4.5' fill='none' stroke='#a8ffe6' stroke-width='2'/>`
+      + `<path d='M-38 -70H30' stroke='#c8fff0' stroke-opacity='.25' stroke-width='2' stroke-linecap='round'/>`;
+  },
   // booking calendar card with one day ticked
   calendar() {
     let cells = '';
@@ -416,7 +433,7 @@ const glow = (id, cx, cy, rx, ry, color, op) => ({
   svg: (W, H) => `<rect width='${W}' height='${H}' fill='url(#${id})'/>`,
 });
 
-function scene({ W, H, glows, beams = [], cam, ribbons, balls, props = [], cones = [], calm }) {
+function scene({ W, H, glows, beams = [], cam, ribbons, balls, props = [], cones = [], arcs = [], sparkles = 0, calm }) {
   let defs = commonDefs; let body = `<rect width='${W}' height='${H}' fill='${BASE}'/>`;
   glows.forEach((g, i) => { const gl = glow(`gl${i}`, ...g); defs += gl.defs; body += gl.svg(W, H); });
   // floodlight beams: soft cones from lights above the screen
@@ -426,6 +443,7 @@ function scene({ W, H, glows, beams = [], cam, ribbons, balls, props = [], cones
     defs += `<linearGradient id='bm${i}' gradientUnits='userSpaceOnUse' x1='${ax}' y1='${ay}' x2='${f(ex)}' y2='${f(ey)}'><stop offset='0' stop-color='#7dffd6' stop-opacity='${op}'/><stop offset='.5' stop-color='${GLOW}' stop-opacity='${f(op * 0.4 * 1000) / 1000}'/><stop offset='1' stop-color='${GLOW}' stop-opacity='0'/></linearGradient>`;
     for (const k of [1.6, 1, 0.5]) body += `<path d='${poly([[ax, ay], pt2(deg - spread * k / 2, len), pt2(deg + spread * k / 2, len)])}' fill='url(#bm${i})' fill-opacity='.45'/>`;
   });
+  if (cam) {
   const pt = pitch(cam, H); defs += pt.defs;
   // floodlight pool on the grass
   defs += `<radialGradient id='pool' gradientUnits='userSpaceOnUse' cx='${cam.poolX}' cy='${H}' r='1' gradientTransform='translate(${cam.poolX} ${H}) scale(${W * 0.55} ${(H - cam.horizon) * 1.1}) translate(${-cam.poolX} ${-H})'><stop offset='0' stop-color='${GLOW}' stop-opacity='.09'/><stop offset='1' stop-color='${GLOW}' stop-opacity='0'/></radialGradient>`;
@@ -436,11 +454,25 @@ function scene({ W, H, glows, beams = [], cam, ribbons, balls, props = [], cones
     const hgt = q[2] * 1.2;   // drawn a bit larger than life so they read
     body += `<ellipse cx='${f(q[0])}' cy='${f(q[1])}' rx='${f(hgt * 0.6)}' ry='${f(hgt * 0.13)}' fill='url(#contact)'/><g transform='translate(${f(q[0])} ${f(q[1])}) scale(${f(hgt / 100 * 1000) / 1000})'>${objects.cone()}</g>`;
   }
+  }
   // a calm zone behind the main text: ribbons are dimmed there
   defs += `<radialGradient id='calmG' gradientUnits='userSpaceOnUse' cx='${calm[0]}' cy='${calm[1]}' r='1' gradientTransform='translate(${calm[0]} ${calm[1]}) scale(${calm[2]} ${calm[3]}) translate(${-calm[0]} ${-calm[1]})'><stop offset='0' stop-color='#000' stop-opacity='.62'/><stop offset='1' stop-color='#000' stop-opacity='0'/></radialGradient><mask id='calm' maskUnits='userSpaceOnUse' x='0' y='0' width='${W}' height='${H}'><rect width='${W}' height='${H}' fill='#fff'/><rect width='${W}' height='${H}' fill='url(#calmG)'/></mask>`;
   let rib = '';
   ribbons.forEach((r, i) => { const rb = ribbon(r, `rb${i}`); defs += rb.defs; rib += rb.svg; });
-  body += `<g mask='url(#calm)'>${rib}</g>`;
+  // light particles (fixed seed, so every build draws the same sky); dimmed behind the text
+  let rnd = 20261122;
+  const rand = () => { rnd = (rnd * 1664525 + 1013904223) % 4294967296; return rnd / 4294967296; };
+  let dust = '';
+  for (let i = 0; i < sparkles; i++) {
+    const x = rand() * W; const y = rand() * H; const k = rand();
+    const r = 0.6 + k * k * 2; const op = 0.15 + rand() * 0.5;
+    dust += `<circle cx='${f(x)}' cy='${f(y)}' r='${f(r)}' fill-opacity='${f(op * 100) / 100}'/>`;
+    if (r > 2) dust += `<path d='M${P(x - r * 3, y)}H${f(x + r * 3)}M${P(x, y - r * 3)}V${f(y + r * 3)}' stroke='#c8fff0' stroke-opacity='${f(op * 50) / 100}' stroke-width='.6'/>`;
+  }
+  // dashed flight paths (a ball's trajectory)
+  let paths = '';
+  for (const [x1, y1, cx, cy, x2, y2] of arcs) paths += `M${P(x1, y1)}Q${P(cx, cy)} ${P(x2, y2)}`;
+  body += `<g mask='url(#calm)'>${rib}<g fill='#8dffdc'>${dust}</g><path d='${paths}' fill='none' stroke='#7dffd6' stroke-opacity='.7' stroke-width='2.2' stroke-dasharray='1 8' stroke-linecap='round'/></g>`;
   body += props.map(prop).join('');
   body += balls.map(ball).join('');
   // vignette: edges sink into the base colour
@@ -452,9 +484,9 @@ function scene({ W, H, glows, beams = [], cam, ribbons, balls, props = [], cones
 // Wide screens (drawn at 1600x1000, shown with background-size: cover).
 const wide = scene({
   W: 1600, H: 1000,
-  glows: [[140, -80, 950, 720, '#11936f', 0.24], [1480, -60, 760, 620, '#0e8064', 0.16], [1180, 640, 620, 380, '#0a5e4b', 0.1]],
-  beams: [[-120, -160, 52, 15, 1250, 0.07], [-40, -200, 63, 9, 1200, 0.05], [1720, -180, 128, 13, 1200, 0.06]],
-  cam: { cx: 930, horizon: 455, focal: 860, height: 15, x: 5, z: -30, yaw: 13, poolX: 980 },
+  glows: [[140, -80, 950, 720, '#11936f', 0.24], [1480, -60, 760, 620, '#0e8064', 0.16], [1180, 640, 620, 380, '#0a5e4b', 0.1], [760, 1060, 820, 300, '#0e8064', 0.14]],
+  sparkles: 90,
+  arcs: [[400, 1040, 500, 800, 634, 922]],   // the small basketball's shot into the hoop
   calm: [450, 470, 500, 300],
   ribbons: [
     // the tennis ball's light trail (it ends under the ball)
@@ -462,54 +494,51 @@ const wide = scene({
     { a: [[-60, 200], [240, 110], [520, 90], [840, -60]], b: [[-60, 290], [320, 200], [580, 110], [880, -10]], n: 26, strength: 0.6, peak: 0.42, width: 60, twist: 0.7 },
     { a: [[1700, 450], [1440, 580], [1360, 820], [1230, 1070]], b: [[1700, 590], [1520, 720], [1480, 900], [1400, 1070]], n: 30, strength: 0.75, peak: 0.45, width: 70, twist: 0.75 },
   ],
-  cones: [[372, 905], [470, 935], [580, 966], [700, 1000]],   // screen positions on the grass
   props: [
-    ['floodlight', 872, 566, 135, 0, 34],
-    ['floodlight', 786, 590, 195, 0, -34],
     ['scoreboard', 690, 205, 70, 0, '21'],
     ['medal', 64, 428, 72, -8],
-    ['racket', 1562, 335, 95, 28],
+    ['racket', 1548, 338, 92, 16],
+    ['jersey', 757, 486, 92, -10],
+    ['hoop', 640, 950, 130],
     ['calendar', 1195, 872, 74, 8],
     ['pin', 978, 905, 88],
     ['stopwatch', 58, 585, 180, 14, 40],
     ['stopwatch', 1522, 196, 62, -16, 300],
     ['whistle', 905, 272, 130, -12],
-    ['trophy', 92, 905, 140, -4, undefined, true],
+    ['trophy', 92, 905, 140, -4],
   ],
   balls: [
     ['volleyball', 1545, 478, 40, 45, 35, 0],
     ['tennis', 1338, 264, 30, 20, 30, 10],
     ['basketball', 70, 215, 135, -40, 15, -50],
-    ['soccer', 1445, 840, 150, 18, -12, 8, true],
+    ['soccer', 1445, 840, 150, 18, -12, 8],
+    ['basketball', 562, 880, 24, -30, 25, -40],
   ],
 });
 // Portrait screens (drawn at 600x1400, shown full width from the top).
 const phone = scene({
   W: 600, H: 1400,
-  glows: [[540, -60, 560, 560, '#11936f', 0.26], [40, 1360, 520, 400, '#0e8064', 0.14]],
-  beams: [[700, -120, 118, 14, 1300, 0.07], [640, -160, 108, 8, 1250, 0.05]],
-  cam: { cx: 340, horizon: 860, focal: 520, height: 15, x: 3, z: -22, yaw: 16, poolX: 330 },
+  glows: [[540, -60, 560, 560, '#11936f', 0.26], [40, 1360, 520, 400, '#0e8064', 0.14], [380, 1180, 420, 260, '#0a5e4b', 0.1]],
+  sparkles: 55,
   calm: [300, 650, 380, 420],
   ribbons: [
     // the basketball's light trail (it ends under the ball)
     { a: [[-60, 960], [170, 820], [360, 560], [482, 296]], b: [[-60, 1120], [260, 940], [470, 520], [494, 396]], n: 40, strength: 1, peak: 0.88, endOp: 0.7, width: 90, twist: 0.8 },
     { a: [[-40, 250], [120, 190], [260, 130], [430, -40]], b: [[-40, 320], [170, 260], [310, 160], [470, -10]], n: 22, strength: 0.55, peak: 0.45, width: 50, twist: 0.7 },
   ],
-  cones: [[300, 1255], [372, 1290], [452, 1330]],
   props: [
-    ['floodlight', 440, 870, 150, 0, -40],
-    ['medal', 576, 772, 62, 10],
-    ['racket', 26, 978, 100, -32],
+    ['jersey', 598, 528, 80, -12],
+    ['racket', 580, 760, 86, 18],
     ['pin', 335, 1168, 72],
     ['stopwatch', -8, 770, 112, 12, 40],
     ['stopwatch', 572, 618, 46, -16, 300],
     ['whistle', 498, 1080, 92, -18, 'M30 -30C60 -80 20 -150 90 -200'],
-    ['trophy', 500, 1218, 100, 0, undefined, true],
+    ['trophy', 500, 1218, 100, 0],
   ],
   balls: [
     ['volleyball', 590, 905, 36, 45, 35, 0],
     ['basketball', 585, 330, 112, -40, 15, -50],
-    ['soccer', 100, 1185, 125, 18, -12, 8, true],
+    ['soccer', 100, 1185, 125, 18, -12, 8],
   ],
 });
 // Fine grain (tiny repeating tile): breaks up the banding of dark gradients.
