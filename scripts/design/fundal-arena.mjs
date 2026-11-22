@@ -523,61 +523,56 @@ function layout({ W, H, glows, sparkles = 0, calm, groups }) {
   return `<svg xmlns='http://www.w3.org/2000/svg' width='100%' height='100%'><defs>${defs}</defs>${body}</svg>`;
 }
 
-// Wide screens (coordinates 1600 x 1000).
+// Wide screens (coordinates 1600 x 1000). Composition: one column on each side margin with
+// even spacing and a gentle zigzag, big pieces in opposite corners (basketball top left,
+// soccer ball bottom right), and a few pieces only where the page leaves room (scoreboard in
+// the top band, jersey between the text and the photo, hoop shot and pin in the bottom band).
 const wide = layout({
   W: 1600, H: 1000,
   glows: [[140, -80, 950, 720, '#11936f', 0.24], [1480, -60, 760, 620, '#0e8064', 0.16], [1180, 640, 620, 380, '#0a5e4b', 0.1], [760, 1060, 820, 300, '#0e8064', 0.14]],
-  sparkles: 90,
+  sparkles: 80,
   calm: [450, 470, 500, 300],
   groups: [
-    { align: 'xMinYMin',   // top left
+    { align: 'xMinYMid',   // left column, top to bottom every ~165 units
       ribbons: [{ a: [[-60, 200], [240, 110], [520, 90], [840, -60]], b: [[-60, 290], [320, 200], [580, 110], [880, -10]], n: 26, strength: 0.6, peak: 0.42, width: 60, twist: 0.7 }],
-      props: [['medal', 72, 425, 66, -8], ['stopwatch', 84, 600, 128, 14, 40]],
-      balls: [['basketball', 104, 226, 84, -40, 15, -50]] },
-    { align: 'xMidYMin',   // top middle
-      props: [['scoreboard', 690, 205, 70, 0, '21'], ['whistle', 905, 272, 130, -12], ['jersey', 757, 486, 92, -10]] },
-    { align: 'xMaxYMin',   // top right: the tennis ball and its light trail
+      props: [['medal', 66, 398, 62, -8], ['stopwatch', 96, 562, 112, 12, 40], ['calendar', 72, 728, 64, -8], ['trophy', 92, 886, 108, -4]],
+      balls: [['basketball', 92, 226, 62, -40, 15, -50]] },
+    { align: 'xMaxYMid',   // right column, same rhythm, mirrored zigzag
+      ribbons: [{ a: [[1700, 450], [1440, 580], [1360, 820], [1230, 1070]], b: [[1700, 590], [1520, 720], [1480, 900], [1400, 1070]], n: 30, strength: 0.6, peak: 0.45, width: 70, twist: 0.75 }],
+      props: [['stopwatch', 1512, 206, 58, -16, 300], ['racket', 1526, 384, 84, 14], ['whistle', 1508, 742, 82, -14, 'M30 -30C44 -80 0 -110 24 -160']],
+      balls: [['volleyball', 1504, 562, 36, 45, 35, 0], ['soccer', 1494, 894, 86, 18, -12, 8]] },
+    { align: 'xMidYMin',   // top band: scoreboard, tennis ball with its light trail
       ribbons: [{ a: [[-80, 700], [380, 560], [900, 470], [1320, 244]], b: [[-80, 900], [520, 760], [1060, 390], [1334, 288]], n: 46, strength: 1, peak: 0.9, endOp: 0.75, width: 110, twist: 0.8 }],
-      props: [['stopwatch', 1522, 196, 62, -16, 300], ['racket', 1540, 340, 92, 16]],
-      balls: [['volleyball', 1540, 480, 40, 45, 35, 0], ['tennis', 1338, 264, 30, 20, 30, 10]] },
-    { align: 'xMinYMax',   // bottom left
-      props: [['trophy', 98, 888, 120, -4]] },
-    { align: 'xMidYMax',   // bottom middle: the hoop shot and the location pin
-      arcs: [[400, 1040, 500, 800, 634, 922]],
-      props: [['hoop', 640, 950, 130], ['pin', 978, 905, 88]],
-      balls: [['basketball', 562, 880, 24, -30, 25, -40]] },
-    { align: 'xMaxYMax',   // bottom right
-      ribbons: [{ a: [[1700, 450], [1440, 580], [1360, 820], [1230, 1070]], b: [[1700, 590], [1520, 720], [1480, 900], [1400, 1070]], n: 30, strength: 0.75, peak: 0.45, width: 70, twist: 0.75 }],
-      props: [['calendar', 1195, 872, 74, 8]],
-      balls: [['soccer', 1452, 846, 122, 18, -12, 8]] },
+      props: [['scoreboard', 700, 200, 64, 0, '21']],
+      balls: [['tennis', 1338, 264, 28, 20, 30, 10]] },
+    { align: 'xMidYMid',   // between the text and the photo
+      props: [['jersey', 757, 500, 84, -8]] },
+    { align: 'xMidYMax',   // bottom band: the hoop shot and the location pin
+      arcs: [[380, 1030, 450, 820, 554, 928]],
+      props: [['hoop', 560, 950, 110], ['pin', 1000, 936, 76]],
+      balls: [['basketball', 485, 891, 20, -30, 25, -40]] },
   ],
 });
-// Portrait screens (coordinates 600 x 1400). Everything stays fully on screen; the bottom
-// groups keep ~90 units free at the very bottom for the phone's browser bar.
+// Portrait screens (coordinates 600 x 1400). Top: pieces only in the free spots next to the
+// text (right of the title, right of the green button, after the "discover" link). Bottom
+// (glued to the bottom edge, ~100 units free for the browser bar): one tidy row of three.
 const phone = layout({
   W: 600, H: 1400,
   glows: [[540, -60, 560, 560, '#11936f', 0.26], [40, 1360, 520, 400, '#0e8064', 0.16], [300, 760, 420, 300, '#0a5e4b', 0.1]],
-  sparkles: 60,
+  sparkles: 50,
   calm: [300, 650, 380, 420],
   groups: [
     { align: 'xMinYMin',
-      ribbons: [{ a: [[-40, 250], [120, 190], [260, 130], [430, -40]], b: [[-40, 320], [170, 260], [310, 160], [470, -10]], n: 22, strength: 0.55, peak: 0.45, width: 50, twist: 0.7 }] },
-    { align: 'xMaxYMin',   // right column next to the text, all fully visible
-      ribbons: [{ a: [[-60, 960], [170, 820], [360, 560], [462, 284]], b: [[-60, 1120], [260, 940], [470, 520], [476, 352]], n: 40, strength: 1, peak: 0.88, endOp: 0.7, width: 90, twist: 0.8 }],
-      props: [['stopwatch', 506, 452, 64, -14, 300], ['racket', 490, 728, 84, 26], ['medal', 440, 856, 50, 8]],
-      balls: [['volleyball', 548, 852, 28, 45, 35, 0], ['basketball', 522, 300, 62, -40, 15, -50]] },
-    { align: 'xMidYMin', dim: 0.5,   // in the middle, softer because the text sits on it
-      props: [['pin', 300, 610, 66]],
-      balls: [['tennis', 318, 842, 22, 20, 30, 10]] },
-    { align: 'xMinYMax',   // bottom left
-      props: [['jersey', 100, 964, 66, -8], ['calendar', 95, 1106, 60, -8]],
-      balls: [['soccer', 112, 1244, 68, 18, -12, 8]] },
-    { align: 'xMidYMax', dim: 0.8,   // bottom middle: stopwatch and the hoop shot
-      arcs: [[190, 1300, 200, 1060, 296, 1120]],
-      props: [['stopwatch', 300, 985, 96, 10, 40], ['hoop', 300, 1140, 92]],
-      balls: [['basketball', 239, 1114, 16, -30, 25, -40]] },
-    { align: 'xMaxYMax',   // bottom right
-      props: [['whistle', 478, 1104, 76, -16, 'M30 -30C60 -80 20 -150 90 -200'], ['trophy', 497, 1248, 82, 0]] },
+      ribbons: [{ a: [[-40, 250], [120, 190], [260, 130], [430, -40]], b: [[-40, 320], [170, 260], [310, 160], [470, -10]], n: 22, strength: 0.5, peak: 0.45, width: 50, twist: 0.7 }] },
+    { align: 'xMaxYMin',   // right of the title: the basketball and its light trail
+      ribbons: [{ a: [[-60, 960], [170, 820], [370, 590], [452, 318]], b: [[-60, 1120], [260, 940], [470, 540], [462, 384]], n: 40, strength: 1, peak: 0.88, endOp: 0.7, width: 90, twist: 0.8 }],
+      balls: [['basketball', 506, 346, 56, -40, 15, -50]] },
+    { align: 'xMaxYMin',   // right of the green button: the hoop, with a shot from the link line
+      arcs: [[360, 862, 400, 680, 486, 716]],
+      props: [['hoop', 492, 736, 80]],
+      balls: [['basketball', 404, 760, 16, -30, 25, -40]] },
+    { align: 'xMidYMax',   // bottom: one tidy row of three, below the text area
+      props: [['stopwatch', 105, 1252, 84, 10, 40], ['trophy', 300, 1250, 84, 0], ['racket', 495, 1244, 80, 18]] },
   ],
 });
 

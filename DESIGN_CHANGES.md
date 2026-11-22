@@ -3,6 +3,14 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-22 (17): Arena icons rearranged on a clear structure (done by Claude, at the owner's request)
+
+Owner: "I like the icons but they are arranged very badly on the page, on both desktop and phone".
+
+- **Desktop:** one column on each side margin (`xMinYMid` / `xMaxYMid` groups). Pieces sit every ~165 units with a gentle zigzag, and the big pieces are in opposite corners (basketball top left, soccer ball bottom right). The other pieces sit only in free areas: the scoreboard and the tennis ball with its trail in the top band, the jersey between the text and the photo, the hoop shot and the pin in the bottom band. The duplicate stopwatch, the whistle in the middle and the scattered calendar position are gone (the whistle and the calendar now sit in the side columns).
+- **Phone:** the top screen only uses the free spots next to the text: the basketball with its trail right of the title, and the hoop with a small ball on a dashed shot right of the green button. Below the text there is one tidy row of three (stopwatch, trophy, racket), glued to the bottom edge, which shows between sections while scrolling. Nothing sits behind the "01/02/03" steps any more.
+- `design-background.css?v=19`; SEO pages regenerated. Checked at 1440×900, 1920×1080 and 390×844 (plus phone scroll).
+
 ## 2026-11-22 (16): Arena objects glued to screen corners, never cut; phone layout redone with items in the middle (done by Claude, at the owner's request)
 
 Owner: "great, it looks good, but at the bottom things get cut, and at the sides on the phone; I also want things in the middle, please redo it".
