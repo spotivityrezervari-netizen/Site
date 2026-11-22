@@ -3,6 +3,14 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-22 (19): Reference layout spread evenly and centred on desktop; softening only right behind text (done by Claude, at the owner's request)
+
+Owner: "on desktop it looks ugly; on the phone it is better but you can do better; on desktop centre them a bit more".
+
+- **Desktop:** the photo's layout now fills the whole screen evenly instead of hugging the edges. Its top half fills the left half (`WL`: x×1.42, y×1.03, from below the header) and its bottom half fills the right half (`WR`). Only pieces right behind the text block or the photo card are softened (`behindWide` zones, opacity 0.2); everything else is at full strength. The middle extras (scoreboard, hoop, pin group) were removed because the layout now covers the middle.
+- **Phone:** the same per-piece rule (`behindPhone`): pieces at the edges stay bright, those right behind the text block are softened (0.35). The drawing starts a little lower (`235 + y×0.585`), so it clears the header.
+- `zoned()` splits a reference half into a clear group and a softened group. `design-background.css?v=21`; SEO pages regenerated. Checked at 1440×900, 1920×1080 and 390×844.
+
 ## 2026-11-22 (18): Arena icons laid out like the owner's reference photo (done by Claude, at the owner's request)
 
 Owner: "not good, you cut the icons down drastically; look at the example I sent and lay them out the same way, but with your icons; the ones from the previous push look good".

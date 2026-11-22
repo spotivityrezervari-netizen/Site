@@ -587,43 +587,46 @@ function refGroup(items, ribbons, map, k, box, extra = {}) {
   return g;
 }
 
-// Wide screens (coordinates 1600 x 1000): the photo's column split in two. Its top half runs
-// down the left edge, its bottom half down the right edge; pieces that reach in under the text
-// or the photo card are softened. Middle: scoreboard on top, the hoop shot and the pin below.
-const leftItems = REF.filter((i) => i[2] < 800); const rightItems = REF.filter((i) => i[2] >= 800);
-// the drawing starts below the two header bars (~150 units)
-const L = (x, y) => [20 + x * 0.62, 165 + y * 1.0];
-const R = (x, y) => [1600 - 20 - 547 * 0.62 + x * 0.62, 165 + (y - 800) * 1.0];
-const split = (items, map, inner) => [items.filter((i) => !inner(map(i[1], i[2])[0])), items.filter((i) => inner(map(i[1], i[2])[0]))];
-const [lOut, lIn] = split(leftItems, L, (x) => x > 120);
-const [rOut, rIn] = split(rightItems, R, (x) => x < 1400);
+// Splits the reference into the pieces that are clear of the page's text/photo (full
+// strength) and the ones that sit behind them (softened). inZone(x, y) works on mapped coords.
+function zoned(items, ribbons, map, k, box, inZone, align, soft) {
+  const pos = (i) => map(i[1], i[2]);
+  const clear = items.filter((i) => !inZone(...pos(i)));
+  const behind = items.filter((i) => inZone(...pos(i)));
+  return [{ align, ...refGroup(clear, ribbons, map, k, box) }, { align, dim: soft, ...refGroup(behind, [], map, k, box) }];
+}
+
+// Wide screens (coordinates 1600 x 1000): the photo spread evenly over the whole screen,
+// centred: its top half fills the left half, its bottom half the right half, both starting
+// below the header bars. Only pieces right behind the text or the photo card are softened.
+const WX = 1.42; const WY = 1.03;
+const WL = (x, y) => [22 + x * WX, 170 + y * WY];
+const WR = (x, y) => [800 + 22 + x * WX, 170 + (y - 800) * WY];
+const behindWide = (x, y) => (x > 150 && x < 800 && y > 270 && y < 840) || (x > 870 && x < 1400 && y > 330 && y < 720);
 const wide = layout({
   W: 1600, H: 1000,
   glows: [[140, -80, 950, 720, '#11936f', 0.24], [1480, -60, 760, 620, '#0e8064', 0.16], [1180, 640, 620, 380, '#0a5e4b', 0.1], [760, 1060, 820, 300, '#0e8064', 0.14]],
-  sparkles: 70,
-  calm: [450, 470, 500, 300],
+  sparkles: 60,
+  calm: [470, 520, 420, 300],
   groups: [
-    { align: 'xMinYMid', ...refGroup(lOut, REF_RIBBONS.filter((r) => r[0][1] < 800), L, 0.72, [1600, 1000]) },
-    { align: 'xMinYMid', dim: 0.32, ...refGroup(lIn, [], L, 0.72, [1600, 1000]) },
-    { align: 'xMaxYMid', ...refGroup(rOut, REF_RIBBONS.filter((r) => r[0][1] >= 800), R, 0.72, [1600, 1000]) },
-    { align: 'xMaxYMid', dim: 0.32, ...refGroup(rIn, [], R, 0.72, [1600, 1000]) },
-    { align: 'xMidYMin', props: [['scoreboard', 760, 205, 64, 0, '21']] },
-    { align: 'xMidYMax', arcs: [[460, 1030, 530, 820, 634, 928]], props: [['hoop', 640, 950, 110], ['pin', 1000, 936, 76]], balls: [['basketball', 565, 891, 20, -30, 25, -40]] },
+    ...zoned(REF.filter((i) => i[2] < 800), REF_RIBBONS.filter((r) => r[0][1] < 800), WL, 0.8, [1600, 1000], behindWide, 'xMinYMid', 0.2),
+    ...zoned(REF.filter((i) => i[2] >= 800), REF_RIBBONS.filter((r) => r[0][1] >= 800), WR, 0.8, [1600, 1000], behindWide, 'xMaxYMid', 0.2),
   ],
 });
-// Portrait screens: the photo's column across the full width, as in the photo. It is fitted to
-// a phone-shaped box (547 x 1184): its upper half is glued to the top, its lower half to the
-// bottom, both scaled to fit, so nothing is ever cut at an edge on any phone.
-const PH = 1184; const PY = (y) => 215 + y * 0.6;
+// Portrait screens: the whole photo across the full width, fitted into 547 x 1184 (upper
+// half glued to the top, lower half to the bottom), so nothing is cut. Pieces at the edges
+// stay bright; only the ones right behind the text block are softened.
+const PH = 1184; const PY = (y) => 235 + y * 0.585;
 const P2 = (x, y) => [x, PY(y)];
+const behindPhone = (x, y) => x > 70 && x < 470 && y > 250 && y < 970;
 const phone = layout({
   W: 547, H: PH,
   glows: [[500, -60, 520, 520, '#11936f', 0.26], [40, 1150, 480, 360, '#0e8064', 0.16], [280, 640, 380, 280, '#0a5e4b', 0.1]],
   sparkles: 50,
-  calm: [273, 540, 340, 360],
+  calm: [273, 560, 300, 330],
   groups: [
-    { align: 'xMidYMin', dim: 0.55, ...refGroup(REF.filter((i) => i[2] < 800), REF_RIBBONS.filter((r) => r[0][1] < 800), P2, 0.66, [547, PH]) },
-    { align: 'xMidYMax', dim: 0.6, ...refGroup(REF.filter((i) => i[2] >= 800), REF_RIBBONS.filter((r) => r[0][1] >= 800), P2, 0.66, [547, PH]) },
+    ...zoned(REF.filter((i) => i[2] < 800), REF_RIBBONS.filter((r) => r[0][1] < 800), P2, 0.7, [547, PH], behindPhone, 'xMidYMin', 0.35),
+    ...zoned(REF.filter((i) => i[2] >= 800), REF_RIBBONS.filter((r) => r[0][1] >= 800), P2, 0.7, [547, PH], behindPhone, 'xMidYMax', 0.35),
   ],
 });
 
