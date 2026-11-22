@@ -57,10 +57,12 @@ async function footballPans(page, touch, label) {
 }
 
 async function openCourts(page) {
-    const chooserUrl = page.url();
+    await page.evaluate(() => { window.__sameDocument = true; });
     await page.locator('#sport-fotbal button.home-reserve-button').click();
     await page.locator('#modal-terenuri').waitFor({state: 'visible'});
-    assert.equal(page.url(), chooserUrl, 'The reservation action opens the chooser on the same page');
+    // Same document; the list gets its own address (terenuri/fotbal/).
+    await page.waitForFunction(() => location.href === new URL('terenuri/fotbal/', window.siteHomeUrl()).href);
+    assert.equal(await page.evaluate(() => window.__sameDocument), true, 'The reservation action opens the chooser on the same page');
     await locked(page, true);
 }
 

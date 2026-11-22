@@ -144,11 +144,17 @@ async function seed(fixture) {
             const initialRobots = await page.locator('meta[name="robots"]').getAttribute('content');
             for (const sport of sports) {
                 const current = page.url();
+                await page.evaluate(() => { window.__sameDocument = true; });
                 await page.locator(`button.card-sport[data-sport="${sport}"]`).click();
                 await page.locator('#modal-terenuri').waitFor({state: 'visible'});
-                assert.equal(page.url(), current, sport+' opens the chooser directly');
+                // The owner asked for one address per sport list: terenuri/<sport>/, same document.
+                const slug = await page.evaluate(value => window.SpotivityEntityPaths.sportSlug(value), sport);
+                const listUrl = await page.evaluate(value => new URL(`terenuri/${value}/`, window.siteHomeUrl()).href, slug);
+                await page.waitForFunction(expected => location.href === expected, listUrl);
+                assert.equal(await page.evaluate(() => window.__sameDocument), true, sport+' opens the chooser directly');
                 assert.equal(await page.locator('[data-home-sport]').count(), 5);
                 await page.locator('#inchide-terenuri').click(); await hidden(page, 'modal-terenuri');
+                await page.waitForFunction(expected => location.href === expected, current);
             }
             // Both explicit Back and browser Back keep the user's filter draft.
             await page.locator(`button.card-sport[data-sport="${knownCourt.sport}"]`).click();

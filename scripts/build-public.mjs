@@ -4,7 +4,7 @@ import { constants } from 'node:fs';
 import { lstat, open, mkdir, mkdtemp, rm, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SEO_PATHS, seoPaths as reviewedSeoPaths, generateSeoFiles, productionHome, PRODUCTION_BASE_URL, reconcileRouteHistory, netlifyAliasRedirects } from './seo-pages.mjs';
+import { SEO_PATHS, seoPaths as reviewedSeoPaths, generateSeoFiles, productionHome, PRODUCTION_BASE_URL, reconcileRouteHistory, netlifyAliasRedirects, APP_SHELL_PATH, NETLIFY_APP_REWRITES, productionAppShell } from './seo-pages.mjs';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // 404.html is the reviewed static "page not found" screen (no scripts) served by Netlify.
@@ -126,8 +126,18 @@ export async function buildPublic({ repoRoot = repositoryRoot } = {}) {
   assertNoPrivateMaterial('_headers', headers.toString('utf8'));
   entries.push(['_headers', headers]);
   if (includesSeo) {
-    const redirects = netlifyAliasRedirects(catalog, routeHistory);
-    if (redirects.trim()) entries.push(['_redirects', Buffer.from(redirects)]);
+    // App shell for court/base/city addresses created after this build. Its
+    // root-absolute references are checked against the manifest like any page.
+    if (files.has(APP_SHELL_PATH)) throw new Error('The production app shell path is reserved.');
+    const shell = productionAppShell((await readRegularFile(repoRoot, 'Idee Site/index.html')).toString('utf8'));
+    assertNoPrivateMaterial(APP_SHELL_PATH, shell);
+    for (const tag of shell.matchAll(/<(?:script|link|img)\b[^>]*>/gi)) {
+      for (const attribute of tag[0].matchAll(/\b(?:src|href)\s*=\s*["']([^"']*)["']/gi)) assertLocalAsset(APP_SHELL_PATH, attribute[1], files);
+    }
+    entries.push([APP_SHELL_PATH, Buffer.from(shell)]);
+    // Aliases (301!) first; the non-forced rewrites only answer missing files.
+    const redirects = netlifyAliasRedirects(catalog, routeHistory) + NETLIFY_APP_REWRITES.join('\n') + '\n';
+    entries.push(['_redirects', Buffer.from(redirects.replace(/^\n+/, ''))]);
   }
 
   const destination = path.join(repoRoot, 'dist');

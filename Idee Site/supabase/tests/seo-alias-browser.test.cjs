@@ -52,7 +52,14 @@ const {servePublicArtifact}=require('./public-artifact-server.cjs');
   await pages.close();await production.close();servers.length=0;
   const retiredPages=await servePublicArtifact({directory:join(temporary,'Idee Site'),prefix:'/Site/Idee%20Site/',applyHeaders:false});servers.push(retiredPages);
   const retiredProduction=await servePublicArtifact({directory:join(temporary,'dist')});servers.push(retiredProduction);
-  for(const host of[retiredPages,retiredProduction])for(const route of[oldCourt,middleCourt,currentCourt,oldBase,currentBase])assert.equal((await fetch(host.url+route,{redirect:'manual'})).status,404,'Retired identity has no stale public page');
+  for(const route of[oldCourt,middleCourt,currentCourt,oldBase,currentBase])assert.equal((await fetch(retiredPages.url+route,{redirect:'manual'})).status,404,'Retired identity has no stale public page');
+  // spotivity.ro answers unknown court/base addresses with the noindex app shell,
+  // which rereads the ID under RLS and reports it unavailable: still no stale page.
+  for(const route of[oldCourt,middleCourt,currentCourt,oldBase,currentBase]){
+   const retired=await fetch(retiredProduction.url+route,{redirect:'manual'}),body=await retired.text();
+   assert.equal(retired.status,200,route);assert.match(body,/<meta name="robots" content="noindex,follow">/,'Retired identity has no stale public page');
+   assert.doesNotMatch(body,/Teren Actual|Teren Vechi|Teren Mijloc/,'Retired identity has no stale public page');
+  }
   assert.deepEqual(errors,[]);console.log('PASS repeated rename/move aliases, one-hop301, Pages external redirect, Back history, query/hash recovery intents, JS-disabled fallback and retired404s.');
  }finally{if(browser)await browser.close();for(const server of servers)await server.close();await rm(temporary,{recursive:true,force:true});}
 })().catch(error=>{console.error(error);process.exitCode=1;});

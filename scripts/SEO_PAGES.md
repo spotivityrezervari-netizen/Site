@@ -46,6 +46,15 @@ regenerate the public snapshot/pages to give it a static indexable URL. A URL is
 never authorization: the dialog reloads the court/base under the normal public
 permissions and rechecks availability before a booking.
 
+## Addresses for every list, court and base (2026-11-22)
+
+At the owner's request every public view has its own readable address:
+
+- Opening a sport's court list pushes `terenuri/<sport>/`. Choosing a city in the open list replaces it with `terenuri/<sport>/<city>/`; on other hosts the sport address stays, because only spotivity.ro can serve a city page that was not generated yet. Closing the list goes back through history, and Back from a court opened in the list reopens the list with its filters.
+- A court or base without a generated page uses its path from `js/entity-paths.js` on spotivity.ro (`teren/<sport>/<city>/<name>-<id>/`, `baze-sportive/<city>-<name>-<id>/`) instead of the `?teren=` query. Other hosts keep the query link.
+- The production build writes `app.html`, the home shell with root-absolute references and `noindex,follow`, and four non-forced `_redirects` rewrites (`/teren/:sport/:city/:court`, `/teren/:sport/:court`, `/terenuri/:sport/:city`, `/baze-sportive/:base`) to it. Netlify serves an existing file first, so generated pages and aliases always win. `js/public-navigation.js` reads the trailing ID (or the sport and city) from the address. The ID is only a lookup key, and the dialog rereads the court or base under RLS. A retired ID shows the existing "not available" message on the noindex shell.
+- Netlify runs `scripts/netlify-build.mjs`: it refreshes the public catalog, regenerates the pages, then runs the reviewed build. Each deploy therefore publishes generated pages for new courts and bases. If the refresh or the regeneration fails, the committed snapshot is restored and the deploy uses it.
+
 ## Regenerate after public changes
 
 Refresh when active courts, their public names, cities, base membership, prices

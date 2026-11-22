@@ -24,8 +24,13 @@ function parseHeaders(source){
 }
 function parseRedirects(source){
   const routes=new Map(),safe=/^\/(?:terenuri|teren|baze-sportive)\/[a-z0-9/-]+\/?$/;
+  // Non-forced 200 rewrites to the app shell, which Netlify applies only when
+  // no file exists at the requested path.
+  routes.rewrites=[];
   for(const line of source.split(/\r?\n/)){
     if(!line.trim()||line.trimStart().startsWith('#'))continue;
+    const rewrite=line.trim().match(/^(\/(?:terenuri|teren|baze-sportive)(?:\/:[a-z]+)+)\s+\/app\.html\s+200$/);
+    if(rewrite){routes.rewrites.push(new RegExp('^'+rewrite[1].replace(/:[a-z]+/g,'[^/]+')+'/?$'));continue;}
     const match=line.trim().match(/^(\S+)\s+(\S+)\s+301!$/);
     if(!match||!safe.test(match[1])||!safe.test(match[2])||routes.has(match[1]))throw new Error('Invalid reviewed alias redirect');
     routes.set(match[1],match[2]);
@@ -70,7 +75,12 @@ async function servePublicArtifact({directory,port=0,applyHeaders=true,mountPath
       const parts=pathname.split('/');
       // Netlify consumes _headers itself; it is not a published document.
       if(parts.some(part=>part.startsWith('.')||part==='_headers'||part==='_redirects')||/[\\\u0000-\u001f\u007f]/.test(pathname))throw new Error('Not public');
-      const target=resolve(root,'.'+pathname);
+      let target=resolve(root,'.'+pathname);
+      if(redirects.rewrites?.some(rule=>rule.test(pathname))){
+        // Like Netlify: a real page (file or directory index) wins over the rewrite.
+        const page=await stat(target).then(info=>info.isDirectory()?stat(resolve(target,'index.html')).then(()=>true,()=>false):true,()=>false);
+        if(!page)target=resolve(root,'app.html');
+      }
       let path=await realpath(target),rel=relative(root,path);
       if(rel.startsWith('..'+sep)||rel==='..')throw new Error('Not a public file');
       let info=await stat(path);

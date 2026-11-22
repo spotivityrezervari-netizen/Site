@@ -117,6 +117,30 @@ export function seoPaths(input, history) {
 export function netlifyAliasRedirects(catalog, history) {
   return seoAliases(catalog, history).flatMap(({ route, target }) => [`/${route} /${target} 301!`, `/${route.slice(0, -1)} /${target} 301!`]).join('\n') + '\n';
 }
+// Production-only app shell for court, base and city addresses that have no
+// generated page yet (added after the last build). Netlify serves an existing
+// file before a non-forced rewrite, so generated pages and aliases always win.
+export const APP_SHELL_PATH = 'app.html';
+export const NETLIFY_APP_REWRITES = Object.freeze([
+  '/teren/:sport/:city/:court /app.html 200',
+  '/teren/:sport/:court /app.html 200',
+  '/terenuri/:sport/:city /app.html 200',
+  '/baze-sportive/:base /app.html 200'
+]);
+export function productionAppShell(homeHtml) {
+  // The shell answers at any depth, so its resources are root-absolute. That is
+  // safe only on spotivity.ro, which serves the site from the domain root.
+  let html = productionHome(homeHtml).replace(/\b(src|href)="([^"]*)"/gi, (attribute, name, value) => {
+    if (/^(?:[A-Za-z][A-Za-z\d+.-]*:|\/\/|#|\/)/.test(value)) return attribute;
+    return `${name}="/${value === './' ? '' : value}"`;
+  });
+  html = html.replace(/\bsrcset="(assets\/imagini\/[A-Za-z0-9_.-]+)"/g, (_, value) => `srcset="/${value}"`);
+  // The address is the page's identity only after generation; until then it is never indexed.
+  const robots = '<meta name="robots" content="noindex,follow">';
+  if (/<meta name="robots" content="[^"]*">/i.test(html)) return html.replace(/<meta name="robots" content="[^"]*">/i, robots);
+  if (!/<head\b[^>]*>/i.test(html)) throw new Error('App shell template is missing its head.');
+  return html.replace(/<head\b[^>]*>/i, opening => `${opening}${robots}`);
+}
 
 export async function readReviewedFile(root, relative) {
   let location = path.resolve(root);

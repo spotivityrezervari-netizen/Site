@@ -43,11 +43,34 @@
             : /^baze-sportive\/[a-z0-9-]+\/$/;
         return pattern.test(value) ? value : '';
     }
+    // spotivity.ro (Netlify) answers an unknown court, base or city address with
+    // the app shell (build-public writes those _redirects rewrites), so courts and
+    // bases added after the last page generation still get a readable path. Other
+    // hosts (the GitHub Pages test copy, local tests) keep the query link, which
+    // always reloads.
+    const cleanFallback = /(?:^|\.)spotivity\.ro$/i.test(location.hostname);
+    const sportNames = Object.freeze({ fotbal: 'Fotbal', baschet: 'Baschet', tenis: 'Tenis', volei: 'Volei', 'tenis-de-picior': 'Tenis Picior' });
+    const entityId = '([1-9]\\d{0,18}|[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})';
+    const fallbackCourt = new RegExp(`^teren\\/(?:fotbal|baschet|tenis|volei|tenis-de-picior)\\/(?:[a-z0-9-]+\\/)?[a-z0-9-]*?-?${entityId}\\/$`);
+    const fallbackBase = new RegExp(`^baze-sportive\\/[a-z0-9-]*?-?${entityId}\\/$`);
+    const listPath = /^terenuri\/(fotbal|baschet|tenis|volei|tenis-de-picior)\/(?:([a-z0-9-]{1,40})\/)?$/;
+    // The court list for one sport (and optionally one city) has its own address,
+    // the same one as its generated category page: terenuri/fotbal/targu-mures/.
+    function listRoute(view) {
+        const sport = paths.sportSlug(view?.sport);
+        if (!sport) return '';
+        // Only spotivity.ro can serve a city page that was not generated yet.
+        return (view.city && cleanFallback && paths.cityPath(view.sport, view.city)) || `terenuri/${sport}/`;
+    }
     function entityUrl(kind, row) {
         const id = paths.normalizedId(row?.id);
         if (!id) return '';
         const indexed = indexedPath(kind, id);
         if (indexed) return new URL(indexed, appRoot).href;
+        if (cleanFallback) {
+            const route = kind === 'court' ? paths.courtPath(row, null) : paths.basePath(row);
+            if (route && route.endsWith(`-${id}/`)) return new URL(route, appRoot).href;
+        }
         const url = new URL(appRoot);
         url.searchParams.set(kind === 'court' ? 'teren' : 'baza', id);
         url.searchParams.set('nume', paths.slug(row?.nume, kind === 'court' ? 'teren' : 'baza'));
@@ -131,8 +154,12 @@
             const id = paths.normalizedId(byId('modal-baze-sportive')?.dataset.selectedBaseId);
             return id ? { kind: 'base', id } : { kind: 'base-list' };
         }
-        if (visible('modal-terenuri')) return { kind: 'court-list', sport: byId('modal-terenuri')?.dataset.sport || '',
-            date: byId('filtru-data')?.value || '', hour: byId('filtru-ora')?.value || 'ALL', name: byId('filtru-nume')?.value || '' };
+        if (visible('modal-terenuri')) {
+            const city = byId('filtru-oras-global')?.value || 'ALL';
+            return { kind: 'court-list', sport: byId('modal-terenuri')?.dataset.sport || '',
+                city: city === 'ALL' ? '' : paths.citySlug(city),
+                date: byId('filtru-data')?.value || '', hour: byId('filtru-ora')?.value || 'ALL', name: byId('filtru-nume')?.value || '' };
+        }
         if (visible('modal-cautare-terenuri')) return { kind: 'search' };
         return null;
     }
@@ -169,6 +196,15 @@
             const entries = window.spotivitySeoRoutes?.[kind === 'court' ? 'courts' : 'bases'] || {};
             for (const id of Object.keys(entries)) if (paths.validId(id) && indexedPath(kind, id) === relative) return { kind, id, direct: true };
         }
+        // Not generated yet: spotivity.ro served the app shell for this address.
+        // The trailing ID is only a lookup key; the dialog rereads it under RLS.
+        const courtMatch = relative.match(fallbackCourt), baseMatch = relative.match(fallbackBase);
+        if (courtMatch || baseMatch) {
+            const id = paths.normalizedId((courtMatch || baseMatch)[1]);
+            return id ? { kind: courtMatch ? 'court' : 'base', id, direct: true } : { kind: 'invalid' };
+        }
+        const list = relative.match(listPath);
+        if (list) return { kind: null, view: { kind: 'court-list', sport: sportNames[list[1]], city: list[2] || '' }, list: true, direct: true };
         return { kind: null, view: null, direct: true };
     }
     function closeUi() {
@@ -179,6 +215,13 @@
     async function restoreView(view) {
         if (!view || foreignModal() || isPrivateWorkspace()) return;
         if (view.kind === 'court-list') {
+            // A city address (terenuri/fotbal/cluj-napoca/) reopens the list on that city.
+            const cities = byId('filtru-oras-global');
+            if (cities && typeof view.city === 'string') {
+                const option = view.city ? [...cities.options].find(item => item.value !== 'ALL' && paths.citySlug(item.value) === view.city) : null;
+                const value = option ? option.value : 'ALL';
+                if ((option || !view.city) && cities.value !== value) cities.value = value;
+            }
             if (typeof window.openSpotivityCourtList === 'function') await window.openSpotivityCourtList(view.sport, { date: view.date, hour: view.hour, name: view.name });
             else [...document.querySelectorAll('button.card-sport[data-sport]')].find(node => node.dataset.sport === view.sport)?.click();
         } else if (view.kind === 'base-list') await window.openSportsBases?.();
@@ -256,6 +299,12 @@
         const queued = queuedEntity;
         queuedEntity = null; goingBack = false;
         currentEntry = history.state?.[stateKey] || readLocation();
+        if (!restoreAfterClose && currentEntry.list && currentEntry.pushed && !currentEntry.kind) {
+            // A court opened from a list was closed outright: leave the list address too.
+            queuedEntity = queued; goingBack = true;
+            history.back();
+            return;
+        }
         const entry = !restoreAfterClose && !currentEntry.kind ? { ...currentEntry, view: null } : currentEntry;
         restoreAfterClose = true;
         await applyEntry(entry);
@@ -278,6 +327,39 @@
             if (!opened) status(kind === 'court' ? 'Acest teren nu mai este disponibil sau nu a putut fi încărcat.' : 'Această bază sportivă nu mai este disponibilă sau nu a putut fi încărcată.');
             return !!opened;
         } finally { if (token === generation) finishPending(); }
+    }
+    // Opening a sport's court list shows its own address (terenuri/fotbal/, or
+    // terenuri/fotbal/<oras>/ once a city is chosen); closing it returns to the
+    // previous address through history, so Back and Forward stay consistent.
+    function syncListAddress(view) {
+        if (restoring || goingBack || settle || active || protectedIntent() || foreignModal() || isPrivateWorkspace()) return;
+        if (view?.kind === 'court-list') {
+            const route = listRoute(view);
+            if (!route) return;
+            const url = new URL(route, appRoot);
+            const here = new URL(location.href);
+            if (currentEntry?.list && url.pathname === here.pathname) {
+                // Keep the latest filters for Back from a court opened from this list.
+                if (JSON.stringify(currentEntry.view) !== JSON.stringify(view)) writeState({ ...currentEntry, view }, location.href, true);
+                return;
+            }
+            if (currentEntry?.list) {
+                // Another city in the same open list: replace, do not stack entries.
+                writeState({ ...currentEntry, view }, url.href, true);
+            } else if (url.pathname === here.pathname) {
+                // Already on this category page: the list now belongs to it.
+                writeState({ ...currentEntry, view, list: true, pushed: false }, location.href, true);
+            } else {
+                writeState({ ...currentEntry, view: null }, location.href, true);
+                writeState({ kind: null, view, list: true, pushed: true, direct: false }, url.href);
+            }
+            restoreMetadata();
+        } else if (!view && currentEntry?.list && !visible('modal-rezervare')) {
+            if (currentEntry.pushed) {
+                goingBack = true; restoreAfterClose = false;
+                startPending(); history.back();
+            } else writeState({ ...currentEntry, view: null, list: false }, location.href, true);
+        }
     }
     function initialize() {
         if (initialized) return;
@@ -306,6 +388,7 @@
             if (active?.kind === 'court' && !visible('modal-rezervare')) closed('court');
             else if (active?.kind === 'base' && !visible('modal-baze-sportive')) closed('base');
             previousView = readView();
+            syncListAddress(previousView);
         });
         observer.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['style', 'hidden', 'class', 'data-selected-base-id'], childList: true });
         document.addEventListener('click', event => {
@@ -332,7 +415,10 @@
         ready = true;
         if (!initialized || initialProtectedIntent || protectedIntent() || window.isSpotivityRecoveryCallback?.() || window.isSpotivityAuthCallback?.()) return;
         setTimeout(() => {
-            if (currentEntry?.kind && !foreignModal() && !isPrivateWorkspace()) applyEntry(currentEntry).catch(() => status('Pagina nu a putut fi încărcată. Încearcă din nou.'));
+            // A list address served as the app shell (a city page not generated yet)
+            // opens that list; a generated category page keeps its own content.
+            const shellList = currentEntry?.list && !document.body.dataset.categorySport;
+            if ((currentEntry?.kind || shellList) && !foreignModal() && !isPrivateWorkspace()) applyEntry(currentEntry).catch(() => status('Pagina nu a putut fi încărcată. Încearcă din nou.'));
         }, 0);
     }
     window.SpotivityNavigation = Object.freeze({

@@ -1,4 +1,4 @@
 [build]
   base = "."
   publish = "dist"
-  command = "node scripts/build-public.mjs"
+  command = "node scripts/netlify-build.mjs"
