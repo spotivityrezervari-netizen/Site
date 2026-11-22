@@ -43,7 +43,7 @@
                     // back to present (the server recounts and emails the correction).
                     const actions = node('div', 'booking-attendance-actions');
                     const value = noShow ? 'present' : 'no_show';
-                    const button = node('button', 'booking-attendance-choice', `${noShow ? '☑' : '☐'} Nu s-a prezentat`);
+                    const button = node('button', 'booking-attendance-choice', noShow ? 'Nu s-a prezentat (bifat)' : 'Nu s-a prezentat');
                     button.type = 'button'; button.dataset.attendanceChoice = value;
                     button.setAttribute('aria-pressed', String(noShow));
                     button.title = noShow ? 'Scoate bifa: clientul redevine prezent' : 'Bifează dacă clientul nu a venit';

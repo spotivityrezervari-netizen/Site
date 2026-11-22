@@ -158,7 +158,7 @@ async function seed(fixture) {
             assert.equal(await document.locator('h1').count(), 1, url);
             assert.equal(await document.locator('section[data-home-intro].home-intro').count(), descriptor.kind === 'home' ? 1 : 0);
             if (descriptor.kind === 'home') {
-                assert.equal(await document.locator('h1').innerText(), headings.ro);
+                assert.equal((await document.locator('h1').textContent()).trim(), headings.ro);
                 assert.equal(await document.locator('#home-title-fotbal').evaluate(node => node.tagName), 'H2');
                 assert.equal(await document.locator('button.card-sport[data-sport]').count(), SPORTS.length);
             }
@@ -214,7 +214,7 @@ async function seed(fixture) {
                 for (const [language, heading] of Object.entries(headings)) {
                     await page.locator('#btn-lang-'+language).click();
                     assert.equal(await page.locator('h1').count(), 1);
-                    assert.equal(await page.locator('h1').innerText(), heading);
+                    assert.equal((await page.locator('h1').textContent()).trim(), heading);
                     assert.equal(await page.locator('.welcome-tagline').innerText(), taglines[language]);
                     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth+1), `Homepage fits ${width}px in ${language}`);
                 }
@@ -227,13 +227,17 @@ async function seed(fixture) {
                     const before = await page.evaluate(() => window.__pickerScrollBefore);
                     await page.locator('#modal-terenuri').waitFor({state: 'visible'});
                     await page.waitForFunction(() => document.body.classList.contains('fara-scroll'));
-                    assert.equal(page.url(), hosted.server.url, sport+' opens its picker before navigation');
+                    // Same document, with the list's own address (terenuri/<sport>/).
+                    const slug = SPORTS.find(item => item.sport === sport).slug;
+                    await page.waitForURL(new URL(`terenuri/${slug}/`, hosted.server.url).href);
+                    assert.ok(page.url().endsWith(`terenuri/${slug}/`), sport+' opens its picker before navigation');
                     assert.equal(await graphText(page), originalGraph, 'Picker keeps the homepage graph');
                     await page.mouse.wheel(0, 280); await page.waitForTimeout(80);
                     assert.ok(Math.abs((await page.evaluate(() => scrollY))-before) <= 1, `${sport} picker locks scroll at ${width}px`);
                     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth+1), `Picker fits ${width}px`);
                     await closeModal(page, 'modal-terenuri');
                     await page.waitForFunction(() => !document.body.classList.contains('fara-scroll'));
+                    await page.waitForURL(hosted.server.url);
                     assert.ok(Math.abs((await page.evaluate(() => scrollY))-before) <= 1, `${sport} picker restores scroll at ${width}px`);
                 }
             }

@@ -58,8 +58,11 @@ const slugs={Fotbal:'fotbal',Baschet:'baschet',Tenis:'tenis',Volei:'volei','Teni
    else if(kind==='keyboard'){await link.focus();await link.press('Enter');}
    else{const box=await link.boundingBox();await link.click({position:{x:box.width*.5,y:box.height-20}});}
    await page.locator('#modal-terenuri').waitFor({state:'visible'});assert.equal(await page.locator('#modal-terenuri').getAttribute('data-sport'),sport);
-   assert.equal(new URL(page.url()).pathname,new URL(base).pathname,'Ordinary click uses current lower sport booking flow');
+   // The chooser opens in place with the sport list's own address (terenuri/<sport>/).
+   await page.waitForURL(new URL(`terenuri/${slugs[sport]}/`,base).href);
+   assert.equal(new URL(page.url()).pathname,new URL(`terenuri/${slugs[sport]}/`,base).pathname,'Ordinary click uses current lower sport booking flow');
    await page.locator('#inchide-terenuri').click();await page.locator('#modal-terenuri').waitFor({state:'hidden'});
+   await page.waitForURL(base);
   }
   for(const width of [320,390,768,1024,1440,1920]){
    await page.setViewportSize({width,height:width<768?844:1000});

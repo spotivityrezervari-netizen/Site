@@ -27,10 +27,12 @@ async function openSport(page, sport) {
     await page.waitForURL(new URL(`terenuri/${sportSlugs[sport]}/`, base).href);
     await page.waitForLoadState('networkidle');
   }
-  const before = page.url();
+  await page.evaluate(() => { window.__sameDocument = true; });
   await button.click();
   await page.locator('#modal-terenuri').waitFor({state:'visible'});
-  assert.equal(page.url(), before, 'The reservation action opens the chooser without a document or URL change');
+  // Same document; the list shows its own address, terenuri/<sport>/ (owner request 22.11.2026).
+  await page.waitForURL(new URL(`terenuri/${sportSlugs[sport]}/`, base).href);
+  assert.equal(await page.evaluate(() => window.__sameDocument), true, 'The reservation action opens the chooser without a document change');
 }
 async function returnHome(page) {
   await page.evaluate(() => window.SpotivityNavigation?.whenSettled?.());
@@ -1289,7 +1291,9 @@ async function openProfile(page) {
       await lowerSport.evaluate(node=>{window.chooserActivationScroll=null;node.addEventListener('click',()=>{window.chooserActivationScroll=window.scrollY;},{capture:true,once:true});});
       await lowerSport.click();
       await mobile.locator('#modal-terenuri').waitFor({state:'visible'});
-      assert.equal(mobile.url(),chooserUrl,'The homepage basketball action opens the chooser directly');
+      // Same document; the basketball list shows its own address.
+      await mobile.waitForURL(new URL('terenuri/baschet/',chooserUrl).href);
+      assert.equal(await mobile.evaluate(()=>window.chooserActivationScroll!==undefined),true,'The homepage basketball action opens the chooser directly');
       const categoryScroll=await mobile.evaluate(()=>window.chooserActivationScroll);
       assert.ok(Number.isFinite(categoryScroll)&&categoryScroll>0,'The chooser records the real click position');
       await mobile.waitForFunction(()=>document.body.classList.contains('fara-scroll'));

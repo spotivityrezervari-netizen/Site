@@ -139,7 +139,7 @@ let passed=0;
   await forms.page.locator('#btn-executa-register').click();await forms.page.locator('#form-login').waitFor({state:'visible'});
   assert.equal(await forms.page.locator('#reg-parola').inputValue(),'');
   console.log('PASS passwords are cleared after login/register attempts, close, Escape and logout while email retry data stays available');passed++;
-  const chooserUrl=normal.page.url();await normal.page.locator('button.card-sport[data-sport="Fotbal"]').click();await normal.page.locator('#modal-terenuri').waitFor({state:'visible'});assert.equal(normal.page.url(),chooserUrl);
+  await normal.page.locator('button.card-sport[data-sport="Fotbal"]').click();await normal.page.locator('#modal-terenuri').waitFor({state:'visible'});await normal.page.waitForURL(url=>url.pathname.endsWith('/terenuri/fotbal/'));
   const image=normal.page.locator('.card-teren-poza img');await image.waitFor();await normal.page.waitForFunction(()=>document.querySelector('.card-teren-poza img')?.naturalWidth>0);
   assert.equal(await image.evaluate(node=>node.src),new URL('assets/imagini/spotivity-256.webp',base).href);
   console.log('PASS a court without a photo gets a valid image in the same card layout');passed++;
