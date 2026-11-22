@@ -599,47 +599,62 @@ function zoned(items, ribbons, map, k, box, inZone, align, soft) {
   return [{ align, ...refGroup(clear, ribbons, map, k, box) }, { align, dim: soft, ...refGroup(behind, [], map, k, box) }];
 }
 
-// Wide screens (coordinates 1600 x 1000): the photo spread evenly over the whole screen,
-// centred: its top half fills the left half, its bottom half the right half, both starting
-// below the header bars. Only pieces right behind the text or the photo card are softened.
-const WX = 1.42; const WY = 1.03;
-const WL = (x, y) => [22 + x * WX, 170 + y * WY];
-const WR = (x, y) => [800 + 22 + x * WX, 170 + (y - 800) * WY];
-const behindWide = (x, y) => (x > 150 && x < 800 && y > 270 && y < 840) || (x > 870 && x < 1400 && y > 330 && y < 720);
+// Wide screens (coordinates 1600 x 1000). Every piece sits in a free area of the page (never
+// behind the text or the photo card) and belongs to a small "story":
+//   left column  - basketball shot into the hoop (dashed flight), volleyball, medal, trophy;
+//   right column - stopwatch, the racket with the tennis ball and its light trail, the
+//                  referee's whistle, the location pin, the soccer ball with its trail;
+//   top band     - the scoreboard; bottom band - the booking path: jersey -> calendar ->
+//                  pin -> stopwatch, linked by a dashed line.
+// Columns are glued to the side edges, bands to the top/bottom, so the free areas line up on
+// every desktop width (checked 1440 and 1920).
 const wide = layout({
   W: 1600, H: 1000,
-  glows: [[140, -80, 950, 720, '#11936f', 0.24], [1480, -60, 760, 620, '#0e8064', 0.16], [1180, 640, 620, 380, '#0a5e4b', 0.1], [760, 1060, 820, 300, '#0e8064', 0.14]],
-  sparkles: 60,
+  glows: [[140, -80, 950, 720, '#11936f', 0.22], [1480, -60, 760, 620, '#0e8064', 0.15], [1180, 640, 620, 380, '#0a5e4b', 0.1], [760, 1060, 820, 300, '#0e8064', 0.12]],
+  sparkles: 55,
   calm: [470, 520, 420, 300],
   groups: [
-    ...zoned(REF.filter((i) => i[2] < 800), REF_RIBBONS.filter((r) => r[0][1] < 800), WL, 0.8, [1600, 1000], behindWide, 'xMinYMid', 0.2),
-    ...zoned(REF.filter((i) => i[2] >= 800), REF_RIBBONS.filter((r) => r[0][1] >= 800), WR, 0.8, [1600, 1000], behindWide, 'xMaxYMid', 0.2),
+    { align: 'xMinYMid',
+      arcs: [[118, 248, 170, 300, 104, 372]],
+      decor: [['dots', 26, 520, 2, 3, 1], ['ring', 140, 680, 6, 0, 1], ['plus', 30, 835, 0, 0, 1]],
+      props: [['hoop', 80, 440, 82], ['medal', 74, 770, 60, -6], ['trophy', 84, 912, 92, 0]],
+      balls: [['basketball', 78, 236, 46, -40, 15, -50], ['volleyball', 82, 612, 38, 45, 35, 0]] },
+    { align: 'xMaxYMid',
+      ribbons: [
+        { a: [[820, 330], [1050, 260], [1260, 220], [1446, 236]], b: [[820, 372], [1080, 300], [1290, 262], [1458, 262]], n: 34, strength: 0.9, peak: 0.85, endOp: 0.6, width: 70, twist: 0.8 },
+        { a: [[1110, 958], [1250, 948], [1370, 918], [1446, 892]], b: [[1110, 984], [1270, 976], [1390, 948], [1460, 926]], n: 26, strength: 0.7, peak: 0.8, endOp: 0.5, width: 44, twist: 0.75 },   // fades in from the left, fully on screen
+      ],
+      decor: [['dots', 1556, 470, 2, 3, 1], ['cross', 1440, 560, 0, 0, 1], ['ring', 1572, 790, 7, 0, 1]],
+      props: [['stopwatch', 1540, 196, 60, -14, 300], ['racket', 1522, 372, 84, 18], ['whistle', 1500, 604, 76, -12, 'M30 -30C44 -80 0 -110 24 -160'], ['pin', 1516, 748, 66]],
+      balls: [['tennis', 1460, 248, 22, 20, 30, 10], ['soccer', 1508, 884, 66, 18, -12, 8]] },
+    { align: 'xMidYMin',
+      decor: [['ring', 330, 212, 7, 0, 1], ['plus', 520, 186, 0, 0, 1], ['dots', 1010, 176, 3, 2, 1]],
+      props: [['scoreboard', 770, 205, 62, 0, '21']] },
+    { align: 'xMidYMax',
+      arcs: [[350, 870, 445, 830, 520, 872], [580, 872, 665, 830, 740, 880], [800, 880, 885, 830, 960, 872]],
+      props: [['jersey', 300, 905, 66, -6], ['calendar', 550, 908, 62, 4], ['pin', 770, 935, 62], ['stopwatch', 990, 910, 62, 10, 40]] },
   ],
 });
-// Portrait screens (547 x 1184, the phone's shape). Fewer pieces, placed with care:
-// top (glued to the top, below the header): the basketball with its light trail right of
-// the title and the racket right of the green button; bottom (glued to the bottom, seen in
-// the gaps between sections while scrolling): two staggered rows, big pieces on the outside.
+// Portrait screens (547 x 1184, the phone's shape). Top: the basketball with its light trail
+// right of the title, the racket right of the green button. Bottom: one tidy row of three that
+// sits between the last section and the footer text, and peeks between sections while scrolling.
 const phone = layout({
   W: 547, H: 1184,
   glows: [[500, -60, 520, 520, '#11936f', 0.24], [60, 980, 460, 320, '#0e8064', 0.12], [280, 640, 380, 280, '#0a5e4b', 0.1]],
-  sparkles: 34,
+  sparkles: 30,
   calm: [250, 560, 300, 330],
   groups: [
     { align: 'xMidYMin',
       ribbons: [
         { a: [[-40, 520], [140, 470], [330, 420], [452, 266]], b: [[-40, 600], [200, 540], [400, 400], [466, 330]], n: 34, strength: 0.9, peak: 0.86, endOp: 0.6, width: 70, twist: 0.8 },
       ],
-      decor: [['dots', 498, 470, 3, 3, 0.8], ['ring', 512, 560, 7, 0, 0.8], ['plus', 380, 236, 0, 0, 0.8], ['cross', 28, 236, 0, 0, 0.8]],
+      decor: [['dots', 498, 470, 3, 3, 0.8], ['ring', 512, 560, 7, 0, 0.8], ['cross', 28, 236, 0, 0, 0.8]],
       props: [['racket', 470, 658, 84, 22]],
       balls: [['basketball', 478, 292, 44, -40, 15, -50]] },
     { align: 'xMidYMax',
-      ribbons: [
-        { a: [[-40, 1070], [160, 1030], [360, 960], [600, 820]], b: [[-40, 1110], [200, 1070], [400, 1000], [600, 880]], n: 26, strength: 0.6, peak: 0.5, width: 60, twist: 0.75 },
-      ],
-      decor: [['ring', 275, 900, 9, 0, 0.8], ['dots', 252, 1040, 3, 2, 0.8], ['plus', 40, 975, 0, 0, 0.8], ['cross', 510, 975, 0, 0, 0.8]],
-      props: [['stopwatch', 290, 965, 62, 10, 40], ['trophy', 462, 912, 76, 0], ['whistle', 120, 1040, 66, -16, 'M30 -30C50 -70 30 -110 70 -150']],
-      balls: [['soccer', 90, 912, 44, 18, -14, 8], ['volleyball', 455, 1036, 30, 45, 35, 0]] },
+      decor: [['dots', 186, 1044, 2, 2, 0.8], ['dots', 350, 1044, 2, 2, 0.8]],
+      props: [['stopwatch', 273, 1058, 58, 10, 40], ['trophy', 440, 1052, 66, 0]],
+      balls: [['soccer', 106, 1054, 32, 18, -14, 8]] },
   ],
 });
 

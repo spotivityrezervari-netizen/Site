@@ -3,6 +3,19 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-22 (24): Icons arranged in small stories, nothing overlaps or is cut; title 15% smaller (done by Claude, at the owner's request)
+
+Owner: "title 15% smaller but still bigger than the text; the icons still overlap; give them a meaning, not random, it looks rather ugly"; then "extend it downward too, it looks ugly that it gets cut".
+
+- **Title:** `clamp(36px, 3.6vw, 53px)` (phone `clamp(29px, 8.5vw, 36px)`), still above the tagline (max 28px).
+- **Desktop** (the reference layout is no longer used for wide screens): every piece sits in a free area, never behind the text or the photo card, and each group tells a small story:
+  - left column (`xMinYMid`): basketball shot into the hoop on a dashed arc, then volleyball, medal and trophy at even spacing;
+  - right column (`xMaxYMid`): stopwatch, the racket with the tennis ball and its light trail, the whistle, the location pin, and the soccer ball with a trail that fades in from the left and stays fully on screen (it used to run off the bottom edge);
+  - top band: the scoreboard and a few small marks; bottom band: the booking path jersey, calendar, pin and stopwatch, linked by dashed arcs.
+  - Checked at 1440×900 and 1920×1080: no overlaps, nothing cut.
+- **Phone:** top as before (basketball with trail, racket). The bottom row (soccer ball, stopwatch, trophy) moved down, so it sits between the last box and the footer text instead of being cut by the box.
+- `design-background.css?v=26`; SEO pages regenerated.
+
 ## 2026-11-22 (23): "SPOTIVITY" bigger than the tagline (done by Claude, at the owner's request)
 
 Owner: "make the text a bit smaller and Spotivity bigger, the title should be bigger than the tagline".
