@@ -9,8 +9,9 @@ import { fileURLToPath } from 'node:url';
 const W = 547;   // same coordinate system as the reference photo
 const H = 1600;
 const ICON = '#1c7a63';      // line-art colour (drawn at low opacity)
-const ICON_OPACITY = 0.27;
-const GLOW = '#0f8a6a';      // brightest emerald of the light ribbons
+const ICON_OPACITY = 0.3;
+const GLOW = '#14a07e';
+const PENT = '#1f9a7a';     // lit soccer-ball pentagons      // brightest emerald of the light ribbons
 
 const f = (n) => Number(n.toFixed(1));
 let uid = 0;
@@ -26,51 +27,124 @@ function star(cx, cy, r) {
   return poly(pts);
 }
 
-// Soccer ball seen from a pentagon: centre pentagon, five hexagon seams, five rim pentagons.
-function soccer() {
-  const id = `sb${uid++}`;
-  const a = 15; const junction = 29; const b = 13; const dist = junction + b;
-  const centre = [0, 1, 2, 3, 4].map((i) => polar(a, -90 + 72 * i));
-  let seams = ''; let patches = poly(centre);
-  const outer = [0, 1, 2, 3, 4].map((i) => {
-    const th = -90 + 72 * i;
-    const [cx, cy] = polar(dist, th);
-    return [0, 1, 2, 3, 4].map((k) => { const [x, y] = polar(b, th + 180 + 72 * k); return [cx + x, cy + y]; });
-  });
-  outer.forEach((pent, i) => {
-    const th = -90 + 72 * i;
-    patches += poly(pent);
-    seams += `M${P(...centre[i])}L${P(...pent[0])}`;                 // centre vertex -> rim pentagon
-    seams += `M${P(...pent[4])}L${P(...outer[(i + 1) % 5][1])}`;      // hexagon outer edge
-    for (const k of [2, 3]) {                                          // rim pentagon -> edge of ball
-      const [x, y] = pent[k]; const [ex, ey] = polar(60, th + (k === 2 ? -28 : 28));
-      seams += `M${P(x, y)}L${P(ex, ey)}`;
+// ---- balls are real 3D spheres (rotated, projected, back half hidden) so the seams curve
+// like in the reference instead of looking flat ----
+const norm = ([x, y, z]) => { const l = Math.hypot(x, y, z); return [x / l, y / l, z / l]; };
+function rotator(yaw, pitch, roll) {
+  const r = (d) => d * Math.PI / 180;
+  const [cy, sy, cp, sp, cr, sr] = [Math.cos(r(yaw)), Math.sin(r(yaw)), Math.cos(r(pitch)), Math.sin(r(pitch)), Math.cos(r(roll)), Math.sin(r(roll))];
+  return ([x, y, z]) => {
+    const X = x * cy + z * sy; let Z = -x * sy + z * cy;           // yaw (around y)
+    const Y = y * cp - Z * sp; Z = y * sp + Z * cp;                 // pitch (around x)
+    return [X * cr - Y * sr, X * sr + Y * cr, Z];                   // roll (in the picture plane)
+  };
+}
+// great-circle samples between two points of the sphere
+const arc = (a, b, n = 10) => Array.from({ length: n + 1 }, (_, i) => norm(a.map((v, k) => v + (b[k] - v) * i / n)));
+// visible (front) parts of 3D polylines as one SVG path; R = ball radius
+function frontPath(lines, rot, R = 50) {
+  let d = '';
+  for (const line of lines) {
+    let open = false;
+    for (const p of line) {
+      const [x, y, z] = rot(p);
+      if (z > 0.015) { d += `${open ? 'L' : 'M'}${P(x * R, -y * R)}`; open = true; } else open = false;
     }
-  });
-  return `<clipPath id='${id}'><circle r='49'/></clipPath><circle r='50' fill='url(%23ballFill)' stroke='none'/><g clip-path='url(%23${id})'><path d='${patches}' fill='${ICON}' fill-opacity='.2'/><path d='${seams}'/></g><circle r='50'/>`;
+  }
+  return d;
 }
-const basketball = () => `<circle r='50' fill='url(%23ballFill)' stroke='none'/><circle r='50'/><path d='M0 -50V50M-50 0H50M-36 -34.7C-17 -14 -17 14 -36 34.7M36 -34.7C17 -14 17 14 36 34.7'/>`;
-// Volleyball: three seams from the centre (120 deg apart), each with one parallel panel line.
-function volleyball() {
-  const unit = `M0 0C10 14 26 22 43.3 25M-19.4 5.6C-6 22 14 34 36 34.7`;
-  const seams = [0, 120, 240].map((r) => `<path d='${unit}' transform='rotate(${r})'/>`).join('');
-  return `<circle r='50' fill='url(%23ballFill)' stroke='none'/><circle r='50'/>${seams}`;
+const ballBase = `<circle r='50' fill='url(%23ballFill)' stroke='none'/>`;
+
+// Soccer ball: a true truncated icosahedron on the sphere (20 hexagons, 12 lit pentagons).
+const PHI = (1 + Math.sqrt(5)) / 2;
+function cyclicSigned(base) {
+  const out = new Map();
+  for (const sx of [1, -1]) for (const sy of [1, -1]) for (const sz of [1, -1]) {
+    const v = [base[0] * sx, base[1] * sy, base[2] * sz];
+    for (const q of [v, [v[1], v[2], v[0]], [v[2], v[0], v[1]]]) out.set(q.map((n) => (n + 0).toFixed(4)).join(), q);
+  }
+  return [...out.values()];
 }
-const trophy = () => `<path d='M-26 -44H26V-26C26 -6 14 8 0 10C-14 8 -26 -6 -26 -26Z'/><path d='M-26 -36H-34C-41 -36 -44 -30 -42 -23C-40 -15 -33 -9 -23 -7M26 -36H34C41 -36 44 -30 42 -23C40 -15 33 -9 23 -7M-4 10V24M4 10V24M-11 24H11V31H-11ZM-21 31H21V45H-21ZM-10 38H10'/><path d='${star(0, -22, 9)}'/>`;
-const whistle = () => `<path d='M0 -10H42Q46 -10 46 -6V2Q46 6 42 6H19.6A20 20 0 1 1 0 -10Z'/><path d='M10 -10V-5H18V-10'/><circle cx='0' cy='10' r='7'/><circle cx='-17.6' cy='-7.6' r='5'/><path d='M53 -14L59 -21M55 -2H63M48 -20L50 -28'/>`;
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const TI = [[0, 1, 3 * PHI], [1, 2 + PHI, 2 * PHI], [PHI, 2, 2 * PHI + 1]].flatMap(cyclicSigned);
+const TI_EDGES = [];
+TI.forEach((a, i) => TI.forEach((b, j) => { if (j > i && Math.abs(Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) - 2) < 1e-6) TI_EDGES.push([norm(a), norm(b)]); }));
+const TI_PENTS = cyclicSigned([0, 1, PHI]).map((c) => {
+  const n = norm(c);
+  const near = TI.map(norm).sort((a, b) => dot(b, n) - dot(a, n)).slice(0, 5);
+  const u = norm(near[0].map((v, k) => v - n[k]));
+  const w = [n[1] * u[2] - n[2] * u[1], n[2] * u[0] - n[0] * u[2], n[0] * u[1] - n[1] * u[0]];
+  const ang = (p) => Math.atan2(dot(p, w), dot(p, u));
+  return { n, ring: near.sort((a, b) => ang(a) - ang(b)) };
+});
+function soccer(yaw = 18, pitch = -14, roll = 8) {
+  const rot = rotator(yaw, pitch, roll);
+  const light = norm([-0.35, 0.45, 1]);
+  let fills = '';
+  for (const { n, ring } of TI_PENTS) {
+    const c = rot(n);
+    if (c[2] < -0.25) continue;
+    const pts = ring.flatMap((a, i) => arc(a, ring[(i + 1) % 5], 4)).map((p) => {
+      const [x, y, z] = rot(p);
+      if (z >= 0) return [x * 50, -y * 50];
+      const l = Math.hypot(x, y); return [x / l * 50, -y / l * 50];   // behind the rim: pin to the outline
+    });
+    const lit = Math.max(0, dot(c, light));
+    fills += `<path d='${poly(pts)}' fill='url(%23pentFill)' fill-opacity='${f(0.25 + 0.75 * lit)}' stroke='none'/>`;
+  }
+  return `${ballBase}${fills}<path d='${frontPath(TI_EDGES.map(([a, b]) => arc(a, b, 6)), rot)}'/><circle r='50'/>`;
+}
+// Basketball: two perpendicular great-circle seams and the two curved side seams.
+function basketball(yaw = -40, pitch = 15, roll = -50) {
+  const rot = rotator(yaw, pitch, roll);
+  const N = 72; const T = (i) => i / N * 2 * Math.PI;
+  const circle = (fn) => Array.from({ length: N + 1 }, (_, i) => fn(T(i)));
+  const k = 0.62; const s = Math.sqrt(1 - k * k);
+  const lines = [
+    circle((t) => [Math.cos(t), 0, Math.sin(t)]),
+    circle((t) => [0, Math.cos(t), Math.sin(t)]),
+    circle((t) => [k, s * Math.cos(t), s * Math.sin(t)]),
+    circle((t) => [-k, s * Math.cos(t), s * Math.sin(t)]),
+  ];
+  return `${ballBase}<path d='${frontPath(lines, rot)}'/><circle r='50'/>`;
+}
+// Volleyball: the cube layout (6 faces x 3 strips, neighbouring faces at right angles).
+function volleyball(yaw = 45, pitch = 35, roll = 0) {
+  const rot = rotator(yaw, pitch, roll);
+  const lines = [];
+  const corners = [];
+  for (const x of [1, -1]) for (const y of [1, -1]) for (const z of [1, -1]) corners.push([x, y, z]);
+  corners.forEach((a, i) => corners.forEach((b, j) => { if (j > i && a.filter((v, q) => v !== b[q]).length === 1) lines.push(arc(norm(a), norm(b), 16)); }));
+  for (let ax = 0; ax < 3; ax++) for (const sg of [1, -1]) for (const u of [-1 / 3, 1 / 3]) {
+    const pts = [];
+    for (let i = 0; i <= 16; i++) { const p = [0, 0, 0]; p[ax] = sg; p[(ax + 1) % 3] = u; p[(ax + 2) % 3] = -1 + i / 8; pts.push(norm(p)); }
+    lines.push(pts);
+  }
+  return `${ballBase}<path d='${frontPath(lines, rot)}'/><circle r='50'/>`;
+}
+// Trophy: flared bowl, loop handles, slim stem opening into a trapezoid base with a plate.
+const trophy = () => `<path d='M-28 -44H28C28 -20 18 -2 4 3C3 12 4 19 12 26H-12C-4 19 -3 12 -4 3C-18 -2 -28 -20 -28 -44Z'/><path d='M-27 -37C-42 -40 -48 -27 -41 -17C-36 -10 -28 -8 -21 -10M27 -37C42 -40 48 -27 41 -17C36 -10 28 -8 21 -10M-15 26H15L20 44H-20ZM-9 35H9'/><path d='${star(0, -23, 9.5)}'/>`;
+// Whistle in 3/4 view: round chamber, long mouthpiece with its end face and underside, slot, sound rays.
+function whistle() {
+  const body = 'M6.9 -7H44V7H12.6A13 13 0 1 1 6.9 -7Z';
+  const depth = 'M44 -7L48 -4V10L44 7M48 10H16.6A13 13 0 0 1 -3.8 17.4L-7.8 14.4';
+  const slot = 'M22 -7V7M29 -7V7';
+  const rays = [-105, -140, -175].map((a) => { const [x1, y1] = polar(18, a); const [x2, y2] = polar(26, a); return `M${P(x1, y1 + 4)}L${P(x2, y2 + 4)}`; }).join('');
+  return `<g transform='scale(-1.3 1.3)'><path d='${body}'/><path d='${depth}'/><path d='${slot}'/><path d='${rays}'/></g>`;
+}
+// Stopwatch: double ring, crown, two side buttons, one hand.
 function stopwatch() {
-  let ticks = '';
-  for (let i = 0; i < 12; i++) { const r1 = i % 3 ? 31 : 28; const [x1, y1] = polar(r1, i * 30); const [x2, y2] = polar(34, i * 30); ticks += `M${P(x1, y1)}L${P(x2, y2)}`; }
-  const [bx1, by1] = polar(40, -45); const [bx2, by2] = polar(47, -45);
-  return `<circle r='40'/><path d='${ticks}' stroke-opacity='.7'/><path d='M-8 -53H8V-46H-8ZM0 -46V-40M${P(bx1, by1)}L${P(bx2, by2)}M0 0L-11 18M0 0V-22'/><circle r='3'/>`;
+  const btn = (a) => { const [x1, y1] = polar(40, a); const [x2, y2] = polar(47, a); const [px, py] = polar(4, a + 90); return `M${P(x1, y1)}L${P(x2, y2)}M${P(x2 - px, y2 - py)}L${P(x2 + px, y2 + py)}`; };
+  return `<circle r='40'/><circle r='33'/><path d='M0 -40V-46M-9 -53Q-9 -56 -6 -56H6Q9 -56 9 -53V-49Q9 -46 6 -46H-6Q-9 -46 -9 -49Z${btn(-135)}${btn(-45)}M0 0L11 -19'/><circle r='3.5'/>`;
 }
-const jersey = () => `<path d='M-18 -48Q0 -40 18 -48L44 -38L64 -10L48 0L40 -10V52Q40 56 36 56H-36Q-40 56 -40 52V-10L-48 0L-64 -10L-44 -38Z'/><path d='M-18 -48Q0 -28 18 -48M-56 -21L-41 -12M56 -21L41 -12'/><path d='M-24 -2L-15 -9V27M2 -9H12A6 6 0 0 1 18 -3V21A6 6 0 0 1 12 27H2A6 6 0 0 1 -4 21V-3A6 6 0 0 1 2 -9Z'/>`;
+const jersey = () => `<path d='M-18 -48Q0 -40 18 -48L44 -38L64 -10L48 0L40 -10V52Q40 56 36 56H-36Q-40 56 -40 52V-10L-48 0L-64 -10L-44 -38Z'/><path d='M-18 -48Q0 -30 18 -48M-56 -21L-41 -12M56 -21L41 -12'/><path d='M-24 -2L-15 -9V27M2 -9H12A6 6 0 0 1 18 -3V21A6 6 0 0 1 12 27H2A6 6 0 0 1 -4 21V-3A6 6 0 0 1 2 -9Z'/>`;
+// Racket: oval head with an open string grid, curved throat, banded grip.
 function racket() {
   const id = `rk${uid++}`;
   let strings = '';
-  for (let x = -32; x <= 32; x += 8) strings += `M${x} -84V24`;
-  for (let y = -76; y <= 16; y += 8) strings += `M-44 ${y}H44`;
-  return `<clipPath id='${id}'><ellipse cx='0' cy='-30' rx='38' ry='48'/></clipPath><path d='${strings}' clip-path='url(%23${id})' stroke-opacity='.5' stroke-width='1'/><ellipse cx='0' cy='-30' rx='44' ry='54'/><path d='M-16 19C-10 30 -7 36 -6 44M16 19C10 30 7 36 6 44M-6 44H6V98Q6 102 2 102H-2Q-6 102 -6 98ZM-6 58H6M-6 72H6M-6 86H6'/>`;
+  for (let x = -30; x <= 30; x += 10) strings += `M${x} -84V24`;
+  for (let y = -70; y <= 10; y += 10) strings += `M-44 ${y}H44`;
+  return `<clipPath id='${id}'><ellipse cx='0' cy='-30' rx='40' ry='50'/></clipPath><path d='${strings}' clip-path='url(%23${id})' stroke-opacity='${f(ICON_OPACITY * 0.8 * 100) / 100}'/><ellipse cx='0' cy='-30' rx='40' ry='50'/><path d='M-15 15C-9 25 -7 32 -7 42M15 15C9 25 7 32 7 42M-7 42H7V98Q7 102 3 102H-3Q-7 102 -7 98ZM-7 54L7 58M-7 66L7 70M-7 78L7 82M-7 90L7 94'/>`;
 }
 const plus = (s = 9) => `<path d='M-${s} 0H${s}M0 -${s}V${s}'/>`;
 const cross = (s = 8) => `<path d='M-${s} -${s}L${s} ${s}M${s} -${s}L-${s} ${s}'/>`;
@@ -83,7 +157,7 @@ function dots(cols, rows, gap = 14) {
 
 // [draw, x, y, scale, rotation, radius-for-wrapping (in tile units)]
 const icons = [
-  [soccer, 95, 62, 1.78, -8, 92],
+  [soccer, 95, 62, 1.78, 0, 92],
   [() => dots(3, 3), 470, 40, 1, 0, 30],
   [trophy, 402, 166, 1.45, -4, 80],
   [() => plus(), 222, 183, 1, 0, 10],
@@ -91,7 +165,7 @@ const icons = [
   [whistle, 218, 282, 1.4, -28, 80],
   [() => ring(7), 44, 358, 1, 0, 9],
   [() => cross(), 98, 346, 1, 0, 10],
-  [basketball, 476, 366, 1.58, 18, 82],
+  [basketball, 476, 366, 1.58, 0, 82],
   [stopwatch, 100, 452, 1.05, 0, 58],
   [() => cross(), 226, 406, 1, 0, 10],
   [() => dots(4, 4, 15), 16, 516, 1, 0, 50],
@@ -108,10 +182,10 @@ const icons = [
   [() => ring(12), 248, 1088, 1, 0, 14],
   [() => cross(), 182, 1134, 1, 0, 10],
   [() => dots(4, 3, 15), 455, 1050, 1, 0, 50],
-  [volleyball, 22, 1196, 2.05, 30, 104],
+  [() => volleyball(45, -35, 15), 22, 1196, 2.05, 0, 104],
   [whistle, 330, 1182, 1.4, -28, 80],
   [() => ring(18), 488, 1188, 1, 0, 20],
-  [soccer, 480, 1332, 1.72, 12, 88],
+  [() => soccer(-24, 10, -6), 480, 1332, 1.72, 0, 88],
   [() => ring(12), 208, 1380, 1, 0, 14],
   [() => plus(), 362, 1386, 1, 0, 10],
   [() => dots(2, 2, 14), 356, 1276, 1, 0, 20],
@@ -146,7 +220,7 @@ function wrapOffsets(minX, minY, maxX, maxY, wrapX) {
 const pct = (v) => f(v * 100) / 100;
 function build(wrapX) {
   uid = 0;
-  let defs = `<radialGradient id='ballFill' cx='.38' cy='.32' r='.75'><stop offset='0' stop-color='${ICON}' stop-opacity='.15'/><stop offset='1' stop-color='${ICON}' stop-opacity='.02'/></radialGradient>`;
+  let defs = `<linearGradient id='pentFill' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='${PENT}' stop-opacity='.55'/><stop offset='1' stop-color='${ICON}' stop-opacity='.18'/></linearGradient><radialGradient id='ballFill' cx='.38' cy='.32' r='.75'><stop offset='0' stop-color='${ICON}' stop-opacity='.15'/><stop offset='1' stop-color='${ICON}' stop-opacity='.02'/></radialGradient>`;
   let ribbonSvg = '';
   ribbons.forEach(([a, b, co, ci, k, peak], i) => {
     const gid = `g${i}`;
@@ -156,11 +230,11 @@ function build(wrapX) {
       const P = ([x, y]) => `${x + dx} ${y + dy}`;
       const outer = `M${P(a)}Q${P(co)} ${P(b)}`;
       // soft body: faint filled crescent, then wide-to-narrow edge strokes that read as a glow
-      ribbonSvg += `<path d='${outer}Q${P(ci)} ${P(a)}Z' fill='url(%23${gid})' fill-opacity='.3'/>`;
-      ribbonSvg += `<path d='${outer}' fill='none' stroke='url(%23${gid})' stroke-width='26' stroke-opacity='.05'/>`;
-      ribbonSvg += `<path d='${outer}' fill='none' stroke='url(%23${gid})' stroke-width='12' stroke-opacity='.1'/>`;
-      ribbonSvg += `<path d='${outer}' fill='none' stroke='url(%23${gid})' stroke-width='4.5' stroke-opacity='.22'/>`;
-      ribbonSvg += `<path d='${outer}' fill='none' stroke='url(%23${gid})' stroke-width='1.2' stroke-opacity='.65'/>`;
+      ribbonSvg += `<path d='${outer}Q${P(ci)} ${P(a)}Z' fill='url(%23${gid})' fill-opacity='.55'/>`;
+      ribbonSvg += `<path d='${outer}' fill='none' stroke='url(%23${gid})' stroke-width='26' stroke-opacity='.08'/>`;
+      ribbonSvg += `<path d='${outer}' fill='none' stroke='url(%23${gid})' stroke-width='12' stroke-opacity='.16'/>`;
+      ribbonSvg += `<path d='${outer}' fill='none' stroke='url(%23${gid})' stroke-width='4.5' stroke-opacity='.32'/>`;
+      ribbonSvg += `<path d='${outer}' fill='none' stroke='url(%23${gid})' stroke-width='1.4' stroke-opacity='.85'/>`;
     }
   });
   let iconSvg = '';
@@ -230,6 +304,6 @@ const sheetAt = process.argv.indexOf('--sheet');
 if (sheetAt > 0) {
   const list = [soccer, basketball, volleyball, trophy, whistle, stopwatch, jersey, racket];
   const cells = list.map((draw, i) => `<g transform='translate(${130 + (i % 4) * 260} ${150 + Math.floor(i / 4) * 300}) scale(2)' stroke-width='1.15'>${draw()}</g>`).join('');
-  const sheet = `<svg xmlns='http://www.w3.org/2000/svg' width='1040' height='600'><defs><radialGradient id='ballFill' cx='.38' cy='.32' r='.75'><stop offset='0' stop-color='${ICON}' stop-opacity='.3'/><stop offset='1' stop-color='${ICON}' stop-opacity='.05'/></radialGradient></defs><rect width='1040' height='600' fill='#011012'/><g fill='none' stroke='#3fd1a8' stroke-opacity='.85' stroke-linecap='round' stroke-linejoin='round'>${cells}</g></svg>`;
+  const sheet = `<svg xmlns='http://www.w3.org/2000/svg' width='1040' height='600'><defs><linearGradient id='pentFill' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='${PENT}' stop-opacity='.9'/><stop offset='1' stop-color='${ICON}' stop-opacity='.3'/></linearGradient><linearGradient id='pentFill' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='${PENT}' stop-opacity='.55'/><stop offset='1' stop-color='${ICON}' stop-opacity='.18'/></linearGradient><radialGradient id='ballFill' cx='.38' cy='.32' r='.75'><stop offset='0' stop-color='${ICON}' stop-opacity='.3'/><stop offset='1' stop-color='${ICON}' stop-opacity='.05'/></radialGradient></defs><rect width='1040' height='600' fill='#011012'/><g fill='none' stroke='#3fd1a8' stroke-opacity='.85' stroke-linecap='round' stroke-linejoin='round'>${cells}</g></svg>`;
   writeFileSync(process.argv[sheetAt + 1], sheet.replace(/%23/g, '#'));
 }

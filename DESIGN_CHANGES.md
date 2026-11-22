@@ -3,6 +3,22 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-22 (9): Line art closer to the reference photo (done by Claude, at the owner's request)
+
+- **The balls are real 3D spheres** in `scripts/design/fundal-final.mjs`. Their seams are 3D curves, rotated (`rotator(yaw, pitch, roll)`) and projected, and only the front half is drawn (`frontPath`):
+  - soccer: a true truncated icosahedron. Pentagons are filled with the `pentFill` gradient, brighter where they face the light (upper left), and pinned to the outline at the rim;
+  - basketball: two perpendicular great circles plus two side seams (small circles at x = ±0.62);
+  - volleyball: the cube layout, 6 faces with 3 strips each, neighbours at right angles. The two volleyballs use different angles.
+- **Other icons redrawn after the photo:**
+  - whistle: 3/4 view, with the mouthpiece end face, the underside and sound rays;
+  - stopwatch: double ring, crown, two side buttons, one hand;
+  - trophy: a slim stem flaring into a trapezoid base;
+  - racket: a 7x9 string grid and a banded grip.
+- **Ribbons are brighter:** `GLOW` `#14a07e`, a fuller crescent fill (.55) and stronger edge strokes. `ICON_OPACITY` went from 0.27 to 0.30.
+- **Fixed:** the racket strings and the stopwatch ticks set an absolute `stroke-opacity`, which made them brighter than the rest. The strings are now `ICON_OPACITY * 0.8`, and the ticks are gone.
+- Each tile is ~55 KB (it was ~29 KB). `<link>` went to `?v=11` and the SEO pages were regenerated.
+- **Revert only this step:** `git revert` the commit "Design: 3D balls and redrawn line art", then run `node scripts/design/fundal-final.mjs` and `node scripts/generate-seo-pages.mjs`.
+
 ## 2026-11-21 (8): Fundal Final fixed again, cleaner line art (done by Claude, at the owner's request)
 
 - **Fixed again:** the owner wants the background to stay still while the content scrolls over it. The `position: absolute` override was removed, so `.home-shell::after` is `position: fixed` again, as it was originally.
