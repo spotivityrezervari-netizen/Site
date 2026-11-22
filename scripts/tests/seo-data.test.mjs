@@ -42,7 +42,8 @@ test('brand and category graphs have canonical IDs, explicit language and real b
       assert.equal(node(category, 'CollectionPage').url, url);
       assert.deepEqual(node(category, 'BreadcrumbList').itemListElement, [
         { '@type': 'ListItem', position: 1, name: 'Acasă', item: baseUrl },
-        { '@type': 'ListItem', position: 2, name: `Terenuri de ${sport.label}`, item: url }
+        { '@type': 'ListItem', position: 2, name: 'Terenuri', item: new URL('terenuri/', baseUrl).href },
+        { '@type': 'ListItem', position: 3, name: `Terenuri de ${sport.label}`, item: url }
       ]);
     }
   }
@@ -54,7 +55,7 @@ test('city listings use their sport and city route, breadcrumb and optional visi
   assert.equal(node(graph, 'CollectionPage').url, url);
   assert.equal(node(graph, 'CollectionPage').name, 'Terenuri de tenis de picior în Târgu Mureș – Rezervări online | Spotivity');
   assert.deepEqual(node(graph, 'BreadcrumbList').itemListElement.map(item => [item.name, item.item]), [
-    ['Acasă', PRODUCTION_BASE_URL], ['Terenuri de tenis de picior', PRODUCTION_BASE_URL + 'terenuri/tenis-de-picior/'], ['Târgu Mureș', url]]);
+    ['Acasă', PRODUCTION_BASE_URL], ['Terenuri', PRODUCTION_BASE_URL + 'terenuri/'], ['Terenuri de tenis de picior', PRODUCTION_BASE_URL + 'terenuri/tenis-de-picior/'], ['Târgu Mureș', url]]);
   assert.deepEqual(node(graph, 'FAQPage').mainEntity, [{ '@type': 'Question', name: 'Q?', acceptedAnswer: { '@type': 'Answer', text: 'A.' } }]);
   assert.equal(node(seo.graphFor({ baseUrl: PRODUCTION_BASE_URL, kind: 'home' }), 'FAQPage'), undefined);
   for (const options of [{ city: '' }, { sport: 'Other' }, { route: 'terenuri/fotbal/reghin/' }, { faq: [{ question: 'Q?', answer: '' }] }]) {
@@ -73,7 +74,7 @@ test('courts describe their actual containing sports base and public city only',
   assert.deepEqual(place.address, { '@type': 'PostalAddress', addressLocality: 'Reghin' });
   assert.deepEqual(sportsBase.address, { '@type': 'PostalAddress', addressLocality: 'Reghin' });
   assert.equal(node(graph, 'WebPage').mainEntity['@id'], place['@id']);
-  assert.deepEqual(node(graph, 'BreadcrumbList').itemListElement.map(item => item.name), ['Acasă', 'Terenuri de fotbal', 'Reghin', base.nume, court.nume]);
+  assert.deepEqual(node(graph, 'BreadcrumbList').itemListElement.map(item => item.name), ['Acasă', 'Terenuri', 'Terenuri de fotbal', 'Reghin', base.nume, court.nume]);
   const standalone = seo.graphFor({ baseUrl, kind: 'court', court: { ...court, baza_sportiva_id: null }, base });
   assert.equal(node(standalone, 'Place').containedInPlace, undefined);
   assert.equal(node(standalone, 'SportsActivityLocation'), undefined);
@@ -138,4 +139,15 @@ test('reviewed source and production generation replace exactly one block with e
   assert.doesNotMatch(seo.serialize(decode(homeProduction)), /spotivityrezervari-netizen\.github\.io/);
   assert.throws(() => generateSeoFiles({ template: template.replace(/<script id="spotivity-seo-data"[\s\S]*?<\/script>/, ''), catalog }), /exactly one/);
   assert.throws(() => generateSeoFiles({ template: template.replace('</head>', seo.script(seo.graphFor({ baseUrl: PAGES_BASE_URL, kind: 'home' })) + '</head>'), catalog }), /exactly one/);
+});
+
+test('the all-courts page is a collection at terenuri/ under the home breadcrumb', () => {
+  for (const baseUrl of [PAGES_BASE_URL, PRODUCTION_BASE_URL]) {
+    const graph = seo.graphFor({ baseUrl, kind: 'catalog' });
+    const url = new URL('terenuri/', baseUrl).href;
+    assert.equal(node(graph, 'CollectionPage').url, url);
+    assert.equal(node(graph, 'CollectionPage').name, seo.catalogTitle);
+    assert.deepEqual(node(graph, 'BreadcrumbList').itemListElement.map(item => [item.name, item.item]), [['Acasă', baseUrl], ['Terenuri', url]]);
+    assert.throws(() => seo.graphFor({ baseUrl, kind: 'catalog', route: 'terenuri/fotbal/' }));
+  }
 });

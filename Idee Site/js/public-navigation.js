@@ -299,8 +299,8 @@
         const queued = queuedEntity;
         queuedEntity = null; goingBack = false;
         currentEntry = history.state?.[stateKey] || readLocation();
-        if (!restoreAfterClose && currentEntry.list && currentEntry.pushed && !currentEntry.kind) {
-            // A court opened from a list was closed outright: leave the list address too.
+        if (!restoreAfterClose && (currentEntry.list || currentEntry.search) && currentEntry.pushed && !currentEntry.kind) {
+            // A court opened from a list or search was closed outright: leave that address too.
             queuedEntity = queued; goingBack = true;
             history.back();
             return;
@@ -360,6 +360,55 @@
                 startPending(); history.back();
             } else writeState({ ...currentEntry, view: null, list: false }, location.href, true);
         }
+    }
+    // "Rezervă un teren" opens the search over every court at terenuri/, the
+    // generated all-courts page, with that page's title, description and
+    // canonical. A typed query (?q=) is a search result and is never indexed.
+    function searchMetadata(query) {
+        const canonical = new URL('terenuri/', canonicalRoot).href;
+        const title = window.SpotivitySeoData?.catalogTitle || 'Terenuri de sport – Rezervări online | Spotivity';
+        const description = 'Toate terenurile de sport de pe Spotivity: fotbal, baschet, tenis, volei și tenis de picior, pe orașe. Compară tarifele, verifică programul și rezervă online.';
+        document.title = query ? `Căutare „${query}” – terenuri de sport | Spotivity` : title;
+        for (const [selector, value] of [['link[rel="canonical"]', canonical], ['meta[name="description"]', description],
+            ['meta[property="og:title"]', title], ['meta[property="og:description"]', description], ['meta[property="og:url"]', canonical],
+            ['meta[name="twitter:title"]', title], ['meta[name="twitter:description"]', description],
+            ['meta[name="robots"]', query || preLaunchNoindex ? 'noindex,follow' : 'index,follow']]) {
+            const node = document.querySelector(selector);
+            if (node) node.setAttribute(node.tagName === 'LINK' ? 'href' : 'content', value);
+        }
+        const structured = byId('spotivity-seo-data'), seo = window.SpotivitySeoData;
+        if (structured && seo) {
+            try { structured.textContent = seo.serialize(seo.graphFor({ baseUrl: canonicalRoot.href, kind: 'catalog' })); }
+            catch { /* An unreviewed origin keeps the page's own graph. */ }
+        }
+    }
+    function enterSearch(query = '') {
+        if (!initialized || protectedIntent() || isPrivateWorkspace()) return false;
+        const url = new URL('terenuri/', appRoot);
+        const text = String(query).trim().slice(0, 100);
+        if (text) url.searchParams.set('q', text);
+        if (currentEntry?.search) writeState(currentEntry, url.href, true);
+        else if (url.pathname === location.pathname) writeState({ ...currentEntry, view: { kind: 'search' }, search: true, pushed: false }, url.href, true);
+        else {
+            // An old shared ?q= on the page below must not survive the move to terenuri/.
+            const below = new URL(location.href); below.searchParams.delete('q');
+            writeState({ ...currentEntry, view: previousView?.kind === 'search' ? null : previousView }, below.href, true);
+            writeState({ kind: null, view: { kind: 'search' }, search: true, pushed: true, direct: false }, url.href);
+        }
+        searchMetadata(text);
+        return true;
+    }
+    function leaveSearch() {
+        if (!currentEntry?.search) return false;
+        if (currentEntry.pushed) {
+            goingBack = true; restoreAfterClose = false;
+            startPending(); history.back();
+        } else {
+            const url = new URL(location.href); url.searchParams.delete('q');
+            writeState({ ...currentEntry, view: null, search: false }, url.href, true);
+            restoreMetadata();
+        }
+        return true;
     }
     function initialize() {
         if (initialized) return;
@@ -425,6 +474,7 @@
         courtUrl: row => entityUrl('court', row), baseUrl: row => entityUrl('base', row),
         openCourt: id => openUser('court', id), openBase: id => openUser('base', id),
         openCurrent: () => applyEntry(readLocation()), close: closed,
+        enterSearch, leaveSearch,
         whenSettled,
         get pending() { return !!settle || restoring || goingBack; }
     });

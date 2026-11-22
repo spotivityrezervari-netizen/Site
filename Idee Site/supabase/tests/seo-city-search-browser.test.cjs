@@ -54,12 +54,15 @@ const pass = message => { checks++; console.log('PASS', message); };
         await page.locator('#home-nav-search-input').fill('Court');
         await page.locator('#btn-home-search').click();
         await page.locator('#modal-cautare-terenuri').waitFor({state: 'visible'});
+        // The search over every court lives at terenuri/ (the generated all-courts page).
+        assert.equal(new URL(page.url()).pathname, new URL('terenuri/', site.url).pathname);
         assert.equal(new URL(page.url()).searchParams.get('q'), 'Court');
         assert.equal(await page.locator('meta[name="robots"]').getAttribute('content'), 'noindex,follow');
         await page.locator('#home-search-input').fill('Court Suceava');
         await page.waitForFunction(() => new URL(location.href).searchParams.get('q') === 'Court Suceava');
         await page.keyboard.press('Escape');
         await page.locator('#modal-cautare-terenuri').waitFor({state: 'hidden'});
+        await page.waitForFunction(home => location.href === home, site.url);
         assert.equal(new URL(page.url()).searchParams.has('q'), false);
         assert.equal(await page.locator('meta[name="robots"]').getAttribute('content'), robotsBefore);
         pass('searching gives the page a ?q= address with noindex, and closing the search restores the address and robots');
@@ -70,6 +73,22 @@ const pass = message => { checks++; console.log('PASS', message); };
         await page.waitForFunction(() => [...document.querySelectorAll('#home-search-results [data-discovery-court]')].some(card => card.textContent.includes('Court A')));
         assert.equal(await page.locator('meta[name="robots"]').getAttribute('content'), 'noindex,follow');
         pass('opening a shared ?q= address shows the same search results');
+
+        await page.goto(site.url, {waitUntil: 'networkidle'});
+        await page.evaluate(() => window.spotivityDiscoveryReady);
+        await page.locator('#btn-welcome-reserve').click();
+        await page.locator('#modal-cautare-terenuri').waitFor({state: 'visible'});
+        assert.equal(page.url(), new URL('terenuri/', site.url).href, '"Rezervă un teren" opens the all-courts address');
+        assert.equal(await page.title(), 'Terenuri de sport – Rezervări online | Spotivity');
+        assert.match(await page.locator('link[rel="canonical"]').getAttribute('href'), /\/terenuri\/$/);
+        await page.goBack();
+        await page.waitForFunction(home => location.href === home, site.url);
+        await page.locator('#modal-cautare-terenuri').waitFor({state: 'hidden'});
+        await page.goto(new URL('terenuri/', site.url).href, {waitUntil: 'networkidle'});
+        assert.equal(await page.locator('h1').innerText(), 'Terenuri de sport – rezervă online');
+        assert.ok(await page.locator('a[href$="terenuri/fotbal/"]').count() > 0);
+        assert.ok(await page.locator('[data-entity-court-id]').count() >= 2, 'The all-courts page lists every published court');
+        pass('"Rezervă un teren" opens terenuri/ with its own title and canonical, Back closes it, and terenuri/ is a real page');
 
         assert.deepEqual(errors, []);
         assert.equal(await page.evaluate(() => window.__cityCsp || 0), 0);

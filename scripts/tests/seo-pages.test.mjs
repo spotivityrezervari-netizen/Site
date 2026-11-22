@@ -55,8 +55,8 @@ test('five categories keep one static H1, original booking controls and real cra
       assert.match(html, /<a[^>]*class="home-court-card"[^>]*data-entity-court-id="1"/);
     } else assert.ok(html.includes('Momentan nu sunt terenuri publicate pentru acest sport.'));
   }
-  // home + 5 sports + 1 city page + 1 court + 1 base
-  assert.equal((generated.get('sitemap.xml').match(/<loc>/g) || []).length, 9);
+  // home + all courts + 5 sports + 1 city page + 1 court + 1 base
+  assert.equal((generated.get('sitemap.xml').match(/<loc>/g) || []).length, 10);
   assert.ok(generated.get('robots.txt').includes(`${PAGES_BASE_URL}sitemap.xml`));
 });
 

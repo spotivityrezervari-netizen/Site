@@ -55,6 +55,12 @@ At the owner's request every public view has its own readable address:
 - The production build writes `app.html`, the home shell with root-absolute references and `noindex,follow`, and four non-forced `_redirects` rewrites (`/teren/:sport/:city/:court`, `/teren/:sport/:court`, `/terenuri/:sport/:city`, `/baze-sportive/:base`) to it. Netlify serves an existing file first, so generated pages and aliases always win. `js/public-navigation.js` reads the trailing ID (or the sport and city) from the address. The ID is only a lookup key, and the dialog rereads the court or base under RLS. A retired ID shows the existing "not available" message on the noindex shell.
 - Netlify runs `scripts/netlify-build.mjs`: it refreshes the public catalog, regenerates the pages, then runs the reviewed build. Each deploy therefore publishes generated pages for new courts and bases. If the refresh or the regeneration fails, the committed snapshot is restored and the deploy uses it.
 
+## All courts: terenuri/ (2026-11-22)
+
+`terenuri/` is a generated, indexable page with every published court grouped by sport, links to every sport and city page, and a general FAQ. Its structured data is a `CollectionPage` (`kind: 'catalog'` in `js/seo-data.js`). It is in the sitemap. Every breadcrumb, visible and structured, now reads Acasă › Terenuri › Terenuri de <sport> › … .
+
+The homepage "Rezervă un teren" button opens the search over every court at `terenuri/`, with that page's title, description and canonical (`SpotivityNavigation.enterSearch`/`leaveSearch`). A typed query becomes `terenuri/?q=…`, which is never indexed. Closing the search, or Back, returns to the previous address.
+
 ## Regenerate after public changes
 
 Refresh when active courts, their public names, cities, base membership, prices

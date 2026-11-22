@@ -82,6 +82,14 @@
                 robotsBefore = null; searchPath = null;
                 return;
             }
+            // The search over every court lives at terenuri/ (the generated
+            // all-courts page); the navigation module owns that history entry,
+            // its metadata and robots (?q= results stay noindex).
+            const navigation = window.SpotivityNavigation;
+            if (navigation?.enterSearch && (open ? navigation.enterSearch(query) : navigation.leaveSearch())) {
+                searchPath = open ? new URL(location.href).pathname : null;
+                return;
+            }
             if (query) url.searchParams.set('q', query); else url.searchParams.delete('q');
             if (url.href !== location.href) history.replaceState(history.state, '', url.href);
             if (open) {

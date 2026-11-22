@@ -10,6 +10,7 @@
         'https://spotivity.ro/'
     ]);
     const homeTitle = 'Spotivity — Rezervări terenuri de sport';
+    const catalogTitle = 'Terenuri de sport – Rezervări online | Spotivity';
     const logoPath = 'assets/imagini/spotivity-256.webp';
     const sportLabels = Object.freeze({ fotbal: 'fotbal', baschet: 'baschet', tenis: 'tenis', volei: 'volei', 'tenis-de-picior': 'tenis de picior' });
     const text = value => typeof value === 'string' ? value.trim() : '';
@@ -22,7 +23,7 @@
     function routeFor(route, fallback, kind, sportSlug) {
         const candidate = route === undefined ? fallback : route;
         if (typeof candidate !== 'string' || !/^(?:[a-z0-9-]+\/)*$/.test(candidate) || candidate.includes('//') ||
-            (kind === 'home' ? candidate !== '' : kind === 'sport' ? candidate !== `terenuri/${sportSlug}/` :
+            (kind === 'home' ? candidate !== '' : kind === 'catalog' ? candidate !== 'terenuri/' : kind === 'sport' ? candidate !== `terenuri/${sportSlug}/` :
                 kind === 'city' ? candidate !== fallback :
                 kind === 'court' ? !new RegExp(`^teren/${sportSlug}/(?:[a-z0-9-]+/)?[a-z0-9-]+/$`).test(candidate) : !/^baze-sportive\/[a-z0-9-]+\/$/.test(candidate))) {
             throw new TypeError('Invalid structured data route.');
@@ -41,7 +42,7 @@
     function graphFor(options) {
         if (!paths || !options || !roots.includes(options.baseUrl)) throw new TypeError('Unreviewed structured data deployment origin.');
         const { baseUrl, kind } = options;
-        if (!['home', 'sport', 'city', 'court', 'base'].includes(kind)) throw new TypeError('Unknown structured data page kind.');
+        if (!['home', 'catalog', 'sport', 'city', 'court', 'base'].includes(kind)) throw new TypeError('Unknown structured data page kind.');
         let court, base, cityName = '', sportSlug = '', defaultRoute = '', defaultTitle = homeTitle;
         if (kind === 'court') {
             court = publicPlace(options.court);
@@ -55,6 +56,10 @@
             base = publicPlace(options.base);
             defaultRoute = paths.basePath(base);
             defaultTitle = `${base.nume} – Bază sportivă în ${base.oras} | Spotivity`;
+        } else if (kind === 'catalog') {
+            // Every published court, all sports and cities: terenuri/.
+            defaultRoute = 'terenuri/';
+            defaultTitle = catalogTitle;
         } else if (kind === 'sport') {
             sportSlug = paths.sportSlug(options.sport);
             if (!sportSlug) throw new TypeError('Unknown structured data sport.');
@@ -71,7 +76,7 @@
         if ((kind === 'court' || kind === 'base') && !route.endsWith(`-${(court || base).id}/`)) throw new TypeError('Structured data route does not match its public entity ID.');
         const canonical = new URL(route, baseUrl).href;
         const organizationId = baseUrl + '#organization', websiteId = baseUrl + '#website';
-        const page = { '@type': kind === 'sport' || kind === 'city' ? 'CollectionPage' : 'WebPage', '@id': canonical + '#webpage',
+        const page = { '@type': ['catalog', 'sport', 'city'].includes(kind) ? 'CollectionPage' : 'WebPage', '@id': canonical + '#webpage',
             url: canonical, name: text(options.title) || defaultTitle, inLanguage: 'ro', isPartOf: reference(websiteId) };
         const graph = [
             { '@type': 'Organization', '@id': organizationId, name: 'Spotivity', url: baseUrl,
@@ -81,7 +86,10 @@
         ];
         if (kind !== 'home') {
             const crumbs = [{ name: 'Acasă', item: baseUrl }];
-            if (sportSlug) crumbs.push({ name: `Terenuri de ${sportLabels[sportSlug]}`, item: new URL(`terenuri/${sportSlug}/`, baseUrl).href });
+            // Acasă › Terenuri › Terenuri de <sport> › …, exactly like the visible breadcrumb.
+            if (sportSlug) crumbs.push({ name: 'Terenuri', item: new URL('terenuri/', baseUrl).href },
+                { name: `Terenuri de ${sportLabels[sportSlug]}`, item: new URL(`terenuri/${sportSlug}/`, baseUrl).href });
+            if (kind === 'catalog') crumbs.push({ name: 'Terenuri', item: canonical });
             if (kind === 'city') crumbs.push({ name: cityName, item: canonical });
             if (kind === 'court' && paths.cityPath(options.court.sport, court.oras)) crumbs.push({ name: court.oras, item: new URL(paths.cityPath(options.court.sport, court.oras), baseUrl).href });
             if (kind === 'court' && base) crumbs.push({ name: base.nume, item: new URL(paths.basePath(base), baseUrl).href });
@@ -118,5 +126,5 @@
     function script(graph) {
         return `<script id="spotivity-seo-data" type="application/ld+json">${serialize(graph)}</script>`;
     }
-    return Object.freeze({ graphFor, serialize, script });
+    return Object.freeze({ graphFor, serialize, script, catalogTitle });
 });
