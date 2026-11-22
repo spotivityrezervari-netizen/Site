@@ -481,66 +481,106 @@ function scene({ W, H, glows, beams = [], cam, ribbons, balls, props = [], cones
   return `<svg xmlns='http://www.w3.org/2000/svg' width='${W}' height='${H}' viewBox='0 0 ${W} ${H}' preserveAspectRatio='xMidYMid slice'><defs>${defs}</defs>${body}</svg>`;
 }
 
-// Wide screens (drawn at 1600x1000, shown with background-size: cover).
-const wide = scene({
+// ---------------------------------------------------------------- anchored layout
+// The picture is drawn with no fixed size (CSS: background-size 100% 100%). Inside it:
+//   - one "slice" layer for the atmosphere (glows, light particles) that always fills the screen;
+//   - several groups of objects, each glued to a corner/edge of the screen with
+//     preserveAspectRatio="<align> meet". "meet" scales a group down until it fits, so an object
+//     is never cut by the screen edge, on any phone or monitor.
+// Every group uses the same W x H coordinates, so positions read like one composition.
+function layout({ W, H, glows, sparkles = 0, calm, groups }) {
+  let defs = commonDefs;
+  // atmosphere
+  let atmo = '';
+  glows.forEach((g, i) => { const gl = glow(`gl${i}`, ...g); defs += gl.defs; atmo += gl.svg(W, H); });
+  let rnd = 20261122;
+  const rand = () => { rnd = (rnd * 1664525 + 1013904223) % 4294967296; return rnd / 4294967296; };
+  let dust = '';
+  for (let i = 0; i < sparkles; i++) {
+    const x = rand() * W; const y = rand() * H; const k = rand();
+    const r = 0.6 + k * k * 2; const op = 0.15 + rand() * 0.5;
+    dust += `<circle cx='${f(x)}' cy='${f(y)}' r='${f(r)}' fill-opacity='${f(op * 100) / 100}'/>`;
+    if (r > 2) dust += `<path d='M${P(x - r * 3, y)}H${f(x + r * 3)}M${P(x, y - r * 3)}V${f(y + r * 3)}' stroke='#c8fff0' stroke-opacity='${f(op * 50) / 100}' stroke-width='.6'/>`;
+  }
+  // calm zone behind the main text (used by the ribbons and particles)
+  defs += `<radialGradient id='calmG' gradientUnits='userSpaceOnUse' cx='${calm[0]}' cy='${calm[1]}' r='1' gradientTransform='translate(${calm[0]} ${calm[1]}) scale(${calm[2]} ${calm[3]}) translate(${-calm[0]} ${-calm[1]})'><stop offset='0' stop-color='#000' stop-opacity='.62'/><stop offset='1' stop-color='#000' stop-opacity='0'/></radialGradient><mask id='calm' maskUnits='userSpaceOnUse' x='-2000' y='-2000' width='${W + 4000}' height='${H + 4000}'><rect x='-2000' y='-2000' width='${W + 4000}' height='${H + 4000}' fill='#fff'/><rect x='-2000' y='-2000' width='${W + 4000}' height='${H + 4000}' fill='url(#calmG)'/></mask>`;
+  const box = (align, mode, inner, extra = '') => `<svg width='100%' height='100%' viewBox='0 0 ${W} ${H}' preserveAspectRatio='${align} ${mode}' overflow='visible'${extra}>${inner}</svg>`;
+  let body = `<rect width='100%' height='100%' fill='${BASE}'/>`;
+  body += box('xMidYMid', 'slice', `${atmo}<g fill='#8dffdc' mask='url(#calm)'>${dust}</g>`);
+  let rb = 0;
+  for (const g of groups) {
+    let inner = '';
+    let rib = '';
+    for (const r of g.ribbons || []) { const x = ribbon(r, `rb${rb++}`); defs += x.defs; rib += x.svg; }
+    let paths = '';
+    for (const [x1, y1, cx, cy, x2, y2] of g.arcs || []) paths += `M${P(x1, y1)}Q${P(cx, cy)} ${P(x2, y2)}`;
+    if (rib || paths) inner += `<g mask='url(#calm)'>${rib}${paths ? `<path d='${paths}' fill='none' stroke='#7dffd6' stroke-opacity='.7' stroke-width='2.2' stroke-dasharray='1 8' stroke-linecap='round'/>` : ''}</g>`;
+    inner += (g.props || []).map(prop).join('') + (g.balls || []).map(ball).join('');
+    body += box(g.align, 'meet', g.dim ? `<g opacity='${g.dim}'>${inner}</g>` : inner);
+  }
+  defs += `<radialGradient id='vig' cx='.5' cy='.45' r='.75'><stop offset='.6' stop-color='${BASE}' stop-opacity='0'/><stop offset='1' stop-color='${BASE}' stop-opacity='.5'/></radialGradient>`;
+  body += `<rect width='100%' height='100%' fill='url(#vig)'/>`;
+  return `<svg xmlns='http://www.w3.org/2000/svg' width='100%' height='100%'><defs>${defs}</defs>${body}</svg>`;
+}
+
+// Wide screens (coordinates 1600 x 1000).
+const wide = layout({
   W: 1600, H: 1000,
   glows: [[140, -80, 950, 720, '#11936f', 0.24], [1480, -60, 760, 620, '#0e8064', 0.16], [1180, 640, 620, 380, '#0a5e4b', 0.1], [760, 1060, 820, 300, '#0e8064', 0.14]],
   sparkles: 90,
-  arcs: [[400, 1040, 500, 800, 634, 922]],   // the small basketball's shot into the hoop
   calm: [450, 470, 500, 300],
-  ribbons: [
-    // the tennis ball's light trail (it ends under the ball)
-    { a: [[-80, 700], [380, 560], [900, 470], [1320, 244]], b: [[-80, 900], [520, 760], [1060, 390], [1334, 288]], n: 46, strength: 1, peak: 0.9, endOp: 0.75, width: 110, twist: 0.8 },
-    { a: [[-60, 200], [240, 110], [520, 90], [840, -60]], b: [[-60, 290], [320, 200], [580, 110], [880, -10]], n: 26, strength: 0.6, peak: 0.42, width: 60, twist: 0.7 },
-    { a: [[1700, 450], [1440, 580], [1360, 820], [1230, 1070]], b: [[1700, 590], [1520, 720], [1480, 900], [1400, 1070]], n: 30, strength: 0.75, peak: 0.45, width: 70, twist: 0.75 },
-  ],
-  props: [
-    ['scoreboard', 690, 205, 70, 0, '21'],
-    ['medal', 64, 428, 72, -8],
-    ['racket', 1548, 338, 92, 16],
-    ['jersey', 757, 486, 92, -10],
-    ['hoop', 640, 950, 130],
-    ['calendar', 1195, 872, 74, 8],
-    ['pin', 978, 905, 88],
-    ['stopwatch', 58, 585, 180, 14, 40],
-    ['stopwatch', 1522, 196, 62, -16, 300],
-    ['whistle', 905, 272, 130, -12],
-    ['trophy', 92, 905, 140, -4],
-  ],
-  balls: [
-    ['volleyball', 1545, 478, 40, 45, 35, 0],
-    ['tennis', 1338, 264, 30, 20, 30, 10],
-    ['basketball', 70, 215, 135, -40, 15, -50],
-    ['soccer', 1445, 840, 150, 18, -12, 8],
-    ['basketball', 562, 880, 24, -30, 25, -40],
+  groups: [
+    { align: 'xMinYMin',   // top left
+      ribbons: [{ a: [[-60, 200], [240, 110], [520, 90], [840, -60]], b: [[-60, 290], [320, 200], [580, 110], [880, -10]], n: 26, strength: 0.6, peak: 0.42, width: 60, twist: 0.7 }],
+      props: [['medal', 72, 425, 66, -8], ['stopwatch', 84, 600, 128, 14, 40]],
+      balls: [['basketball', 104, 226, 84, -40, 15, -50]] },
+    { align: 'xMidYMin',   // top middle
+      props: [['scoreboard', 690, 205, 70, 0, '21'], ['whistle', 905, 272, 130, -12], ['jersey', 757, 486, 92, -10]] },
+    { align: 'xMaxYMin',   // top right: the tennis ball and its light trail
+      ribbons: [{ a: [[-80, 700], [380, 560], [900, 470], [1320, 244]], b: [[-80, 900], [520, 760], [1060, 390], [1334, 288]], n: 46, strength: 1, peak: 0.9, endOp: 0.75, width: 110, twist: 0.8 }],
+      props: [['stopwatch', 1522, 196, 62, -16, 300], ['racket', 1540, 340, 92, 16]],
+      balls: [['volleyball', 1540, 480, 40, 45, 35, 0], ['tennis', 1338, 264, 30, 20, 30, 10]] },
+    { align: 'xMinYMax',   // bottom left
+      props: [['trophy', 98, 888, 120, -4]] },
+    { align: 'xMidYMax',   // bottom middle: the hoop shot and the location pin
+      arcs: [[400, 1040, 500, 800, 634, 922]],
+      props: [['hoop', 640, 950, 130], ['pin', 978, 905, 88]],
+      balls: [['basketball', 562, 880, 24, -30, 25, -40]] },
+    { align: 'xMaxYMax',   // bottom right
+      ribbons: [{ a: [[1700, 450], [1440, 580], [1360, 820], [1230, 1070]], b: [[1700, 590], [1520, 720], [1480, 900], [1400, 1070]], n: 30, strength: 0.75, peak: 0.45, width: 70, twist: 0.75 }],
+      props: [['calendar', 1195, 872, 74, 8]],
+      balls: [['soccer', 1452, 846, 122, 18, -12, 8]] },
   ],
 });
-// Portrait screens (drawn at 600x1400, shown full width from the top).
-const phone = scene({
+// Portrait screens (coordinates 600 x 1400). Everything stays fully on screen; the bottom
+// groups keep ~90 units free at the very bottom for the phone's browser bar.
+const phone = layout({
   W: 600, H: 1400,
-  glows: [[540, -60, 560, 560, '#11936f', 0.26], [40, 1360, 520, 400, '#0e8064', 0.14], [380, 1180, 420, 260, '#0a5e4b', 0.1]],
-  sparkles: 55,
+  glows: [[540, -60, 560, 560, '#11936f', 0.26], [40, 1360, 520, 400, '#0e8064', 0.16], [300, 760, 420, 300, '#0a5e4b', 0.1]],
+  sparkles: 60,
   calm: [300, 650, 380, 420],
-  ribbons: [
-    // the basketball's light trail (it ends under the ball)
-    { a: [[-60, 960], [170, 820], [360, 560], [482, 296]], b: [[-60, 1120], [260, 940], [470, 520], [494, 396]], n: 40, strength: 1, peak: 0.88, endOp: 0.7, width: 90, twist: 0.8 },
-    { a: [[-40, 250], [120, 190], [260, 130], [430, -40]], b: [[-40, 320], [170, 260], [310, 160], [470, -10]], n: 22, strength: 0.55, peak: 0.45, width: 50, twist: 0.7 },
-  ],
-  props: [
-    ['jersey', 598, 528, 80, -12],
-    ['racket', 580, 760, 86, 18],
-    ['pin', 335, 1168, 72],
-    ['stopwatch', -8, 770, 112, 12, 40],
-    ['stopwatch', 572, 618, 46, -16, 300],
-    ['whistle', 498, 1080, 92, -18, 'M30 -30C60 -80 20 -150 90 -200'],
-    ['trophy', 500, 1218, 100, 0],
-  ],
-  balls: [
-    ['volleyball', 590, 905, 36, 45, 35, 0],
-    ['basketball', 585, 330, 112, -40, 15, -50],
-    ['soccer', 100, 1185, 125, 18, -12, 8],
+  groups: [
+    { align: 'xMinYMin',
+      ribbons: [{ a: [[-40, 250], [120, 190], [260, 130], [430, -40]], b: [[-40, 320], [170, 260], [310, 160], [470, -10]], n: 22, strength: 0.55, peak: 0.45, width: 50, twist: 0.7 }] },
+    { align: 'xMaxYMin',   // right column next to the text, all fully visible
+      ribbons: [{ a: [[-60, 960], [170, 820], [360, 560], [462, 284]], b: [[-60, 1120], [260, 940], [470, 520], [476, 352]], n: 40, strength: 1, peak: 0.88, endOp: 0.7, width: 90, twist: 0.8 }],
+      props: [['stopwatch', 506, 452, 64, -14, 300], ['racket', 490, 728, 84, 26], ['medal', 440, 856, 50, 8]],
+      balls: [['volleyball', 548, 852, 28, 45, 35, 0], ['basketball', 522, 300, 62, -40, 15, -50]] },
+    { align: 'xMidYMin', dim: 0.5,   // in the middle, softer because the text sits on it
+      props: [['pin', 300, 610, 66]],
+      balls: [['tennis', 318, 842, 22, 20, 30, 10]] },
+    { align: 'xMinYMax',   // bottom left
+      props: [['jersey', 100, 964, 66, -8], ['calendar', 95, 1106, 60, -8]],
+      balls: [['soccer', 112, 1244, 68, 18, -12, 8]] },
+    { align: 'xMidYMax', dim: 0.8,   // bottom middle: stopwatch and the hoop shot
+      arcs: [[190, 1300, 200, 1060, 296, 1120]],
+      props: [['stopwatch', 300, 985, 96, 10, 40], ['hoop', 300, 1140, 92]],
+      balls: [['basketball', 239, 1114, 16, -30, 25, -40]] },
+    { align: 'xMaxYMax',   // bottom right
+      props: [['whistle', 478, 1104, 76, -16, 'M30 -30C60 -80 20 -150 90 -200'], ['trophy', 497, 1248, 82, 0]] },
   ],
 });
+
 // Fine grain (tiny repeating tile): breaks up the banding of dark gradients.
 const grain = `<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n' x='0' y='0'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .75  0 0 0 0 1  0 0 0 0 .9  .5 0 0 0 -.22'/></filter><rect width='180' height='180' filter='url(#n)' opacity='.32'/></svg>`;
 

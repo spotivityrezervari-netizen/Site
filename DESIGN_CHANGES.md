@@ -3,6 +3,19 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-22 (16): Arena objects glued to screen corners, never cut; phone layout redone with items in the middle (done by Claude, at the owner's request)
+
+Owner: "great, it looks good, but at the bottom things get cut, and at the sides on the phone; I also want things in the middle, please redo it".
+
+- **Why things were cut:** the picture was one fixed-ratio image (cover on desktop, full width on phones), so every screen shape cropped it differently.
+- **New method (`layout()` in `scripts/design/fundal-arena.mjs`):** the SVG has no fixed size and is shown with `background-size: 100% 100%`. Inside it:
+  - one `xMidYMid slice` layer holds the atmosphere (glows, light particles) and always fills the screen;
+  - the objects sit in groups (`xMinYMin`, `xMidYMin`, `xMaxYMin`, `xMinYMax`, `xMidYMax`, `xMaxYMax`), each a nested `<svg preserveAspectRatio="<align> meet">`. A group is glued to its corner or edge and scaled down until it fits, so no object is ever cut, on any screen;
+  - all groups share the same coordinates (1600×1000 wide, 600×1400 portrait), so it still reads as one composition. Ribbons travel with the ball they trail. A group can be softened with `dim`.
+- **Phone layout redone:** a right column next to the text (basketball and trail, stopwatch, racket, medal, volleyball); in the middle a softened pin and tennis ball; at the bottom (glued to the bottom edge, ~90 units kept free for the browser bar) the jersey, calendar, soccer ball, a big stopwatch, the hoop shot, the whistle and the trophy. Checked at 390×844, 360×640 and 430×932, and in phone scroll.
+- **Desktop:** same composition, now fully on screen (the basketball, soccer ball and stopwatch were partly cut before). Checked at 1440×900 and 1920×1080.
+- CSS: both pictures `background-size: 180px 180px, 100% 100%`; the portrait-tablet `center 55%` rule is removed. `design-background.css?v=18`; SEO pages regenerated. The scroll measurement is unchanged (as smooth as with no background).
+
 ## 2026-11-22 (15): Arena without the pitch and floodlights; hoop shot, jersey, light particles; racket fully visible (done by Claude, at the owner's request)
 
 Owner: "remove the pitch with the lighting, centre the tennis racket better, work a bit more on the design and play with the symbols". Asked to clarify: remove the whole pitch AND the floodlights.
