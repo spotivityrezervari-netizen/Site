@@ -72,7 +72,7 @@ async function fits(page,selector,label){
   const writes=()=>requests.filter(r=>r.source==='browser'&&((r.path.startsWith('/storage/v1/object/'+bucket+'/')&&r.method==='POST')||(r.path==='/rest/v1/baze_sportive'&&r.method==='PATCH')));
   const pausePrivateIdentity=()=>{
     let enter,release,timer;const entered=new Promise((resolve,reject)=>{timer=setTimeout(()=>reject(new Error('Expected isolated image-client identity verification')),15000);enter=()=>{clearTimeout(timer);resolve();};});
-    const wait=new Promise(resolve=>release=resolve);controls.userGate={remaining:2,enter,wait};return{entered,release};
+    const wait=new Promise(resolve=>release=resolve);controls.userGate={remaining:1,enter,wait};return{entered,release};
   };
   try{
     await root(async()=>{

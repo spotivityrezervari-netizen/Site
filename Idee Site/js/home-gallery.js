@@ -10,7 +10,6 @@
         const frame = gallery.querySelector('.welcome-photo-frame');
         const backImage = back.querySelector('img');
         const buttons = [...gallery.querySelectorAll('[data-welcome-sport]')];
-        const toggle = gallery.querySelector('[data-gallery-toggle]');
         const controls = gallery.querySelector('.welcome-gallery-controls');
         const photos = [
             { sport: 'Fotbal', slug: 'fotbal', file: 'BackgroundFootball.avif' },
@@ -20,9 +19,9 @@
             { sport: 'Tenis Picior', slug: 'tenis-de-picior', file: 'BackgroundLavolei.avif' }
         ];
         const labels = {
-            ro: { title: 'Fotografiile sporturilor', pause: 'Oprește schimbarea fotografiilor', play: 'Reia schimbarea fotografiilor' },
-            hu: { title: 'Sportfotók', pause: 'Képváltás szüneteltetése', play: 'Képváltás folytatása' },
-            en: { title: 'Sports photographs', pause: 'Pause photo rotation', play: 'Resume photo rotation' }
+            ro: { title: 'Fotografiile sporturilor' },
+            hu: { title: 'Sportfotók' },
+            en: { title: 'Sports photographs' }
         };
         const reduced = matchMedia('(prefers-reduced-motion: reduce)');
         // One complete cycle includes both the still photograph and its slide.
@@ -30,7 +29,7 @@
         const decodedImages = new Map();
         let current = 0, desired = 0, generation = 0, pending = 0, timer;
         let previewGeneration = 0, transition = null, outgoingTransition = null;
-        let paused = false, visible = false, bookingFocused = false;
+        let visible = false, bookingFocused = false;
 
         function syncCard(card, index) {
             const photo = photos[index];
@@ -55,16 +54,11 @@
                 button.title = label;
                 button.setAttribute('aria-pressed', String(index === current));
             });
-            toggle.hidden = reduced.matches;
-            toggle.setAttribute('aria-label', paused ? text.play : text.pause);
-            toggle.title = paused ? text.play : text.pause;
-            toggle.setAttribute('aria-pressed', String(paused));
-            toggle.querySelector('path').setAttribute('d', paused ? 'M6 4l7 4-7 4z' : 'M5 4v8M11 4v8');
             syncCard(front, current);
             if (back.dataset.galleryIndex !== undefined) syncCard(back, Number(back.dataset.galleryIndex));
         }
         function canRotate() {
-            return visible && !document.hidden && !paused && !bookingFocused && !reduced.matches
+            return visible && !document.hidden && !bookingFocused && !reduced.matches
                 && !document.body.classList.contains('fara-scroll')
                 && !document.body.classList.contains('home-menu-open');
         }
@@ -205,15 +199,6 @@
             clearTimeout(timer);
             void show(index, true).then(schedule);
         }));
-        toggle.addEventListener('click', () => {
-            paused = !paused;
-            if (paused) {
-                generation++; previewGeneration++; pending = 0; desired = current;
-                cancelTransition();
-                if (visible) void preparePreview();
-            }
-            syncControls(); schedule();
-        });
         document.addEventListener('visibilitychange', schedule);
         window.addEventListener('spotivity:language', syncControls);
         window.addEventListener('spotivity:sport-appearance', () => { if (visible) void show(desired, true).then(schedule); });

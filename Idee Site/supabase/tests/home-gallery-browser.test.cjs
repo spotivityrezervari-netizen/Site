@@ -99,8 +99,8 @@ const slugs={Fotbal:'fotbal',Baschet:'baschet',Tenis:'tenis',Volei:'volei','Teni
   const cycle=await page.evaluate(()=>slideEvents.slice(0,5));assert.deepEqual(cycle.map(x=>x.sport),['Baschet','Tenis','Volei','Tenis Picior','Fotbal']);
   const intervals=cycle.slice(1).map((event,index)=>Math.round(event.at-cycle[index].at));assert.ok(intervals.every(ms=>ms>=2400&&ms<=2850),JSON.stringify(intervals));
   await link.focus();await page.keyboard.press('Tab');await page.keyboard.press('Shift+Tab');assert.equal(await link.evaluate(node=>node.matches(':focus-visible')),true);const focused=await cover.getAttribute('data-gallery-sport');await page.waitForTimeout(2850);assert.equal(await cover.getAttribute('data-gallery-sport'),focused,'Booking link remains stable while keyboard-focused');
-  await page.locator('[data-gallery-toggle]').click();const paused=await cover.getAttribute('data-gallery-sport');await page.waitForTimeout(2850);assert.equal(await cover.getAttribute('data-gallery-sport'),paused,'Pause is respected');
-  await page.emulateMedia({reducedMotion:'reduce'});await page.locator('[data-gallery-toggle]').waitFor({state:'hidden'});await choose('Tenis');await page.waitForTimeout(2700);assert.equal(await cover.getAttribute('data-gallery-sport'),'Tenis');
+  assert.equal(await page.locator('[data-gallery-toggle]').count(),0,'The owner removed the pause button; rotation always runs');
+  await page.emulateMedia({reducedMotion:'reduce'});await choose('Tenis');await page.waitForTimeout(2700);assert.equal(await cover.getAttribute('data-gallery-sport'),'Tenis');
   const afterMetadata=await page.evaluate(()=>({h1:document.querySelectorAll('h1').length,canonical:document.querySelector('link[rel="canonical"]').href,title:document.title,json:document.querySelector('#spotivity-seo-data').textContent}));assert.deepEqual(afterMetadata,metadata);
   for(const sport of sports)assert.ok(await page.locator(`a[href$="terenuri/${slugs[sport]}/"]`).count()>0);
   assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);assert.deepEqual(bad,[]);

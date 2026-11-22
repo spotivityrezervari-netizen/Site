@@ -148,11 +148,7 @@
     }
 
     async function boundClient(snapshot) {
-        const { data: identity, error: identityError } = await db.auth.getUser();
-        check(snapshot);
-        if (identityError || identity?.user?.id !== snapshot.context.userId) {
-            throw new Error('Sesiunea s-a schimbat. Conectează-te din nou.');
-        }
+        // One Auth round trip: setSession asks the server for the token's user.
         const { data, error } = await db.auth.getSession();
         check(snapshot);
         const session = data?.session;
@@ -163,14 +159,12 @@
             auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
         });
         snapshot.client = client;
-        const { error: sessionError } = await client.auth.setSession({
+        const verified = await client.auth.setSession({
             access_token: session.access_token, refresh_token: session.refresh_token
         });
         check(snapshot);
-        if (sessionError) throw new Error('Sesiunea nu poate fi verificată. Conectează-te din nou.');
-        const verified = await client.auth.getUser();
-        check(snapshot);
-        if (verified.error || verified.data?.user?.id !== snapshot.context.userId) {
+        if (verified.error) throw new Error('Sesiunea nu poate fi verificată. Conectează-te din nou.');
+        if (verified.data?.user?.id !== snapshot.context.userId) {
             throw new Error('Identitatea contului nu poate fi verificată.');
         }
         return client;

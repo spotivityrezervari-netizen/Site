@@ -60,7 +60,7 @@ async function editor(f,options={}){
    };
    const chain={select(value){selection=value;return this},update(value){kind='update';patch=value;return this},insert(value){kind='insert';rows=value;return this},eq(name,value){filter=[name,value];return this},maybeSingle:execute,then(resolve,reject){return execute().then(resolve,reject)}};return chain;
   };
-  return{auth:{getUser:async()=>({data:{user:{id:who}},error:null}),getSession:async()=>({data:{session:{user:{id:who},access_token:'fixture:'+who,refresh_token:'refresh'}},error:null}),setSession:async session=>{who=session.access_token.slice(8);return{error:null}}},
+  return{auth:{getUser:async()=>({data:{user:{id:who}},error:null}),getSession:async()=>({data:{session:{user:{id:who},access_token:'fixture:'+who,refresh_token:'refresh'}},error:null}),setSession:async session=>{who=session.access_token.slice(8);return{data:{user:{id:who},session},error:null}}},
    from:()=>query(),storage:{from:()=>({upload:async path=>{await f.as(person(who),'insert into storage.objects(bucket_id,name)values($1,$2)',['poze_terenuri',path]);files.add(path);if(options.switchDuringUpload){state.authGeneration++;state.account={user_id:uid(2)};}return{error:null}},getPublicUrl:path=>({data:{publicUrl:photoURL(path)}}),remove:async paths=>{
     if(options.removeFails){options.removeFails--;return{error:{message:'Cleanup unavailable'}}}
     const removed=(await f.as(person(who),'delete from storage.objects where bucket_id=$1 and name=any($2::text[])returning name',['poze_terenuri',paths])).rows;for(const row of removed){files.delete(row.name);deleted.push(row.name)}return{data:removed,error:null}

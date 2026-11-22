@@ -139,12 +139,8 @@
 
     async function authorizedClient(context) {
         check(context);
-        const { data: identity, error: identityError } = await db.auth.getUser();
-        check(context);
-        if (identityError || identity?.user?.id !== context.userId) {
-            clear();
-            throw new Error('Sesiunea s-a schimbat. Conectează-te din nou.');
-        }
+        // One Auth round trip: setSession below asks the server for the token's
+        // user (or refreshes it), so a separate getUser before and after is redundant.
         const { data, error } = await db.auth.getSession();
         check(context);
         const session = data?.session;
@@ -156,14 +152,12 @@
         const client = createClient(supabaseUrl, supabaseKey, {
             auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
         });
-        const { error: bindError } = await client.auth.setSession({
+        const { data: verified, error: bindError } = await client.auth.setSession({
             access_token: session.access_token, refresh_token: session.refresh_token
         });
         check(context);
         if (bindError) throw new Error('Sesiunea a expirat. Conectează-te din nou.');
-        const { data: verified, error: verifiedError } = await client.auth.getUser();
-        check(context);
-        if (verifiedError || verified?.user?.id !== context.userId) {
+        if (verified?.user?.id !== context.userId) {
             clear();
             throw new Error('Sesiunea s-a schimbat. Conectează-te din nou.');
         }

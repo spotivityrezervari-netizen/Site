@@ -137,9 +137,7 @@
 
         async function photoClient(context) {
             checkContext(context);
-            const { data: identity, error: identityError } = await db.auth.getUser();
-            checkContext(context);
-            if (identityError || identity?.user?.id !== context.userId) throw new Error('Sesiunea s-a schimbat. Conectează-te din nou.');
+            // One Auth round trip: setSession asks the server for the token's user.
             const { data, error } = await db.auth.getSession();
             checkContext(context);
             const session = data?.session;
@@ -148,12 +146,10 @@
                 auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
             });
             context.client = client;
-            const { error: bindError } = await client.auth.setSession({ access_token: session.access_token, refresh_token: session.refresh_token });
+            const { data: verified, error: bindError } = await client.auth.setSession({ access_token: session.access_token, refresh_token: session.refresh_token });
             checkContext(context);
             if (bindError) throw new Error('Sesiunea a expirat. Conectează-te din nou.');
-            const { data: verified, error: verifiedError } = await client.auth.getUser();
-            checkContext(context);
-            if (verifiedError || verified?.user?.id !== context.userId) throw new Error('Sesiunea s-a schimbat. Conectează-te din nou.');
+            if (verified?.user?.id !== context.userId) throw new Error('Sesiunea s-a schimbat. Conectează-te din nou.');
             return client;
         }
 

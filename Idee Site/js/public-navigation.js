@@ -296,8 +296,13 @@
         currentEntry = readLocation();
         previousView = readView();
         if (!initialProtectedIntent) writeState(currentEntry, location.href, true);
-        const observer = new MutationObserver(() => {
-            if (restoring || goingBack) return;
+        // The moving court rows rewrite their own style on every animation frame.
+        // Those records never open or close a public view, so skip them before
+        // measuring the dialogs (a forced style recalculation each frame).
+        const motionOnly = record => record.type === 'attributes' && record.target.nodeType === 1
+            && !!record.target.closest('.home-courts-strip');
+        const observer = new MutationObserver(records => {
+            if (restoring || goingBack || records.every(motionOnly)) return;
             if (active?.kind === 'court' && !visible('modal-rezervare')) closed('court');
             else if (active?.kind === 'base' && !visible('modal-baze-sportive')) closed('base');
             previousView = readView();

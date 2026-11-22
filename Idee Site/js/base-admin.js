@@ -589,6 +589,10 @@
         }, true);
         new MutationObserver(mutations => {
             if (!ownerView) return;
+            // Moving court rows restyle themselves on every animation frame; they
+            // never open a dialog, so they must not trigger a full modal scan.
+            if (mutations.every(record => record.type === 'attributes' && record.target.nodeType === 1
+                && record.target.closest('.home-courts-strip'))) return;
             if (quickMode && !Array.from(byId('base-admin-workspace').querySelectorAll('.modal'))
                 .some(modal => ['flex', 'block'].includes(modal.style.display))) {
                 finishQuickView();
@@ -602,11 +606,20 @@
         new MutationObserver(() => {
             if (byId('modal-profil').style.display === 'flex') window.refreshSpotivityAdminAccess();
         }).observe(byId('modal-profil'), { attributes: true, attributeFilter: ['style'] });
-        window.addEventListener('focus', () => window.refreshSpotivityAdminAccess());
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden) window.refreshSpotivityAdminAccess();
-        });
-        setInterval(() => { if (!document.hidden && userId) window.refreshSpotivityAdminAccess(); }, 30000);
+        // Returning to the tab fires focus and visibilitychange together while the
+        // Auth SDK refreshes its token. One background check, started a moment
+        // later, keeps the visitor's first clicks ahead of it in the queue.
+        let passiveTimer = 0;
+        const passiveRefresh = () => {
+            if (document.hidden || !userId || passiveTimer) return;
+            passiveTimer = setTimeout(() => {
+                passiveTimer = 0;
+                if (!document.hidden && userId) window.refreshSpotivityAdminAccess();
+            }, 800);
+        };
+        window.addEventListener('focus', passiveRefresh);
+        document.addEventListener('visibilitychange', passiveRefresh);
+        setInterval(passiveRefresh, 30000);
         window.addEventListener('spotivity:profile-user', event => {
             changeUser(event.detail?.user?.id || null);
             if (userId) window.refreshSpotivityAdminAccess();

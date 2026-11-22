@@ -62,10 +62,16 @@ test('administrators record and correct attendance through the real schedule, hi
   await page.evaluate(day=>{SpotivityModules.adminSchedule({db,state:testState});SpotivityModules.adminHistory({db,state:testState});document.getElementById('tabel-data').value=day;initializeazaTabel(['Court A']);document.getElementById('modal-tabel-program').style.display='flex';},day);
   const controls=page.locator(`[data-booking-attendance="${booking}"]`).first();
   await controls.locator('[data-attendance-choice="no_show"]').waitFor();
+  // Presence is the default: no "present" button, and an unmarked booking reads as attended.
+  assert.equal(await controls.locator('[data-attendance-choice="present"]').count(),0);
+  assert.match(await controls.locator('.booking-attendance-label').innerText(),/S-a prezentat/);
   rejectWrite=true;await controls.locator('[data-attendance-choice="no_show"]').click();await controls.getByRole('status').filter({hasText:'nu a putut fi salvată'}).waitFor();
   assert.equal((await f.root('select count(*)::int n from spotivity_private.booking_attendance_events')).rows[0].n,0,'Failed writes never show saved attendance');
   rejectWrite=false;await controls.locator('[data-attendance-choice="no_show"]').click();await controls.locator('[data-attendance-status="no_show"]').waitFor();
-  assert.ok(await controls.locator('[data-attendance-choice="no_show"]').isDisabled());
+  // One tick box: once ticked it offers only the correction back to present.
+  assert.equal(await controls.locator('[data-attendance-choice="no_show"]').count(),0);
+  assert.equal(await controls.locator('[data-attendance-choice="present"][aria-pressed="true"]').count(),1);
+  assert.equal(await controls.locator('button').count(),1);
   const jobs=async()=>(await f.root("select * from spotivity_private.notification_outbox where kind='booking_attendance_client'")).rows;
   assert.equal((await jobs()).length,1);
   const screenshots=process.env.SPOTIVITY_TEST_SCREENSHOT_DIR;if(screenshots)mkdirSync(screenshots,{recursive:true});

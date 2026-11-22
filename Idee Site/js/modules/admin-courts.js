@@ -37,14 +37,13 @@
         async function photoOperation(userId, sameContext) {
             const check = () => { if (!sameContext()) throw new Error('Sesiunea s-a schimbat. Conectează-te din nou.'); };
             check();
-            const { data: identity, error: identityError } = await db.auth.getUser(); check();
+            // One Auth round trip: setSession asks the server for the token's user.
             const { data: auth, error: authError } = await db.auth.getSession(); check();
             const session = auth?.session;
-            if (identityError || authError || identity?.user?.id !== userId || session?.user?.id !== userId || !session.access_token || !session.refresh_token) throw new Error('Autentifică-te din nou.');
+            if (authError || session?.user?.id !== userId || !session.access_token || !session.refresh_token) throw new Error('Autentifică-te din nou.');
             const client = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
-            const { error } = await client.auth.setSession({ access_token: session.access_token, refresh_token: session.refresh_token }); check();
-            const { data: verified, error: verifyError } = await client.auth.getUser(); check();
-            if (error || verifyError || verified?.user?.id !== userId) throw new Error('Autentifică-te din nou.');
+            const { data: verified, error } = await client.auth.setSession({ access_token: session.access_token, refresh_token: session.refresh_token }); check();
+            if (error || verified?.user?.id !== userId) throw new Error('Autentifică-te din nou.');
             return { client, userId, isSuper: state.account?.is_super === true, path: null, check };
         }
         async function removePhoto(operation, path) {

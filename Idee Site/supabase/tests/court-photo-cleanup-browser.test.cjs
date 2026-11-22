@@ -83,7 +83,7 @@ const source=readFileSync(join(__dirname,'../../js/modules/admin-courts.js'),'ut
        const execute=()=>__photoBackend({op,column,patch,filter,actor});
        return{select(value){column=value;return this},update(value){op='update';patch=value;return this},insert(value){op='insert';patch=value[0];return this},eq(name,value){filter=[name,value];return this},maybeSingle:execute,then(resolve,reject){return execute().then(resolve,reject)}};
       };
-      return{auth:{getUser:async()=>({data:{user:{id:actor}},error:null}),getSession:async()=>({data:{session:{user:{id:actor},access_token:'fixture:'+actor,refresh_token:'fixture-refresh'}},error:null}),setSession:async session=>{actor=session.access_token.slice(8);return{error:null}}},from:query,
+      return{auth:{getUser:async()=>({data:{user:{id:actor}},error:null}),getSession:async()=>({data:{session:{user:{id:actor},access_token:'fixture:'+actor,refresh_token:'fixture-refresh'}},error:null}),setSession:async session=>{actor=session.access_token.slice(8);return{data:{user:{id:actor},session},error:null}}},from:query,
        storage:{from:()=>({
         upload:async(path,file)=>{
          if(!(file instanceof File))throw new Error('Native File expected');

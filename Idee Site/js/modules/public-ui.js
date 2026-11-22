@@ -19,7 +19,8 @@
         const modalObserver = new MutationObserver(records => {
             if (records.some(record => record.type === 'childList'
                 ? [...record.addedNodes, ...record.removedNodes].some(containsModal)
-                : containsModal(record.target))) syncModalScroll();
+                // Moving court rows restyle themselves every frame and hold no dialogs.
+                : !record.target.closest?.('.home-courts-strip') && containsModal(record.target))) syncModalScroll();
         });
         modalObserver.observe(document.body, {
             subtree: true, childList: true, attributes: true,

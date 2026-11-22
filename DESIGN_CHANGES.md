@@ -3,6 +3,14 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-22 (30): Welcome-photo dots centred under the slider; pause button removed (done by Claude, at the owner's request)
+
+Owner: "the dots under the slider where the sports move are not centred, and remove the pause button for the transition".
+
+- `css/home-layout.css`: `.welcome-gallery-controls` uses `justify-content: center` (was `flex-end`). The photo is centred in its full-width frame, so the dots now sit under the middle of the photo.
+- The pause button (`[data-gallery-toggle]`) is gone from `index.html`, and `js/home-gallery.js` no longer has a pause state. The rotation still stops while the visitor focuses the booking link, while a menu or dialog is open, while the tab is hidden, and with "reduce motion".
+- `home-layout.css?v=29`, `home-gallery.js?v=8`; SEO pages regenerated.
+
 ## 2026-11-22 (29): Left column back at the left edge; phone whistle and stopwatch a little further left (done by Claude, at the owner's request)
 
 Owner: "more to the left, you placed them badly; on the phone too, a bit more to the left".

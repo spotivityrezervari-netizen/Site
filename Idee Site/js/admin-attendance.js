@@ -22,7 +22,10 @@
             const attendance = records.get(id);
             for (const target of elements(id)) {
                 target.replaceChildren();
-                const label = node('p', 'booking-attendance-label', `Prezență: ${attendance?.status === 'present' ? 'S-a prezentat' : attendance?.status === 'no_show' ? 'Nu s-a prezentat' : 'Nemarcată'}`);
+                // Presence is the default: an unmarked booking counts as attended and adds
+                // nothing to the incident total. The admin only ticks a no-show.
+                const noShow = attendance?.status === 'no_show';
+                const label = node('p', 'booking-attendance-label', `Prezență: ${noShow ? 'Nu s-a prezentat' : 'S-a prezentat'}`);
                 label.dataset.attendanceStatus = attendance?.status || 'unmarked';
                 target.append(label);
                 if (attendance?.needs_email && attendance.can_mark) {
@@ -36,21 +39,23 @@
                     target.append(node('p', 'booking-attendance-help', 'Rezervarea nu are email. Completează adresa pentru identificarea clientului și trimiterea avertizării.'));
                 }
                 {
+                    // A single tick box: ticking records the no-show, unticking corrects it
+                    // back to present (the server recounts and emails the correction).
                     const actions = node('div', 'booking-attendance-actions');
-                    for (const [value, title] of [['present', 'S-a prezentat'], ['no_show', 'Nu s-a prezentat']]) {
-                        const button = node('button', 'booking-attendance-choice', title);
-                        button.type = 'button'; button.dataset.attendanceChoice = value;
-                        button.setAttribute('aria-pressed', String(attendance.status === value));
-                        button.disabled = !attendance?.can_mark || pending.has(id) || attendance.status === value;
-                        button.addEventListener('click', () => void save(id, value));
-                        actions.append(button);
-                    }
+                    const value = noShow ? 'present' : 'no_show';
+                    const button = node('button', 'booking-attendance-choice', `${noShow ? '☑' : '☐'} Nu s-a prezentat`);
+                    button.type = 'button'; button.dataset.attendanceChoice = value;
+                    button.setAttribute('aria-pressed', String(noShow));
+                    button.title = noShow ? 'Scoate bifa: clientul redevine prezent' : 'Bifează dacă clientul nu a venit';
+                    button.disabled = !attendance?.can_mark || pending.has(id);
+                    button.addEventListener('click', () => void save(id, value));
+                    actions.append(button);
                     target.append(actions);
                 }
                 if (!attendance?.can_mark) {
                     const end = new Date(attendance?.ends_at || '');
                     const when = Number.isFinite(end.getTime()) ? new Intl.DateTimeFormat('ro-RO', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Europe/Bucharest' }).format(end) : '';
-                    target.append(node('p', 'booking-attendance-help', when ? `Prezența poate fi marcată după ${when}, ora României.` : 'Prezența se marchează după încheierea întregii rezervări.'));
+                    target.append(node('p', 'booking-attendance-help', when ? `Neprezentarea poate fi bifată după ${when}, ora României.` : 'Neprezentarea se bifează după încheierea întregii rezervări.'));
                 }
                 if (message) {
                     const status = node('p', 'booking-attendance-feedback', message);
@@ -71,7 +76,7 @@
             const question = status === 'no_show'
                 ? 'Marchezi că acest client nu s-a prezentat la întreaga rezervare? Neprezentarea intră în totalul abaterilor, o singură dată pentru această rezervare, iar clientul primește un email de avertizare.'
                 : previous.status === 'no_show'
-                    ? 'Corectezi neprezentarea și marchezi „S-a prezentat”? Totalul abaterilor se recalculează, iar clientul primește un email de corectare.' : '';
+                    ? 'Scoți bifa de neprezentare? Clientul redevine prezent, totalul abaterilor se recalculează, iar clientul primește un email de corectare.' : '';
             if (question && !window.confirm(question + (email ? `\nEmail client: ${email}` : ''))) return;
             pending.add(id); render(id, 'Se salvează prezența…');
             try {

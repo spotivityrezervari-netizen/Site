@@ -2,6 +2,10 @@
 
 Migrarea 034 este aplicată în Supabase din 11 noiembrie 2026. Workerul `booking-notifications` versiunea 9 este activ; toate cele patru fișiere din pachet au fost comparate cu sursa testată. Scenariul Make 7938404, versiunea 15, acceptă noul tip de notificare. Instalarea nu a marcat rezervări și nu a creat notificări de prezență în proiectul live. Nu s-a publicat pe Netlify.
 
+## Prezența implicită (22.11.2026)
+
+La cererea proprietarului, prezența este implicită. Administratorul vede o singură bifă, „Nu s-a prezentat”. O rezervare încheiată și nebifată se afișează „S-a prezentat” și nu intră în totalul abaterilor, așa cum o trata deja serverul. Bifa trimite `no_show`. Scoaterea ei trimite `present` prin aceeași funcție, deci totalul se recalculează și clientul primește emailul de corectare. Baza de date și Make nu s-au schimbat. Textul de mai jos despre cele două butoane descrie varianta inițială.
+
 Administratorii verificați pot marca „S-a prezentat” sau „Nu s-a prezentat” în Program & Disponibilitate și în istoricul rezervărilor finalizate. O rezervare cu mai multe ore poate fi marcată numai după încheierea ultimei ore păstrate. Rezervările anulate integral și blocările terenului nu sunt eligibile. Administratorul obișnuit are acces numai la ID-urile terenurilor alocate în prezent; superadminul poate verifica toate terenurile.
 
 Migrarea `034_booking_attendance.sql` se aplică o singură dată după 033. Tabelele de prezență și audit sunt private, cu RLS și fără drepturi directe pentru rolurile API. Funcțiile publice `get_booking_attendance(uuid[])` și `set_booking_attendance(uuid,text,integer)` verifică din nou contul confirmat și alocarea terenului. Browserul transmite doar rezervarea, alegerea și revizia afișată; nu poate transmite un destinatar, un contor sau textul emailului.
