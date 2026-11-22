@@ -3,6 +3,14 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-22 (29): Left column back at the left edge; phone whistle and stopwatch a little further left (done by Claude, at the owner's request)
+
+Owner: "more to the left, you placed them badly; on the phone too, a bit more to the left".
+
+- **Desktop:** the left column (reference pieces and `LEFT_EXTRA`) is glued to the left edge again (`xMinYMid`), at x≈64–70. The middle and right columns stay centred with the content.
+- **Phone:** the whistle (x 246) and the stopwatch (x 344) moved left, just after the "Descoperă sporturile" link, without touching it.
+- `design-background.css?v=31`; SEO pages regenerated. Checked at 1920×1080 and 390×844.
+
 ## 2026-11-22 (28): Desktop side pieces centred in the free margins; phone whistle and stopwatch further left (done by Claude, at the owner's request)
 
 Owner: "put them more to the left on the phone; on desktop put them more to the centre".
