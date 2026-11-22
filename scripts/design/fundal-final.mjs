@@ -124,13 +124,24 @@ function volleyball(yaw = 45, pitch = 35, roll = 0) {
 }
 // Trophy: flared bowl, loop handles, slim stem opening into a trapezoid base with a plate.
 const trophy = () => `<path d='M-28 -44H28C28 -20 18 -2 4 3C3 12 4 19 12 26H-12C-4 19 -3 12 -4 3C-18 -2 -28 -20 -28 -44Z'/><path d='M-27 -37C-42 -40 -48 -27 -41 -17C-36 -10 -28 -8 -21 -10M27 -37C42 -40 48 -27 41 -17C36 -10 28 -8 21 -10M-15 26H15L20 44H-20ZM-9 35H9'/><path d='${star(0, -23, 9.5)}'/>`;
-// Whistle in 3/4 view: round chamber, long mouthpiece with its end face and underside, slot, sound rays.
+// Referee whistle in 3/4 view, after the reference: a slightly curved body (top face +
+// side face split by a ridge), a boxy mouthpiece end at the lower left, a round chamber
+// that hooks back under itself at the right, two grip lines and three sound rays.
 function whistle() {
-  const body = 'M6.9 -7H44V7H12.6A13 13 0 1 1 6.9 -7Z';
-  const depth = 'M44 -7L48 -4V10L44 7M48 10H16.6A13 13 0 0 1 -3.8 17.4L-7.8 14.4';
-  const slot = 'M22 -7V7M29 -7V7';
-  const rays = [-105, -140, -175].map((a) => { const [x1, y1] = polar(18, a); const [x2, y2] = polar(26, a); return `M${P(x1, y1 + 4)}L${P(x2, y2 + 4)}`; }).join('');
-  return `<g transform='scale(-1.3 1.3)'><path d='${body}'/><path d='${depth}'/><path d='${slot}'/><path d='${rays}'/></g>`;
+  const cubic = (p, t) => { const u = 1 - t; return [0, 1].map((k) => u * u * u * p[0][k] + 3 * u * u * t * p[1][k] + 3 * u * t * t * p[2][k] + t * t * t * p[3][k]); };
+  const top = [[-40, -8], [-24, -13], [-6, -17], [12, -17]];        // top edge
+  const ridge = [[-39, 0], [-23, -5], [-6, -9], [10, -9]];           // top face / side face edge
+  const C = (p) => `C${P(...p[1])} ${P(...p[2])} ${P(...p[3])}`;
+  const outline = `M${P(...top[0])}${C(top)}`
+    + 'C26 -17 36 -8 36 4C36 13 31 19 25 19'                       // big round chamber (smooth join)
+    + 'Q20 19 17 14'                                             // hook back into the opening
+    + 'C8 13 -10 16 -24 22'                                          // underside
+    + 'L-32 25Q-38 27 -41 21L-45 9Q-46 0 -40 -8Z';      // mouthpiece end
+  const edges = `M${P(...ridge[0])}${C(ridge)}Q16.5 0 17 14`         // ridge, curling into the chamber opening
+    + `M${P(...top[0])}L${P(...ridge[0])}L-32 25`;                 // mouthpiece end face
+  const grips = [0.36, 0.6].map((t) => `M${P(...cubic(top, t))}L${P(...cubic(ridge, t))}`).join('');
+  const rays = [-92, -55, -18].map((a) => { const [x1, y1] = polar(23, a); const [x2, y2] = polar(31, a); return `M${P(22 + x1, 1 + y1)}L${P(22 + x2, 1 + y2)}`; }).join('');
+  return `<path d='${outline}'/><path d='${edges}${grips}'/><path d='${rays}'/>`;
 }
 // Stopwatch: double ring, crown, two side buttons, one hand.
 function stopwatch() {
@@ -162,7 +173,7 @@ const icons = [
   [trophy, 402, 166, 1.45, -4, 80],
   [() => plus(), 222, 183, 1, 0, 10],
   [() => ring(7), 332, 240, 1, 0, 9],
-  [whistle, 218, 282, 1.4, -28, 80],
+  [whistle, 218, 282, 1.15, -22, 56],
   [() => ring(7), 44, 358, 1, 0, 9],
   [() => cross(), 98, 346, 1, 0, 10],
   [basketball, 476, 366, 1.58, 0, 82],
@@ -182,8 +193,8 @@ const icons = [
   [() => ring(12), 248, 1088, 1, 0, 14],
   [() => cross(), 182, 1134, 1, 0, 10],
   [() => dots(4, 3, 15), 455, 1050, 1, 0, 50],
-  [() => volleyball(45, -35, 15), 22, 1196, 2.05, 0, 104],
-  [whistle, 330, 1182, 1.4, -28, 80],
+  [() => volleyball(45, -35, 15), 40, 1196, 1.92, 0, 96],
+  [whistle, 330, 1180, 1.15, -22, 56],
   [() => ring(18), 488, 1188, 1, 0, 20],
   [() => soccer(-24, 10, -6), 480, 1332, 1.72, 0, 88],
   [() => ring(12), 208, 1380, 1, 0, 14],
@@ -256,14 +267,17 @@ const toUri = (svg) => `data:image/svg+xml;base64,${Buffer.from(svg.replace(/%23
 // SHIFT, so side-by-side repeats never line up in identical rows. Elements cut at an edge
 // continue into the neighbouring half. SHIFT is chosen so those continuations overlap
 // the other half's drawings as little as possible.
+// Wide panel: the two columns sit COL_GAP apart, so the big balls cut at a column edge never touch
+// the neighbouring column (nothing is clipped, so the drawing still continues seamlessly).
+const COL_GAP = 40; const PITCH = W + COL_GAP;
 function overlapCost(shift) {
   let cost = 0;
   for (const [, x1, y1, , , r1] of icons) {
     for (const [, x2, y2, , , r2] of icons) {
-      for (const dx of [W, -W]) {
+      for (const dx of [PITCH, -PITCH]) {
         for (const wy of [-H, 0, H]) {
           const d = Math.hypot(x1 - (x2 + dx), y1 - (y2 + shift + wy));
-          cost += Math.max(0, r1 + r2 + 12 - d);
+          cost += Math.max(0, r1 + r2 + 12 - d) ** 2;
         }
       }
     }
@@ -271,19 +285,23 @@ function overlapCost(shift) {
   return cost;
 }
 let SHIFT = 800; let best = Infinity;
-for (let s = 560; s <= 1040; s += 4) { const c = overlapCost(s); if (c < best) { best = c; SHIFT = s; } }
+for (let s = 420; s <= 1180; s += 4) { const c = overlapCost(s); if (c < best) { best = c; SHIFT = s; } }
 function buildWide() {
   const base = build(false);
   const inner = base.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
   const defsEnd = inner.indexOf('</defs>') + '</defs>'.length;
   const defs = inner.slice(0, defsEnd);
   const art = inner.slice(defsEnd);
-  const uses = [[0, 0], [2 * W, 0], [W, SHIFT], [-W, SHIFT], [W, SHIFT - H], [-W, SHIFT - H]]
+  const uses = [[0, 0], [2 * PITCH, 0], [PITCH, SHIFT], [-PITCH, SHIFT], [PITCH, SHIFT - H], [-PITCH, SHIFT - H]]
     .map(([x, y]) => `<use href='%23art' x='${x}' y='${y}'/>`).join('');
-  return `<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' width='${2 * W}' height='${H}' viewBox='0 0 ${2 * W} ${H}'>${defs.replace('</defs>', `<g id='art'>${art}</g></defs>`)}${uses}</svg>`;
+  return `<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' width='${2 * PITCH}' height='${H}' viewBox='0 0 ${2 * PITCH} ${H}'>${defs.replace('</defs>', `<g id='art'>${art}</g></defs>`)}${uses}</svg>`;
 }
 const variants = { '--design-bg-final': buildWide(), '--design-bg-final-phone': build(false) };
 console.log(`fundal-final: wide panel shift ${SHIFT}px (overlap score ${best.toFixed(0)})`);
+for (const [, x1, y1, , , r1] of icons) for (const [, x2, y2, , , r2] of icons) for (const dx of [PITCH, -PITCH]) for (const wy of [-H, 0, H]) {
+  const gap = Math.hypot(x1 - (x2 + dx), y1 - (y2 + SHIFT + wy)) - r1 - r2;
+  if (gap < 0) console.log(`  touch across a join: (${x1},${y1}) and (${x2},${y2}) by ${(-gap).toFixed(0)}px`);
+}
 const cssPath = fileURLToPath(new URL('../../Idee Site/css/design-background.css', import.meta.url));
 let css = readFileSync(cssPath, 'utf8');
 for (const [name, svg] of Object.entries(variants)) {

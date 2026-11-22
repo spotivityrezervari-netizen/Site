@@ -3,6 +3,22 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-22 (11): Home title is the brand "Spotivity", with a tagline (done by Claude, at the owner's request)
+
+- `index.html`: the eyebrow span was removed. The h1 is now `<h1 id="home-intro-title" class="welcome-brand">Spotivity</h1>`, with no i18n key because the brand never changes. It is followed by `<p class="welcome-tagline" data-i18n="home_welcome_tagline">`.
+- `js/home.js`: `home_intro_title` and `home_welcome_eyebrow` were removed, and `home_welcome_tagline` was added in RO/HU/EN.
+- `css/design-background.css`: a new block, "2026-11-22: home title", before `@media print`:
+  - brand: `clamp(64px, 7vw, 104px)` (phones `clamp(52px, 15vw, 72px)`), weight 750;
+  - tagline: `clamp(22px, 2.3vw, 30px)`, colour `#E8F1EE`.
+- Tests: `seo-schema-browser` (h1 = Spotivity in every language, tagline per language) and `public-resilience-browser`.
+- Versions: `design-background.css?v=13` and `home.js?v=11`. The SEO pages were regenerated.
+
+## 2026-11-22 (10): Better whistle, no touching balls on desktop (done by Claude, at the owner's request)
+
+- `whistle()` is redrawn after the reference: a curved body with a top-face ridge, a boxy mouthpiece end, a round chamber hooking back under itself, two grip lines and three rays. Placement scale is 1.15, rotation -22.
+- **Wide panel:** the columns are now `COL_GAP = 40` apart (`PITCH = W + COL_GAP`). The overlap score is squared, and the shift search runs over 420–1180. The big volleyball moved to x=40 at scale 1.92. Result: shift 624, no two pieces touch across a join. The script prints a warning if they ever do.
+- CSS: the desktop background-size is 1240px and the tablet size is 1070px, so the drawing keeps the same scale with the wider panel.
+
 ## 2026-11-22 (9): Line art closer to the reference photo (done by Claude, at the owner's request)
 
 - **The balls are real 3D spheres** in `scripts/design/fundal-final.mjs`. Their seams are 3D curves, rotated (`rotator(yaw, pitch, roll)`) and projected, and only the front half is drawn (`frontPath`):

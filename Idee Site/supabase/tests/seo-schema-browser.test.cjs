@@ -17,7 +17,8 @@ const catalog = JSON.parse(readFileSync(join(root, 'scripts/seo-public-catalog.j
 const baseById = new Map(catalog.bases.map(base => [String(base.id), base]));
 const productionRoot = 'https://spotivity.ro/';
 const pagesRoot = 'https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/';
-const headings = {ro: 'Rezervă terenuri de sport online', hu: 'Foglalj sportpályát online', en: 'Book sports courts online'};
+const headings = {ro: 'Spotivity', hu: 'Spotivity', en: 'Spotivity'};
+const taglines = {ro: 'Locația perfectă pentru activitatea dorită', hu: 'A tökéletes helyszín a kívánt tevékenységhez', en: 'The perfect place for the activity you want'};
 const cleanCity = value => value.trim().replace(/\.+$/, '');
 const courtRoute = court => paths.courtPath(court, baseById.get(String(court.baza_sportiva_id)));
 const hasType = (node, type) => [node['@type']].flat().includes(type);
@@ -214,6 +215,7 @@ async function seed(fixture) {
                     await page.locator('#btn-lang-'+language).click();
                     assert.equal(await page.locator('h1').count(), 1);
                     assert.equal(await page.locator('h1').innerText(), heading);
+                    assert.equal(await page.locator('.welcome-tagline').innerText(), taglines[language]);
                     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth+1), `Homepage fits ${width}px in ${language}`);
                 }
                 await page.locator('#btn-lang-ro').click();
