@@ -632,7 +632,7 @@ const KW = 0.78;
 // Extra pieces on the left edge (owner: "add a whistle, a stopwatch etc. on the left").
 // They are placed first, so the reference pieces make room for them.
 const LEFT_EXTRA = {
-  props: [['whistle', 84, 232, 70, -14, 'M30 -30C44 -70 10 -100 30 -140'], ['medal', 80, 690, 64, -6], ['trophy', 82, 872, 76, -4]],
+  props: [['whistle', 84, 236, 88, -14, 'M30 -30C44 -70 10 -100 30 -140'], ['medal', 80, 690, 64, -6], ['trophy', 82, 872, 76, -4]],
   balls: [['volleyball', 78, 395, 30, 45, 35, 0]],
 };
 const takenWide = [[84, 232, 50], [86, 690, 50], [82, 872, 52], [78, 395, 34]];
@@ -656,13 +656,17 @@ const wide = layout({
 const PY = (y) => 235 + y * 0.585;
 const P2 = (x, y) => [x, PY(y)];
 const ZONES_PHONE = [[40, 240, 420, 900], [0, 0, 547, 215], [0, 790, 547, 890], [0, 1085, 547, 1184]];   // text block, header, steps row, footer text
-const takenPhone = [];
+// Owner: whistle and stopwatch must be visible on the phone too: placed first, in the free
+// spot right of the "discover" link and below the jersey.
+const PHONE_EXTRA = { props: [['whistle', 330, 732, 62, -14, 'M30 -30C44 -70 10 -100 30 -140'], ['stopwatch', 482, 742, 58, 12, 40]] };
+const takenPhone = [[330, 732, 42], [482, 742, 44]];
 const phone = layout({
   W: 547, H: 1184,
   glows: [[500, -60, 520, 520, '#11936f', 0.24], [60, 980, 460, 320, '#0e8064', 0.12], [280, 640, 380, 280, '#0a5e4b', 0.1]],
   sparkles: 34,
   calm: [250, 560, 300, 330],
   groups: [
+    { align: 'xMidYMin', ...PHONE_EXTRA },
     { align: 'xMidYMin', ...refGroup(cleanRef(REF.filter((i) => i[2] < 800), P2, 0.66, ZONES_PHONE, takenPhone), REF_RIBBONS.filter((r) => r[0][1] < 800), P2, 0.66, [547, 1184]) },
     { align: 'xMidYMax', ...refGroup(cleanRef(REF.filter((i) => i[2] >= 800), P2, 0.66, ZONES_PHONE.slice(2), takenPhone), REF_RIBBONS.filter((r) => r[0][1] >= 800), P2, 0.66, [547, 1184]) },
   ],

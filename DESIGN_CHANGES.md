@@ -3,6 +3,14 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-22 (27): Whistle and stopwatch on the phone too (done by Claude, at the owner's request)
+
+Owner: "but you didn't put the stopwatch or the whistle" (they were on desktop only).
+
+- `PHONE_EXTRA` in `scripts/design/fundal-arena.mjs`: a whistle and a stopwatch in the free spot right of the "Descoperă sporturile" link, below the jersey. They are placed first (`takenPhone`), so the reference pieces make room. On the phone the left side is all text, so this is the closest free spot.
+- Desktop whistle a bit larger (88).
+- `design-background.css?v=29`; SEO pages regenerated. Checked at 390×844 and 1440×900.
+
 ## 2026-11-22 (26): Bottom of the screen fades into the page colour; more pieces on the left (done by Claude, at the owner's request)
 
 Owner: "it is not a black bar, it is a change of contrast; can't we make it the same colour?" and "add a whistle, a stopwatch etc. on the left".
