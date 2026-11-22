@@ -299,6 +299,107 @@ function prop([kind, cx, cy, size, rot = 0, arg, shadow = false]) {
   return `${contact}<g transform='translate(${f(cx)} ${f(cy)}) rotate(${rot}) scale(${f(s * 1000) / 1000})'>${objects[kind](arg)}</g>`;
 }
 
+// ---------------------------------------------------------------- more props (same style)
+// seven-segment LED digits (lit segments glow, unlit ones stay as faint ghosts, like a real board)
+const SEG = { 0: 'abcdef', 1: 'bc', 2: 'abged', 3: 'abgcd', 4: 'fgbc', 5: 'afgcd', 6: 'afgedc', 7: 'abc', 8: 'abcdefg', 9: 'abcdfg' };
+function sevenSeg(chars, x0, y0, w = 20, h = 38, t = 4.2, gap = 8) {
+  let lit = ''; let ghost = '';
+  const hseg = (x1, x2, y) => poly([[x1, y], [x1 + t / 2, y - t / 2], [x2 - t / 2, y - t / 2], [x2, y], [x2 - t / 2, y + t / 2], [x1 + t / 2, y + t / 2]]);
+  const vseg = (x, y1, y2) => poly([[x, y1], [x + t / 2, y1 + t / 2], [x + t / 2, y2 - t / 2], [x, y2], [x - t / 2, y2 - t / 2], [x - t / 2, y1 + t / 2]]);
+  [...chars].forEach((ch, i) => {
+    const x = x0 + i * (w + gap); const m = h / 2;
+    const segs = {
+      a: hseg(x + 1, x + w - 1, y0), g: hseg(x + 1, x + w - 1, y0 + m), d: hseg(x + 1, x + w - 1, y0 + h),
+      f: vseg(x, y0 + 1, y0 + m - 1), b: vseg(x + w, y0 + 1, y0 + m - 1), e: vseg(x, y0 + m + 1, y0 + h - 1), c: vseg(x + w, y0 + m + 1, y0 + h - 1),
+    };
+    for (const [k, d] of Object.entries(segs)) { if ((SEG[ch] || '').includes(k)) lit += d; else ghost += d; }
+  });
+  return `<path d='${ghost}' fill='${SEAM}' fill-opacity='.08'/><path d='${lit}' fill='#7dffd6' fill-opacity='.22' stroke='#7dffd6' stroke-opacity='.25' stroke-width='5' stroke-linejoin='round'/><path d='${lit}' fill='#a8ffe6'/>`;
+}
+let clipN = 0;
+Object.assign(objects, {
+  // stadium floodlight mast standing on the horizon: lattice mast, lamp head, glow and a light cone
+  floodlight(lean = -40) {
+    let brace = '';
+    for (let i = 0; i < 9; i++) {
+      const y1 = -i * 9; const y2 = -(i + 1) * 9;
+      const w1 = 4 - i * 0.28; const w2 = 4 - (i + 1) * 0.28;
+      brace += `M${P(-w1, y1)}L${P(w2, y2)}M${P(w1, y1)}L${P(-w2, y2)}`;
+    }
+    let lamps = '';
+    for (let r = 0; r < 2; r++) for (let c = 0; c < 4; c++) lamps += `<circle cx='${-10.5 + c * 7}' cy='${-96 + r * 6.5}' r='2.3'/>`;
+    return `<path d='M-11 -86L11 -86L${f(lean + 70)} 40L${f(lean - 70)} 40Z' fill='url(#lampBeam)'/>`
+      + `<circle cy='-93' r='34' fill='url(#lampGlow)'/>`
+      + `<path d='M-4 0L-1.5 -82M4 0L1.5 -82${brace}' fill='none' stroke='#2fb894' stroke-opacity='.55' stroke-width='1.1'/>`
+      + `<rect x='-16' y='-102' width='32' height='16' rx='2' fill='#021412' ${rim(1.2)}/>`
+      + `<g fill='#bff5e4' fill-opacity='.8'>${lamps}</g>`;
+  },
+  // location pin hovering over the grass with pulse rings (the "spot" of Spotivity)
+  pin() {
+    const drop = 'M0 0C-6 -18 -34 -40 -34 -64A34 34 0 1 1 34 -64C34 -40 6 -18 0 0Z';
+    return `<ellipse rx='95' ry='22' fill='url(#pinPool)'/>`
+      + `<ellipse rx='28' ry='6.5' fill='none' stroke='#5fe8bf' stroke-opacity='.75' stroke-width='1.6'/><ellipse rx='54' ry='12.5' fill='none' stroke='#5fe8bf' stroke-opacity='.4' stroke-width='1.3'/><ellipse rx='82' ry='19' fill='none' stroke='#5fe8bf' stroke-opacity='.18' stroke-width='1.1'/>`
+      + `<ellipse rx='12' ry='3' fill='#000' fill-opacity='.5'/>`
+      + `<g transform='translate(0 -16)'><path d='${drop}' fill='url(#objBody)'/><path d='${drop}' fill='url(#objShade)'/><path d='${drop}' fill='none' ${rim(2)} stroke-linejoin='round'/>`
+      + `<circle cy='-64' r='14' fill='#010d0c' stroke='${SEAM}' stroke-opacity='.55' stroke-width='1.2'/><circle cy='-64' r='8' fill='#8dffdc' fill-opacity='.25'/><circle cy='-64' r='5' fill='#b5ffe8'/>`
+      + `<path d='M-24 -78A28 28 0 0 1 2 -94' fill='none' stroke='#c8fff0' stroke-opacity='.35' stroke-width='3' stroke-linecap='round'/></g>`;
+  },
+  // hanging scoreboard with LED digits
+  scoreboard(score = '21') {
+    return `<path d='M-56 -36L-62 -120M56 -36L62 -120' stroke='#2fb894' stroke-opacity='.4' stroke-width='1.2'/>`
+      + `<rect x='-82' y='-38' width='164' height='76' rx='9' fill='url(#objBody)' ${rim(1.8)}/>`
+      + `<rect x='-74' y='-30' width='148' height='60' rx='5' fill='#010b0a' stroke='${SEAM}' stroke-opacity='.3' stroke-width='1'/>`
+      + `<g transform='skewX(-8)'>${sevenSeg(score[0], -58, -19)}${sevenSeg(score[1], 36, -19)}</g>`
+      + `<circle cx='-1' cy='-7' r='3' fill='#a8ffe6'/><circle cx='-3' cy='8' r='3' fill='#a8ffe6'/>`
+      + `<path d='M-64 -24H-40M38 -24H62' stroke='${SEAM}' stroke-opacity='.45' stroke-width='2' stroke-linecap='round'/>`
+      + `<path d='M-74 -26Q0 -36 74 -26' fill='none' stroke='#c8fff0' stroke-opacity='.18' stroke-width='2'/>`;
+  },
+  // tennis racket: frame, strings (clipped to the head), throat, wrapped grip
+  racket() {
+    const id = `rc${clipN++}`;
+    let strings = '';
+    for (let x = -28; x <= 28; x += 7) strings += `M${x} -95V-5`;
+    for (let y = -88; y <= -12; y += 7) strings += `M-35 ${y}H35`;
+    let grip = '';
+    for (let y = 30; y < 98; y += 8) grip += `M-6 ${y}L6 ${y + 5}`;
+    return `<clipPath id='${id}'><ellipse cy='-50' rx='31' ry='41'/></clipPath>`
+      + `<path d='M-14 -9Q-6 4 -6 22H6Q6 4 14 -9' fill='url(#objBody)' ${rim(1.2)}/>`
+      + `<ellipse cy='-50' rx='38' ry='48' fill='url(#objBody)'/><ellipse cy='-50' rx='31' ry='41' fill='#010d0c' fill-opacity='.85'/>`
+      + `<path d='${strings}' clip-path='url(#${id})' stroke='${SEAM}' stroke-opacity='.45' stroke-width='.9'/>`
+      + `<ellipse cy='-50' rx='38' ry='48' fill='none' ${rim(1.8)}/><ellipse cy='-50' rx='31' ry='41' fill='none' stroke='${SEAM}' stroke-opacity='.4' stroke-width='1'/>`
+      + `<rect x='-7' y='22' width='14' height='78' rx='3.5' fill='url(#objBody)' ${rim(1.4)}/><path d='${grip}' stroke='${SEAM}' stroke-opacity='.35' stroke-width='1.1'/>`
+      + `<path d='M-30 -78A40 48 0 0 1 -4 -97' fill='none' stroke='#c8fff0' stroke-opacity='.35' stroke-width='2.5' stroke-linecap='round'/>`;
+  },
+  // winner's medal on a ribbon
+  medal() {
+    const star = []; for (let i = 0; i < 10; i++) { const r = i % 2 ? 5 : 12; const t = (-90 + i * 36) * Math.PI / 180; star.push([r * Math.cos(t), 2 + r * Math.sin(t)]); }
+    return `<path d='M-30 -78L-12 -78L4 -20L-10 -20Z' fill='url(#objBody)' ${rim(1.1)}/><path d='M30 -78L12 -78L-4 -20L10 -20Z' fill='url(#objBody)' ${rim(1.1)}/>`
+      + `<path d='M-22 -78L-4 -22M22 -78L4 -22' stroke='#8dffdc' stroke-opacity='.35' stroke-width='3'/>`
+      + `<circle cy='2' r='28' fill='url(#ballBody)'/><circle cy='2' r='28' fill='url(#ballShade)'/><circle cy='2' r='27.5' fill='none' ${rim(2)}/><circle cy='2' r='21' fill='none' stroke='${SEAM}' stroke-opacity='.5' stroke-width='1.1'/>`
+      + `<path d='${poly(star)}' fill='#8dffdc' fill-opacity='.2' stroke='#a8ffe6' stroke-width='1.3' stroke-linejoin='round'/>`;
+  },
+  // football shirt with a lit number 10
+  jersey() {
+    const shirt = 'M-18 -48Q0 -40 18 -48L44 -38L64 -10L48 0L40 -10V52Q40 56 36 56H-36Q-40 56 -40 52V-10L-48 0L-64 -10L-44 -38Z';
+    return `<path d='${shirt}' fill='url(#objBody)'/><path d='${shirt}' fill='url(#objShade)'/><path d='${shirt}' fill='none' ${rim(1.8)} stroke-linejoin='round'/>`
+      + `<path d='M-18 -48Q0 -30 18 -48' fill='#010d0c' stroke='${SEAM}' stroke-opacity='.5' stroke-width='1.2'/>`
+      + `<path d='M-56 -21L-41 -12M56 -21L41 -12' stroke='${SEAM}' stroke-opacity='.45' stroke-width='1.2'/>`
+      + `<path d='M-30 10Q-22 30 -26 50M24 -8Q30 20 28 50' fill='none' stroke='#000' stroke-opacity='.25' stroke-width='3'/>`
+      + `<g transform='translate(-2 0) scale(.75)'>${sevenSeg('10', -26, -12, 18, 40, 5, 12)}</g>`;
+  },
+  // booking calendar card with one day ticked
+  calendar() {
+    let cells = '';
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) if (!(r === 1 && c === 2)) cells += `M${-34 + c * 18} ${-8 + r * 16}h12v10h-12Z`;
+    return `<rect x='-46' y='-42' width='92' height='92' rx='10' fill='url(#objBody)' ${rim(1.8)}/>`
+      + `<path d='M-46 -20H46' stroke='${SEAM}' stroke-opacity='.4' stroke-width='1.2'/><rect x='-46' y='-42' width='92' height='22' rx='10' fill='#8dffdc' fill-opacity='.12'/>`
+      + `<rect x='-26' y='-52' width='7' height='18' rx='3.5' fill='#021412' ${rim(1.2)}/><rect x='19' y='-52' width='7' height='18' rx='3.5' fill='#021412' ${rim(1.2)}/>`
+      + `<path d='${cells}' fill='none' stroke='${SEAM}' stroke-opacity='.35' stroke-width='1'/>`
+      + `<rect x='1' y='7' width='14' height='12' rx='2' fill='#8dffdc' fill-opacity='.3' stroke='#a8ffe6' stroke-width='1.2'/><path d='M4 13L7.5 16.5L12.5 9.5' fill='none' stroke='#d8fff3' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/>`
+      + `<circle cx='8' cy='13' r='16' fill='url(#pinPool)'/>`;
+  },
+});
+
 // ---------------------------------------------------------------- scenes
 const commonDefs = `
 <radialGradient id='ballBody' cx='.36' cy='.3' r='.78'><stop offset='0' stop-color='#1a6a57'/><stop offset='.45' stop-color='#0b3a33'/><stop offset='1' stop-color='#031b18'/></radialGradient>
@@ -308,7 +409,7 @@ const commonDefs = `
 <radialGradient id='contact'><stop offset='0' stop-color='#000' stop-opacity='.75'/><stop offset='1' stop-color='#000' stop-opacity='0'/></radialGradient>
 <linearGradient id='objBody' x1='.15' y1='0' x2='.85' y2='1'><stop offset='0' stop-color='#1a6a57'/><stop offset='.45' stop-color='#0b3a33'/><stop offset='1' stop-color='#031b18'/></linearGradient>
 <linearGradient id='objShade' x1='0' y1='0' x2='0' y2='1'><stop offset='.35' stop-color='#000' stop-opacity='0'/><stop offset='1' stop-color='#000' stop-opacity='.5'/></linearGradient>
-<linearGradient id='cordFade' x1='0' y1='1' x2='1' y2='0'><stop offset='0' stop-color='${SEAM}' stop-opacity='.7'/><stop offset='1' stop-color='${SEAM}' stop-opacity='0'/></linearGradient>`.replace(/\n/g, '');
+<linearGradient id='lampBeam' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#8dffdc' stop-opacity='.11'/><stop offset='1' stop-color='#8dffdc' stop-opacity='0'/></linearGradient><radialGradient id='lampGlow'><stop offset='0' stop-color='#c8fff0' stop-opacity='.32'/><stop offset='.3' stop-color='#5fe8bf' stop-opacity='.1'/><stop offset='1' stop-color='#5fe8bf' stop-opacity='0'/></radialGradient><radialGradient id='pinPool'><stop offset='0' stop-color='#4fe0b6' stop-opacity='.3'/><stop offset='1' stop-color='#4fe0b6' stop-opacity='0'/></radialGradient><linearGradient id='cordFade' x1='0' y1='1' x2='1' y2='0'><stop offset='0' stop-color='${SEAM}' stop-opacity='.7'/><stop offset='1' stop-color='${SEAM}' stop-opacity='0'/></linearGradient>`.replace(/\n/g, '');
 
 const glow = (id, cx, cy, rx, ry, color, op) => ({
   defs: `<radialGradient id='${id}' cx='${cx}' cy='${cy}' r='1' gradientUnits='userSpaceOnUse' gradientTransform='translate(${cx} ${cy}) scale(${rx} ${ry}) translate(${-cx} ${-cy})'><stop offset='0' stop-color='${color}' stop-opacity='${op}'/><stop offset='.45' stop-color='${color}' stop-opacity='${f(op * 0.35 * 1000) / 1000}'/><stop offset='1' stop-color='${color}' stop-opacity='0'/></radialGradient>`,
@@ -363,6 +464,13 @@ const wide = scene({
   ],
   cones: [[372, 905], [470, 935], [580, 966], [700, 1000]],   // screen positions on the grass
   props: [
+    ['floodlight', 872, 566, 135, 0, 34],
+    ['floodlight', 786, 590, 195, 0, -34],
+    ['scoreboard', 690, 205, 70, 0, '21'],
+    ['medal', 64, 428, 72, -8],
+    ['racket', 1562, 335, 95, 28],
+    ['calendar', 1195, 872, 74, 8],
+    ['pin', 978, 905, 88],
     ['stopwatch', 58, 585, 180, 14, 40],
     ['stopwatch', 1522, 196, 62, -16, 300],
     ['whistle', 905, 272, 130, -12],
@@ -389,6 +497,10 @@ const phone = scene({
   ],
   cones: [[300, 1255], [372, 1290], [452, 1330]],
   props: [
+    ['floodlight', 440, 870, 150, 0, -40],
+    ['medal', 576, 772, 62, 10],
+    ['racket', 26, 978, 100, -32],
+    ['pin', 335, 1168, 72],
     ['stopwatch', -8, 770, 112, 12, 40],
     ['stopwatch', 572, 618, 46, -16, 300],
     ['whistle', 498, 1080, 92, -18, 'M30 -30C60 -80 20 -150 90 -200'],

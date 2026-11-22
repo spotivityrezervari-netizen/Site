@@ -3,6 +3,21 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-22 (14): Footer melts into the background; floodlights, location pin, LED scoreboard, booking calendar, racket, medal (done by Claude, at the owner's request)
+
+Owner: "at the very bottom on the phone there is a black line, get rid of it; I want more of those graphics, be inventive".
+
+- **Black line at the bottom:** it was the footer, an opaque dark band (`--design-bar`) with a 1px line on top that cut the background off. In `css/design-background.css` (new block before the home title block) the footer is now a transparent-to-base gradient with no line. Its last colour is the page base `#011012`, so the iOS overscroll area below it matches too.
+- **New objects** (`Object.assign(objects, ...)` in `scripts/design/fundal-arena.mjs`), all in the back-lit 3D style:
+  - `floodlight`: lattice mast on the horizon, lamp head, glow and a soft light cone onto the pitch;
+  - `pin`: location pin hovering over the grass with pulse rings (the "spot" of Spotivity);
+  - `scoreboard`: hanging board with real seven-segment LED digits (lit segments glow, unlit ones stay as faint ghosts), showing 2:1;
+  - `calendar`: booking card with one day ticked;
+  - `racket` (strings clipped to the head, wrapped grip) and `medal` on a ribbon;
+  - `jersey` with a lit 10 is also available, but not placed yet.
+- New gradients: `lampBeam`, `lampGlow`, `pinPool`. Still no SVG filters.
+- Placement was checked on the real page at 1440×900, 1920×1080 and 390×844 (nothing behind the title, buttons or the steps row). `design-background.css?v=16`; SEO pages regenerated.
+
 ## 2026-11-22 (13): Arena: scroll fix, stopwatches, whistle, trophy, cones, goals and corner flags (done by Claude, at the owner's request)
 
 Owner: "the idea is good but make it much better; there are bugs when I scroll; add the stopwatches and the whistle and a few more things in the same artwork".
