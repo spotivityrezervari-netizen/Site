@@ -3,6 +3,13 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-22 (21): Smaller "Spotivity" title (done by Claude, at the owner's request)
+
+Owner: "you made Spotivity too big; same style as before but a bit smaller, it is exaggerated now".
+
+- `css/design-background.css`, home title block: the brand title went from `clamp(64px, 7vw, 104px)` to `clamp(50px, 5.2vw, 78px)`; phones (≤767px) from `clamp(52px, 15vw, 72px)` to `clamp(42px, 12vw, 56px)`. Same weight, letter spacing and colour; the tagline is unchanged.
+- `design-background.css?v=23`; SEO pages regenerated.
+
 ## 2026-11-22 (20): No dark band at the bottom of the phone page (done by Claude, at the owner's request)
 
 Owner: "the line at the bottom on the phone is back".
