@@ -36,6 +36,29 @@ window.appAssetUrl = value => {
     } catch { /* Embedded helper tests may not provide a page location. */ }
     return new URL(safe, spotivityAppRoot).href;
 };
+// Speed: photos uploaded to Supabase can be several megabytes. On spotivity.ro
+// Netlify's image service sends a resized copy instead (netlify.toml [images]);
+// other hosts get the original. If the resized copy fails, the original loads.
+const spotivityStoragePhoto = /^https:\/\/ndubcdwohqzgxpuiowye\.supabase\.co\/storage\/v1\/object\/public\/[^?#]+$/;
+const spotivityImageService = /(^|\.)spotivity\.ro$/.test(window.location?.hostname || '');
+window.spotivityPhotoUrl = (value, width = 480) => {
+    const url = window.appAssetUrl(value);
+    if (!url || !spotivityImageService || !spotivityStoragePhoto.test(url)) return url;
+    const w = Math.min(2000, Math.max(64, Math.round(Number(width) || 480)));
+    return `/.netlify/images?url=${encodeURIComponent(url)}&w=${w}&q=75`;
+};
+if (typeof document !== 'undefined' && typeof HTMLImageElement !== 'undefined') document.addEventListener('error', event => {
+    const image = event.target;
+    if (!(image instanceof HTMLImageElement) || image.dataset.photoFallback) return;
+    const src = image.getAttribute('src') || '';
+    if (!src.startsWith('/.netlify/images?')) return;
+    const original = new URLSearchParams(src.slice(src.indexOf('?') + 1)).get('url') || '';
+    if (!spotivityStoragePhoto.test(original)) return;
+    // Retry with the original before the image's own error handler runs.
+    event.stopImmediatePropagation();
+    image.dataset.photoFallback = '1';
+    image.src = original;
+}, true);
 // Read every authorized row, even when PostgREST caps a response below the
 // requested page size. Callers must use a fresh query with a stable ordering.
 // Never return an apparently complete partial list after a failed page.

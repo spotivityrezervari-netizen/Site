@@ -150,7 +150,7 @@
                 divTeren.className = 'card-teren-poza btn-teren';
                 divTeren.href = window.SpotivityNavigation.courtUrl(teren);
                 const fallbackPhoto = window.appAssetUrl('assets/imagini/spotivity-256.webp');
-                divTeren.innerHTML = `<img src="${window.escapeHtml(window.appAssetUrl(teren.poza) || fallbackPhoto)}" alt="${window.escapeHtml(teren.nume)}"><div class="info-teren-poza"><h3>${window.escapeHtml(teren.nume)}</h3><p>${window.escapeHtml(teren.pret)} ${window.dict[window.lang]['lei_ora']}</p></div>`;
+                divTeren.innerHTML = `<img src="${window.escapeHtml((window.spotivityPhotoUrl?.(teren.poza, 720) ?? window.appAssetUrl(teren.poza)) || fallbackPhoto)}" loading="lazy" decoding="async" alt="${window.escapeHtml(teren.nume)}"><div class="info-teren-poza"><h3>${window.escapeHtml(teren.nume)}</h3><p>${window.escapeHtml(teren.pret)} ${window.dict[window.lang]['lei_ora']}</p></div>`;
                 divTeren.querySelector('img').addEventListener('error', function () {
                     if (this.getAttribute('src') !== fallbackPhoto) this.src = fallbackPhoto;
                 });

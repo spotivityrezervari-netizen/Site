@@ -2,3 +2,8 @@
   base = "."
   publish = "dist"
   command = "node scripts/netlify-build.mjs"
+
+# Speed: lets /.netlify/images resize the photos stored in Supabase
+# (js/security.js -> window.spotivityPhotoUrl). Public buckets only.
+[images]
+  remote_images = ['https://ndubcdwohqzgxpuiowye\.supabase\.co/storage/v1/object/public/.*']

@@ -13,7 +13,7 @@
         if (!url) return null;
         const image = document.createElement('img');
         image.className = className || 'sports-base-photo';
-        image.src = url;
+        image.src = window.spotivityPhotoUrl?.(url, 1100) || url;
         image.alt = base.nume || '';
         image.width = 640;
         image.height = 360;
@@ -37,7 +37,7 @@
         const url = publicImageUrl(base, 'poza_profil');
         if (url) {
             const image = document.createElement('img');
-            image.src = url;
+            image.src = window.spotivityPhotoUrl?.(url, 256) || url;
             image.alt = '';
             image.width = 128;
             image.height = 128;

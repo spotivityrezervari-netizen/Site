@@ -1,6 +1,7 @@
 -- 050: account deletion and superadmin analytics (owner's request, 23.11.2026).
 --  * public.delete_my_account(text): a client deletes their own account from
---    "Profilul meu". Administrator accounts cannot delete themselves.
+--    "Profilul meu" or the menu, confirming with their name. Administrator
+--    accounts cannot delete themselves.
 --  * public.admin_list_accounts(text,integer,integer) and
 --    public.admin_delete_account(uuid,text): the superadmin lists and deletes
 --    accounts. Another superadmin and the caller's own account are refused.
@@ -8,6 +9,7 @@
 --    cancellations, attendance and no-shows per court and in total for the
 --    last 7 days, the last 30 days and all time. The superadmin sees every
 --    court plus new/active accounts; an administrator only their own courts.
+--    Also: the previous 7/30-day window and a day-by-day series (30 days).
 -- Deleting an account removes the login, the profile, the admin rights and the
 -- base allocations. Bookings, chat messages and statistics stay: their foreign
 -- keys are ON DELETE SET NULL. An account with future active bookings is never
@@ -75,12 +77,26 @@ end
 $$;
 revoke all on function spotivity_private.delete_account_internal(uuid) from public,anon,authenticated,service_role;
 
+create or replace function spotivity_private.confirm_name_key(p_value text)
+returns text language sql immutable set search_path='' as $$
+ select regexp_replace(lower(translate(btrim(coalesce(p_value,'')),
+  'ĂăÂâÎîȘșŞşȚțŢţÁáÉéÍíÓóÖöŐőÚúÜüŰű','AaAaIiSsSsTtTtAaEeIiOoOoOoUuUuUu')),'\s+',' ','g')
+$$;
+revoke all on function spotivity_private.confirm_name_key(text) from public,anon,authenticated,service_role;
+
 create or replace function public.delete_my_account(p_confirm text)
 returns jsonb language plpgsql volatile security definer set search_path='' as $$
-declare me uuid:=auth.uid();
+declare me uuid:=auth.uid();expected text;
 begin
  if me is null then raise exception 'Sign in first.' using errcode='42501'; end if;
- if coalesce(btrim(p_confirm),'')<>'STERGE' then raise exception 'confirmation' using errcode='22023'; end if;
+ -- Confirmation: the account's name exactly as "Profilul tău" shows it (the
+ -- saved name, or the part of the email before @ when no name is saved).
+ -- Case, spaces and Romanian/Hungarian diacritics are ignored.
+ select coalesce(nullif(btrim(c.nume),''),split_part(u.email,'@',1)) into expected
+ from auth.users u left join public.clienti c on c.user_id=u.id where u.id=me;
+ if spotivity_private.confirm_name_key(p_confirm)='' or spotivity_private.confirm_name_key(p_confirm)<>spotivity_private.confirm_name_key(expected) then
+  raise exception 'confirmation' using errcode='22023';
+ end if;
  if exists(select 1 from public.users_admin where user_id=me) then
   raise exception 'admin_account' using errcode='42501',
    hint='Administrator accounts are deleted by the superadmin.';
@@ -148,6 +164,7 @@ create or replace function public.admin_analytics()
 returns jsonb language plpgsql stable security definer set search_path='' as $$
 declare now_at timestamptz:=statement_timestamp();v_d7 timestamptz:=statement_timestamp()-interval '7 days';
  v_d30 timestamptz:=statement_timestamp()-interval '30 days';result jsonb;v_super boolean;
+ v_today date:=(statement_timestamp() at time zone 'Europe/Bucharest')::date;
 begin
  if auth.uid() is null or not exists(select 1 from public.users_admin where user_id=auth.uid()) then
   raise exception 'Administrators only.' using errcode='42501';
@@ -212,13 +229,33 @@ begin
   select jsonb_object_agg(k.kind,jsonb_build_object(
    'd7',(select count(distinct ev.ekey) from scoped ev where ev.kind=k.kind and ev.ts>=v_d7),
    'd30',(select count(distinct ev.ekey) from scoped ev where ev.kind=k.kind and ev.ts>=v_d30),
-   'all',(select count(distinct ev.ekey) from scoped ev where ev.kind=k.kind))) stats
+   'all',(select count(distinct ev.ekey) from scoped ev where ev.kind=k.kind),
+   -- The window just before: compared with d7 / d30 in the charts.
+   'p7',(select count(distinct ev.ekey) from scoped ev where ev.kind=k.kind and ev.ts>=v_d7-interval '7 days' and ev.ts<v_d7),
+   'p30',(select count(distinct ev.ekey) from scoped ev where ev.kind=k.kind and ev.ts>=v_d30-interval '30 days' and ev.ts<v_d30))) stats
   from kinds k
+ ), days as(
+  -- The last 30 calendar days in Romania, oldest first, today last.
+  select (v_today-g)::date as day from generate_series(0,29) g
+ ), daily_counts as(
+  select ev.kind,(ev.ts at time zone 'Europe/Bucharest')::date as day,count(distinct ev.ekey)::integer n
+  from scoped ev where ev.ts>=now_at-interval '31 days' group by 1,2
+ ), daily as(
+  select jsonb_object_agg(x.kind,x.series) series from(
+   select k.kind,jsonb_agg(coalesce(dc.n,0) order by d.day) series
+   from kinds k cross join days d
+   left join daily_counts dc on dc.kind=k.kind and dc.day=d.day
+   group by k.kind) x
  )
  select jsonb_build_object(
   'generated_at',now_at,
   'scope',case when v_super then 'all' else 'own' end,
-  'users',case when v_super then (select jsonb_build_object('d7',count(*) filter(where u.created_at>=v_d7),'d30',count(*) filter(where u.created_at>=v_d30),'all',count(*)) from auth.users u) end,
+  'today',v_today,
+  'daily',(select series from daily),
+  'users',case when v_super then (select jsonb_build_object('d7',count(*) filter(where u.created_at>=v_d7),'d30',count(*) filter(where u.created_at>=v_d30),'all',count(*),
+    'p7',count(*) filter(where u.created_at>=v_d7-interval '7 days' and u.created_at<v_d7),
+    'p30',count(*) filter(where u.created_at>=v_d30-interval '30 days' and u.created_at<v_d30),
+    'daily',(select jsonb_agg((select count(*) from auth.users x where (x.created_at at time zone 'Europe/Bucharest')::date=(v_today-g)) order by g desc) from generate_series(0,29) g)) from auth.users u) end,
   'active_users',case when v_super then (select jsonb_build_object('d7',count(*) filter(where u.last_sign_in_at>=v_d7),'d30',count(*) filter(where u.last_sign_in_at>=v_d30),'all',count(*) filter(where u.last_sign_in_at is not null)) from auth.users u) end,
   'totals',(select stats from totals),
   'courts',coalesce((select jsonb_agg(jsonb_build_object('court',p.court,'sport',p.sport,'city',p.oras,'active',p.active,'stats',p.stats) order by p.active desc,p.court) from per_court p),'[]'::jsonb))

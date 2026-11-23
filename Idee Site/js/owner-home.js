@@ -290,7 +290,7 @@
         card.setAttribute('aria-label', `Editează ${court.nume || 'terenul'}, ${displaySport(sport)}, ${court.oras || base?.oras || ''}${court.este_activ === false ? ', ascuns clienților' : ''}`);
         const image = element('img', 'home-court-photo');
         const fallbackPhoto = window.appAssetUrl('assets/imagini/spotivity-256.webp');
-        image.src = safeImage(court.poza) || fallbackPhoto;
+        image.src = window.spotivityPhotoUrl?.(court.poza, 480) || fallbackPhoto;
         image.alt = ''; image.width = 240; image.height = 160; image.loading = 'lazy'; image.decoding = 'async';
         image.addEventListener('error', () => { if (image.getAttribute('src') !== fallbackPhoto) image.src = fallbackPhoto; });
         const details = element('span', 'home-court-details');

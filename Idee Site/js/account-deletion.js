@@ -1,4 +1,5 @@
-/* Account deletion: "Șterge contul" in the client profile and the superadmin
+/* Account deletion: red "Șterge contul" at the bottom of the client profile and
+   of the 3-bar menu (confirmed by typing the account name), and the superadmin
    "Conturi utilizatori" panel. Every rule is enforced in SQL (migration 050):
    delete_my_account, admin_list_accounts, admin_delete_account. */
 (() => {
@@ -15,11 +16,11 @@
             title: 'Șterge contul',
             intro: 'Contul, datele de autentificare și profilul tău vor fi șterse definitiv. Nu mai poți intra cu acest cont, iar operația nu poate fi anulată.',
             keep: 'Istoricul rezervărilor rămâne la bazele sportive, fără legătură cu un cont. Dacă ai rezervări viitoare, anulează-le mai întâi din „Rezervări active”.',
-            label: 'Pentru confirmare, scrie STERGE',
+            label: 'Pentru confirmare, scrie numele tău exact cum apare în profil: {name}',
             confirm: 'Șterge definitiv contul',
             cancel: 'Renunță',
             working: 'Se șterge contul…',
-            word: 'Scrie STERGE (cu majuscule) ca să confirmi.',
+            word: 'Numele scris nu corespunde contului. Scrie: {name}',
             future: 'Ai {n} ore rezervate în viitor. Anulează-le din „Rezervări active”, apoi încearcă din nou.',
             admin: 'Conturile de administrator nu se pot șterge de aici. Cere ștergerea superadminului.',
             session: 'Sesiunea a expirat. Conectează-te din nou.',
@@ -31,11 +32,11 @@
             title: 'Fiók törlése',
             intro: 'A fiókod, a bejelentkezési adataid és a profilod véglegesen törlődnek. Ezzel a fiókkal többé nem tudsz belépni, és a művelet nem vonható vissza.',
             keep: 'A foglalási előzmények fiók nélkül megmaradnak a sportközpontoknál. Ha jövőbeli foglalásod van, előbb mondd le az „Aktív foglalások” menüben.',
-            label: 'Megerősítéshez írd be: STERGE',
+            label: 'Megerősítéshez írd be a neved úgy, ahogy a profilodban szerepel: {name}',
             confirm: 'Fiók végleges törlése',
             cancel: 'Mégse',
             working: 'Fiók törlése…',
-            word: 'A megerősítéshez írd be: STERGE (nagybetűkkel).',
+            word: 'A beírt név nem egyezik a fiókkal. Írd be: {name}',
             future: '{n} jövőbeli foglalt órád van. Mondd le őket az „Aktív foglalások” menüben, majd próbáld újra.',
             admin: 'Adminisztrátori fiók itt nem törölhető. Kérd a szuperadmint.',
             session: 'A munkamenet lejárt. Jelentkezz be újra.',
@@ -47,11 +48,11 @@
             title: 'Delete account',
             intro: 'Your account, sign-in details and profile will be permanently deleted. You will no longer be able to sign in with this account, and this cannot be undone.',
             keep: 'Booking history stays with the sports bases, no longer linked to an account. If you have future bookings, cancel them first from “Active bookings”.',
-            label: 'To confirm, type STERGE',
+            label: 'To confirm, type your name exactly as your profile shows it: {name}',
             confirm: 'Delete my account permanently',
             cancel: 'Cancel',
             working: 'Deleting your account…',
-            word: 'Type STERGE (in capitals) to confirm.',
+            word: 'The name you typed does not match this account. Type: {name}',
             future: 'You have {n} booked hours in the future. Cancel them from “Active bookings”, then try again.',
             admin: 'Administrator accounts cannot be deleted here. Ask the superadmin.',
             session: 'Your session expired. Please sign in again.',
@@ -77,17 +78,31 @@
         });
     }
 
-    // ---- Client: "Șterge contul" in the profile ----
+    // Same rule as spotivity_private.confirm_name_key() in migration 050:
+    // case, extra spaces and Romanian/Hungarian diacritics are ignored.
+    const nameKey = value => String(value || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .trim().toLocaleLowerCase('ro-RO').replace(/\s+/g, ' ');
+    const accountName = user => String(user?.nume || '').trim() || String(user?.email || '').split('@')[0];
+
+    // ---- Client: "Șterge contul" at the bottom of the profile and of the menu ----
     function createSelfDeletion(db) {
         const actions = document.querySelector('#modal-profil .actiuni-cont');
-        const logout = document.getElementById('btn-logout');
         if (!actions || document.getElementById('btn-sterge-cont')) return;
-        const button = node('button', 'btn-cont btn-sterge-cont');
-        button.id = 'btn-sterge-cont'; button.type = 'button';
-        button.setAttribute('aria-controls', 'modal-sterge-cont');
-        const buttonText = node('span', '', t('button'));
-        button.append('🗑️ ', buttonText);
-        actions.insertBefore(button, logout || null);
+        const makeButton = (id, className) => {
+            const b = node('button', className);
+            b.id = id; b.type = 'button';
+            b.setAttribute('aria-controls', 'modal-sterge-cont');
+            b.setAttribute('aria-haspopup', 'dialog');
+            return b;
+        };
+        // Profile: the very last button, under "Deconectare".
+        const button = makeButton('btn-sterge-cont', 'btn-cont btn-sterge-cont');
+        actions.append(button);
+        // Menu with the 3 bars: the very last entry, shown only when signed in.
+        const menuLinks = document.querySelector('#home-mobile-menu .home-mobile-links');
+        const menuButton = menuLinks ? makeButton('btn-sterge-cont-meniu', 'home-menu-delete-account') : null;
+        if (menuButton) { menuButton.hidden = true; menuLinks.append(menuButton); }
+        const entries = [button, menuButton].filter(Boolean);
 
         const modal = node('div', 'modal account-delete-modal');
         modal.id = 'modal-sterge-cont'; modal.style.display = 'none';
@@ -101,53 +116,75 @@
         const group = node('div', 'grup-input');
         const label = node('label'); label.htmlFor = 'sterge-cont-confirmare';
         const input = node('input'); input.id = 'sterge-cont-confirmare'; input.type = 'text';
-        input.autocomplete = 'off'; input.spellcheck = false; input.maxLength = 20;
+        input.autocomplete = 'off'; input.spellcheck = false; input.maxLength = 120;
         group.append(label, input);
         const status = node('p', 'account-delete-status'); status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
         const row = node('div', 'account-delete-actions');
-        const confirm = node('button', 'btn-deconectare'); confirm.type = 'submit';
+        const confirm = node('button', 'btn-deconectare btn-sterge-definitiv'); confirm.type = 'submit';
         const cancel = node('button', 'btn-cont'); cancel.type = 'button';
         row.append(confirm, cancel);
         form.append(group, status, row);
         panel.append(title, intro, keep, form);
         modal.append(panel);
         document.body.append(modal);
-        let busy = false;
+        let busy = false, isAdmin = false, returnTo = null, fromProfile = false;
+        const currentUser = () => window.getSpotivityProfileUser?.() || null;
+        const signedIn = () => Boolean(currentUser()?.id);
 
         function render() {
-            buttonText.textContent = t('button');
+            for (const entry of entries) entry.textContent = t('button');
             title.textContent = t('title'); intro.textContent = t('intro'); keep.textContent = t('keep');
-            label.textContent = t('label'); confirm.textContent = t('confirm'); cancel.textContent = t('cancel');
+            label.textContent = t('label').replace('{name}', accountName(currentUser()) || '—');
+            confirm.textContent = t('confirm'); cancel.textContent = t('cancel');
+        }
+        function sync() {
+            button.hidden = isAdmin;
+            if (menuButton) menuButton.hidden = isAdmin || !signedIn();
+            render();
         }
         function setStatus(text, error = false) { status.textContent = text; status.classList.toggle('is-error', error); }
-        function setBusy(value) { busy = value; input.disabled = value; confirm.disabled = value; cancel.disabled = value; form.setAttribute('aria-busy', String(value)); }
+        function matches() { return nameKey(input.value) !== '' && nameKey(input.value) === nameKey(accountName(currentUser())); }
+        function setBusy(value) { busy = value; input.disabled = value; cancel.disabled = value; confirm.disabled = value || !matches(); form.setAttribute('aria-busy', String(value)); }
         function close() {
             if (busy) return;
             modal.style.display = 'none'; input.value = ''; setStatus('');
             const profile = document.getElementById('modal-profil');
-            if (window.getSpotivityProfileUser?.()) { profile.style.display = 'flex'; button.focus({ preventScroll: true }); }
+            if (fromProfile && signedIn() && profile) { profile.style.display = 'flex'; button.focus({ preventScroll: true }); }
+            else if (returnTo?.isConnected && returnTo.getClientRects().length) returnTo.focus({ preventScroll: true });
             syncScroll();
         }
-        button.addEventListener('click', () => {
-            if (!window.getSpotivityProfileUser?.()) return;
-            render(); setStatus(''); setBusy(false); input.value = '';
-            document.getElementById('modal-profil').style.display = 'none';
+        function open(origin) {
+            if (!signedIn() || isAdmin) return;
+            returnTo = origin; fromProfile = origin === button;
+            input.value = ''; render(); setStatus(''); setBusy(false);
+            const profile = document.getElementById('modal-profil');
+            if (profile) profile.style.display = 'none';
             modal.style.display = 'flex'; document.body.classList.add('fara-scroll');
             input.focus({ preventScroll: true });
+        }
+        button.addEventListener('click', () => open(button));
+        menuButton?.addEventListener('click', () => {
+            const toggle = document.getElementById('btn-mobile-menu');
+            const menu = document.getElementById('home-mobile-menu');
+            // Close the menu through its own toggle, so home.js restores the page (inert, scroll).
+            if (menu && !menu.hidden) toggle?.click();
+            open(toggle || menuButton);
         });
+        input.addEventListener('input', () => { if (!busy) confirm.disabled = !matches(); });
         cancel.addEventListener('click', close);
         trapFocus(modal, panel, close);
         form.addEventListener('submit', async e => {
             e.preventDefault();
             if (busy) return;
-            if (input.value.trim() !== 'STERGE') { setStatus(t('word'), true); input.focus(); return; }
-            const user = window.getSpotivityProfileUser?.();
+            const user = currentUser();
             if (!user?.id) { setStatus(t('session'), true); return; }
+            const name = accountName(user);
+            if (!matches()) { setStatus(t('word').replace('{name}', name), true); input.focus(); return; }
             setBusy(true); setStatus(t('working'));
             try {
                 const { data: session } = await db.auth.getSession();
                 if (session?.session?.user?.id !== user.id) throw Object.assign(new Error('session'), { code: 'session' });
-                const { error } = await db.rpc('delete_my_account', { p_confirm: 'STERGE' });
+                const { error } = await db.rpc('delete_my_account', { p_confirm: input.value.trim() });
                 if (error) throw error;
                 setStatus(t('done'));
                 // The Auth user no longer exists: drop the local session only.
@@ -158,15 +195,17 @@
                 const n = futureCount(error);
                 if (error?.code === '55000' && n) setStatus(t('future').replace('{n}', n), true);
                 else if (/admin_account/.test(error?.message || '')) setStatus(t('admin'), true);
+                else if (error?.code === '22023') setStatus(t('word').replace('{name}', name), true);
                 else if (error?.code === 'session' || error?.code === '42501') setStatus(t('session'), true);
                 else setStatus(t('failed'), true);
             }
         });
         // Administrators delete accounts through the superadmin only.
-        window.addEventListener('spotivity:admin-role', e => { button.hidden = Boolean(e.detail?.userId); });
-        window.addEventListener('spotivity:admin-clear', () => { button.hidden = false; });
+        window.addEventListener('spotivity:admin-role', e => { isAdmin = Boolean(e.detail?.userId); sync(); });
+        window.addEventListener('spotivity:admin-clear', () => { isAdmin = false; sync(); });
+        window.addEventListener('spotivity:profile-user', sync);
         window.addEventListener('spotivity:language', render);
-        render();
+        sync();
     }
 
     // ---- Superadmin: "Conturi utilizatori" ----

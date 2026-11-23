@@ -157,7 +157,7 @@
         }
         function renderCourt(court) {
             const card = element('article', 'sports-base-court');
-            const src = window.appAssetUrl?.(court.poza);
+            const src = window.spotivityPhotoUrl?.(court.poza, 900);
             if (src) {
                 const image = element('img', 'sports-base-court-photo');
                 image.src = src;
@@ -165,6 +165,7 @@
                 image.width = 450;
                 image.height = 300;
                 image.loading = 'lazy';
+                image.decoding = 'async';
                 image.addEventListener('error', () => image.remove(), { once: true });
                 card.append(image);
             }

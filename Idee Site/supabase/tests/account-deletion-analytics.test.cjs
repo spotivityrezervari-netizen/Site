@@ -55,21 +55,23 @@ test('account deletion and superadmin analytics (050)',async t=>{
   await root("update public.rezervari set data_str=($1::date-5)::text where booking_group_id=$2",[today,past]);
   await root("update public.rezervari set starts_at=(data_str::date+ora::time) at time zone 'Europe/Bucharest' where booking_group_id=$1",[past]);
 
-  await t.test('a client cannot delete an account with future bookings, nor without the confirmation word',async()=>{
-   await assert.rejects(()=>as(1,"select public.delete_my_account('da')"),/confirmation/);
-   await assert.rejects(()=>as(1,"select public.delete_my_account('STERGE')"),error=>error.code==='55000'&&/active_bookings:2/.test(error.message));
+  await t.test('a client cannot delete an account with future bookings, nor without typing their name',async()=>{
+   await root("update public.clienti set nume='Ana-Maria  Ștefănescu' where user_id=$1",[uid(1)]);
+   for(const wrong of ['da','STERGE','','Ana-Maria'])
+    await assert.rejects(()=>as(1,'select public.delete_my_account($1)',[wrong]),/confirmation/);
+   await assert.rejects(()=>as(1,"select public.delete_my_account(' ana-maria stefanescu ')"),error=>error.code==='55000'&&/active_bookings:2/.test(error.message));
    assert.equal((await root('select count(*)::int n from auth.users where id=$1',[uid(1)])).rows[0].n,1);
   });
 
   await t.test('administrators cannot delete themselves',async()=>{
-   await assert.rejects(()=>as(3,"select public.delete_my_account('STERGE')"),/admin_account/);
-   await assert.rejects(()=>as(4,"select public.delete_my_account('STERGE')"),/admin_account/);
+   await assert.rejects(()=>as(3,"select public.delete_my_account('admin')"),/admin_account/);
+   await assert.rejects(()=>as(4,"select public.delete_my_account('super')"),/admin_account/);
   });
 
   await t.test('cancelling is logged, then the client deletes the account and history stays',async()=>{
    await as(1,"update public.rezervari set stare='anulata' where booking_group_id=$1",[future]);
    assert.equal((await root('select count(*)::int n from spotivity_private.booking_cancellation_log')).rows[0].n,2);
-   assert.deepEqual((await as(1,"select public.delete_my_account('STERGE') v")).rows[0].v,{deleted:true});
+   assert.deepEqual((await as(1,"select public.delete_my_account('ANA-MARIA ȘTEFĂNESCU') v")).rows[0].v,{deleted:true});
    assert.equal((await root('select count(*)::int n from auth.users where id=$1',[uid(1)])).rows[0].n,0);
    assert.equal((await root('select count(*)::int n from public.clienti where user_id=$1',[uid(1)])).rows[0].n,0);
    const kept=(await root('select count(*)::int n,count(client_user_id)::int linked from public.rezervari where booking_group_id in ($1,$2)',[future,past])).rows[0];
@@ -100,7 +102,16 @@ test('account deletion and superadmin analytics (050)',async t=>{
    // An old cancellation from before the log existed falls back to older dates.
    await root("insert into spotivity_private.late_cancellation_events(booking_id,customer_name,customer_email,court_name,booking_day,first_cancelled_start,cancelled_at,lead_seconds,total_count,notification_event_key,incident_total_count) values($1,'X','x@example.test','Court A',current_date-40,now()-interval '40 days',now()-interval '40 days',600,1,'fixture-late',1)",[uid(59999)]);
    const data=(await as(4,'select public.admin_analytics() v')).rows[0].v;
-   assert.deepEqual(data.users,{d7:2,d30:3,all:4},'super + super2 this week, carol 20 days ago, old 90 days ago; deleted accounts are gone');
+   const {daily:userDaily,...userTotals}=data.users;
+   assert.deepEqual(userTotals,{d7:2,d30:3,all:4,p7:0,p30:0},'super + super2 this week, carol 20 days ago, old 90 days ago; deleted accounts are gone');
+   assert.equal(userDaily.length,30);assert.equal(userDaily.reduce((a,b)=>a+b,0),3,'Day series: the accounts created in the last 30 days');
+   assert.equal(data.today,today);
+   for(const kind of ['bookings','active_clients','cancelled','late','present','no_show']){
+    assert.equal(data.daily[kind].length,30,kind);
+    assert.ok(data.daily[kind].reduce((a,b)=>a+b,0)<=data.totals[kind].d30+1,kind);
+   }
+   assert.equal(data.daily.no_show[26],1,'The no-show 3 days ago is on its day');
+   assert.equal(data.totals.late.p30,1,'The cancellation 40 days ago is in the previous 30-day window');
    const court=name=>data.courts.find(row=>row.court===name).stats;
    assert.deepEqual(court('Court A').cancelled,{d7:1,d30:1,all:2},'Two cancelled hours of one booking count once; the January fixture cancellation only counts all time');
    assert.deepEqual(court('Court A').present,{d7:1,d30:1,all:1});
@@ -125,9 +136,10 @@ test('account deletion and superadmin analytics (050)',async t=>{
    assert.equal(data.scope,'own');
    assert.equal(data.users,null);assert.equal(data.active_users,null);
    assert.deepEqual(data.courts.map(row=>row.court),['Court B']);
-   assert.deepEqual(data.totals.no_show,{d7:1,d30:1,all:1});
-   assert.deepEqual(data.totals.cancelled,{d7:1,d30:1,all:1},'Court A cancellations are not counted');
-   assert.deepEqual(data.totals.late,{d7:0,d30:0,all:0});
+   assert.deepEqual(data.totals.no_show,{d7:1,d30:1,all:1,p7:0,p30:0});
+   assert.deepEqual(data.totals.cancelled,{d7:1,d30:1,all:1,p7:0,p30:0},'Court A cancellations are not counted');
+   assert.deepEqual(data.totals.late,{d7:0,d30:0,all:0,p7:0,p30:0});
+   assert.equal(data.daily.late.reduce((a,b)=>a+b,0),0);
   });
  }finally{await pg.close();}
 });
