@@ -346,6 +346,9 @@
         void finishCallback();
     }
 
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
+    // Loaded with defer: wait for DOMContentLoaded like before, so the later
+    // scripts (app.js, modules) are defined when init() runs.
+    const deferred = document.currentScript?.defer === true;
+    if (document.readyState === 'loading' || (deferred && document.readyState === 'interactive')) document.addEventListener('DOMContentLoaded', init, { once: true });
     else init();
 })();

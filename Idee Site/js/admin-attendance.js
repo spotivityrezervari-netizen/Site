@@ -99,16 +99,24 @@
         }
         targets.forEach(target => { target.textContent = 'Se încarcă prezența…'; });
         try {
-            for (const kind of ['group', 'legacy']) {
+            // Speed: both kinds are read at the same time (one wait instead of two).
+            const readKind = async kind => {
                 const ids = keys.filter(key => key.startsWith(kind + ':')).map(key => key.slice(kind.length + 1));
+                const found = [];
                 for (let offset = 0; offset < ids.length; offset += 500) {
                     const { data, error } = await db.rpc(kind === 'group' ? 'get_booking_attendance' : 'get_legacy_booking_attendance', {
                         [kind === 'group' ? 'p_booking_ids' : 'p_reservation_ids']: ids.slice(offset, offset + 500)
                     });
-                    if (!current()) return;
+                    if (!current()) return null;
                     if (error || !Array.isArray(data)) throw error || new Error('invalid_response');
-                    data.forEach(record => records.set(`${kind}:${kind === 'group' ? record.booking_id : record.reservation_id}`, record));
+                    found.push(...data);
                 }
+                return found;
+            };
+            const [groupRecords, legacyRecords] = await Promise.all([readKind('group'), readKind('legacy')]);
+            if (!current() || !groupRecords || !legacyRecords) return;
+            for (const [kind, list] of [['group', groupRecords], ['legacy', legacyRecords]]) {
+                list.forEach(record => records.set(`${kind}:${kind === 'group' ? record.booking_id : record.reservation_id}`, record));
             }
             if (!current()) return;
             keys.forEach(id => {

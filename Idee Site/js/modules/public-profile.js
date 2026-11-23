@@ -83,6 +83,12 @@
             const refreshStatus = document.getElementById('profil-refresh-status');
             if (!current()) return false;
             if (refreshStatus) { refreshStatus.hidden = true; refreshStatus.textContent = ''; }
+            // Speed: count the active bookings at the same time as the profile refresh
+            // (it only needs the account id), instead of one after the other.
+            const nrActiveSpan = document.getElementById('nr-active');
+            const activeRead = nrActiveSpan ? window.spotivityReadAllRows(() => db.from('rezervari')
+                .select('id, booking_group_id, data_str, ora, stare, timestamp_start')
+                .eq('client_user_id', owner).neq('stare', 'anulata').gte('data_str', window.siteDate()).order('id')) : null;
             try {
                 await window.refreshSpotivityProfile();
             } catch {
@@ -98,11 +104,8 @@
             document.getElementById('profil-email').innerText = state.user.email;
             if(document.getElementById('profil-telefon')) document.getElementById('profil-telefon').innerText = state.user.telefon || "-";
 
-            const nrActiveSpan = document.getElementById('nr-active');
             if (nrActiveSpan) {
-                const { data, error } = await window.spotivityReadAllRows(() => db.from('rezervari')
-                    .select('id, booking_group_id, data_str, ora, stare, timestamp_start')
-                    .eq('client_user_id', owner).neq('stare', 'anulata').gte('data_str', window.siteDate()).order('id'));
+                const { data, error } = await activeRead;
                 if (!current()) return false;
                 const activeGroups = new Set();
                 if (data) {

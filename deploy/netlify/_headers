@@ -13,11 +13,13 @@
 /index.html
   Cache-Control: no-cache
 
+# Speed: every page links its scripts and styles with ?v=N, so browsers may keep
+# them for a day and refresh them in the background for a week after that.
 /js/*
-  Cache-Control: no-cache
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 
 /css/*
-  Cache-Control: no-cache
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 
 /terenuri/*
   Cache-Control: no-cache
@@ -33,3 +35,7 @@
 
 /robots.txt
   Cache-Control: no-cache
+
+# Photos and icons of the site itself (not the uploads in Supabase).
+/assets/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
