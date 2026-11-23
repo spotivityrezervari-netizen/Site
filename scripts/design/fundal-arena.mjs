@@ -681,7 +681,8 @@ const phone = layout({
 // large outside. Only stopwatch, whistle, balls and their flight trails (owner's list).
 // Squares are added Right, Up, Left, Down around the first unit square; flipX/flipY mirror
 // the drawing, (ox, oy) is where the eye (the first square) lands, unit = size of square 1.
-function fibTiling({ n, unit, flipX = false, flipY = false, ox, oy }) {
+// fit: { cx, cy, w } puts the whole golden rectangle of the tiling, w wide, centred on (cx, cy).
+function fibTiling({ n, unit, flipX = false, flipY = false, ox, oy, fit }) {
   const F = [1, 1]; while (F.length < n) F.push(F.at(-1) + F.at(-2));
   const r = { x0: 0, y0: 0, x1: 1, y1: 1 };
   const raw = [{ x: 0, y: 0, s: 1, arc: [[1, 1], [0, 0], [0, 1]] }];
@@ -692,6 +693,11 @@ function fibTiling({ n, unit, flipX = false, flipY = false, ox, oy }) {
     if (d === 'L') { q = [r.x0 - s, r.y0]; a = [[r.x0, r.y0], [r.x0 - s, r.y0 + s], [r.x0, r.y0 + s]]; r.x0 -= s; }
     if (d === 'D') { q = [r.x0, r.y1]; a = [[r.x0, r.y1], [r.x0 + s, r.y1 + s], [r.x0 + s, r.y1]]; r.y1 += s; }
     raw.push({ x: q[0], y: q[1], s, arc: a });
+  }
+  if (fit) {
+    const x0 = flipX ? -r.x1 : r.x0; const x1 = flipX ? -r.x0 : r.x1; const y0 = flipY ? -r.y1 : r.y0; const y1 = flipY ? -r.y0 : r.y1;
+    unit = fit.w / (x1 - x0);
+    ox = fit.cx - (x0 + x1) / 2 * unit; oy = fit.cy - (y0 + y1) / 2 * unit;
   }
   const T = ([x, y]) => [ox + (flipX ? -x : x) * unit, oy + (flipY ? -y : y) * unit];
   return raw.map((q, i) => {
@@ -825,8 +831,61 @@ function fibonacci({ W, H, tiling, zones, items = [], chain, glows, sparkles, ca
   return { defs, body };
 }
 // One composition per screen shape, glued like the content (wide: centred; phone: from the top).
+// ---- "Floarea-soarelui" (owner, 24.11: "să punem mai multe șiruri?"): Fibonacci as it grows in
+// nature. Seed n sits at n x 137.5° (the golden angle), at radius c·√n (Vogel's model). The eye
+// then sees several spirals at once, in both directions: 13, 21 and 34 of them (Fibonacci
+// numbers). The seeds are small points of light, joined faintly along the 21 and 34 spirals;
+// the seeds whose number is a Fibonacci number (5, 8, 13, 21, 34, 55, 89, 144, 233) carry the
+// icons, larger outwards. Over the text or the photo everything is drawn faint.
+const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
+function sunflower({ W, H, cx, cy, c, count, size0, grow, kinds, dim, zones, glows, label, arms: armCount = 21, iconArms = [3, 13], iconEvery = 2 }) {
+  let defs = FIB_BRIGHT ? fibBrightDefs : commonDefs; let atmo = '';
+  glows.forEach((g, i) => { const gl = glow(`gl${i}`, ...g); defs += gl.defs; atmo += gl.svg(W, H); });
+  defs += `<radialGradient id='trailHead'><stop offset='0' stop-color='#8dffdc' stop-opacity='.34'/><stop offset='1' stop-color='#8dffdc' stop-opacity='0'/></radialGradient>`;
+  const seed = (n) => { const a = n * GOLDEN_ANGLE - Math.PI / 2; const r = c * Math.sqrt(n); return [cx + r * Math.cos(a), cy + r * Math.sin(a), r]; };
+  const covered = (x, y, r) => !fibFree(x, y, r, zones, W, H, 6);
+  const fib = new Set([5, 8, 13, 21, 34, 55, 89, 144, 233, 377]);
+  let arms = ''; let dots = ''; let faint = ''; let icons = '';
+  // the visible spirals: seed n joined to n+21 (21 arms one way) and n+34 (34 arms the other way)
+  for (let a = 1; a <= armCount; a++) {
+    const pts = []; for (let n = a; n <= count; n += armCount) pts.push(seed(n));
+    arms += polyline(pts.map(([x, y]) => [x, y]));
+  }
+  // which three arms carry the icons: the rotation that leaves the most icons clear of the content
+  const armsAt = (a) => [a, a + 7, a + 14].map((v) => v % armCount);
+  const clearFor = (set) => { let n2 = 0; for (let n = armCount + 1; n <= count; n++) { if (!set.includes(n % armCount) || Math.floor(n / armCount) % iconEvery) continue; const [x, y, r] = seed(n); const rad = (size0 + r * grow) / 2; if (x - rad >= 8 && y - rad >= 8 && x + rad <= W - 8 && y + rad <= H - 8 && !covered(x, y, rad)) n2++; } return n2; };
+  if (iconArms === 'auto') { let best = 0; for (let a = 0; a < 7; a++) if (clearFor(armsAt(a)) > clearFor(armsAt(best))) best = a; iconArms = armsAt(best); }
+  console.log(`fundal-arena (${label}): icons on arms ${iconArms.join(', ')}: ${clearFor(iconArms)} clear`);
+  let k = 0;
+  for (let n = 1; n <= count; n++) {
+    const [x, y, r] = seed(n);
+    if (x < -40 || y < -40 || x > W + 40 || y > H + 40) continue;
+    const onArm = iconArms.includes(n % armCount) && Math.floor(n / armCount) % iconEvery === 0 && n > armCount;
+    if (onArm) {
+      const kind = kinds[k++ % kinds.length]; const size = size0 + r * grow; const rad = size / 2;   // grows with the distance from the centre, like the seeds
+      if (x - rad < 8 || y - rad < 8 || x + rad > W - 8 || y + rad > H - 8) continue;
+      let svg = `<circle cx='${f(x)}' cy='${f(y)}' r='${f(rad * 1.45)}' fill='url(#trailHead)'/>`;
+      if (seams[kind]) {
+        const pose = BALL_POSE[kind][0];
+        svg += fibBrighten(ball([kind, x, y, rad, pose[0] + n * 7, pose[1], pose[2]])) + `<circle cx='${f(x)}' cy='${f(y)}' r='${f(rad + 1.5)}' fill='none' stroke='#b5ffe8' stroke-opacity='.35' stroke-width='${f(Math.max(1, rad * 0.04))}'/>`;
+      } else {
+        const extra = { whistle: [-18, 'M30 -30C44 -70 10 -100 30 -140'], stopwatch: [12, 40] }[kind] || [0];
+        svg += fibBrighten(prop([kind, x, y, size, ...extra]));
+      }
+      icons += covered(x, y, rad) ? `<g opacity='${dim}'>${svg}</g>` : svg;
+    } else {
+      const d = `<circle cx='${f(x)}' cy='${f(y)}' r='${f(1.2 + r / 260)}'/>`;
+      if (covered(x, y, 3)) faint += d; else dots += d;
+    }
+  }
+  console.log(`fundal-arena (${label}): sunflower with ${count} seeds, ${k} icons`);
+  const body = `<rect width='${W}' height='${H}' fill='${BASE}'/>${atmo}`
+    + `<path d='${arms}' fill='none' stroke='#7dffd6' stroke-opacity='.16' stroke-width='1.3' stroke-linecap='round'/>`
+    + `<g fill='#8dffdc'><g fill-opacity='.55'>${dots}</g><g fill-opacity='.14'>${faint}</g></g>${icons}`;
+  return { defs, body };
+}
 function fibSvg(W, H, align, comp) {
-  const { defs, body } = fibonacci({ W, H, ...comp });
+  const { defs, body } = comp.sunflower ? sunflower({ W, H, ...comp, ...comp.sunflower }) : fibonacci({ W, H, ...comp });
   const vig = `<linearGradient id='vig' x1='0' y1='0' x2='1' y2='0'><stop offset='0' stop-color='${BASE}' stop-opacity='.35'/><stop offset='.12' stop-color='${BASE}' stop-opacity='0'/><stop offset='.88' stop-color='${BASE}' stop-opacity='0'/><stop offset='1' stop-color='${BASE}' stop-opacity='.35'/></linearGradient>`;
   return `<svg xmlns='http://www.w3.org/2000/svg' width='100%' height='100%'><defs>${defs}${vig}</defs><rect width='100%' height='100%' fill='${BASE}'/>`
     + `<svg width='100%' height='100%' viewBox='0 0 ${W} ${H}' preserveAspectRatio='${align} meet' overflow='visible'>${body}</svg><rect width='100%' height='100%' fill='url(#vig)'/></svg>`;
@@ -836,18 +895,20 @@ const FIB_ZONES_WIDE = [[0, 0, 1600, 150], [169, 321, 485, 381], [169, 399, 608,
 const FIB_ZONES_PHONE = [[0, 0, 547, 222], [34, 275, 290, 324], [34, 338, 444, 409], [34, 434, 513, 552], [34, 586, 326, 664], [34, 684, 213, 747], [34, 786, 513, 876], [34, 921, 513, 1184]];
 const fibWide = fibSvg(1600, 1000, 'xMidYMid', {
   label: 'wide', zones: FIB_ZONES_WIDE,
-  tiling: { n: 16, unit: 1, ox: 800, oy: 500 },
+  sunflower: { cx: 800, cy: 540, c: 52, count: 377, size0: 22, grow: 0.075, iconArms: [2, 9, 16], iconEvery: 2, kinds: ['tennis', 'whistle', 'stopwatch', 'volleyball', 'basketball', 'soccer'], dim: 0.4 },
+  tiling: { n: 14, flipX: false, flipY: true, fit: { cx: 800, cy: 540, w: 1080 } },
   glows: [[815, 880, 520, 380, '#11936f', 0.16], [300, -60, 900, 600, '#0e8064', 0.14], [1500, 980, 600, 420, '#0a5e4b', 0.1]],
   sparkles: 40, calm: [470, 520, 380, 300],
   // smallest near the eye, biggest outside: 55 -> 89 -> 144 -> 377 -> 610 -> 987 squares
-  chain: { from: 7.5, step: 1, count: 8, size0: 26, grow: 1.2, dim: 0.45, kinds: ['tennis', 'whistle', 'stopwatch', 'volleyball', 'basketball', 'soccer'] },
+  chain: { from: 6.5, step: 1, count: 8, size0: 26, grow: 1.2, dim: 0.45, kinds: ['tennis', 'whistle', 'stopwatch', 'volleyball', 'basketball', 'soccer'] },
 });
 const fibPhone = fibSvg(547, 1184, 'xMidYMin', {
   label: 'phone', zones: FIB_ZONES_PHONE,
-  tiling: { n: 15, unit: 0.6, ox: 273, oy: 600 },
+  sunflower: { cx: 273, cy: 600, c: 43, count: 233, size0: 18, grow: 0.075, iconArms: 'auto', iconEvery: 1, kinds: ['tennis', 'whistle', 'stopwatch', 'volleyball', 'basketball', 'soccer'], dim: 0.4 },
+  tiling: { n: 15, flipX: true, fit: { cx: 273, cy: 600, w: 500 } },
   glows: [[420, 715, 340, 300, '#11936f', 0.16], [500, -60, 520, 520, '#0e8064', 0.16]],
   sparkles: 26, calm: [250, 520, 300, 330],
-  chain: { from: 7.5, step: 1, count: 8, size0: 22, grow: 1.2, dim: 0.45, kinds: ['tennis', 'whistle', 'stopwatch', 'volleyball', 'basketball', 'soccer'] },
+  chain: { from: 6.5, step: 1, count: 9, size0: 20, grow: 1.2, dim: 0.45, kinds: ['tennis', 'whistle', 'stopwatch', 'volleyball', 'basketball', 'soccer'] },
 });
 
 // Fine grain (tiny repeating tile): breaks up the banding of dark gradients.

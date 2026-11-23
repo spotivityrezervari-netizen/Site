@@ -3,6 +3,15 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-24 (34): "Sunflower" background: many Fibonacci spirals at once (done by Claude, at the owner's request)
+
+Owner: "it is not really centred", then "should we put several sequences? how do you think it looks better".
+
+- New composition `sunflower()` in `scripts/design/fundal-arena.mjs` (Vogel's model of a sunflower head): seed n at n × 137.5° (the golden angle), radius c·√n, centred on the screen (wide 800,540; phone 273,600). The seeds are small points of light; the 21 spiral arms are drawn faintly, so several Fibonacci spirals show at once.
+- The icons (tennis, whistle, stopwatch, volleyball, basketball, soccer, repeating) sit on three evenly spaced arms (2, 9, 16; every second seed on desktop), growing with the distance from the centre. Over the text or the photo they are drawn at 40%.
+- The single-spiral composition (`fibonacci()`, `chain` / `items`) is still in the file: remove `sunflower` from `fibWide` / `fibPhone` to use it again. `iconArms: 'auto'` picks the arms with the most clear icons.
+- `design-background.css?v=35`; SEO pages regenerated.
+
 ## 2026-11-24 (33): Fibonacci background centred; icons repeat along the spiral at the golden ratio; text halo (done by Claude, at the owner's request)
 
 Owner: "centre it more on desktop and phone", then "the icons should start from one point and repeat at the same ratio as the spiral, as distance between them", then "do the golden ratio and where it comes over the text, make the text show more".
