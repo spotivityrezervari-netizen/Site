@@ -35,8 +35,8 @@ test('account deletion and superadmin analytics (050)',async t=>{
   assert.equal((await root('select count(*)::int n from spotivity_private.migrations where version=50')).rows[0].n,1);
 
   await t.test('only the superadmin can list accounts, delete others or read analytics',async()=>{
+   await assert.rejects(()=>as(1,'select public.admin_analytics()'),/Administrators only/);
    for(const person of [1,3]){
-    await assert.rejects(()=>as(person,'select public.admin_analytics()'),/Superadmin only/);
     await assert.rejects(()=>as(person,"select public.admin_list_accounts('',10,0)"),/Superadmin only/);
     await assert.rejects(()=>as(person,'select public.admin_delete_account($1,$2)',[uid(2),'bob@example.test']),/Superadmin only/);
    }
@@ -111,6 +111,23 @@ test('account deletion and superadmin analytics (050)',async t=>{
    assert.deepEqual(data.totals.cancelled.all,court('Court A').cancelled.all+court('Court B').cancelled.all+court('Hidden Court').cancelled.all
     +data.courts.filter(row=>!['Court A','Court B','Hidden Court'].includes(row.court)).reduce((sum,row)=>sum+row.stats.cancelled.all,0));
    assert.equal(data.totals.no_show.d7,1);
+   assert.equal(data.scope,'all');
+   assert.ok(data.active_users,'The superadmin sees active accounts');
+   assert.deepEqual(court('Court B').bookings,{d7:2,d30:2,all:2},"Bob's cancelled booking and the guest booking");
+   assert.deepEqual(court('Court B').active_clients,{d7:2,d30:2,all:2},"Bob (account deleted, email kept on the booking) and the guest");
+   assert.equal(data.totals.active_clients.all,3,'Alice (both courts/bookings count once), Bob and the guest');
+  });
+
+  await t.test('an ordinary administrator sees only their own courts and no account totals',async()=>{
+   await root("insert into auth.users(id,email,email_confirmed_at) values($1,'manager2@example.test',now())",[uid(8)]);
+   await root("insert into public.users_admin(nume_admin,email,is_super,terenuri,user_id) values('Manager 2','manager2@example.test',false,'Court B',$1)",[uid(8)]);
+   const data=(await as(8,'select public.admin_analytics() v')).rows[0].v;
+   assert.equal(data.scope,'own');
+   assert.equal(data.users,null);assert.equal(data.active_users,null);
+   assert.deepEqual(data.courts.map(row=>row.court),['Court B']);
+   assert.deepEqual(data.totals.no_show,{d7:1,d30:1,all:1});
+   assert.deepEqual(data.totals.cancelled,{d7:1,d30:1,all:1},'Court A cancellations are not counted');
+   assert.deepEqual(data.totals.late,{d7:0,d30:0,all:0});
   });
  }finally{await pg.close();}
 });

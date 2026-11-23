@@ -4,9 +4,10 @@
 --  * public.admin_list_accounts(text,integer,integer) and
 --    public.admin_delete_account(uuid,text): the superadmin lists and deletes
 --    accounts. Another superadmin and the caller's own account are refused.
---  * public.admin_analytics(): new accounts and, per court and in total,
---    cancellations, late cancellations, attendance and no-shows for the last
---    7 days, the last 30 days and all time.
+--  * public.admin_analytics(): bookings, active clients, cancellations, late
+--    cancellations, attendance and no-shows per court and in total for the
+--    last 7 days, the last 30 days and all time. The superadmin sees every
+--    court plus new/active accounts; an administrator only their own courts.
 -- Deleting an account removes the login, the profile, the admin rights and the
 -- base allocations. Bookings, chat messages and statistics stay: their foreign
 -- keys are ON DELETE SET NULL. An account with future active bookings is never
@@ -141,18 +142,35 @@ grant execute on function public.admin_delete_account(uuid,text) to authenticate
 
 -- Counts for three windows. A booking is one booking group (several
 -- consecutive hours count once); "Teren Blocat" entries are not bookings.
+-- The superadmin sees every court plus account totals; an ordinary
+-- administrator sees only the courts allocated to them, and no account totals.
 create or replace function public.admin_analytics()
 returns jsonb language plpgsql stable security definer set search_path='' as $$
 declare now_at timestamptz:=statement_timestamp();v_d7 timestamptz:=statement_timestamp()-interval '7 days';
- v_d30 timestamptz:=statement_timestamp()-interval '30 days';result jsonb;
+ v_d30 timestamptz:=statement_timestamp()-interval '30 days';result jsonb;v_super boolean;
 begin
- if auth.uid() is null or not spotivity_private.is_super_admin() then raise exception 'Superadmin only.' using errcode='42501'; end if;
+ if auth.uid() is null or not exists(select 1 from public.users_admin where user_id=auth.uid()) then
+  raise exception 'Administrators only.' using errcode='42501';
+ end if;
+ v_super:=spotivity_private.is_super_admin();
  with slots as(
   select r.teren court,r.stare,r.starts_at,r.id::text rid,
-   coalesce(r.booking_group_id::text,l.booking_id::text,'r'||r.id::text) bkey
+   coalesce(r.booking_group_id::text,l.booking_id::text,'r'||r.id::text) bkey,
+   coalesce(r.client_user_id::text,lower(btrim(r.email_client))) customer,
+   coalesce(g.created_at,r.created_at::timestamptz) created
   from public.rezervari r
   left join spotivity_private.legacy_attendance_bookings l on r.booking_group_id is null and l.reservation_id=r.id::text
+  left join spotivity_private.booking_groups g on g.id=r.booking_group_id
   where coalesce(r.email_client,'')<>'Teren Blocat' and r.teren is not null
+ ), courts as(
+  select t.nume court,t.sport,t.oras,coalesce(t.este_activ,true) active from public.terenuri t where t.nume is not null
+  union
+  select distinct s.court,null,null,false from slots s
+   where not exists(select 1 from public.terenuri t where t.nume=s.court)
+ ), scope as(
+  select c.* from courts c where v_super or spotivity_private.manages_court(c.court)
+ ), booked as(
+  select s.court,s.bkey,min(s.created) ts,min(s.customer) customer from slots s group by s.court,s.bkey
  ), cancelled as(
   select s.court,s.bkey,max(coalesce(cl.cancelled_at,lc.cancelled_at,g.updated_at,s.starts_at)) ts
   from slots s
@@ -166,36 +184,42 @@ begin
  ), noshow as(
   select e.court,e.bkey,e.ts from ended e join spotivity_private.booking_attendance a
    on a.booking_id::text=e.bkey and a.status='no_show'
- ), late as(
-  select e.court_name court,e.booking_id::text bkey,e.cancelled_at ts from spotivity_private.late_cancellation_events e
  ), events as(
-  select 'cancelled' kind,court,ts from cancelled
-  union all select 'late',court,ts from late
-  union all select 'present',e.court,e.ts from ended e where not exists(select 1 from noshow n where n.bkey=e.bkey)
-  union all select 'no_show',court,ts from noshow
- ), courts as(
-  select t.nume court,t.sport,t.oras,coalesce(t.este_activ,true) active from public.terenuri t where t.nume is not null
-  union
-  select distinct ev.court,null,null,false from events ev where ev.court is not null
-   and not exists(select 1 from public.terenuri t where t.nume=ev.court)
+  select 'bookings' kind,court,ts,bkey ekey from booked
+  union all select 'active_clients',court,ts,customer from booked where customer is not null
+  union all select 'cancelled',court,ts,bkey from cancelled
+  union all select 'late',e.court_name,e.cancelled_at,e.booking_id::text from spotivity_private.late_cancellation_events e
+  union all select 'present',e.court,e.ts,e.bkey from ended e where not exists(select 1 from noshow n where n.bkey=e.bkey)
+  union all select 'no_show',court,ts,bkey from noshow
+ ), scoped as(
+  select ev.* from events ev join scope c on c.court=ev.court
+ ), kinds(kind) as(
+  values('bookings'),('active_clients'),('cancelled'),('late'),('present'),('no_show')
  ), windows as(
   select ev.court,ev.kind,
-   count(*) filter(where ev.ts>=v_d7)::integer d7,count(*) filter(where ev.ts>=v_d30)::integer d30,count(*)::integer total
-  from events ev group by ev.court,ev.kind
+   count(distinct ev.ekey) filter(where ev.ts>=v_d7)::integer d7,
+   count(distinct ev.ekey) filter(where ev.ts>=v_d30)::integer d30,
+   count(distinct ev.ekey)::integer total
+  from scoped ev group by ev.court,ev.kind
  ), per_court as(
   select c.court,c.sport,c.oras,c.active,
    jsonb_object_agg(k.kind,jsonb_build_object('d7',coalesce(w.d7,0),'d30',coalesce(w.d30,0),'all',coalesce(w.total,0))) stats
-  from courts c cross join(values('cancelled'),('late'),('present'),('no_show')) k(kind)
+  from scope c cross join kinds k
   left join windows w on w.court=c.court and w.kind=k.kind
   group by c.court,c.sport,c.oras,c.active
  ), totals as(
-  select jsonb_object_agg(s.kind,jsonb_build_object('d7',s.d7,'d30',s.d30,'all',s.total)) stats
-  from(select k.kind,coalesce(sum(w.d7),0)::integer d7,coalesce(sum(w.d30),0)::integer d30,coalesce(sum(w.total),0)::integer total
-   from(values('cancelled'),('late'),('present'),('no_show')) k(kind) left join windows w on w.kind=k.kind group by k.kind) s
+  -- Distinct across courts: a client active on two courts counts once.
+  select jsonb_object_agg(k.kind,jsonb_build_object(
+   'd7',(select count(distinct ev.ekey) from scoped ev where ev.kind=k.kind and ev.ts>=v_d7),
+   'd30',(select count(distinct ev.ekey) from scoped ev where ev.kind=k.kind and ev.ts>=v_d30),
+   'all',(select count(distinct ev.ekey) from scoped ev where ev.kind=k.kind))) stats
+  from kinds k
  )
  select jsonb_build_object(
   'generated_at',now_at,
-  'users',(select jsonb_build_object('d7',count(*) filter(where u.created_at>=v_d7),'d30',count(*) filter(where u.created_at>=v_d30),'all',count(*)) from auth.users u),
+  'scope',case when v_super then 'all' else 'own' end,
+  'users',case when v_super then (select jsonb_build_object('d7',count(*) filter(where u.created_at>=v_d7),'d30',count(*) filter(where u.created_at>=v_d30),'all',count(*)) from auth.users u) end,
+  'active_users',case when v_super then (select jsonb_build_object('d7',count(*) filter(where u.last_sign_in_at>=v_d7),'d30',count(*) filter(where u.last_sign_in_at>=v_d30),'all',count(*) filter(where u.last_sign_in_at is not null)) from auth.users u) end,
   'totals',(select stats from totals),
   'courts',coalesce((select jsonb_agg(jsonb_build_object('court',p.court,'sport',p.sport,'city',p.oras,'active',p.active,'stats',p.stats) order by p.active desc,p.court) from per_court p),'[]'::jsonb))
  into result;
