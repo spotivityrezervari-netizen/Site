@@ -263,3 +263,45 @@
     .analytics-bar, .analytics-rank-bar { fill: CanvasText; background: CanvasText; }
     .btn-sterge-cont, .home-menu-delete-account { border: 2px solid ButtonText; }
 }
+
+/* Period and court pickers: drop-down lists, like the city picker on the home page. */
+.analytics-filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.analytics-filter { display: grid; gap: 4px; margin: 0; min-width: 0; }
+.analytics-filter-label { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--an-muted); }
+.analytics-select { position: relative; display: block; }
+.analytics-select select {
+    appearance: none;
+    -webkit-appearance: none;
+    width: auto;
+    min-width: 200px;
+    max-width: min(340px, 80vw);
+    min-height: 42px;
+    margin: 0;
+    padding: 8px 42px 8px 16px;
+    border: 1px solid var(--an-line-strong);
+    border-radius: 999px;
+    background: var(--an-surface);
+    color: var(--an-text);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    cursor: pointer;
+}
+.analytics-select select:hover { border-color: var(--an-gold); }
+.analytics-select select:focus-visible { outline: 2px solid var(--an-gold); outline-offset: 2px; }
+.analytics-select select option, .analytics-select select optgroup { background: #132119; color: #f8efd7; }
+.analytics-select-chevron { position: absolute; right: 14px; top: 50%; width: 18px; height: 18px; transform: translateY(-50%); fill: none; stroke: var(--an-gold); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.analytics-custom { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; flex-basis: 100%; }
+.analytics-custom[hidden] { display: none; }
+.analytics-custom label { display: grid; gap: 4px; margin: 0; font-size: 12px; color: var(--an-muted); }
+.analytics-custom input { min-height: 40px; margin: 0; padding: 6px 12px; border: 1px solid var(--an-line-strong); border-radius: 12px; background: var(--an-surface); color: var(--an-text); font: inherit; color-scheme: dark; }
+.analytics-content[aria-busy="true"] { opacity: .55; transition: opacity .15s; }
+@media (max-width: 860px) {
+    .analytics-filters { width: 100%; }
+    .analytics-filter { flex: 1 1 100%; }
+    .analytics-hero-periods dd { font-size: 17px; }
+    .analytics-select select { width: 100%; min-width: 0; max-width: none; }
+    .analytics-head-actions { width: 100%; }
+    .analytics-head-actions .analytics-action { flex: 1 1 0; }
+}
