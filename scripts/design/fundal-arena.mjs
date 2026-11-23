@@ -725,7 +725,7 @@ function fibTrail(sq, u, len, width) {
   // speed lines: two thin strands alongside the last part of the trail
   const strand = (side) => polyline(pts.slice(Math.round(N * 0.35)).map((p, k, all) => { const t = k / (all.length - 1); const w = width * (1.6 + 0.6 * t) * side; return [p.x - p.ty * w, p.y + p.tx * w]; }));
   return {
-    defs: grad(id, 0.75) + grad(`${id}s`, 0.35),
+    defs: grad(id, 0.95) + grad(`${id}s`, 0.5),
     svg: `<path d='${poly([...left, ...right])}' fill='url(#${id})'/>`
       + `<path d='${polyline(pts.map((p) => [p.x, p.y]))}' fill='none' stroke='url(#${id})' stroke-width='${f(Math.max(0.8, width * 0.22))}' stroke-linecap='round'/>`
       + `<path d='${strand(1)}${strand(-1)}' fill='none' stroke='url(#${id}s)' stroke-width='${f(Math.max(0.6, width * 0.12))}' stroke-linecap='round'/>`
@@ -737,13 +737,23 @@ function fibTrail(sq, u, len, width) {
 const fibFree = (x, y, r, zones, W, H, pad = 14) => x - r >= 8 && y - r >= 8 && x + r <= W - 8 && y + r <= H - 8
   && zones.every(([a, b, c, d]) => x + r + pad < a || x - r - pad > c || y + r + pad < b || y - r - pad > d);
 const fibDebug = {};
+// Owner (24.11): "nu se vede prea bine" -> lighter bodies, stronger rim light and seams, brighter
+// spiral and trails, a light ring around every icon.
+const FIB_BRIGHT = true;
+const fibBrightDefs = commonDefs
+  .replace("<stop offset='0' stop-color='#1a6a57'/><stop offset='.45' stop-color='#0b3a33'/><stop offset='1' stop-color='#031b18'/></radialGradient>", "<stop offset='0' stop-color='#3fb896'/><stop offset='.45' stop-color='#187563'/><stop offset='1' stop-color='#07362f'/></radialGradient>")
+  .replace("<stop offset='0' stop-color='#1a6a57'/><stop offset='.45' stop-color='#0b3a33'/><stop offset='1' stop-color='#031b18'/></linearGradient>", "<stop offset='0' stop-color='#3fb896'/><stop offset='.45' stop-color='#187563'/><stop offset='1' stop-color='#07362f'/></linearGradient>")
+  .replace("<stop offset='.45' stop-color='#000' stop-opacity='0'/><stop offset='1' stop-color='#000' stop-opacity='.6'/>", "<stop offset='.5' stop-color='#000' stop-opacity='0'/><stop offset='1' stop-color='#000' stop-opacity='.42'/>")
+  .replace("<stop offset='0' stop-color='#b5ffe8' stop-opacity='.26'/>", "<stop offset='0' stop-color='#e2fff6' stop-opacity='.5'/>");
+// seams and dial lines a lot more visible (the drawings are shared with the older layout)
+const fibBrighten = (svg) => svg.replace(/stroke='#33c49c' stroke-opacity='\.(62|6|45|5|4|35|25)'/g, (m, o) => `stroke='#7dffd6' stroke-opacity='${Math.min(0.95, Number('.' + o) + 0.3).toFixed(2)}'`);
 // items: [kind, u, size factor (of the square), rotation, arg]
 function fibonacci({ W, H, tiling, zones, items, glows, sparkles, calm, label }) {
   const sq = fibTiling(tiling);
-  let defs = commonDefs; let atmo = '';
+  let defs = FIB_BRIGHT ? fibBrightDefs : commonDefs; let atmo = '';
   glows.forEach((g, i) => { const gl = glow(`gl${i}`, ...g); defs += gl.defs; atmo += gl.svg(W, H); });
   defs += `<radialGradient id='calmG' gradientUnits='userSpaceOnUse' cx='${calm[0]}' cy='${calm[1]}' r='1' gradientTransform='translate(${calm[0]} ${calm[1]}) scale(${calm[2]} ${calm[3]}) translate(${-calm[0]} ${-calm[1]})'><stop offset='0' stop-color='#000' stop-opacity='.7'/><stop offset='1' stop-color='#000' stop-opacity='0'/></radialGradient><mask id='calm' maskUnits='userSpaceOnUse' x='-4000' y='-4000' width='${W + 8000}' height='${H + 8000}'><rect x='-4000' y='-4000' width='${W + 8000}' height='${H + 8000}' fill='#fff'/><rect x='-4000' y='-4000' width='${W + 8000}' height='${H + 8000}' fill='url(#calmG)'/></mask>`;
-  defs += `<radialGradient id='trailHead'><stop offset='0' stop-color='#8dffdc' stop-opacity='.22'/><stop offset='1' stop-color='#8dffdc' stop-opacity='0'/></radialGradient>`;
+  defs += `<radialGradient id='trailHead'><stop offset='0' stop-color='#8dffdc' stop-opacity='.34'/><stop offset='1' stop-color='#8dffdc' stop-opacity='0'/></radialGradient>`;
   // the Fibonacci squares, barely visible, and the spiral itself as a thin line of light
   let grid = ''; let spiral = '';
   for (const q of sq) {
@@ -766,8 +776,9 @@ function fibonacci({ W, H, tiling, zones, items, glows, sparkles, calm, label })
       const tr = fibTrail(sq, u - 0.03, Math.min(1.1, 0.5 + 0.08 * Math.log2(p.s)), Math.max(2, r * 0.42));
       defs += tr.defs; trails += tr.svg;
       const pose = BALL_POSE[kind][0];
-      icons += ball([kind, p.x, p.y, r, pose[0] + rot, pose[1], pose[2]]);
-    } else icons += `<circle cx='${f(p.x)}' cy='${f(p.y)}' r='${f(r * 1.25)}' fill='url(#trailHead)'/>` + prop([kind, p.x, p.y, size, rot, arg]);
+      icons += `<circle cx='${f(p.x)}' cy='${f(p.y)}' r='${f(r * 1.45)}' fill='url(#trailHead)'/>` + fibBrighten(ball([kind, p.x, p.y, r, pose[0] + rot, pose[1], pose[2]]))
+        + `<circle cx='${f(p.x)}' cy='${f(p.y)}' r='${f(r + 1.5)}' fill='none' stroke='#b5ffe8' stroke-opacity='.35' stroke-width='${f(Math.max(1, r * 0.04))}'/>`;
+    } else icons += `<circle cx='${f(p.x)}' cy='${f(p.y)}' r='${f(r * 1.4)}' fill='url(#trailHead)'/>` + fibBrighten(prop([kind, p.x, p.y, size, rot, arg]));
   }
   // --debug: an overlay with numbered positions along the spiral and the content boxes (tuning aid)
   if (process.argv.includes('--debug')) {
@@ -781,8 +792,8 @@ function fibonacci({ W, H, tiling, zones, items, glows, sparkles, calm, label })
     fibDebug[label] = `${d}</svg>`;
   }
   const body = `<rect width='${W}' height='${H}' fill='${BASE}'/>${atmo}`
-    + `<g mask='url(#calm)'><path d='${grid}' fill='none' stroke='${LINE}' stroke-opacity='.07' stroke-width='1'/>`
-    + `<path d='${spiral}' fill='none' stroke='${GLOW}' stroke-opacity='.14' stroke-width='9' stroke-linecap='round'/><path d='${spiral}' fill='none' stroke='#7dffd6' stroke-opacity='.45' stroke-width='1.4' stroke-linecap='round'/>`
+    + `<g mask='url(#calm)'><path d='${grid}' fill='none' stroke='${LINE}' stroke-opacity='.12' stroke-width='1'/>`
+    + `<path d='${spiral}' fill='none' stroke='${GLOW}' stroke-opacity='.22' stroke-width='10' stroke-linecap='round'/><path d='${spiral}' fill='none' stroke='#9fffe2' stroke-opacity='.75' stroke-width='2' stroke-linecap='round'/>`
     + `<g fill='#8dffdc'>${dust}</g>${trails}</g>${icons}`;
   return { defs, body };
 }
@@ -802,16 +813,16 @@ const fibWide = fibSvg(1600, 1000, 'xMidYMid', {
   glows: [[815, 880, 520, 380, '#11936f', 0.16], [300, -60, 900, 600, '#0e8064', 0.14], [1500, 980, 600, 420, '#0a5e4b', 0.1]],
   sparkles: 40, calm: [470, 520, 380, 300],
   // smallest near the eye, biggest outside: 55 -> 89 -> 144 -> 377 -> 610 -> 987 squares
-  items: [['tennis', 9.6, 0.7], ['whistle', 10.4, 0.9, -18, 'M30 -30C44 -70 10 -100 30 -140'], ['stopwatch', 11.85, 0.66, 12, 40],
-    ['volleyball', 13.78, 0.25], ['basketball', 14.72, 0.16], ['soccer', 15.12, 0.12]],
+  items: [['tennis', 9.6, 0.85], ['whistle', 10.4, 1.0, -18, 'M30 -30C44 -70 10 -100 30 -140'], ['stopwatch', 11.85, 0.78, 12, 40],
+    ['volleyball', 13.75, 0.28], ['basketball', 14.72, 0.18], ['soccer', 15.12, 0.135]],
 });
 const fibPhone = fibSvg(547, 1184, 'xMidYMin', {
   label: 'phone', zones: FIB_ZONES_PHONE,
   tiling: { n: 15, unit: 0.62, ox: 420, oy: 715 },
   glows: [[420, 715, 340, 300, '#11936f', 0.16], [500, -60, 520, 520, '#0e8064', 0.16]],
   sparkles: 26, calm: [250, 520, 300, 330],
-  items: [['tennis', 9.8, 0.6], ['whistle', 10.6, 0.8, -15, 'M30 -30C44 -70 10 -100 30 -140'], ['stopwatch', 11.25, 0.6, 10, 40],
-    ['volleyball', 12.05, 0.36], ['basketball', 14.85, 0.24]],
+  items: [['tennis', 9.8, 0.75], ['whistle', 10.6, 0.95, -15, 'M30 -30C44 -70 10 -100 30 -140'], ['stopwatch', 11.25, 0.7, 10, 40],
+    ['volleyball', 12.05, 0.4], ['basketball', 14.85, 0.26]],
 });
 
 // Fine grain (tiny repeating tile): breaks up the banding of dark gradients.

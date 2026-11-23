@@ -3,6 +3,15 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-24 (32): Fibonacci background brighter and clearer (done by Claude, at the owner's request)
+
+Owner: "it does not show very well, work on it more".
+
+- Lighter ball and object bodies, a softer form shadow, stronger sheen; seams and dial lines much more visible (`fibBrightDefs`, `fibBrighten`, used only by the Fibonacci composition).
+- A soft light and a thin light ring around every icon; brighter spiral line, Fibonacci squares a bit more visible, stronger flight trails; icons about 10-20% bigger.
+- `design-background.css`: the bottom fade of the background layer now covers only the last 16% of the screen (was 40%), so the icons near the spiral's eye are no longer darkened. The very bottom still ends in #011012 (no visible band against the phone bar).
+- `design-background.css?v=33`; SEO pages regenerated. Checked at 1440×900, 1920×1080 and 390×844.
+
 ## 2026-11-24 (31): "Fibonacci" background: stopwatch, whistle and balls on a Fibonacci spiral (done by Claude, at the owner's request)
 
 Owner: "I don't really like the background, I want it more coherent and beautiful; now it is arranged very badly. I want these icons, made very nicely: stopwatch, whistle, balls, the ball flight effects; arrange them along Fibonacci to start with, to see how it looks".
