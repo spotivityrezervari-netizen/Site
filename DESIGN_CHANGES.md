@@ -3,6 +3,19 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-24 (31): "Fibonacci" background: stopwatch, whistle and balls on a Fibonacci spiral (done by Claude, at the owner's request)
+
+Owner: "I don't really like the background, I want it more coherent and beautiful; now it is arranged very badly. I want these icons, made very nicely: stopwatch, whistle, balls, the ball flight effects; arrange them along Fibonacci to start with, to see how it looks".
+
+- `scripts/design/fundal-arena.mjs` draws the classic Fibonacci spiral: a quarter circle in each square of the tiling 1, 1, 2, 3, 5, 8, 13, 21, ... (`fibTiling`). The squares themselves are drawn barely visible.
+- The eye of the spiral sits below the content, between the text and the photo; the spiral grows between them and sweeps over the content, so the large turns run through the free space at the top.
+- Only the owner's icons: tennis ball, whistle, stopwatch, volleyball, basketball and soccer ball, in that order outwards. Each icon's size follows its Fibonacci square (small near the eye, big outside).
+- Each ball flies outward along the spiral and leaves a light trail (a tapered shape fading towards the eye, plus two thin speed lines). The stopwatch and the whistle get a soft light behind them.
+- Removed: the silk ribbons, trophy, medal, racket, pin, jersey, scoreboard and the other pieces of the previous layout. That layout still exists: `node scripts/design/fundal-arena.mjs --ref`.
+- No icon touches the text, the photo cards, the gallery dots or the header (the generator warns otherwise; the checks use the measured boxes `FIB_ZONES_WIDE` / `FIB_ZONES_PHONE`).
+- New options: `--dry` (do not write the CSS), `--debug` (with `--svg`: an overlay with numbered positions on the spiral, to place icons).
+- `design-background.css?v=32`; SEO pages regenerated. Checked at 1440×900, 1920×1080 and 390×844. Restore tag: `design-before-fibonacci`.
+
 ## 2026-11-22 (30): Welcome-photo dots centred under the slider; pause button removed (done by Claude, at the owner's request)
 
 Owner: "the dots under the slider where the sports move are not centred, and remove the pause button for the transition".
