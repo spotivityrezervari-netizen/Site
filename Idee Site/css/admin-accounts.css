@@ -305,3 +305,9 @@
     .analytics-head-actions { width: 100%; }
     .analytics-head-actions .analytics-action { flex: 1 1 0; }
 }
+/* Third list "Categorie": on phones it replaces the side-scrolling row of buttons. */
+.analytics-select select { min-width: 180px; }
+@media (max-width: 860px) {
+    .analytics-side .analytics-nav { display: none; }
+    .analytics-side { padding-bottom: 12px; }
+}

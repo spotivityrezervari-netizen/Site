@@ -2,7 +2,7 @@
    one button per category, plus an overview. At the top, two drop-down lists
    (like the city picker): the period (today, yesterday, 7/30 days, this/last
    month, 3/12 months, this year, all time, or chosen dates) and the court
-   ("Toate terenurile" or one court). Each category shows the number, the
+   ("Toate terenurile" or one court), plus the category as a third list. Each category shows the number, the
    change against the window of the same length just before, a chart per day
    (per month for long periods) and a ranking of the courts with a table.
    The superadmin may pick any court and also sees the account categories; an
@@ -88,6 +88,7 @@
 <div class="analytics-main"><header class="analytics-topbar">
 <div class="analytics-filters">
 <label class="analytics-filter"><span class="analytics-filter-label">Perioada</span><span class="analytics-select"><select id="an-period"></select>${chevron}</span></label>
+<label class="analytics-filter"><span class="analytics-filter-label">Categorie</span><span class="analytics-select"><select id="an-section"></select>${chevron}</span></label>
 <label class="analytics-filter"><span class="analytics-filter-label">Teren</span><span class="analytics-select"><select id="an-court"><option value="">Toate terenurile</option></select>${chevron}</span></label>
 </div>
 <div class="analytics-head-actions"><button type="button" class="analytics-action" id="an-refresh">Reîncarcă</button><button type="button" class="analytics-action" id="an-close">Închide</button></div>
@@ -154,6 +155,21 @@
                 nav.append(node('span', 'analytics-nav-group', group));
                 for (const [key, label] of items) nav.append(entry(key, label));
             }
+        }
+        // Category list: the same choices as the side menu, as a drop-down list.
+        function drawSectionSelect() {
+            const select = get('section');
+            select.replaceChildren();
+            const label = (key, name) => key !== 'overview' && data ? `${name} (${fmt.format(value(key))})` : name;
+            const first = node('option', '', 'Prezentare generală'); first.value = 'overview'; select.append(first);
+            for (const group of groups) {
+                const items = visibleMetrics().filter(m => m[3] === group);
+                if (!items.length) continue;
+                const og = node('optgroup'); og.label = group;
+                for (const [key, name] of items) { const o = node('option', '', label(key, name)); o.value = key; og.append(o); }
+                select.append(og);
+            }
+            select.value = section;
         }
         // Court list: every court the caller may pick, grouped by sport.
         function drawCourtOptions() {
@@ -345,6 +361,7 @@
             if (!data) return;
             const metric = visibleMetrics().find(m => m[0] === section);
             if (metric) drawMetric(content, metric); else { section = 'overview'; drawOverview(content); }
+            drawSectionSelect();
         }
         function chosenRange() {
             if (period === 'custom') return isIso(custom.from) && isIso(custom.to) ? [custom.from, custom.to] : null;
@@ -397,6 +414,7 @@
             custom = { from: get('from').value, to: get('to').value };
             load();
         });
+        get('section').addEventListener('change', () => { section = get('section').value; hideTip(); draw(); });
         get('court').addEventListener('change', () => { court = get('court').value; hideTip(); load(); });
         button.addEventListener('click', () => {
             if (!role) return;
