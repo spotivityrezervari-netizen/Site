@@ -748,7 +748,7 @@ const fibBrightDefs = commonDefs
 // seams and dial lines a lot more visible (the drawings are shared with the older layout)
 const fibBrighten = (svg) => svg.replace(/stroke='#33c49c' stroke-opacity='\.(62|6|45|5|4|35|25)'/g, (m, o) => `stroke='#7dffd6' stroke-opacity='${Math.min(0.95, Number('.' + o) + 0.3).toFixed(2)}'`);
 // items: [kind, u, size factor (of the square), rotation, arg]
-function fibonacci({ W, H, tiling, zones, items, glows, sparkles, calm, label }) {
+function fibonacci({ W, H, tiling, zones, items = [], chain, glows, sparkles, calm, label }) {
   const sq = fibTiling(tiling);
   let defs = FIB_BRIGHT ? fibBrightDefs : commonDefs; let atmo = '';
   glows.forEach((g, i) => { const gl = glow(`gl${i}`, ...g); defs += gl.defs; atmo += gl.svg(W, H); });
@@ -769,9 +769,32 @@ function fibonacci({ W, H, tiling, zones, items, glows, sparkles, calm, label })
     dust += `<circle cx='${f(x)}' cy='${f(y)}' r='${f(0.5 + k * k * 1.6)}' fill-opacity='${f((0.12 + rand() * 0.4) * 100) / 100}'/>`;
   }
   let trails = ''; let icons = '';
-  for (const [kind, u, k, rot = 0, arg] of items) {
+  // Owner (24.11): the icons start from the eye and repeat along the spiral, one per Fibonacci
+  // square, so the distance between two neighbours grows by the golden ratio, like the spiral.
+  // Sizes grow more gently (chain.grow per step), or the outer icons would be huge. An icon that
+  // would cover the text or the photo is left out; the next one keeps its place in the rhythm.
+  if (chain) {
+    const props = { whistle: [-18, 'M30 -30C44 -70 10 -100 30 -140'], stopwatch: [12, 40] };
+    // The chain may start anywhere on its first arc (phase): the generator picks the start at
+    // which the most icons stay clear of the content. The steps stay one square each.
+    const clear = (from) => { let n = 0; for (let k = 0; k < chain.count; k++) { const q = fibPoint(sq, from + k * chain.step); if (fibFree(q.x, q.y, chain.size0 * chain.grow ** k * 0.75, zones, W, H, 24)) n++; } return n; };
+    let best = chain.from;
+    if (chain.auto) for (let ph = 0; ph < 1; ph += 0.02) { const from = Math.floor(chain.from) + ph; if (clear(from) > clear(best)) best = from; }
+    console.log(`fundal-arena (${label}): chain starts at u=${best.toFixed(2)}, ${clear(best)} of ${chain.count} icons clear`);
+    for (let k = 0; k < chain.count; k++) {
+      const u = best + k * chain.step; const kind = chain.kinds[k % chain.kinds.length];
+      const p = fibPoint(sq, u); const size = chain.size0 * chain.grow ** k;
+      const inside = p.x - size / 2 >= 8 && p.y - size / 2 >= 8 && p.x + size / 2 <= W - 8 && p.y + size / 2 <= H - 8;
+      if (!inside) continue;
+      // over the content: kept in the rhythm, but only as a faint shadow behind the text
+      const dim = fibFree(p.x, p.y, size / 2, zones, W, H, 24) ? 1 : chain.dim;
+      items.push([kind, u, size / p.s, ...(props[kind] || [0, undefined]), dim]);
+    }
+  }
+  for (const [kind, u, k, rot = 0, arg, dim = 1] of items) {
     const p = fibPoint(sq, u); const size = p.s * k; const r = size / 2;
-    if (!fibFree(p.x, p.y, r, zones, W, H)) console.warn(`fundal-arena (${label}): ${kind} at u=${u} (${Math.round(p.x)}, ${Math.round(p.y)}, r ${Math.round(r)}) touches text/photo or the edge`);
+    const icons0 = icons.length; const trails0 = trails.length;
+    if (!chain && !fibFree(p.x, p.y, r, zones, W, H)) console.warn(`fundal-arena (${label}): ${kind} at u=${u} (${Math.round(p.x)}, ${Math.round(p.y)}, r ${Math.round(r)}) touches text/photo or the edge`);
     if (seams[kind]) {
       const tr = fibTrail(sq, u - 0.03, Math.min(1.1, 0.5 + 0.08 * Math.log2(p.s)), Math.max(2, r * 0.42));
       defs += tr.defs; trails += tr.svg;
@@ -779,6 +802,10 @@ function fibonacci({ W, H, tiling, zones, items, glows, sparkles, calm, label })
       icons += `<circle cx='${f(p.x)}' cy='${f(p.y)}' r='${f(r * 1.45)}' fill='url(#trailHead)'/>` + fibBrighten(ball([kind, p.x, p.y, r, pose[0] + rot, pose[1], pose[2]]))
         + `<circle cx='${f(p.x)}' cy='${f(p.y)}' r='${f(r + 1.5)}' fill='none' stroke='#b5ffe8' stroke-opacity='.35' stroke-width='${f(Math.max(1, r * 0.04))}'/>`;
     } else icons += `<circle cx='${f(p.x)}' cy='${f(p.y)}' r='${f(r * 1.4)}' fill='url(#trailHead)'/>` + fibBrighten(prop([kind, p.x, p.y, size, rot, arg]));
+    if (dim < 1) {
+      icons = icons.slice(0, icons0) + `<g opacity='${dim}'>${icons.slice(icons0)}</g>`;
+      trails = trails.slice(0, trails0) + `<g opacity='${dim}'>${trails.slice(trails0)}</g>`;
+    }
   }
   // --debug: an overlay with numbered positions along the spiral and the content boxes (tuning aid)
   if (process.argv.includes('--debug')) {
@@ -809,20 +836,18 @@ const FIB_ZONES_WIDE = [[0, 0, 1600, 150], [169, 321, 485, 381], [169, 399, 608,
 const FIB_ZONES_PHONE = [[0, 0, 547, 222], [34, 275, 290, 324], [34, 338, 444, 409], [34, 434, 513, 552], [34, 586, 326, 664], [34, 684, 213, 747], [34, 786, 513, 876], [34, 921, 513, 1184]];
 const fibWide = fibSvg(1600, 1000, 'xMidYMid', {
   label: 'wide', zones: FIB_ZONES_WIDE,
-  tiling: { n: 16, unit: 0.9, ox: 815, oy: 860 },
+  tiling: { n: 16, unit: 1, ox: 800, oy: 500 },
   glows: [[815, 880, 520, 380, '#11936f', 0.16], [300, -60, 900, 600, '#0e8064', 0.14], [1500, 980, 600, 420, '#0a5e4b', 0.1]],
   sparkles: 40, calm: [470, 520, 380, 300],
   // smallest near the eye, biggest outside: 55 -> 89 -> 144 -> 377 -> 610 -> 987 squares
-  items: [['tennis', 9.6, 0.85], ['whistle', 10.4, 1.0, -18, 'M30 -30C44 -70 10 -100 30 -140'], ['stopwatch', 11.85, 0.78, 12, 40],
-    ['volleyball', 13.75, 0.28], ['basketball', 14.72, 0.18], ['soccer', 15.12, 0.135]],
+  chain: { from: 7.5, step: 1, count: 8, size0: 26, grow: 1.2, dim: 0.45, kinds: ['tennis', 'whistle', 'stopwatch', 'volleyball', 'basketball', 'soccer'] },
 });
 const fibPhone = fibSvg(547, 1184, 'xMidYMin', {
   label: 'phone', zones: FIB_ZONES_PHONE,
-  tiling: { n: 15, unit: 0.62, ox: 420, oy: 715 },
+  tiling: { n: 15, unit: 0.6, ox: 273, oy: 600 },
   glows: [[420, 715, 340, 300, '#11936f', 0.16], [500, -60, 520, 520, '#0e8064', 0.16]],
   sparkles: 26, calm: [250, 520, 300, 330],
-  items: [['tennis', 9.8, 0.75], ['whistle', 10.6, 0.95, -15, 'M30 -30C44 -70 10 -100 30 -140'], ['stopwatch', 11.25, 0.7, 10, 40],
-    ['volleyball', 12.05, 0.4], ['basketball', 14.85, 0.26]],
+  chain: { from: 7.5, step: 1, count: 8, size0: 22, grow: 1.2, dim: 0.45, kinds: ['tennis', 'whistle', 'stopwatch', 'volleyball', 'basketball', 'soccer'] },
 });
 
 // Fine grain (tiny repeating tile): breaks up the banding of dark gradients.

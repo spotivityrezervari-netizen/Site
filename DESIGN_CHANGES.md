@@ -3,6 +3,16 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-24 (33): Fibonacci background centred; icons repeat along the spiral at the golden ratio; text halo (done by Claude, at the owner's request)
+
+Owner: "centre it more on desktop and phone", then "the icons should start from one point and repeat at the same ratio as the spiral, as distance between them", then "do the golden ratio and where it comes over the text, make the text show more".
+
+- The eye of the spiral is at the centre of the screen (wide 800,500; phone 273,600, unit 0.6).
+- `chain` in `fibonacci()`: one icon per Fibonacci square (step 1), starting at square 7, so the distance between two neighbours grows by the golden ratio; the six icons repeat in order (tennis, whistle, stopwatch, volleyball, basketball, soccer). Sizes grow by 1.2 per step (the golden ratio would make the outer icons huge). Icons outside the screen are left out.
+- Icons that pass behind the welcome text or the photo are drawn at 45% opacity (`chain.dim`).
+- `design-background.css`: the welcome text (title, tagline, paragraph, link, steps) has a soft dark halo (`text-shadow`), so it reads clearly over the spiral.
+- The hand-placed `items` list still works when `chain` is not given. `design-background.css?v=34`; SEO pages regenerated.
+
 ## 2026-11-24 (32): Fibonacci background brighter and clearer (done by Claude, at the owner's request)
 
 Owner: "it does not show very well, work on it more".
