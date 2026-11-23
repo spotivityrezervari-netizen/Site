@@ -391,6 +391,8 @@
             target = byId('modal-tabel-program');
         } else if (action === 'history' && ownerCourts.length) {
             target = byId('modal-istoric'); target.style.display = 'flex';
+        } else if (action === 'analytics') {
+            if (window.openSpotivityAnalytics?.()) target = byId('modal-admin-analytics');
         } else if (action === 'late-cancellations') {
             if (window.openLateCancellationReview?.()) target = byId('modal-late-cancellations');
         } else if (action === 'base') {

@@ -377,7 +377,7 @@
             if (state.courts.some(court => court.are_chat !== false)) nav.append(actionButton('Chat', 'chat'));
             nav.append(actionButton('Programul terenurilor', 'program'), actionButton('Istoricul rezervărilor', 'history'));
         }
-        if (state.access?.can_manage) nav.append(actionButton('Anulări târzii', 'late-cancellations'), actionButton('Administrare baze de date', 'administration'), actionButton('Vezi site-ul', 'site'));
+        if (state.access?.can_manage) nav.append(actionButton('Analitice', 'analytics'), actionButton('Anulări târzii', 'late-cancellations'), actionButton('Administrare baze de date', 'administration'), actionButton('Vezi site-ul', 'site'));
         else nav.append(actionButton('Încearcă din nou', 'retry'));
         nav.append(actionButton('Deconectare', 'logout', {}, 'owner-menu-logout'));
     }

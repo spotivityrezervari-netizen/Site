@@ -347,13 +347,17 @@
         });
         get('section').addEventListener('change', () => { section = get('section').value; hideTip(); draw(); });
         get('court').addEventListener('change', () => { court = get('court').value; hideTip(); load(); });
-        button.addEventListener('click', () => {
-            if (!role) return;
+        // Also used by the administrators' home page (menu "Analitice"), see base-admin.js.
+        function open() {
+            if (!role) return false;
             view++; previousFocus = document.activeElement; period = 'd30'; court = ''; section = 'overview';
             get('period').value = period; get('custom').hidden = true; data = null; drawCourtOptions();
             get('scope').textContent = role.isSuper ? 'Superadmin · toate terenurile și conturile' : 'Doar terenurile tale';
             modal.style.display = 'flex'; document.body.classList.add('fara-scroll'); draw(); panel.focus(); load();
-        });
+            return true;
+        }
+        button.addEventListener('click', open);
+        window.openSpotivityAnalytics = open;
         // Redraw at the new width when the window changes size (phone rotation).
         let resizeTimer = 0, lastWidth = 0;
         window.addEventListener('resize', () => {

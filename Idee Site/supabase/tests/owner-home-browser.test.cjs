@@ -220,6 +220,11 @@ async function ownerTouchScrolling(page){
     assert.equal(await admin.locator('#owner-home-menu-toggle').getAttribute('aria-expanded'),'false');
     assert.equal(await admin.locator('#owner-home-menu-toggle').evaluate(node=>node===document.activeElement),true);
     pass('the hamburger and owner drawer actions fit phones and desktop, and Escape closes the menu');
+    await ownerAction(admin,'analytics');await visible(admin,'#modal-admin-analytics');
+    assert.equal(await admin.locator('#an-scope').textContent(),'Doar terenurile tale');
+    await admin.locator('#an-close').click();await admin.locator('#modal-admin-analytics').waitFor({state:'hidden'});
+    await visible(admin,'#owner-home');
+    pass('an ordinary administrator opens "Analitice" from the owner menu, for their own courts');
     await ownerAction(admin,'late-cancellations');await visible(admin,'#modal-late-cancellations');
     await admin.waitForFunction(()=>document.querySelector('#late-cancellation-status')?.textContent.includes('Nu sunt'));
     assert.ok(requests.some(item=>item.path==='/rest/v1/rpc/list_late_cancellations'&&item.userId===uid(3)&&item.status===200));
