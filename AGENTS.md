@@ -10,7 +10,7 @@ spotivity.ro is live on Netlify, and only the owner decides when it is published
 
 Push changes to GitHub as requested. Include `[skip netlify]` in every pushed commit message so Git pushes don't trigger Netlify builds.
 
-Database changes go in a new numbered migration in `Idee Site/supabase/` (next: `050_…`). Never edit or re-run a migration that is already applied. Apply migrations as `supabase db query --remote --yes -f "<file>"` from `Desktop\Spotivity\supabase`. Paths are resolved from `Desktop\Spotivity`. Preserve other contributors' changes. Updating the Supabase email backend is separate from publishing the site to Netlify.
+Database changes go in a new numbered migration in `Idee Site/supabase/` (next: `051_…`). Never edit or re-run a migration that is already applied. Apply migrations as `supabase db query --remote --yes -f "<file>"` from `Desktop\Spotivity\supabase`. Paths are resolved from `Desktop\Spotivity`. Preserve other contributors' changes. Updating the Supabase email backend is separate from publishing the site to Netlify.
 
 # Browser security
 

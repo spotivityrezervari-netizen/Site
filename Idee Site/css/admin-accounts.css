@@ -1,0 +1,48 @@
+/* Account deletion (profile + superadmin "Conturi utilizatori") and superadmin
+   "Analitice". Functional layout only, reusing the announcements panel look;
+   the design AI may restyle freely. Added by Claude, 23.11.2026. */
+#btn-admin-accounts[hidden], #btn-admin-analytics[hidden], #btn-sterge-cont[hidden] { display: none !important; }
+
+/* Client confirmation dialog */
+.account-delete-modal { z-index: 1250; }
+.account-delete-panel { width: min(520px, 94vw); padding: 24px; text-align: left; }
+.account-delete-panel .titlu-modal { margin-top: 0; }
+.account-delete-warning { color: #ffc0b5; line-height: 1.6; }
+.account-delete-panel input { width: 100%; box-sizing: border-box; font-size: 16px; }
+.account-delete-status { min-height: 1.4em; line-height: 1.6; overflow-wrap: anywhere; }
+.account-delete-status.is-error, #acc-status.is-error, #an-status.is-error { color: #ffc0b5; }
+.account-delete-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.account-delete-actions button { min-height: 44px; width: auto; flex: 1 1 180px; }
+
+/* Superadmin accounts list */
+.accounts-search label { display: block; margin-bottom: 8px; }
+.accounts-search-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.accounts-search-row input { flex: 1 1 240px; }
+.accounts-search-row button { flex: 0 0 auto; width: auto; }
+.accounts-card h4 { overflow-wrap: anywhere; }
+.accounts-confirm { margin-top: 12px; padding-top: 12px; border-top: 1px solid #5e6c52; }
+.accounts-confirm label { line-height: 1.5; overflow-wrap: anywhere; }
+
+/* Superadmin analytics */
+.analytics-head-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.analytics-periods { display: flex; gap: 10px; flex-wrap: wrap; margin: 18px 0 8px; }
+.analytics-periods .analytics-period { width: auto; flex: 1 1 160px; }
+.analytics-periods .analytics-period.is-active { border-color: #edca82; background: rgba(237, 202, 130, .18); color: #edca82; font-weight: 700; }
+.analytics-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 12px 0 24px; }
+.analytics-tile { display: grid; gap: 4px; padding: 16px; border: 1px solid #5e6c52; border-radius: 12px; background: #17271c; }
+.analytics-tile-value { font-size: 30px; font-weight: 700; line-height: 1.1; color: #edca82; font-variant-numeric: tabular-nums; }
+.analytics-tile-label { font-weight: 600; }
+.analytics-tile-extra { font-size: 12px; color: #c1cabb; }
+.analytics-subtitle { margin: 0 0 10px; }
+.analytics-table-wrap { overflow-x: auto; border: 1px solid #5e6c52; border-radius: 12px; }
+.analytics-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.analytics-table th, .analytics-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid rgba(94, 108, 82, .6); white-space: nowrap; }
+.analytics-table thead th { color: #edca82; font-size: 13px; }
+.analytics-table .analytics-num { text-align: right; font-variant-numeric: tabular-nums; }
+.analytics-table tfoot th, .analytics-table tfoot td { font-weight: 700; border-bottom: 0; border-top: 2px solid #807449; }
+.analytics-muted { color: #c1cabb; font-weight: 400; font-size: 12px; }
+@media (max-width: 767px) {
+ .account-delete-panel { padding: 18px 14px; }
+ .analytics-tile-value { font-size: 24px; }
+ .analytics-table th, .analytics-table td { padding: 8px; }
+}
