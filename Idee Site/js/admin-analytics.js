@@ -4,7 +4,7 @@
    month, 3/12 months, this year, all time, or chosen dates) and the court
    ("Toate terenurile" or one court), plus the category as a third list. Each category shows the number, the
    change against the window of the same length just before, a chart per day
-   (per month for long periods) and a ranking of the courts with a table.
+   (per month for long periods). One court at a time is picked in the list.
    The superadmin may pick any court and also sees the account categories; an
    administrator only their own courts. The scope is enforced in SQL by
    admin_analytics_range() (migration 051). No icons in the admin panel. */
@@ -241,50 +241,6 @@
             return chartEl;
         }
 
-        function courtCell(c) {
-            const th = node('th', '', c.court || '—'); th.scope = 'row';
-            if (!c.active) th.append(node('span', 'analytics-muted', c.sport ? ' (ascuns)' : ' (șters)'));
-            const where = [c.sport, c.city].filter(Boolean).join(' · ');
-            if (where) th.append(node('span', 'analytics-muted', where));
-            return th;
-        }
-        function table(headers, rows, footer) {
-            const wrap = node('div', 'analytics-table-wrap'); wrap.tabIndex = 0;
-            const t = node('table', 'analytics-table');
-            const head = node('tr');
-            headers.forEach((label, i) => { const th = node('th', i ? 'analytics-num' : '', label); th.scope = 'col'; head.append(th); });
-            const thead = node('thead'); thead.append(head);
-            const tbody = node('tbody'); rows.forEach(r => tbody.append(r));
-            t.append(thead, tbody);
-            if (footer) { const tfoot = node('tfoot'); tfoot.append(footer); t.append(tfoot); }
-            wrap.append(t); return wrap;
-        }
-        // Courts ranked by the chosen period, as horizontal bars.
-        function courtRanking(key, label) {
-            const list = (data.courts || []).map(c => ({ c, n: num(c.stats?.[key]) })).sort((a, b) => b.n - a.n || String(a.c.court).localeCompare(String(b.c.court), 'ro'));
-            const box = node('div', 'analytics-ranking');
-            if (!list.length) { box.append(node('p', 'analytics-empty', 'Nu ai terenuri alocate.')); return box; }
-            const max = Math.max(1, ...list.map(x => x.n));
-            for (const { c, n } of list) {
-                const row = node('div', 'analytics-rank-row');
-                const name = node('span', 'analytics-rank-name', c.court || '—');
-                const where = [c.sport, c.city, c.active ? '' : c.sport ? 'ascuns' : 'șters'].filter(Boolean).join(' · ');
-                if (where) name.append(node('span', 'analytics-muted', where));
-                const track = node('span', 'analytics-rank-track');
-                const bar = node('span', 'analytics-rank-bar');
-                bar.style.width = n ? `${Math.max(2, n / max * 100)}%` : '0';
-                track.append(bar);
-                row.append(name, track, node('span', 'analytics-rank-value', fmt.format(n)));
-                row.title = `${c.court}: ${fmt.format(n)} ${label.toLowerCase()} (${periodWords()})`;
-                box.append(row);
-            }
-            return box;
-        }
-        function details(summary, content) {
-            const d = node('details', 'analytics-details');
-            d.append(node('summary', '', summary), content);
-            return d;
-        }
         const courtWords = () => court ? `terenul ${court}` : (data?.scope === 'own' ? 'terenurile tale' : 'toate terenurile');
 
         function drawOverview(content) {
@@ -301,18 +257,6 @@
                 grid.append(card);
             }
             content.append(grid);
-            const courtMetrics = metrics.filter(m => m[5]);
-            const rows = (data.courts || []).map(c => {
-                const tr = node('tr'); tr.append(courtCell(c));
-                for (const [key] of courtMetrics) tr.append(node('td', 'analytics-num', fmt.format(num(c.stats?.[key]))));
-                return tr;
-            });
-            const foot = node('tr'); const th = node('th', '', 'Total'); th.scope = 'row'; foot.append(th);
-            for (const [key] of courtMetrics) foot.append(node('td', 'analytics-num', fmt.format(value(key))));
-            const block = node('section', 'analytics-block');
-            block.append(node('h4', 'analytics-block-title', `Pe fiecare teren · ${periodWords()}`),
-                rows.length ? table(['Teren', ...courtMetrics.map(m => m[1])], rows, rows.length > 1 ? foot : null) : node('p', 'analytics-empty', 'Nu ai terenuri alocate.'));
-            content.append(block);
         }
         function drawMetric(content, metric) {
             const [key, label, help, , , perCourt, average] = metric;
@@ -341,19 +285,6 @@
                 block.append(node('h4', 'analytics-block-title', data.bucket === 'month' ? 'Pe luni' : 'Pe zile'), c);
                 content.append(block);
             }
-            if (!perCourt || !(data.courts || []).length) return;
-            const block = node('section', 'analytics-block');
-            block.append(node('h4', 'analytics-block-title', `Pe fiecare teren · ${periodWords()}`), courtRanking(key, label));
-            if ((data.courts || []).length > 1) {
-                const metricsPerCourt = metrics.filter(m => m[5]);
-                const rows = data.courts.map(ct => {
-                    const row = node('tr'); row.append(courtCell(ct));
-                    for (const [k] of metricsPerCourt) row.append(node('td', 'analytics-num', fmt.format(num(ct.stats?.[k]))));
-                    return row;
-                });
-                block.append(details('Tabel cu toate categoriile', table(['Teren', ...metricsPerCourt.map(m => m[1])], rows)));
-            }
-            content.append(block);
         }
         function draw() {
             drawNav();

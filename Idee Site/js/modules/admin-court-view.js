@@ -57,10 +57,19 @@
                     const oraseTerenuri = Object.create(null);
                     const allocatedCourts = [];
 
+                    // Speed: read every allocated court in ONE request (it used to be one
+                    // request per court, one after the other, before the panel could open).
+                    // A name that matches no row or several rows is skipped, as before.
+                    const wantedNames = [...new Set(listaTerenuriAlocate.filter(Boolean))];
+                    const rowsByName = new Map();
+                    if (wantedNames.length) {
+                        const { data: rows } = await window.spotivityReadAllRows(() => db.from('terenuri').select('*').in('nume', wantedNames).order('id'));
+                        if (authRequest !== state.authGeneration) return;
+                        for (const row of rows || []) rowsByName.set(row.nume, rowsByName.has(row.nume) ? null : row);
+                    }
                     for (let numeT of listaTerenuriAlocate) {
                         if(!numeT) continue;
-                        const { data: terenDB } = await db.from('terenuri').select('*').eq('nume', numeT).single();
-                        if (authRequest !== state.authGeneration) return;
+                        const terenDB = rowsByName.get(numeT) || null;
                         if (terenDB) {
                             allocatedCourts.push(terenDB);
                             selectManualTeren.innerHTML += `<option value="${window.escapeHtml(terenDB.nume)}" data-sport="${window.escapeHtml(terenDB.sport)}">${window.escapeHtml(terenDB.nume)}</option>`;
@@ -280,7 +289,9 @@
                 chatButton.hidden = !hasStaffChat;
                 chatButton.style.display = hasStaffChat ? 'flex' : 'none';
                 if (!terenuriPtTabel.length) document.getElementById('tabel-corp-program').replaceChildren();
-                await window.actualizeazaOreManualAdmin();
+                // The manual-booking hours load in the background: the panel opens without
+                // waiting for them (the list shows "Se încarcă orele..." meanwhile).
+                void window.actualizeazaOreManualAdmin().catch(() => {});
                 if (authRequest !== state.authGeneration) return;
 
                 // Chat real-time pentru admin
