@@ -1,7 +1,7 @@
 /** Romanian transactional email templates. Rendering never sends mail or creates credentials. */
 import { isMailAddress } from './email-address.ts';
 export const TRANSACTIONAL_SITE_URL = 'https://spotivity.ro/';
-export const TRANSACTIONAL_SUPPORT_EMAIL = 'spotivity.rezervari@gmail.com';
+export const TRANSACTIONAL_SUPPORT_EMAIL = 'contact@spotivity.ro';
 export const LEGACY_LATE_CANCELLATION_WARNING = 'La mai mult de 3 neprezentări, riști închiderea contului.';
 export const LATE_CANCELLATION_POLICY_WARNING = 'La mai mult de 3 neprezentări sau anulări târzii, riști închiderea contului.';
 export type MailRecipient = { email: string; name?: string };

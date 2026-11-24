@@ -66,7 +66,7 @@ test('late client cancellation shows the frozen cumulative occurrence and exact 
     assert.match(rendered.subject, /^Anulare târzie: Terenul unu · Spotivity$/);
     const occurrence = count === 1 ? 'prima anulare târzie' : `a ${count}-a anulare târzie`;
     for (const content of [rendered.html, rendered.text]) {
-      for (const value of [occurrence, LATE_CANCELLATION_POLICY_WARNING, booking.courtName, '25 octombrie 2026', '18:00–19:00', '19:00–20:00', 'mai puțin de o oră', 'Găsește un teren', 'spotivity.rezervari@gmail.com']) assert.ok(content.includes(value), `${count}: missing ${value}`);
+      for (const value of [occurrence, LATE_CANCELLATION_POLICY_WARNING, booking.courtName, '25 octombrie 2026', '18:00–19:00', '19:00–20:00', 'mai puțin de o oră', 'Găsește un teren', 'contact@spotivity.ro']) assert.ok(content.includes(value), `${count}: missing ${value}`);
       assert.ok(!content.includes('contul a fost închis'));
       assert.ok(!content.includes('neprezentarea cu numărul'));
     }
@@ -206,7 +206,7 @@ test('client model has secure view/cancel actions, maps, calendar and a real Rom
     booking: { ...booking, id, dayISO: '2026-10-20', hours: ['15:00–16:00', '16:00–17:00'], cancellationDeadlineISO: '2026-10-20T12:00:00Z', mapsURL: 'https://www.google.com/maps/search/?api=1&query=Complex+XYZ', paymentMethods: 'cash_card' },
     cancellationURL: cancel,
   }));
-  for (const text of ['Confirmare oficială a rezervării tale', '15:00 – 17:00', '15:00, 20 octombrie 2026', 'cash sau cu cardul', 'Adaugă în Calendar', 'Vezi rezervarea', 'Chat cu baza sportivă', '15 minute', 'spotivity.rezervari@gmail.com']) assert.ok(mail.text.includes(text), text);
+  for (const text of ['Confirmare oficială a rezervării tale', '15:00 – 17:00', '15:00, 20 octombrie 2026', 'cash sau cu cardul', 'Adaugă în Calendar', 'Vezi rezervarea', 'Chat cu baza sportivă', '15 minute', 'contact@spotivity.ro']) assert.ok(mail.text.includes(text), text);
   const urls = links(mail.html);
   const calendar = new URL(urls.find(url => url.startsWith('https://calendar.google.com/')));
   assert.equal(calendar.searchParams.get('dates'), '20261020T150000/20261020T170000');
@@ -244,7 +244,7 @@ test('owner contact shortcuts and app actions do not contain the client cancella
   assert.ok(!urls.some(url => url.includes('token=') || url.includes('anulare-rezervare') || url.startsWith('https://calendar.google.com/')));
   const unsafe = renderTransactionalMail(input('booking_created_owner', { booking: { ...booking, customerPhone: '+40721" onclick="bad()', customerEmail: 'x@example.test?subject=attack\r\nBcc:evil@example.test' } }));
   assert.ok(!links(unsafe.html).some(url => url.startsWith('tel:')));
-  assert.ok(!links(unsafe.html).some(url => url.startsWith('mailto:') && url !== 'mailto:spotivity.rezervari@gmail.com'));
+  assert.ok(!links(unsafe.html).some(url => url.startsWith('mailto:') && url !== 'mailto:contact@spotivity.ro'));
 });
 
 test('maps only links approved HTTPS Google Maps hosts and never creates a misleading arbitrary link', async () => {
@@ -262,7 +262,7 @@ test('maps only links approved HTTPS Google Maps hosts and never creates a misle
 test('welcome email uses the first name, support contact and functional account/site actions without booking data', async () => {
   const { renderTransactionalMail } = await template;
   const mail = renderTransactionalMail({ kind: 'account_welcome', recipient: { email: 'ana@example.test', name: 'Ana Exemplu' }, firstName: 'Ana' });
-  for (const text of ['Contul tău este înregistrat. Hai la sport!', 'Salut, Ana!', 'Alege un teren', 'Accesează contul', 'Ne vedem pe teren', 'spotivity.rezervari@gmail.com', 'Dacă nu ai creat tu contul']) assert.ok(mail.text.includes(text), text);
+  for (const text of ['Contul tău este înregistrat. Hai la sport!', 'Salut, Ana!', 'Alege un teren', 'Accesează contul', 'Ne vedem pe teren', 'contact@spotivity.ro', 'Dacă nu ai creat tu contul']) assert.ok(mail.text.includes(text), text);
   const urls = links(mail.html);
   assert.ok(urls.includes(SITE)); assert.ok(urls.includes(`${SITE}#spotivity-action=account`));
   assert.ok(!mail.html.includes('Cod rezervare'));
@@ -291,7 +291,7 @@ test('client chat uses the shared Spotivity model and an authenticated message r
   const { renderTransactionalMail } = await template;
   for (const messageID of ['42', '734cd157-5baa-4d5f-93d7-6bb6e8155b59']) {
     const mail = renderTransactionalMail({ kind: 'chat_client', recipient: { email: 'ana@example.test', name: 'Ana' }, chat: { courtName: 'Teren Acoperit #2', baseName: 'Complex Sportiv XYZ', customerName: 'Ana', preview: 'Vestiarul este disponibil. Te așteptăm la teren.', messageID } });
-    for (const copy of ['Salut, Ana!', 'Ai un mesaj nou de la baza sportivă', 'Complex Sportiv XYZ', 'Teren Acoperit #2', 'Deschide conversația', 'spotivity.rezervari@gmail.com']) assert.ok(mail.text.includes(copy), copy);
+    for (const copy of ['Salut, Ana!', 'Ai un mesaj nou de la baza sportivă', 'Complex Sportiv XYZ', 'Teren Acoperit #2', 'Deschide conversația', 'contact@spotivity.ro']) assert.ok(mail.text.includes(copy), copy);
     const urls = links(mail.html);
     assert.ok(urls.includes(`${SITE}#spotivity-action=chat&message=${messageID}`));
     assert.ok(!urls.some(url => url.includes('ana%40') || url.includes('token=') || url.includes('anulare-rezervare')));
@@ -347,7 +347,7 @@ test('all four client emails share the logo, palette and contact and contain no 
   for (const mail of mails) {
     assert.ok(mail.html.includes('assets/imagini/spotivity-96.png'));
     assert.match(mail.html, /#101a14/); assert.match(mail.html, /#d8b66a/);
-    assert.ok(mail.text.includes('spotivity.rezervari@gmail.com'));
+    assert.ok(mail.text.includes('contact@spotivity.ro'));
     assert.ok(!/\p{Extended_Pictographic}/u.test(mail.subject + mail.text));
   }
 });

@@ -34,7 +34,7 @@
 <div class="grup-input"><label for="ann-image">Imagine opțională · JPG sau PNG, maximum 5 MB</label><input id="ann-image" type="file" accept="image/jpeg,image/png"><p class="ann-help">Imaginea își păstrează proporțiile și se adaptează la lățimea emailului, inclusiv pe telefon.</p><button type="button" class="btn-cont" id="ann-remove-image">Elimină imaginea</button></div>
 <button type="submit" class="btn-cont" id="ann-preview">Previzualizează și verifică destinatarii</button></fieldset></form>
 <section id="ann-review" class="ann-review" aria-labelledby="ann-review-title" hidden><h3 id="ann-review-title">Previzualizare email</h3>
-<p id="ann-count"></p><article class="ann-email"><p class="ann-brand">Spotivity</p><h3 id="ann-email-subject"></h3><img id="ann-email-image" alt="" hidden><p id="ann-email-message"></p><p class="ann-help">Deschide Spotivity · Contact: spotivity.rezervari@gmail.com</p></article>
+<p id="ann-count"></p><article class="ann-email"><p class="ann-brand">Spotivity</p><h3 id="ann-email-subject"></h3><img id="ann-email-image" alt="" hidden><p id="ann-email-message"></p><p class="ann-help">Deschide Spotivity · Contact: contact@spotivity.ro</p></article>
 <label class="ann-confirm"><input type="checkbox" id="ann-confirm"><span id="ann-confirm-text"></span></label>
 <button type="button" class="btn-cont" id="ann-send" disabled>Trimite emailurile</button></section></div>
 <p id="ann-status" role="status" aria-live="polite"></p>
