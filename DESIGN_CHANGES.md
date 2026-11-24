@@ -3,6 +3,14 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-24 (40): Golden vortex: more icons, no abrupt ends (done by Claude, at the owner's request)
+
+Owner: "it looks more ok; could you add a few more icons and make it not end so abruptly?".
+
+- More icons along the arms: small ones born at the centre (wide: tennis, soccer, volleyball at 4–4.5 quarter turns; phone: tennis, soccer, volleyball) and smaller ones further out (wide: tennis at 0:8 and 1:8.5; phone: soccer at 1:7). Wide now 13 icons, phone 9.
+- The haze of the arms fades in from the centre and out towards the screen edges (radial mask `vxFade`), so the spirals never stop abruptly.
+- Picture size: wide 153 KB, phone 137 KB. `design-background.css?v=41`; SEO pages regenerated.
+
 ## 2026-11-24 (39): "Golden vortex" background; white, larger title (done by Claude, at the owner's request)
 
 Owner: "I don't like how it looks, it's very ugly, let's make it more dynamic, more natural, I leave it to you; make the Spotivity title a bit bigger and white".

@@ -976,6 +976,8 @@ function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0
   const inZone = (x, y, r) => zones.some(([a, b, e, d]) => x + r > a - 10 && x - r < e + 10 && y + r > b - 10 && y - r < d + 10);
   // the haze: each arm as a broad, very soft band that widens with the spiral
   let hazeSvg = '';
+  const far = Math.hypot(Math.max(cx, W - cx), Math.max(cy, H - cy));
+  defs += `<radialGradient id='vxFadeG' gradientUnits='userSpaceOnUse' cx='${cx}' cy='${cy}' r='${f(far)}'><stop offset='0' stop-color='#fff' stop-opacity='0'/><stop offset='.12' stop-color='#fff' stop-opacity='1'/><stop offset='.6' stop-color='#fff' stop-opacity='.8'/><stop offset='1' stop-color='#fff' stop-opacity='0'/></radialGradient><mask id='vxFade' maskUnits='userSpaceOnUse' x='-2000' y='-2000' width='${W + 4000}' height='${H + 4000}'><rect x='-2000' y='-2000' width='${W + 4000}' height='${H + 4000}' fill='url(#vxFadeG)'/></mask>`;
   for (let arm = 0; arm < arms; arm++) {
     const pts = []; for (let th = 0; th < 10 * Math.PI / 2; th += 0.05) pts.push(pt(arm, th));
     for (const [wk, op] of [[0.42, haze * 0.5], [0.2, haze]]) {
@@ -1028,7 +1030,7 @@ function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0
     fibDebug[label] = `${d}</svg>`;
   }
   console.log(`fundal-arena (${label}): golden vortex, ${arms} arms, ${balls.length} icons`);
-  const body = `<rect width='${W}' height='${H}' fill='${BASE}'/>${atmo}<circle cx='${cx}' cy='${cy}' r='220' fill='url(#vxCore)'/>${hazeSvg}`
+  const body = `<rect width='${W}' height='${H}' fill='${BASE}'/>${atmo}<circle cx='${cx}' cy='${cy}' r='220' fill='url(#vxCore)'/><g mask='url(#vxFade)'>${hazeSvg}</g>`
     + `<g fill='none' stroke='#b5ffe8' stroke-linecap='round'>${dustSvg}</g>${trails}${icons}`;
   return { defs, body };
 }
@@ -1044,7 +1046,9 @@ const FIB_ZONES_PHONE = [[0, 0, 547, 222], [34, 275, 290, 324], [34, 338, 444, 4
 const fibWide = fibSvg(1600, 1000, 'xMidYMid', {
   // golden vortex (owner, 24.11): [arm, quarter turns from the centre, kind, size factor]
   vortex: { cx: 800, cy: 540, arms: 3, r0: 12, turn: 0.4, dim: 0.4, dust: { count: 900, c: 30, fall: 420 },
-    balls: [[0, 5.5, 'tennis'], [1, 5, 'volleyball'], [0, 6.5, 'soccer'], [2, 6, 'basketball'], [0, 7, 'tennis'], [2, 7.5, 'whistle', 0.09], [1, 8, 'soccer', 0.12]] },
+    balls: [[0, 5.5, 'tennis'], [1, 5, 'volleyball'], [0, 6.5, 'soccer'], [2, 6, 'basketball'], [0, 7, 'tennis'], [2, 7.5, 'whistle', 0.09], [1, 8, 'soccer', 0.12],
+      // owner: "încă câteva iconițe și să nu se termine așa brusc": small ones born at the centre, more towards the edges
+      [1, 4, 'tennis'], [2, 4.5, 'soccer'], [0, 4.5, 'volleyball'], [0, 8, 'tennis', 0.055], [1, 8.5, 'tennis', 0.045]] },
   label: 'wide', zones: FIB_ZONES_WIDE,
   sunflower: { cx: 800, cy: 540, c: 32, rMax: 980, iconSeeds: true, iconFill: 0.8, iconOp: [0.95, 0.75, 0.42, 0], goldenFade: { r0: 60, low: 0.25 }, iconC: 52, iconCount: 377, size0: 22, grow: 0.075, iconArms: [2, 9, 16], iconEvery: 2, kinds: ['tennis', 'whistle', 'stopwatch', 'volleyball', 'basketball', 'soccer'], dim: 0.4 },
   tiling: { n: 14, flipX: false, flipY: true, fit: { cx: 800, cy: 540, w: 1080 } },
@@ -1055,7 +1059,8 @@ const fibWide = fibSvg(1600, 1000, 'xMidYMid', {
 });
 const fibPhone = fibSvg(547, 1184, 'xMidYMin', {
   vortex: { cx: 273, cy: 600, arms: 3, r0: 9, turn: 1.2, dim: 0.4, dust: { count: 700, c: 26, fall: 330 },
-    balls: [[0, 6.5, 'soccer'], [1, 6, 'tennis'], [2, 5, 'volleyball'], [1, 6.5, 'basketball', 0.14], [2, 5.5, 'whistle', 0.12]] },
+    balls: [[0, 6.5, 'soccer'], [1, 6, 'tennis'], [2, 5, 'volleyball'], [1, 6.5, 'basketball', 0.14], [2, 5.5, 'whistle', 0.12],
+      [2, 4.5, 'tennis'], [0, 4, 'soccer'], [1, 4.5, 'volleyball'], [1, 7, 'soccer', 0.08]] },
   label: 'phone', zones: FIB_ZONES_PHONE,
   sunflower: { cx: 273, cy: 600, c: 28, rMax: 760, iconSeeds: true, iconFill: 0.8, iconOp: [1, 0.9, 0.55, 0], goldenFade: { r0: 45, low: 0.25 }, margin: [60, 60], iconC: 43, iconCount: 233, size0: 18, grow: 0.075, iconArms: 'auto', iconEvery: 1, kinds: ['tennis', 'whistle', 'stopwatch', 'volleyball', 'basketball', 'soccer'], dim: 0.4 },
   tiling: { n: 15, flipX: true, fit: { cx: 273, cy: 600, w: 500 } },
