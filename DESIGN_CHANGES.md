@@ -3,6 +3,14 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-24 (54): Title "Spotivity" (not uppercase); constellations removed (done by Claude, at the owner's request)
+
+Owner: "write spotivity with only the S capital, the rest small", then "it's too busy, remove the constellations".
+
+- `h1.welcome-brand` in `design-background.css`: `text-transform: none` (was uppercase) and letter spacing -.01em (was .05em / .04em on phones). The page text is already "Spotivity", so it now shows as written. This also matches the tests that expect the h1 "Spotivity".
+- Constellations off on wide and phone: the lists were renamed `constellationsOff` in `fibWide` / `fibPhone` (kept for reference); rename them back to `constellations` to show the real constellations again (or use tag `design-before-real-constellations` for the sport ones).
+- Picture size: wide 309 KB, phone 189 KB. Static. `design-background.css?v=55`; SEO pages regenerated.
+
 ## 2026-11-24 (53): Real constellations instead of the sport/quote pictures (done by Claude, at the owner's request)
 
 Owner: "I don't really like the constellations, delete all of them and maybe put some spectacular constellations that exist, centre them nicely so they don't interleave with the Fibonacci spirals, so they look good on each side, on laptop and desktop".

@@ -1249,7 +1249,8 @@ const fibWide = fibSvg(1600, 1000, 'xMidYMid', {
     galaxy: { arms2: 5, turn2: 0.6, stars: 600, stars2: 260, width: 0.05, op: 0.95, fall: 1500, rMax: 1150, sky: 140, bulge: 125, haze: 0.04 },
     // hidden constellations (star-chart pictures) and the name written in stars
     // real constellations, one in each free corner of each side, away from the arms and the text
-    constellations: [{ real: 'dipper', x: 290, y: 225, size: 250 }, { real: 'cassiopeia', x: 1105, y: 245, size: 210, rot: -8 },
+    // owner, 24.11: "e prea încărcat, scoate constelațiile" - off; the old list stays here to bring them back
+    constellationsOff: [{ real: 'dipper', x: 290, y: 225, size: 250 }, { real: 'cassiopeia', x: 1105, y: 245, size: 210, rot: -8 },
       { real: 'orion', x: 320, y: 918, size: 170 }, { real: 'cygnus', x: 1250, y: 930, size: 150, rot: 10 }],
     // small far-away galaxies in the free corners: { x, y, r, tilt, rot, arms, tint }
     universe: [{ x: 1350, y: 235, r: 110, tilt: 0.45, rot: -25 }, { x: 1495, y: 865, r: 85, tilt: 0.62, rot: 35, tint: '#bfe6ff' }, { x: 92, y: 640, r: 52, tilt: 0.55, rot: 70 }, { x: 1040, y: 935, r: 42, tilt: 0.38, rot: -12 }, { x: 1545, y: 520, r: 34, tilt: 0.75, rot: 15 },
@@ -1272,7 +1273,7 @@ const fibPhone = fibSvg(547, 1184, 'xMidYMin', {
   vortex: { cx: 273, cy: 592, arms: 3, r0: 7, extend: [60, 460],
     turn: 1.2, dim: 0.4, dust: { count: 700, c: 26, fall: 330 },
     galaxy: { arms2: 5, turn2: 0.6, stars: 430, stars2: 180, width: 0.05, op: 0.95, fall: 1100, rMax: 1050, sky: 90, bulge: 85, haze: 0.04 },
-    constellations: [{ real: 'dipper', x: 440, y: 286, size: 150, star: 1.7, line: 0.32 }, { real: 'orion', x: 478, y: 548, size: 110, star: 1.7, line: 0.32 }, { real: 'cassiopeia', x: 382, y: 768, size: 150, star: 1.7, line: 0.32 }],
+    constellationsOff: [{ real: 'dipper', x: 440, y: 286, size: 150, star: 1.7, line: 0.32 }, { real: 'orion', x: 478, y: 548, size: 110, star: 1.7, line: 0.32 }, { real: 'cassiopeia', x: 382, y: 768, size: 150, star: 1.7, line: 0.32 }],
     universe: [{ x: 455, y: 250, r: 58, tilt: 0.5, rot: -20 }, { x: 440, y: 762, r: 36, tilt: 0.6, rot: 30, tint: '#bfe6ff' }, { x: 80, y: 205, r: 28, tilt: 0.65, rot: 60 },
       { x: 480, y: 715, r: 16, tilt: 0.55, rot: 35 }, { x: 150, y: 1300, r: 42, tilt: 0.5, rot: 20 }, { x: 420, y: 1450, r: 34, tilt: 0.6, rot: -40, tint: '#bfe6ff' }, { x: 240, y: 1600, r: 26, tilt: 0.45, rot: 70 }],
     // phone (owner, 24.11 cleanup): at most one ball per arm within a quarter turn, so every trail stays whole
