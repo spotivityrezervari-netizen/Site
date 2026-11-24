@@ -3,6 +3,15 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-24 (52): The same constellations on desktop and phone, calmer (done by Claude, at the owner's request)
+
+Owner: "on phone and desktop the constellations are not the same, please make them roughly the same, keep the proportions and whatever is needed to work well, and work more on the constellations so they don't load the screen too much and are nicer".
+
+- One set on both: "DO IT NOW", "GAME ON", soccer ball, tennis ball, basketball, cup, with the same proportions between them, each in a free spot of its screen. Phone positions: GAME ON right of the title, tennis right of the paragraph, soccer right of the button, cup right of the link, DO IT NOW between the link and the steps, basketball between the steps and the gallery.
+- Less busy on desktop: racket, hoop and volleyball constellations removed (shapes kept in the generator).
+- Calmer style: sparkle crosses rarer (about 1 in 6 on pictures, 1 in 17 on letters) and finer, lines a little softer (opacity .38, width 1.1), halo narrower.
+- Picture size: wide 345 KB, phone 220 KB; `design-background.css` 606 KB (165 KB gzipped). Restore point unchanged: tag `design-before-constellations`. Static. `design-background.css?v=53`; SEO pages regenerated.
+
 ## 2026-11-24 (51): Constellations: quotes instead of SPOTIVITY, ball constellations, more visible (done by Claude, at the owner's request)
 
 Owner: "work a bit more on these constellations, they don't show very well; I don't really like that spotivity; put some quotes, 'do it now' things like that, in constellations, but make them really beautiful; add a ball constellation here and there".

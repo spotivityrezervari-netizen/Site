@@ -1184,11 +1184,11 @@ function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0
       const k = rand(); const r = (c.star || 2.2) * (0.75 + 0.5 * k);
       st += `<circle cx='${f(x)}' cy='${f(y)}' r='${f(r * (c.text ? 3.2 : 4.5))}' fill='url(#cnGlow)'/><circle cx='${f(x)}' cy='${f(y)}' r='${f(r)}' fill='#f4fffb' fill-opacity='${f((0.8 + 0.2 * k) * 100) / 100}'/>`;
       // about one star in four sparkles: a thin four-pointed cross of light
-      if (k > (c.text ? 0.93 : 0.72)) { const L = r * 4.2;   // text: only a rare sparkle, so the letters read clearly
-        st += `<path d='M${f(x - L)} ${f(y)}H${f(x + L)}M${f(x)} ${f(y - L)}V${f(y + L)}' stroke='#e8fff7' stroke-opacity='.55' stroke-width='${f(Math.max(0.6, r * 0.32))}' stroke-linecap='round'/>`; }
+      if (k > (c.text ? 0.94 : 0.84)) { const L = r * 3.6;   // text: only a rare sparkle, so the letters read clearly
+        st += `<path d='M${f(x - L)} ${f(y)}H${f(x + L)}M${f(x)} ${f(y - L)}V${f(y + L)}' stroke='#e8fff7' stroke-opacity='.45' stroke-width='${f(Math.max(0.5, r * 0.26))}' stroke-linecap='round'/>`; }
     }
     // a faint halo along the lines, then the fine line itself
-    constSvg += `<path d='${d}' fill='none' stroke='#4fe0b6' stroke-opacity='.1' stroke-width='${f((c.lw ?? 1.2) * 5)}' stroke-linecap='round' stroke-linejoin='round'/><path d='${d}' fill='none' stroke='#b5ffe8' stroke-opacity='${c.line ?? 0.45}' stroke-width='${c.lw ?? 1.2}' stroke-linecap='round' stroke-linejoin='round'/>${st}`;
+    constSvg += `<path d='${d}' fill='none' stroke='#4fe0b6' stroke-opacity='.08' stroke-width='${f((c.lw ?? 1.2) * 4)}' stroke-linecap='round' stroke-linejoin='round'/><path d='${d}' fill='none' stroke='#b5ffe8' stroke-opacity='${c.line ?? 0.38}' stroke-width='${c.lw ?? 1.1}' stroke-linecap='round' stroke-linejoin='round'/>${st}`;
   }
   if (constellations) defs += `<radialGradient id='cnGlow'><stop offset='0' stop-color='#d6fff2' stop-opacity='.55'/><stop offset='.3' stop-color='#8dffdc' stop-opacity='.16'/><stop offset='1' stop-color='#8dffdc' stop-opacity='0'/></radialGradient>`;
   // the flying balls (and a few props). Owner, 24.11: "unele efecte se suprapun peste iconițe".
@@ -1275,9 +1275,11 @@ const fibWide = fibSvg(1600, 1000, 'xMidYMid', {
     turn: 0.4, dim: 0.4, dust: { count: 900, c: 30, fall: 420 },
     galaxy: { arms2: 5, turn2: 0.6, stars: 600, stars2: 260, width: 0.05, op: 0.95, fall: 1500, rMax: 1150, sky: 140, bulge: 125, haze: 0.04 },
     // hidden constellations (star-chart pictures) and the name written in stars
-    constellations: [{ text: 'DO IT NOW', x: 425, y: 880, size: 46, star: 2.4 }, { text: 'GAME ON', x: 1085, y: 262, size: 28, star: 2 },
-      { shape: 'racket', x: 290, y: 228, size: 120, rot: -30 }, { shape: 'cup', x: 1512, y: 405, size: 92 }, { shape: 'hoop', x: 95, y: 828, size: 105, rot: -6 },
-      { shape: 'soccer', x: 1335, y: 765, size: 78, rot: 12, star: 2 }, { shape: 'tennis', x: 600, y: 205, size: 64, rot: -20, star: 1.9 }, { shape: 'basket', x: 1545, y: 610, size: 56, rot: 18, star: 1.8 }, { shape: 'volley', x: 820, y: 935, size: 58, rot: 8, star: 1.8 }],
+    // the same six on wide and phone (owner, 24.11: "să fie cât de cât la fel"), same proportions
+    // between them (quote 1 : quote 2 : balls : cup = 46 : 28 : 64-78 : 92), each in a free spot
+    constellations: [{ text: 'DO IT NOW', x: 425, y: 880, size: 46, star: 2.3 }, { text: 'GAME ON', x: 1085, y: 262, size: 28, star: 1.9 },
+      { shape: 'soccer', x: 1335, y: 765, size: 78, rot: 12, star: 2 }, { shape: 'tennis', x: 600, y: 205, size: 64, rot: -20, star: 1.9 },
+      { shape: 'basket', x: 1545, y: 610, size: 60, rot: 18, star: 1.8 }, { shape: 'cup', x: 1512, y: 405, size: 92, star: 2 }],
     // small far-away galaxies in the free corners: { x, y, r, tilt, rot, arms, tint }
     universe: [{ x: 1350, y: 235, r: 110, tilt: 0.45, rot: -25 }, { x: 1495, y: 865, r: 85, tilt: 0.62, rot: 35, tint: '#bfe6ff' }, { x: 92, y: 640, r: 52, tilt: 0.55, rot: 70 }, { x: 1040, y: 935, r: 42, tilt: 0.38, rot: -12 }, { x: 1545, y: 520, r: 34, tilt: 0.75, rot: 15 },
       // tiny ones scattered over the sky, and a few past the picture for taller screens
@@ -1299,7 +1301,9 @@ const fibPhone = fibSvg(547, 1184, 'xMidYMin', {
   vortex: { cx: 273, cy: 592, arms: 3, r0: 7, extend: [60, 460],
     turn: 1.2, dim: 0.4, dust: { count: 700, c: 26, fall: 330 },
     galaxy: { arms2: 5, turn2: 0.6, stars: 430, stars2: 180, width: 0.05, op: 0.95, fall: 1100, rMax: 1050, sky: 90, bulge: 85, haze: 0.04 },
-    constellations: [{ text: 'DO IT NOW', x: 375, y: 765, size: 30, star: 1.8, lw: 1 }, { shape: 'soccer', x: 470, y: 560, size: 62, rot: 10, star: 1.7, lw: 1 }],
+    constellations: [{ text: 'DO IT NOW', x: 375, y: 765, size: 30, star: 1.8, lw: 1 }, { text: 'GAME ON', x: 420, y: 300, size: 19, star: 1.5, lw: 0.9 },
+      { shape: 'soccer', x: 478, y: 548, size: 50, rot: 12, star: 1.6, lw: 1 }, { shape: 'tennis', x: 502, y: 398, size: 36, rot: -20, star: 1.5, lw: 0.9 },
+      { shape: 'basket', x: 470, y: 900, size: 36, rot: 18, star: 1.5, lw: 0.9 }, { shape: 'cup', x: 492, y: 682, size: 56, star: 1.6, lw: 0.9 }],
     universe: [{ x: 455, y: 250, r: 58, tilt: 0.5, rot: -20 }, { x: 440, y: 762, r: 36, tilt: 0.6, rot: 30, tint: '#bfe6ff' }, { x: 80, y: 205, r: 28, tilt: 0.65, rot: 60 },
       { x: 480, y: 715, r: 16, tilt: 0.55, rot: 35 }, { x: 150, y: 1300, r: 42, tilt: 0.5, rot: 20 }, { x: 420, y: 1450, r: 34, tilt: 0.6, rot: -40, tint: '#bfe6ff' }, { x: 240, y: 1600, r: 26, tilt: 0.45, rot: 70 }],
     // phone (owner, 24.11 cleanup): at most one ball per arm within a quarter turn, so every trail stays whole
