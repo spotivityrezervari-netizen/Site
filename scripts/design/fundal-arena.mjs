@@ -831,57 +831,82 @@ function fibonacci({ W, H, tiling, zones, items = [], chain, glows, sparkles, ca
   return { defs, body };
 }
 // One composition per screen shape, glued like the content (wide: centred; phone: from the top).
-// ---- "Floarea-soarelui" (owner, 24.11: "să punem mai multe șiruri?"): Fibonacci as it grows in
-// nature. Seed n sits at n x 137.5° (the golden angle), at radius c·√n (Vogel's model). The eye
-// then sees several spirals at once, in both directions: 13, 21 and 34 of them (Fibonacci
-// numbers). The seeds are small points of light, joined faintly along the 21 and 34 spirals;
-// the seeds whose number is a Fibonacci number (5, 8, 13, 21, 34, 55, 89, 144, 233) carry the
-// icons, larger outwards. Over the text or the photo everything is drawn faint.
+// ---- "Floarea-soarelui" (owner, 24.11): Fibonacci as it grows in nature. Seed n sits at
+// n x 137.5° (the golden angle), at radius c·√n (Vogel's model). Owner, 24.11 later: "să nu fie
+// trasate liniile spiralei, ca la floarea-soarelui, cât mai natural". So no line is drawn: the
+// seeds are packed tightly enough to almost touch, as in a real sunflower head, and the eye finds
+// the 21, 34 and 55 spirals by itself in the packing. Each seed is a small oval pointing away
+// from the centre; the florets in the middle are smaller and brighter (the young centre of the
+// flower), the seeds reach full size quickly and fade towards the edge of the screen. A tiny
+// seeded jitter in place and size keeps it from looking machine-made. Each icon takes the place
+// of a seed (the seeds under it are left out); the icon places are the old ones (three of the
+// 21 spirals of a wider sunflower, c = iconC). Over the text or the photo everything is faint.
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
-function sunflower({ W, H, cx, cy, c, count, size0, grow, kinds, dim, zones, glows, label, arms: armCount = 21, iconArms = [3, 13], iconEvery = 2 }) {
+function sunflower({ W, H, cx, cy, c, rMax, margin = [200, 100], size0, grow, kinds, dim, seedDim = 0.3, zones, glows, label, iconC, iconCount, arms: armCount = 21, iconArms = [3, 13], iconEvery = 2 }) {
   let defs = FIB_BRIGHT ? fibBrightDefs : commonDefs; let atmo = '';
   glows.forEach((g, i) => { const gl = glow(`gl${i}`, ...g); defs += gl.defs; atmo += gl.svg(W, H); });
   defs += `<radialGradient id='trailHead'><stop offset='0' stop-color='#8dffdc' stop-opacity='.34'/><stop offset='1' stop-color='#8dffdc' stop-opacity='0'/></radialGradient>`;
-  const seed = (n) => { const a = n * GOLDEN_ANGLE - Math.PI / 2; const r = c * Math.sqrt(n); return [cx + r * Math.cos(a), cy + r * Math.sin(a), r]; };
+  // seeds: bright young centre, steady on the disc, fading out towards rMax
+  defs += `<radialGradient id='seedG' gradientUnits='userSpaceOnUse' cx='${cx}' cy='${cy}' r='${rMax}'><stop offset='0' stop-color='#d9fff0' stop-opacity='.55'/><stop offset='.08' stop-color='#a6ffe2' stop-opacity='.36'/><stop offset='.35' stop-color='#7dffd6' stop-opacity='.24'/><stop offset='.7' stop-color='#4fd9b2' stop-opacity='.14'/><stop offset='1' stop-color='#3cc39e' stop-opacity='0'/></radialGradient>`;
+  defs += `<radialGradient id='seedCore' gradientUnits='userSpaceOnUse' cx='${cx}' cy='${cy}' r='${c * 9}'><stop offset='0' stop-color='#8dffdc' stop-opacity='.22'/><stop offset='1' stop-color='#8dffdc' stop-opacity='0'/></radialGradient>`;
+  const inZone = (x, y, r) => zones.some(([a, b, e, d]) => x + r > a - 6 && x - r < e + 6 && y + r > b - 6 && y - r < d + 6);
   const covered = (x, y, r) => !fibFree(x, y, r, zones, W, H, 6);
-  const fib = new Set([5, 8, 13, 21, 34, 55, 89, 144, 233, 377]);
-  let arms = ''; let dots = ''; let faint = ''; let icons = '';
-  // the visible spirals: seed n joined to n+21 (21 arms one way) and n+34 (34 arms the other way)
-  for (let a = 1; a <= armCount; a++) {
-    const pts = []; for (let n = a; n <= count; n += armCount) pts.push(seed(n));
-    arms += polyline(pts.map(([x, y]) => [x, y]));
+  let rnd = 20261124;
+  const rand = () => { rnd = (rnd * 1664525 + 1013904223) % 4294967296; return rnd / 4294967296; };
+  const count = Math.ceil((rMax / c) ** 2);
+  const seeds = [];
+  for (let n = 1; n <= count; n++) {
+    const j1 = rand(); const j2 = rand(); const j3 = rand();
+    const a = n * GOLDEN_ANGLE - Math.PI / 2 + (j1 - 0.5) * 0.5 / Math.sqrt(n + 4);
+    const r = c * Math.sqrt(n) * (1 + (j2 - 0.5) * 0.03);
+    seeds.push({ n, a, r, x: cx + r * Math.cos(a), y: cy + r * Math.sin(a), s: (0.9 + j3 * 0.2) * Math.min(1, 0.5 + 0.5 * Math.sqrt(n / 60)) });
   }
-  // which three arms carry the icons: the rotation that leaves the most icons clear of the content
+  const old = (n) => { const a = n * GOLDEN_ANGLE - Math.PI / 2; const r = iconC * Math.sqrt(n); return [cx + r * Math.cos(a), cy + r * Math.sin(a), r]; };
   const armsAt = (a) => [a, a + 7, a + 14].map((v) => v % armCount);
-  const clearFor = (set) => { let n2 = 0; for (let n = armCount + 1; n <= count; n++) { if (!set.includes(n % armCount) || Math.floor(n / armCount) % iconEvery) continue; const [x, y, r] = seed(n); const rad = (size0 + r * grow) / 2; if (x - rad >= 8 && y - rad >= 8 && x + rad <= W - 8 && y + rad <= H - 8 && !covered(x, y, rad)) n2++; } return n2; };
+  const isIcon = (set, n) => set.includes(n % armCount) && Math.floor(n / armCount) % iconEvery === 0 && n > armCount;
+  const fits = (x, y, rad) => x - rad >= 8 && y - rad >= 8 && x + rad <= W - 8 && y + rad <= H - 8;
+  const clearFor = (set) => { let n2 = 0; for (let n = 1; n <= iconCount; n++) { if (!isIcon(set, n)) continue; const [x, y, r] = old(n); const rad = (size0 + r * grow) / 2; if (fits(x, y, rad) && !covered(x, y, rad)) n2++; } return n2; };
   if (iconArms === 'auto') { let best = 0; for (let a = 0; a < 7; a++) if (clearFor(armsAt(a)) > clearFor(armsAt(best))) best = a; iconArms = armsAt(best); }
   console.log(`fundal-arena (${label}): icons on arms ${iconArms.join(', ')}: ${clearFor(iconArms)} clear`);
-  let k = 0;
-  for (let n = 1; n <= count; n++) {
-    const [x, y, r] = seed(n);
-    if (x < -40 || y < -40 || x > W + 40 || y > H + 40) continue;
-    const onArm = iconArms.includes(n % armCount) && Math.floor(n / armCount) % iconEvery === 0 && n > armCount;
-    if (onArm) {
-      const kind = kinds[k++ % kinds.length]; const size = size0 + r * grow; const rad = size / 2;   // grows with the distance from the centre, like the seeds
-      if (x - rad < 8 || y - rad < 8 || x + rad > W - 8 || y + rad > H - 8) continue;
-      let svg = `<circle cx='${f(x)}' cy='${f(y)}' r='${f(rad * 1.45)}' fill='url(#trailHead)'/>`;
-      if (seams[kind]) {
-        const pose = BALL_POSE[kind][0];
-        svg += fibBrighten(ball([kind, x, y, rad, pose[0] + n * 7, pose[1], pose[2]])) + `<circle cx='${f(x)}' cy='${f(y)}' r='${f(rad + 1.5)}' fill='none' stroke='#b5ffe8' stroke-opacity='.35' stroke-width='${f(Math.max(1, rad * 0.04))}'/>`;
-      } else {
-        const extra = { whistle: [-18, 'M30 -30C44 -70 10 -100 30 -140'], stopwatch: [12, 40] }[kind] || [0];
-        svg += fibBrighten(prop([kind, x, y, size, ...extra]));
-      }
-      icons += covered(x, y, rad) ? `<g opacity='${dim}'>${svg}</g>` : svg;
-    } else {
-      const d = `<circle cx='${f(x)}' cy='${f(y)}' r='${f(1.2 + r / 260)}'/>`;
-      if (covered(x, y, 3)) faint += d; else dots += d;
-    }
+  const placed = [];
+  for (let n = 1; n <= iconCount; n++) {
+    if (!isIcon(iconArms, n)) continue;
+    const [ox, oy, r] = old(n); const size = size0 + r * grow; const rad = size / 2;   // grows with the distance from the centre
+    if (!fits(ox, oy, rad)) continue;
+    let near = seeds[0]; for (const sd of seeds) if ((sd.x - ox) ** 2 + (sd.y - oy) ** 2 < (near.x - ox) ** 2 + (near.y - oy) ** 2) near = sd;
+    placed.push({ n, x: near.x, y: near.y, size, rad });
   }
-  console.log(`fundal-arena (${label}): sunflower with ${count} seeds, ${k} icons`);
-  const body = `<rect width='${W}' height='${H}' fill='${BASE}'/>${atmo}`
-    + `<path d='${arms}' fill='none' stroke='#7dffd6' stroke-opacity='.16' stroke-width='1.3' stroke-linecap='round'/>`
-    + `<g fill='#8dffdc'><g fill-opacity='.55'>${dots}</g><g fill-opacity='.14'>${faint}</g></g>${icons}`;
+  let icons = ''; let k = 0;
+  for (const { n, x, y, size, rad } of placed) {
+    const kind = kinds[k++ % kinds.length];
+    let svg = `<circle cx='${f(x)}' cy='${f(y)}' r='${f(rad * 1.45)}' fill='url(#trailHead)'/>`;
+    if (seams[kind]) {
+      const pose = BALL_POSE[kind][0];
+      svg += fibBrighten(ball([kind, x, y, rad, pose[0] + n * 7, pose[1], pose[2]])) + `<circle cx='${f(x)}' cy='${f(y)}' r='${f(rad + 1.5)}' fill='none' stroke='#b5ffe8' stroke-opacity='.35' stroke-width='${f(Math.max(1, rad * 0.04))}'/>`;
+    } else {
+      const extra = { whistle: [-18, 'M30 -30C44 -70 10 -100 30 -140'], stopwatch: [12, 40] }[kind] || [0];
+      svg += fibBrighten(prop([kind, x, y, size, ...extra]));
+    }
+    icons += covered(x, y, rad) ? `<g opacity='${dim}'>${svg}</g>` : svg;
+  }
+  // the seeds: one short stroke each with round ends (an oval, long axis along the radius). Seeds
+  // of about the same width share one path, so the picture stays small (a few bytes per seed).
+  const d0 = c * Math.sqrt((2 * Math.PI) / Math.sqrt(3));   // distance between neighbours at this density
+  const g = (v) => Math.round(v);
+  const clear = {}; const faint = {};
+  for (const sd of seeds) {
+    const { x, y, a, s } = sd;
+    if (x < -margin[0] || y < -margin[1] || x > W + margin[0] || y > H + margin[1]) continue;
+    if (placed.some((p) => (p.x - x) ** 2 + (p.y - y) ** 2 < (p.rad + d0 * 0.35) ** 2)) continue;
+    const w = Math.round(d0 * 0.6 * s * 2) / 2; const len = d0 * 0.8 * s - w;   // stroke width = the oval's short axis
+    const ux = Math.cos(a) * len / 2; const uy = Math.sin(a) * len / 2;
+    const seg = `M${g(x - ux)} ${g(y - uy)}l${g(2 * ux)} ${g(2 * uy)}`;
+    const box = inZone(x, y, d0 * 0.4 * s) ? faint : clear; box[w] = (box[w] || '') + seg;
+  }
+  const paths = (box) => Object.entries(box).map(([w, d]) => `<path d='${d}' stroke-width='${w}'/>`).join('');
+  console.log(`fundal-arena (${label}): sunflower with ${count} seeds (c ${c}), ${k} icons`);
+  const body = `<rect width='${W}' height='${H}' fill='${BASE}'/>${atmo}<circle cx='${cx}' cy='${cy}' r='${c * 9}' fill='url(#seedCore)'/>`
+    + `<g fill='none' stroke='url(#seedG)' stroke-linecap='round'>${paths(clear)}<g opacity='${seedDim}'>${paths(faint)}</g></g>${icons}`;
   return { defs, body };
 }
 function fibSvg(W, H, align, comp) {
@@ -895,7 +920,7 @@ const FIB_ZONES_WIDE = [[0, 0, 1600, 150], [169, 321, 485, 381], [169, 399, 608,
 const FIB_ZONES_PHONE = [[0, 0, 547, 222], [34, 275, 290, 324], [34, 338, 444, 409], [34, 434, 513, 552], [34, 586, 326, 664], [34, 684, 213, 747], [34, 786, 513, 876], [34, 921, 513, 1184]];
 const fibWide = fibSvg(1600, 1000, 'xMidYMid', {
   label: 'wide', zones: FIB_ZONES_WIDE,
-  sunflower: { cx: 800, cy: 540, c: 52, count: 377, size0: 22, grow: 0.075, iconArms: [2, 9, 16], iconEvery: 2, kinds: ['tennis', 'whistle', 'stopwatch', 'volleyball', 'basketball', 'soccer'], dim: 0.4 },
+  sunflower: { cx: 800, cy: 540, c: 19, rMax: 980, iconC: 52, iconCount: 377, size0: 22, grow: 0.075, iconArms: [2, 9, 16], iconEvery: 2, kinds: ['tennis', 'whistle', 'stopwatch', 'volleyball', 'basketball', 'soccer'], dim: 0.4 },
   tiling: { n: 14, flipX: false, flipY: true, fit: { cx: 800, cy: 540, w: 1080 } },
   glows: [[815, 880, 520, 380, '#11936f', 0.16], [300, -60, 900, 600, '#0e8064', 0.14], [1500, 980, 600, 420, '#0a5e4b', 0.1]],
   sparkles: 40, calm: [470, 520, 380, 300],
@@ -904,7 +929,7 @@ const fibWide = fibSvg(1600, 1000, 'xMidYMid', {
 });
 const fibPhone = fibSvg(547, 1184, 'xMidYMin', {
   label: 'phone', zones: FIB_ZONES_PHONE,
-  sunflower: { cx: 273, cy: 600, c: 43, count: 233, size0: 18, grow: 0.075, iconArms: 'auto', iconEvery: 1, kinds: ['tennis', 'whistle', 'stopwatch', 'volleyball', 'basketball', 'soccer'], dim: 0.4 },
+  sunflower: { cx: 273, cy: 600, c: 15, rMax: 760, margin: [60, 60], iconC: 43, iconCount: 233, size0: 18, grow: 0.075, iconArms: 'auto', iconEvery: 1, kinds: ['tennis', 'whistle', 'stopwatch', 'volleyball', 'basketball', 'soccer'], dim: 0.4 },
   tiling: { n: 15, flipX: true, fit: { cx: 273, cy: 600, w: 500 } },
   glows: [[420, 715, 340, 300, '#11936f', 0.16], [500, -60, 520, 520, '#0e8064', 0.16]],
   sparkles: 26, calm: [250, 520, 300, 330],

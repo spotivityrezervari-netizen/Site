@@ -3,6 +3,15 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-24 (35): Sunflower without drawn spirals, packed like a real flower head (done by Claude, at the owner's request)
+
+Owner: "I want it to be like in nature, the spiral lines should not be drawn, like the sunflower, as natural as possible".
+
+- `sunflower()` rewritten: no arm lines any more. The seeds are packed densely (wide c 19, phone c 15, out to rMax 980 / 760), so they almost touch and the 21/34/55 spirals appear by themselves, as in a real sunflower head.
+- Each seed is a small oval pointing away from the centre (a short stroke with round ends, grouped by width so the picture stays small: wide 71 KB, phone 65 KB). The centre seeds are smaller and brighter, with a soft glow; the seeds fade towards the edges (gradient `seedG`). A small seeded jitter in position and size makes it look grown, not drawn.
+- The icons keep their old places (three of the 21 spirals of the wider sunflower, `iconC`), each moved onto the nearest seed; the seeds under an icon are left out. Over the text or the photo the seeds are drawn at 30% (`seedDim`), the icons at 40%.
+- `design-background.css?v=36`; SEO pages regenerated.
+
 ## 2026-11-24 (34): "Sunflower" background: many Fibonacci spirals at once (done by Claude, at the owner's request)
 
 Owner: "it is not really centred", then "should we put several sequences? how do you think it looks better".
