@@ -3,6 +3,16 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-24 (43): Golden vortex: lit from the centre, one green accent, cleanup (done by Claude, at the owner's request)
+
+Owner: "what other ideas do you have, to make it look even better?", then "I don't want the mouse effect, I want everything static". Done: cleanup, light from the centre, one accent (static only, no animation).
+
+- Light from the centre: every ball is turned so that its highlight (at about -124° in the ball drawing) faces the centre of the vortex; the side away from the centre falls into shadow. The props (whistle) are not turned.
+- One accent: the big top ball (wide 0:7, phone 0:6.5) has a thin outline and a soft glow in the green of the "Rezervă un teren" button (#22c55e, `accent: true` in the ball's options; gradient `vxAccent`).
+- Cleanup, wide: removed the ball that seemed to come out from under the photo (0:8) and the small one on the left edge whose trail ran beside the text (1:8.5). Wide now 9 icons.
+- Cleanup, phone: at most one ball per arm within a quarter turn, so every trail is whole (removed 2:5 volleyball and 1:6.5 basketball; the whistle at 2:5.5 is now a basketball). Phone now 7 icons.
+- Picture size: wide 149 KB, phone 136 KB. `design-background.css?v=44`; SEO pages regenerated.
+
 ## 2026-11-24 (42): Golden vortex: full trail for the big top ball, comet sparks (done by Claude, at the owner's request)
 
 Owner: "still not good, look at the tennis ball on desktop, it seems rather empty behind it; how do you think we could make it nicer?".

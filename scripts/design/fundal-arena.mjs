@@ -968,6 +968,7 @@ function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0
   defs += `<radialGradient id='trailHead'><stop offset='0' stop-color='#8dffdc' stop-opacity='.34'/><stop offset='1' stop-color='#8dffdc' stop-opacity='0'/></radialGradient>`;
   defs += `<radialGradient id='vxCore' gradientUnits='userSpaceOnUse' cx='${cx}' cy='${cy}' r='220'><stop offset='0' stop-color='#9fffe2' stop-opacity='.2'/><stop offset='.4' stop-color='#4fe0b6' stop-opacity='.07'/><stop offset='1' stop-color='#4fe0b6' stop-opacity='0'/></radialGradient>`;
   defs += `<radialGradient id='vxShade'><stop offset='.78' stop-color='${BASE}' stop-opacity='.55'/><stop offset='1' stop-color='${BASE}' stop-opacity='0'/></radialGradient>`;
+  defs += `<radialGradient id='vxAccent'><stop offset='0' stop-color='#22c55e' stop-opacity='.34'/><stop offset='.55' stop-color='#22c55e' stop-opacity='.1'/><stop offset='1' stop-color='#22c55e' stop-opacity='0'/></radialGradient>`;
   // th = angle travelled along the arm (radians); r = r0·φ^(th / quarter turn)
   const pt = (arm, th) => {
     const a = th + turn + (arm * 2 * Math.PI) / arms; const r = r0 * Math.exp(kk * th);
@@ -1010,7 +1011,7 @@ function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0
   // wider curve, like a ball with spin), so it can pass outside the ball in front of it
   const items = balls.map(([arm, q, kind, scale = 0.17, opt = {}]) => {
     const th = (q * Math.PI) / 2; const p = pt(arm, th);
-    return { arm, q, kind, th, p, rad: Math.max(8, Math.min(70, p.r * scale)), drift: opt.drift || 0, span: opt.span };
+    return { arm, q, kind, th, p, rad: Math.max(8, Math.min(70, p.r * scale)), drift: opt.drift || 0, span: opt.span, accent: !!opt.accent };
   });
   const clearOf = (self, x, y) => items.every((o) => o === self || Math.hypot(o.p.x - x, o.p.y - y) > o.rad * 1.5 + self.rad * 0.5 + 6);
   let glows2 = ''; let trails = ''; let icons = ''; let i = 0;
@@ -1026,7 +1027,7 @@ function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0
   for (const it of [...items].sort((a, b) => a.rad - b.rad)) {
     const { arm, q, kind, th, p, rad, drift } = it;
     const faint = inZone(p.x, p.y, rad); const wrap = (s) => (faint ? `<g opacity='${dim}'>${s}</g>` : s);
-    glows2 += wrap(`<circle cx='${f(p.x)}' cy='${f(p.y)}' r='${f(rad * 1.6)}' fill='url(#trailHead)'/>`);
+    glows2 += wrap(`<circle cx='${f(p.x)}' cy='${f(p.y)}' r='${f(rad * (it.accent ? 1.9 : 1.6))}' fill='url(#${it.accent ? 'vxAccent' : 'trailHead'})'/>`);
     let ic = `<circle cx='${f(p.x)}' cy='${f(p.y)}' r='${f(rad * 1.12)}' fill='url(#vxShade)'/>`;
     if (seams[kind]) {
       // walk back from the ball along the arm until the trail would touch another icon
@@ -1046,8 +1047,12 @@ function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0
         + `<path d='${polyline(pts.map((pp) => [pp.x, pp.y]))}' fill='none' stroke='url(#${id})' stroke-width='${f(Math.max(0.8, rad * 0.12))}' stroke-linecap='round'/>`
         + sparks(pts, rad));
       const pose = BALL_POSE[kind][0];
-      ic += fibBrighten(ball([kind, p.x, p.y, rad, pose[0] + q * 40, pose[1], pose[2]]))
-        + `<circle cx='${f(p.x)}' cy='${f(p.y)}' r='${f(rad + 1.5)}' fill='none' stroke='#b5ffe8' stroke-opacity='.35' stroke-width='${f(Math.max(1, rad * 0.04))}'/>`;
+      // lit from the centre of the vortex (owner, 24.11: "să arate și mai bine"): the ball's
+      // highlight sits at about -124° in its own drawing, so the whole ball is turned until the
+      // highlight faces the centre; the side away from the centre falls into shadow
+      const toCentre = (Math.atan2(cy - p.y, cx - p.x) * 180) / Math.PI;
+      ic += `<g transform='rotate(${Math.round(toCentre + 124)} ${f(p.x)} ${f(p.y)})'>${fibBrighten(ball([kind, p.x, p.y, rad, pose[0] + q * 40, pose[1], pose[2]]))}</g>`
+        + `<circle cx='${f(p.x)}' cy='${f(p.y)}' r='${f(rad + 1.5)}' fill='none' stroke='${it.accent ? '#22c55e' : '#b5ffe8'}' stroke-opacity='${it.accent ? '.85' : '.35'}' stroke-width='${f(Math.max(1, rad * (it.accent ? 0.05 : 0.04)))}'/>`;
     } else {
       const extra = { whistle: [-18, 'M30 -30C44 -70 10 -100 30 -140'], stopwatch: [12, 40] }[kind] || [0];
       ic += fibBrighten(prop([kind, p.x, p.y, rad * 2, ...extra]));
@@ -1078,9 +1083,9 @@ const FIB_ZONES_PHONE = [[0, 0, 547, 222], [34, 275, 290, 324], [34, 338, 444, 4
 const fibWide = fibSvg(1600, 1000, 'xMidYMid', {
   // golden vortex (owner, 24.11): [arm, quarter turns from the centre, kind, size factor]
   vortex: { cx: 800, cy: 540, arms: 3, r0: 12, turn: 0.4, dim: 0.4, dust: { count: 900, c: 30, fall: 420 },
-    balls: [[0, 5.5, 'tennis'], [1, 5, 'volleyball'], [2, 6, 'basketball'], [0, 7, 'soccer', 0.17, { span: 1.6 }], [2, 7.5, 'whistle', 0.09], [1, 8, 'soccer', 0.12],
+    balls: [[0, 5.5, 'tennis'], [1, 5, 'volleyball'], [2, 6, 'basketball'], [0, 7, 'soccer', 0.17, { span: 1.6, accent: true }], [2, 7.5, 'whistle', 0.09], [1, 8, 'soccer', 0.12],
       // owner: "încă câteva iconițe și să nu se termine așa brusc": small ones born at the centre, more towards the edges
-      [1, 4, 'tennis'], [2, 4.5, 'soccer'], [0, 4.5, 'volleyball'], [0, 8, 'tennis', 0.055], [1, 8.5, 'tennis', 0.045]] },
+      [1, 4, 'tennis'], [2, 4.5, 'soccer'], [0, 4.5, 'volleyball']] },
   label: 'wide', zones: FIB_ZONES_WIDE,
   sunflower: { cx: 800, cy: 540, c: 32, rMax: 980, iconSeeds: true, iconFill: 0.8, iconOp: [0.95, 0.75, 0.42, 0], goldenFade: { r0: 60, low: 0.25 }, iconC: 52, iconCount: 377, size0: 22, grow: 0.075, iconArms: [2, 9, 16], iconEvery: 2, kinds: ['tennis', 'whistle', 'stopwatch', 'volleyball', 'basketball', 'soccer'], dim: 0.4 },
   tiling: { n: 14, flipX: false, flipY: true, fit: { cx: 800, cy: 540, w: 1080 } },
@@ -1091,7 +1096,8 @@ const fibWide = fibSvg(1600, 1000, 'xMidYMid', {
 });
 const fibPhone = fibSvg(547, 1184, 'xMidYMin', {
   vortex: { cx: 273, cy: 600, arms: 3, r0: 9, turn: 1.2, dim: 0.4, dust: { count: 700, c: 26, fall: 330 },
-    balls: [[0, 6.5, 'soccer'], [1, 6, 'tennis'], [2, 5, 'volleyball'], [1, 6.5, 'basketball', 0.14], [2, 5.5, 'whistle', 0.12],
+    // phone (owner, 24.11 cleanup): at most one ball per arm within a quarter turn, so every trail stays whole
+    balls: [[0, 6.5, 'soccer', 0.17, { accent: true }], [1, 6, 'tennis'], [2, 5.5, 'basketball', 0.15],
       [2, 4.5, 'tennis'], [0, 4, 'soccer'], [1, 4.5, 'volleyball'], [1, 7, 'soccer', 0.08]] },
   label: 'phone', zones: FIB_ZONES_PHONE,
   sunflower: { cx: 273, cy: 600, c: 28, rMax: 760, iconSeeds: true, iconFill: 0.8, iconOp: [1, 0.9, 0.55, 0], goldenFade: { r0: 45, low: 0.25 }, margin: [60, 60], iconC: 43, iconCount: 233, size0: 18, grow: 0.075, iconArms: 'auto', iconEvery: 1, kinds: ['tennis', 'whistle', 'stopwatch', 'volleyball', 'basketball', 'soccer'], dim: 0.4 },
