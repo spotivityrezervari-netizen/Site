@@ -1104,9 +1104,9 @@ function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0
     let mTrails = ''; let mBalls = '';
     const cr = Math.cos((rot * Math.PI) / 180); const sr = Math.sin((rot * Math.PI) / 180);
     const proj = (x, y) => [ux + x * cr - y * tilt * sr, uy + x * sr + y * tilt * cr];   // galaxy plane -> screen
-    for (const [arm, q, kind, scale = 0.17, opt = {}] of (ur >= 40 ? balls : [])) {
+    for (const [arm, q, kind, scale = 0.17, opt = {}] of balls) {   // owner: every small galaxy gets the big one's balls, 1:1 at its own scale
       const th = (q * Math.PI) / 2; const [bx, by, br] = at(arm, main, 0, th); if (br > ur * 1.02) continue;
-      const rad = Math.max(1.8, br * scale); mini.add(kind);
+      const rad = br * scale; if (rad < 0.8) continue; mini.add(kind);   // true scale; balls under ~1 px would not show
       if (seams[kind]) {
         const sp = Math.min(1.2, opt.span || span * Math.min(1, 0.6 + q / 12)); const N = 10;
         const pts = Array.from({ length: N + 1 }, (_, i2) => at(arm, main, 0, th - sp + (sp * i2) / N));

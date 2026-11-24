@@ -3,6 +3,15 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-24 (49): Every small galaxy carries the balls, true 1:1 scale (done by Claude, at the owner's request)
+
+Owner: "you did it fairly well, but I want the small galaxies to have icons too; take the big one and make it 1:1 but at the small, current scale".
+
+- The ball sequence of the big galaxy is now drawn in every small galaxy, the tiny ones too (before: only r >= 40).
+- True 1:1 scale: a mini ball's radius is exactly its distance from the centre × the same size factor as on the big galaxy (before: at least 1.8 units, which made the small balls too big). Balls that would be under ~1 px (radius < 0.8) are skipped.
+- Picture size: wide 311 KB, phone 189 KB; `design-background.css` 534 KB (153 KB gzipped).
+- Restore point unchanged: tag `design-before-universe`. Static. `design-background.css?v=50`; SEO pages regenerated.
+
 ## 2026-11-24 (48): No hard end at the bottom; main galaxy centred and smaller; more tiny galaxies (done by Claude, at the owner's request)
 
 Owner: "the background stops abruptly at the bottom, can't we lengthen it a bit; centre the main sequence in the middle, make it a little smaller and add a few more tiny sequences".
