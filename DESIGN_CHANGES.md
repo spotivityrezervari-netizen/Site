@@ -3,6 +3,17 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-24 (48): No hard end at the bottom; main galaxy centred and smaller; more tiny galaxies (done by Claude, at the owner's request)
+
+Owner: "the background stops abruptly at the bottom, can't we lengthen it a bit; centre the main sequence in the middle, make it a little smaller and add a few more tiny sequences".
+
+- Bottom: the eased fade of the background layer (`.home-shell::after`, top gradient) now covers only the last 7% of the screen (was 16%), so the galaxy runs on to the bottom; the very bottom still matches the browser bar.
+- `extend: [top, bottom]` in `vortex()` (wide 300/320, phone 60/460): the base colour, the glows, the stars and the loose sky stars are drawn past the picture, so taller screens show no edge (there was a visible horizontal line at the end of the picture on e.g. 1280×1024).
+- Main galaxy centred and smaller: wide centre 800,500 (was 800,540), r0 9 (was 12); phone 273,592, r0 7 (was 9). Bulge smaller to match. The soccer ball that landed on the steps moved from 1:8 to 1:7.5.
+- More tiny galaxies (no balls under r 40, no haze under r 40): wide 7 on the sky + 4 past the picture (top/bottom, for tall screens); phone 1 + 3 below the picture.
+- Smaller encoding: star points are written as sorted relative moves (`dotPath`), arm haze outlines are coarser. Picture size: wide 286 KB, phone 178 KB; `design-background.css` 497 KB (143 KB gzipped).
+- Restore point for the whole universe step unchanged: tag `design-before-universe`. Static. `design-background.css?v=49`; SEO pages regenerated.
+
 ## 2026-11-24 (47): The small galaxies carry the balls of the big one, 1:1 in miniature (done by Claude, at the owner's request)
 
 Owner: "can't you put some icons too? take the big sequence 1:1 and transpose it really small".

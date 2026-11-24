@@ -21,6 +21,14 @@ const f = (n) => Number(n.toFixed(1));
 const P = (x, y) => `${f(x)} ${f(y)}`;
 const polyline = (pts) => (pts.length < 2 ? '' : `M${pts.map(([x, y]) => P(x, y)).join('L')}`);
 const poly = (pts) => `${polyline(pts)}Z`;
+// Many star points as one path of zero-length round-capped strokes. The points are sorted in
+// bands of 40 units and written as relative moves, which keeps the numbers short (smaller file).
+const dotPath = (pts) => {
+  const s = [...pts].sort((a, b) => Math.floor(a[1] / 40) - Math.floor(b[1] / 40) || a[0] - b[0]);
+  let d = ''; let px = 0; let py = 0;
+  s.forEach(([x, y], i) => { d += i ? `m${x - px} ${y - py}h0` : `M${x} ${y}h0`; px = x; py = y; });
+  return d.replace(/ -/g, '-');
+};
 
 // ---------------------------------------------------------------- spheres (balls)
 const norm = ([x, y, z]) => { const l = Math.hypot(x, y, z); return [x / l, y / l, z / l]; };
@@ -961,10 +969,11 @@ function sunflower({ W, H, cx, cy, c, rMax, margin = [200, 100], size0, grow, ki
 // light trail behind it, so the picture moves. Behind them, the arms are only a soft haze (no
 // line), and a fine dust of light lies around the centre the way sunflower seeds do (golden
 // angle, Vogel). Balls further out are bigger; a ball over the text or the photo is faint.
-function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0, balls, dim = 0.4, span = 1.15, haze = 0.022, dust, galaxy = null, universe = null }) {
+function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0, balls, dim = 0.4, span = 1.15, haze = 0.022, dust, galaxy = null, universe = null, extend = [80, 80] }) {
   const PHI = (1 + Math.sqrt(5)) / 2; const kk = Math.log(PHI) / (Math.PI / 2);
   let defs = FIB_BRIGHT ? fibBrightDefs : commonDefs; let atmo = '';
-  glows.forEach((g, i) => { const gl = glow(`gl${i}`, ...g); defs += gl.defs; atmo += gl.svg(W, H); });
+  const ext = `x='-300' y='${-extend[0]}' width='${W + 600}' height='${H + extend[0] + extend[1]}'`;   // the base and the glows cover the extended area too (no edge on tall screens)
+  glows.forEach((g, i) => { const gl = glow(`gl${i}`, ...g); defs += gl.defs; atmo += `<rect ${ext} fill='url(#gl${i})'/>`; });
   defs += `<radialGradient id='trailHead'><stop offset='0' stop-color='#8dffdc' stop-opacity='.34'/><stop offset='1' stop-color='#8dffdc' stop-opacity='0'/></radialGradient>`;
   defs += `<radialGradient id='vxCore' gradientUnits='userSpaceOnUse' cx='${cx}' cy='${cy}' r='220'><stop offset='0' stop-color='#9fffe2' stop-opacity='.2'/><stop offset='.4' stop-color='#4fe0b6' stop-opacity='.07'/><stop offset='1' stop-color='#4fe0b6' stop-opacity='0'/></radialGradient>`;
   defs += `<radialGradient id='vxShade'><stop offset='.78' stop-color='${BASE}' stop-opacity='.55'/><stop offset='1' stop-color='${BASE}' stop-opacity='0'/></radialGradient>`;
@@ -978,10 +987,10 @@ function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0
   const inZone = (x, y, r) => zones.some(([a, b, e, d]) => x + r > a - 10 && x - r < e + 10 && y + r > b - 10 && y - r < d + 10);
   // the haze: each arm as a broad, very soft band that widens with the spiral
   let hazeSvg = '';
-  const far = Math.hypot(Math.max(cx, W - cx), Math.max(cy, H - cy));
+  const far = Math.hypot(Math.max(cx, W - cx), Math.max(cy + extend[0], H + extend[1] - cy));   // the haze fades out beyond the extended area
   defs += `<radialGradient id='vxFadeG' gradientUnits='userSpaceOnUse' cx='${cx}' cy='${cy}' r='${f(far)}'><stop offset='0' stop-color='#fff' stop-opacity='0'/><stop offset='.12' stop-color='#fff' stop-opacity='1'/><stop offset='.6' stop-color='#fff' stop-opacity='.8'/><stop offset='1' stop-color='#fff' stop-opacity='0'/></radialGradient><mask id='vxFade' maskUnits='userSpaceOnUse' x='-2000' y='-2000' width='${W + 4000}' height='${H + 4000}'><rect x='-2000' y='-2000' width='${W + 4000}' height='${H + 4000}' fill='url(#vxFadeG)'/></mask>`;
   for (let arm = 0; arm < arms; arm++) {
-    const pts = []; for (let th = 0; th < 10 * Math.PI / 2; th += 0.16) pts.push(pt(arm, th));
+    const pts = []; for (let th = 0; th < 10 * Math.PI / 2; th += 0.22) pts.push(pt(arm, th));
     for (const [wk, op] of [[0.42, haze * 0.5], [0.2, haze]]) {
       const side = (s) => pts.map((p) => [Math.round(p.x - p.ty * p.r * wk * s * 0.5), Math.round(p.y + p.tx * p.r * wk * s * 0.5)]);   // whole units: smaller file
       hazeSvg += `<path d='${poly([...side(1), ...side(-1).reverse()])}' fill='#4fe0b6' fill-opacity='${op}'/>`;
@@ -1019,10 +1028,10 @@ function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0
       return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a), r, tx: dx / l, ty: dy / l };
     };
     const put = (x, y, w, op) => {
-      if (x < -150 || y < -80 || x > W + 150 || y > H + 80) return;
+      if (x < -250 || y < -extend[0] || x > W + 250 || y > H + extend[1]) return;   // owner: "se oprește brusc în jos" - stars go on past the picture
       if (inZone(x, y, w)) op *= 0.35;
       op = Math.round(op * 20) / 20; if (op <= 0) return;
-      const key = `${w}|${op}`; stars[key] = (stars[key] || '') + `M${Math.round(x)} ${Math.round(y)}h0`;
+      const key = `${w}|${op}`; (stars[key] ||= []).push([Math.round(x), Math.round(y)]);
     };
     const lane = (at, count, wk, op0) => {
       for (let s = 0; s < count; s++) {
@@ -1037,16 +1046,16 @@ function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0
     };
     for (let arm = 0; arm < arms; arm++) lane((th) => pt(arm, th), g.stars, g.width, g.op);
     for (let j = 0; j < g.arms2; j++) lane((th) => pt2(j, th), g.stars2, g.width * 1.3, g.op * 0.6);
-    for (let s = 0; s < g.sky; s++) put(rand() * W, rand() * H, [1.2, 1.6, 2.2][Math.floor(rand() ** 2 * 3)], 0.12 + rand() * 0.35);
+    for (let s = 0; s < g.sky; s++) put(-250 + rand() * (W + 500), -extend[0] + rand() * (H + extend[0] + extend[1]), [1.2, 1.6, 2.2][Math.floor(rand() ** 2 * 3)], 0.12 + rand() * 0.35);
     // the soft haze of the secondary arms (the main ones already have theirs)
     for (let j = 0; j < g.arms2; j++) {
-      const pts = []; for (let th = 0; th < 10 * Math.PI / 2; th += 0.16) pts.push(pt2(j, th));
+      const pts = []; for (let th = 0; th < 10 * Math.PI / 2; th += 0.22) pts.push(pt2(j, th));
       const side = (s2) => pts.map((p) => [Math.round(p.x - p.ty * p.r * 0.16 * s2), Math.round(p.y + p.tx * p.r * 0.16 * s2)]);
       hazeSvg += `<path d='${poly([...side(1), ...side(-1).reverse()])}' fill='#4fe0b6' fill-opacity='${f(haze * 0.6 * 1000) / 1000}'/>`;
     }
     defs += `<radialGradient id='vxBulge' gradientUnits='userSpaceOnUse' cx='${cx}' cy='${cy}' r='${g.bulge}'><stop offset='0' stop-color='#e8fff6' stop-opacity='.5'/><stop offset='.25' stop-color='#9fffe2' stop-opacity='.22'/><stop offset='.6' stop-color='#4fe0b6' stop-opacity='.06'/><stop offset='1' stop-color='#4fe0b6' stop-opacity='0'/></radialGradient>`;
     galaxySvg = `<circle cx='${cx}' cy='${cy}' r='${g.bulge}' fill='url(#vxBulge)'/><g fill='none' stroke='#d6fff2' stroke-linecap='round'>`
-      + Object.entries(stars).map(([key, d]) => { const [w, op] = key.split('|'); return `<path d='${d}' stroke-width='${w}' stroke-opacity='${op}'/>`; }).join('') + '</g>';
+      + Object.entries(stars).map(([key, d]) => { const [w, op] = key.split('|'); return `<path d='${dotPath(d)}' stroke-width='${w}' stroke-opacity='${op}'/>`; }).join('') + '</g>';
   }
   // ---- universe (owner, 24.11: "mai multe galaxii dinastea, să arate ca un univers", then "la
   // acele galaxii să faci aceleași șiruri Fibonacci ca la cea mare, la o scară mult mai mică").
@@ -1074,10 +1083,10 @@ function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0
     const main = 3; const faint = 5; const quarters = 8.5; const b0 = ur / PHI_U ** quarters;   // the arms reach ur after 8.5 quarter turns
     const at = (j, n, off0, th) => { const a = th + spin + off0 + (j * 2 * Math.PI) / n; const r = b0 * Math.exp(kk * th); return [r * Math.cos(a), r * Math.sin(a), r, a]; };
     const ga = {};
-    const put2 = (x, y, w, op) => { op = Math.round(op * 20) / 20; if (op <= 0) return; const key = `${w}|${op}`; ga[key] = (ga[key] || '') + `M${Math.round(x)} ${Math.round(y)}h0`; };
+    const put2 = (x, y, w, op) => { op = Math.round(op * 20) / 20; if (op <= 0) return; const key = `${w}|${op}`; (ga[key] ||= []).push([Math.round(x), Math.round(y)]); };
     const gauss2 = () => Math.sqrt(-2 * Math.log(rand() + 1e-9)) * Math.cos(2 * Math.PI * rand());
     let hz = '';
-    for (const [n, off0, per, wk, op0] of [[main, 0, ur * 1.1, 0.06, 1], [faint, 0.6, ur * 0.4, 0.08, 0.55]]) {
+    for (const [n, off0, per, wk, op0] of [[main, 0, ur * 0.95, 0.06, 1], [faint, 0.6, ur * 0.32, 0.08, 0.55]]) {
       for (let j = 0; j < n; j++) {
         for (let s = 0; s < per; s++) {
           const rr = ur * 0.05 + rand() * ur * 0.95; const th = Math.log(rr / b0) / kk;
@@ -1086,15 +1095,16 @@ function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0
           put2(x0 - Math.sin(a) * off, y0 + Math.cos(a) * off, rand() < 0.05 ? 2.2 : [0.9, 1.2, 1.6][Math.floor(rand() ** 1.8 * 3)], op0 * (0.2 + 0.8 * near) * (0.3 + 0.7 * fade) * (0.5 + 0.5 * rand()));
         }
         // the haze of the arm, as on the big galaxy (a soft band widening with the spiral)
-        const pts = []; for (let th = Math.log((ur * 0.05) / b0) / kk; ; th += 0.25) { const p = at(j, n, off0, th); if (p[2] > ur) break; pts.push(p); }
-        const side = (sg) => pts.map(([x, y, r, a]) => [Math.round(x - Math.sin(a) * r * 0.1 * sg), Math.round(y + Math.cos(a) * r * 0.1 * sg)]);
-        if (pts.length > 2) hz += `<path d='${poly([...side(1), ...side(-1).reverse()])}' fill='${tint}' fill-opacity='${n === main ? 0.07 : 0.035}'/>`;
+        const pts = []; for (let th = Math.log((ur * 0.05) / b0) / kk; ; th += 0.25) { const p = at(j, n, off0, th); if (p[2] > ur) break; pts.push(p); th += 0.25; }   // coarse: these galaxies are small
+        const rd = ur >= 40 ? Math.round : (v) => Math.round(v * 2) / 2;
+        const side = (sg) => pts.map(([x, y, r, a]) => [rd(x - Math.sin(a) * r * 0.1 * sg), rd(y + Math.cos(a) * r * 0.1 * sg)]);
+        if (pts.length > 2 && ur >= 40) hz += `<path d='${poly([...side(1), ...side(-1).reverse()])}' fill='${tint}' fill-opacity='${n === main ? 0.07 : 0.035}'/>`;
       }
     }
     let mTrails = ''; let mBalls = '';
     const cr = Math.cos((rot * Math.PI) / 180); const sr = Math.sin((rot * Math.PI) / 180);
     const proj = (x, y) => [ux + x * cr - y * tilt * sr, uy + x * sr + y * tilt * cr];   // galaxy plane -> screen
-    for (const [arm, q, kind, scale = 0.17, opt = {}] of balls) {
+    for (const [arm, q, kind, scale = 0.17, opt = {}] of (ur >= 40 ? balls : [])) {
       const th = (q * Math.PI) / 2; const [bx, by, br] = at(arm, main, 0, th); if (br > ur * 1.02) continue;
       const rad = Math.max(1.8, br * scale); mini.add(kind);
       if (seams[kind]) {
@@ -1110,7 +1120,7 @@ function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0
     const id = `vxG${k}`;
     defs += `<radialGradient id='${id}'><stop offset='0' stop-color='#f2fffa' stop-opacity='.8'/><stop offset='.1' stop-color='${tint}' stop-opacity='.35'/><stop offset='.4' stop-color='${tint}' stop-opacity='.08'/><stop offset='1' stop-color='${tint}' stop-opacity='0'/></radialGradient>`;
     universeSvg += `<g transform='translate(${f(ux)} ${f(uy)}) rotate(${rot}) scale(1 ${tilt})'><circle r='${f(ur * 1.05)}' fill='url(#${id})'/>${hz}`
-      + `<g fill='none' stroke='${tint}' stroke-linecap='round'>${Object.entries(ga).map(([key, d]) => { const [w, op] = key.split('|'); return `<path d='${d}' stroke-width='${w}' stroke-opacity='${op}'/>`; }).join('')}</g>${mTrails}</g>${mBalls}`;
+      + `<g fill='none' stroke='${tint}' stroke-linecap='round'>${Object.entries(ga).map(([key, d]) => { const [w, op] = key.split('|'); return `<path d='${dotPath(d)}' stroke-width='${w}' stroke-opacity='${op}'/>`; }).join('')}</g>${mTrails}</g>${mBalls}`;
   }
   defs += miniDefs();
   // the flying balls (and a few props). Owner, 24.11: "unele efecte se suprapun peste iconițe".
@@ -1178,7 +1188,7 @@ function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0
     fibDebug[label] = `${d}</svg>`;
   }
   console.log(`fundal-arena (${label}): golden vortex, ${arms} arms, ${balls.length} icons`);
-  const body = `<rect width='${W}' height='${H}' fill='${BASE}'/>${atmo}<circle cx='${cx}' cy='${cy}' r='220' fill='url(#vxCore)'/><g mask='url(#vxFade)'>${hazeSvg}</g>`
+  const body = `<rect ${ext} fill='${BASE}'/>${atmo}<circle cx='${cx}' cy='${cy}' r='220' fill='url(#vxCore)'/><g mask='url(#vxFade)'>${hazeSvg}</g>`
     + `${galaxy ? galaxySvg : `<g fill='none' stroke='#b5ffe8' stroke-linecap='round'>${dustSvg}</g>`}${universeSvg}${glows2}${trails}${icons}`;
   return { defs, body };
 }
@@ -1193,11 +1203,16 @@ const FIB_ZONES_WIDE = [[0, 0, 1600, 150], [169, 321, 485, 381], [169, 399, 608,
 const FIB_ZONES_PHONE = [[0, 0, 547, 222], [34, 275, 290, 324], [34, 338, 444, 409], [34, 434, 513, 552], [34, 586, 326, 664], [34, 684, 213, 747], [34, 786, 513, 876], [34, 921, 513, 1184]];
 const fibWide = fibSvg(1600, 1000, 'xMidYMid', {
   // golden vortex (owner, 24.11): [arm, quarter turns from the centre, kind, size factor]
-  vortex: { cx: 800, cy: 540, arms: 3, r0: 12, turn: 0.4, dim: 0.4, dust: { count: 900, c: 30, fall: 420 },
-    galaxy: { arms2: 5, turn2: 0.6, stars: 560, stars2: 240, width: 0.05, op: 0.95, fall: 1500, rMax: 1000, sky: 90, bulge: 160, haze: 0.04 },
+  vortex: { cx: 800, cy: 500, arms: 3, r0: 9, extend: [300, 320],   // owner: centred, a little smaller, no hard end at the bottom
+    turn: 0.4, dim: 0.4, dust: { count: 900, c: 30, fall: 420 },
+    galaxy: { arms2: 5, turn2: 0.6, stars: 600, stars2: 260, width: 0.05, op: 0.95, fall: 1500, rMax: 1150, sky: 140, bulge: 125, haze: 0.04 },
     // small far-away galaxies in the free corners: { x, y, r, tilt, rot, arms, tint }
-    universe: [{ x: 1350, y: 235, r: 110, tilt: 0.45, rot: -25 }, { x: 1495, y: 865, r: 85, tilt: 0.62, rot: 35, tint: '#bfe6ff' }, { x: 92, y: 640, r: 52, tilt: 0.55, rot: 70 }, { x: 1040, y: 935, r: 42, tilt: 0.38, rot: -12 }, { x: 1545, y: 520, r: 34, tilt: 0.75, rot: 15 }],
-    balls: [[0, 5.5, 'tennis'], [1, 5, 'volleyball'], [2, 6, 'basketball'], [0, 7, 'soccer', 0.17, { span: 1.6, accent: true }], [2, 7.5, 'whistle', 0.09], [1, 8, 'soccer', 0.12],
+    universe: [{ x: 1350, y: 235, r: 110, tilt: 0.45, rot: -25 }, { x: 1495, y: 865, r: 85, tilt: 0.62, rot: 35, tint: '#bfe6ff' }, { x: 92, y: 640, r: 52, tilt: 0.55, rot: 70 }, { x: 1040, y: 935, r: 42, tilt: 0.38, rot: -12 }, { x: 1545, y: 520, r: 34, tilt: 0.75, rot: 15 },
+      // tiny ones scattered over the sky, and a few past the picture for taller screens
+      { x: 667, y: 190, r: 24, tilt: 0.5, rot: 40 }, { x: 1130, y: 178, r: 20, tilt: 0.65, rot: -50, tint: '#bfe6ff' }, { x: 270, y: 880, r: 26, tilt: 0.45, rot: 10 },
+      { x: 1250, y: 940, r: 22, tilt: 0.55, rot: 75 }, { x: 60, y: 300, r: 22, tilt: 0.6, rot: -30 }, { x: 1560, y: 700, r: 20, tilt: 0.5, rot: 55 }, { x: 720, y: 975, r: 24, tilt: 0.4, rot: -20, tint: '#bfe6ff' },
+      { x: 420, y: 1150, r: 44, tilt: 0.5, rot: 25 }, { x: 1180, y: 1190, r: 46, tilt: 0.42, rot: -35, tint: '#bfe6ff' }, { x: 500, y: -150, r: 36, tilt: 0.55, rot: 60 }, { x: 1150, y: -130, r: 30, tilt: 0.6, rot: -15 }],
+    balls: [[0, 5.5, 'tennis'], [1, 5, 'volleyball'], [2, 6, 'basketball'], [0, 7, 'soccer', 0.17, { span: 1.6, accent: true }], [2, 7.5, 'whistle', 0.09], [1, 7.5, 'soccer', 0.12],
       // owner: "încă câteva iconițe și să nu se termine așa brusc": small ones born at the centre, more towards the edges
       [1, 4, 'tennis'], [2, 4.5, 'soccer'], [0, 4.5, 'volleyball']] },
   label: 'wide', zones: FIB_ZONES_WIDE,
@@ -1209,9 +1224,11 @@ const fibWide = fibSvg(1600, 1000, 'xMidYMid', {
   chain: { from: 6.5, step: 1, count: 8, size0: 26, grow: 1.2, dim: 0.45, kinds: ['tennis', 'whistle', 'stopwatch', 'volleyball', 'basketball', 'soccer'] },
 });
 const fibPhone = fibSvg(547, 1184, 'xMidYMin', {
-  vortex: { cx: 273, cy: 600, arms: 3, r0: 9, turn: 1.2, dim: 0.4, dust: { count: 700, c: 26, fall: 330 },
-    galaxy: { arms2: 5, turn2: 0.6, stars: 400, stars2: 170, width: 0.05, op: 0.95, fall: 1100, rMax: 800, sky: 50, bulge: 110, haze: 0.04 },
-    universe: [{ x: 455, y: 250, r: 58, tilt: 0.5, rot: -20 }, { x: 440, y: 762, r: 36, tilt: 0.6, rot: 30, tint: '#bfe6ff' }, { x: 80, y: 205, r: 28, tilt: 0.65, rot: 60 }],
+  vortex: { cx: 273, cy: 592, arms: 3, r0: 7, extend: [60, 460],
+    turn: 1.2, dim: 0.4, dust: { count: 700, c: 26, fall: 330 },
+    galaxy: { arms2: 5, turn2: 0.6, stars: 430, stars2: 180, width: 0.05, op: 0.95, fall: 1100, rMax: 1050, sky: 90, bulge: 85, haze: 0.04 },
+    universe: [{ x: 455, y: 250, r: 58, tilt: 0.5, rot: -20 }, { x: 440, y: 762, r: 36, tilt: 0.6, rot: 30, tint: '#bfe6ff' }, { x: 80, y: 205, r: 28, tilt: 0.65, rot: 60 },
+      { x: 480, y: 715, r: 16, tilt: 0.55, rot: 35 }, { x: 150, y: 1300, r: 42, tilt: 0.5, rot: 20 }, { x: 420, y: 1450, r: 34, tilt: 0.6, rot: -40, tint: '#bfe6ff' }, { x: 240, y: 1600, r: 26, tilt: 0.45, rot: 70 }],
     // phone (owner, 24.11 cleanup): at most one ball per arm within a quarter turn, so every trail stays whole
     balls: [[0, 6.5, 'soccer', 0.17, { accent: true }], [1, 6, 'tennis'], [2, 5.5, 'basketball', 0.15],
       [2, 4.5, 'tennis'], [0, 4, 'soccer'], [1, 4.5, 'volleyball'], [1, 7, 'soccer', 0.08]] },
