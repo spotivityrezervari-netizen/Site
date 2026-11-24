@@ -3,6 +3,16 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-24 (36): Sunflower made of icons instead of dots (done by Claude, at the owner's request)
+
+Owner: "instead of those dots, make them a bit sparser and put the icons".
+
+- `sunflower()` has a new mode `iconSeeds: true` (now on for wide and phone): every seed is a small icon (tennis, whistle, stopwatch, volleyball, basketball, soccer). Each icon is drawn once in `<defs>` (balls in three turns) and placed with `<use>`, so a seed costs about 60 bytes.
+- Sparser seeds: wide c 32 (was 19), phone c 28 (was 15); the icon is 62% of the distance between neighbours (`iconFill`), so there is space around each one.
+- The kind is the same along each of the 21 spirals (`n % 21`), so the spirals show through the pattern without any line.
+- Brightness falls off with the distance from the centre (`iconOp` .75 → .55 → .32 → 0); over the text or the photo it is ×0.3 (`seedDim`). The separate big icons are off in this mode.
+- Picture size: wide 120 KB, phone 93 KB (dots version: 71 / 65). Removing `iconSeeds` brings the dots back. `design-background.css?v=37`; SEO pages regenerated.
+
 ## 2026-11-24 (35): Sunflower without drawn spirals, packed like a real flower head (done by Claude, at the owner's request)
 
 Owner: "I want it to be like in nature, the spiral lines should not be drawn, like the sunflower, as natural as possible".

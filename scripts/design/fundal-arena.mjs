@@ -842,7 +842,7 @@ function fibonacci({ W, H, tiling, zones, items = [], chain, glows, sparkles, ca
 // of a seed (the seeds under it are left out); the icon places are the old ones (three of the
 // 21 spirals of a wider sunflower, c = iconC). Over the text or the photo everything is faint.
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
-function sunflower({ W, H, cx, cy, c, rMax, margin = [200, 100], size0, grow, kinds, dim, seedDim = 0.3, zones, glows, label, iconC, iconCount, arms: armCount = 21, iconArms = [3, 13], iconEvery = 2 }) {
+function sunflower({ W, H, cx, cy, c, rMax, margin = [200, 100], size0, grow, kinds, dim, seedDim = 0.3, zones, glows, label, iconC, iconCount, arms: armCount = 21, iconArms = [3, 13], iconEvery = 2, iconSeeds = false, iconFill = 0.62, iconOp = [0.75, 0.55, 0.32, 0] }) {
   let defs = FIB_BRIGHT ? fibBrightDefs : commonDefs; let atmo = '';
   glows.forEach((g, i) => { const gl = glow(`gl${i}`, ...g); defs += gl.defs; atmo += gl.svg(W, H); });
   defs += `<radialGradient id='trailHead'><stop offset='0' stop-color='#8dffdc' stop-opacity='.34'/><stop offset='1' stop-color='#8dffdc' stop-opacity='0'/></radialGradient>`;
@@ -869,6 +869,7 @@ function sunflower({ W, H, cx, cy, c, rMax, margin = [200, 100], size0, grow, ki
   if (iconArms === 'auto') { let best = 0; for (let a = 0; a < 7; a++) if (clearFor(armsAt(a)) > clearFor(armsAt(best))) best = a; iconArms = armsAt(best); }
   console.log(`fundal-arena (${label}): icons on arms ${iconArms.join(', ')}: ${clearFor(iconArms)} clear`);
   const placed = [];
+  if (iconSeeds) iconCount = 0;   // every seed is an icon: no separate big icons
   for (let n = 1; n <= iconCount; n++) {
     if (!isIcon(iconArms, n)) continue;
     const [ox, oy, r] = old(n); const size = size0 + r * grow; const rad = size / 2;   // grows with the distance from the centre
@@ -888,6 +889,38 @@ function sunflower({ W, H, cx, cy, c, rMax, margin = [200, 100], size0, grow, ki
       svg += fibBrighten(prop([kind, x, y, size, ...extra]));
     }
     icons += covered(x, y, rad) ? `<g opacity='${dim}'>${svg}</g>` : svg;
+  }
+  // Owner, 24.11: "in loc de buline ... mai rare și să pui iconițele". Every seed is a small icon
+  // (one kind along each of the 21 spirals, so the spirals show by the pattern). Each icon is drawn once in <defs> and placed with <use>, so a
+  // seed costs ~60 bytes. Balls come in three turns each (the light stays top-left); the whistle
+  // and stopwatch lean a little. Brightness falls off with the radius in bands (iconOp at r = 0,
+  // rMax/3, 2rMax/3, rMax); over the text or the photo they are drawn at seedDim.
+  if (iconSeeds) {
+    const yaws = [0, 120, 240];
+    for (const kind of kinds) {
+      if (seams[kind]) yaws.forEach((yw, i) => { const pose = BALL_POSE[kind][0]; defs += `<g id='s${kinds.indexOf(kind)}${i}'>${fibBrighten(ball([kind, 0, 0, 50, pose[0] + yw, pose[1], pose[2]]))}</g>`; });
+      else {
+        const extra = { whistle: [-18, 'M30 -30C44 -70 10 -100 30 -140'], stopwatch: [12, 40] }[kind] || [0];
+        defs += `<g id='s${kinds.indexOf(kind)}0'>${fibBrighten(prop([kind, 0, 0, 100, ...extra]))}</g>`;
+      }
+    }
+    const d0 = c * Math.sqrt((2 * Math.PI) / Math.sqrt(3));
+    const opAt = (r) => { const u = Math.min(1, r / rMax) * 3; const i = Math.min(2, Math.floor(u)); return iconOp[i] + (iconOp[i + 1] - iconOp[i]) * (u - i); };
+    const bands = {};
+    for (const sd of seeds) {
+      const { x, y, n, s, r } = sd;
+      if (x < -margin[0] || y < -margin[1] || x > W + margin[0] || y > H + margin[1]) continue;
+      const size = d0 * iconFill * s;
+      let op = opAt(r); if (inZone(x, y, size / 2)) op *= seedDim;
+      op = Math.round(op * 20) / 20; if (op <= 0) continue;
+      const kind = kinds[(n % armCount) % kinds.length]; const isBall = !!seams[kind];   // one kind along each of the 21 spirals
+      const id = `s${kinds.indexOf(kind)}${isBall ? n % 3 : 0}`;
+      const rot = isBall ? '' : `rotate(${Math.round(((n * 37) % 41) - 20)})`;
+      bands[op] = (bands[op] || '') + `<use href='#${id}' transform='translate(${Math.round(x)} ${Math.round(y)})${rot}scale(${(size / 100).toFixed(3)})'/>`;
+    }
+    const uses = Object.entries(bands).map(([op, u]) => `<g opacity='${op}'>${u}</g>`).join('');
+    console.log(`fundal-arena (${label}): sunflower of icons, ${count} seeds (c ${c})`);
+    return { defs, body: `<rect width='${W}' height='${H}' fill='${BASE}'/>${atmo}<circle cx='${cx}' cy='${cy}' r='${c * 9}' fill='url(#seedCore)'/>${uses}` };
   }
   // the seeds: one short stroke each with round ends (an oval, long axis along the radius). Seeds
   // of about the same width share one path, so the picture stays small (a few bytes per seed).
@@ -920,7 +953,7 @@ const FIB_ZONES_WIDE = [[0, 0, 1600, 150], [169, 321, 485, 381], [169, 399, 608,
 const FIB_ZONES_PHONE = [[0, 0, 547, 222], [34, 275, 290, 324], [34, 338, 444, 409], [34, 434, 513, 552], [34, 586, 326, 664], [34, 684, 213, 747], [34, 786, 513, 876], [34, 921, 513, 1184]];
 const fibWide = fibSvg(1600, 1000, 'xMidYMid', {
   label: 'wide', zones: FIB_ZONES_WIDE,
-  sunflower: { cx: 800, cy: 540, c: 19, rMax: 980, iconC: 52, iconCount: 377, size0: 22, grow: 0.075, iconArms: [2, 9, 16], iconEvery: 2, kinds: ['tennis', 'whistle', 'stopwatch', 'volleyball', 'basketball', 'soccer'], dim: 0.4 },
+  sunflower: { cx: 800, cy: 540, c: 32, rMax: 980, iconSeeds: true, iconC: 52, iconCount: 377, size0: 22, grow: 0.075, iconArms: [2, 9, 16], iconEvery: 2, kinds: ['tennis', 'whistle', 'stopwatch', 'volleyball', 'basketball', 'soccer'], dim: 0.4 },
   tiling: { n: 14, flipX: false, flipY: true, fit: { cx: 800, cy: 540, w: 1080 } },
   glows: [[815, 880, 520, 380, '#11936f', 0.16], [300, -60, 900, 600, '#0e8064', 0.14], [1500, 980, 600, 420, '#0a5e4b', 0.1]],
   sparkles: 40, calm: [470, 520, 380, 300],
@@ -929,7 +962,7 @@ const fibWide = fibSvg(1600, 1000, 'xMidYMid', {
 });
 const fibPhone = fibSvg(547, 1184, 'xMidYMin', {
   label: 'phone', zones: FIB_ZONES_PHONE,
-  sunflower: { cx: 273, cy: 600, c: 15, rMax: 760, margin: [60, 60], iconC: 43, iconCount: 233, size0: 18, grow: 0.075, iconArms: 'auto', iconEvery: 1, kinds: ['tennis', 'whistle', 'stopwatch', 'volleyball', 'basketball', 'soccer'], dim: 0.4 },
+  sunflower: { cx: 273, cy: 600, c: 28, rMax: 760, iconSeeds: true, margin: [60, 60], iconC: 43, iconCount: 233, size0: 18, grow: 0.075, iconArms: 'auto', iconEvery: 1, kinds: ['tennis', 'whistle', 'stopwatch', 'volleyball', 'basketball', 'soccer'], dim: 0.4 },
   tiling: { n: 15, flipX: true, fit: { cx: 273, cy: 600, w: 500 } },
   glows: [[420, 715, 340, 300, '#11936f', 0.16], [500, -60, 520, 520, '#0e8064', 0.16]],
   sparkles: 26, calm: [250, 520, 300, 330],
