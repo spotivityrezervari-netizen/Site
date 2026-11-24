@@ -3,6 +3,15 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-24 (42): Golden vortex: full trail for the big top ball, comet sparks (done by Claude, at the owner's request)
+
+Owner: "still not good, look at the tennis ball on desktop, it seems rather empty behind it; how do you think we could make it nicer?".
+
+- Cause: the big ball at the top (0:7) and the soccer ball in front of it (0:6.5) sat on the same arm, too close, so its trail always ran into the soccer ball and had to be cut to a stub. Now there is one ball there (soccer, the main sport) with a full, long trail (`span` 1.6). The soccer ball at 0:6.5 is gone.
+- Every trail now leaves a few points of light behind it, like the dust of a comet (`sparks`, more and bigger for bigger balls), so the space behind a ball is never empty.
+- Trails can bend away from the arm (`drift` in the optional 5th ball item); not used at the moment. `VXDBG=1` prints each ball's trail length.
+- `design-background.css?v=43`; SEO pages regenerated.
+
 ## 2026-11-24 (41): Golden vortex: clean layers, no effect over an icon (done by Claude, at the owner's request)
 
 Owner: "it looks fairly good, work a bit more on the graphics, some effects overlap the icons".
