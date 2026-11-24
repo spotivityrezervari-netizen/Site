@@ -3,6 +3,16 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-24 (39): "Golden vortex" background; white, larger title (done by Claude, at the owner's request)
+
+Owner: "I don't like how it looks, it's very ugly, let's make it more dynamic, more natural, I leave it to you; make the Spotivity title a bit bigger and white".
+
+- New composition `vortex()` in `scripts/design/fundal-arena.mjs`, on through the `vortex` key in `fibWide` / `fibPhone` (it takes priority over `sunflower`, which stays in the file). Three golden spirals turn out of the screen centre (r = r0·φ^(quarter turns), so each quarter turn is φ times wider). A few balls fly out along them, each with a tapered light trail, so the picture moves. Further out the balls are bigger. Wide: 8 icons (tennis ×2, volleyball, soccer ×2, basketball, whistle); phone: 5.
+- Behind them the arms are only a very soft haze (no line), and a fine dust of light lies around the centre in sunflower order (golden angle), thinning outwards at random.
+- Icons are placed by `[arm, quarter turns, kind, size]`; `--dry --debug --svg <prefix>` writes the overlay with every arm:quarter position. Icons over text/photo are drawn at 40%.
+- Title `h1.welcome-brand`: white (was `--design-blue`), `clamp(40px, 4vw, 59px)` (was 36/3.6vw/53), phone `clamp(32px, 9.4vw, 40px)` (was 29/8.5vw/36).
+- Picture size: wide 120 KB, phone 100 KB. `design-background.css?v=40`; SEO pages regenerated.
+
 ## 2026-11-24 (38): Golden-ratio fade and depth for the sunflower icons (done by Claude, at the owner's request)
 
 Owner: "I don't really like it, it looks like the WhatsApp background; add a fade at golden-ratio distances to the icons and try to make it nicer".

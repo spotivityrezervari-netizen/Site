@@ -955,8 +955,85 @@ function sunflower({ W, H, cx, cy, c, rMax, margin = [200, 100], size0, grow, ki
     + `<g fill='none' stroke='url(#seedG)' stroke-linecap='round'>${paths(clear)}<g opacity='${seedDim}'>${paths(faint)}</g></g>${icons}`;
   return { defs, body };
 }
+// ---- "Vârtej de aur" (owner, 24.11: the icon sunflower "arată foarte urât ... mai dinamic, mai
+// natural, îți las mână liberă"). A few balls fly out of the centre along golden spirals (the
+// spiral widens by φ every quarter turn, as in a nautilus shell or a galaxy arm), each one with a
+// light trail behind it, so the picture moves. Behind them, the arms are only a soft haze (no
+// line), and a fine dust of light lies around the centre the way sunflower seeds do (golden
+// angle, Vogel). Balls further out are bigger; a ball over the text or the photo is faint.
+function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0, balls, dim = 0.4, span = 1.15, haze = 0.022, dust }) {
+  const PHI = (1 + Math.sqrt(5)) / 2; const kk = Math.log(PHI) / (Math.PI / 2);
+  let defs = FIB_BRIGHT ? fibBrightDefs : commonDefs; let atmo = '';
+  glows.forEach((g, i) => { const gl = glow(`gl${i}`, ...g); defs += gl.defs; atmo += gl.svg(W, H); });
+  defs += `<radialGradient id='trailHead'><stop offset='0' stop-color='#8dffdc' stop-opacity='.34'/><stop offset='1' stop-color='#8dffdc' stop-opacity='0'/></radialGradient>`;
+  defs += `<radialGradient id='vxCore' gradientUnits='userSpaceOnUse' cx='${cx}' cy='${cy}' r='220'><stop offset='0' stop-color='#9fffe2' stop-opacity='.2'/><stop offset='.4' stop-color='#4fe0b6' stop-opacity='.07'/><stop offset='1' stop-color='#4fe0b6' stop-opacity='0'/></radialGradient>`;
+  // th = angle travelled along the arm (radians); r = r0·φ^(th / quarter turn)
+  const pt = (arm, th) => {
+    const a = th + turn + (arm * 2 * Math.PI) / arms; const r = r0 * Math.exp(kk * th);
+    const dx = r * (kk * Math.cos(a) - Math.sin(a)); const dy = r * (kk * Math.sin(a) + Math.cos(a)); const l = Math.hypot(dx, dy);
+    return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a), r, tx: dx / l, ty: dy / l };
+  };
+  const inZone = (x, y, r) => zones.some(([a, b, e, d]) => x + r > a - 10 && x - r < e + 10 && y + r > b - 10 && y - r < d + 10);
+  // the haze: each arm as a broad, very soft band that widens with the spiral
+  let hazeSvg = '';
+  for (let arm = 0; arm < arms; arm++) {
+    const pts = []; for (let th = 0; th < 10 * Math.PI / 2; th += 0.05) pts.push(pt(arm, th));
+    for (const [wk, op] of [[0.42, haze * 0.5], [0.2, haze]]) {
+      const side = (s) => pts.map((p) => [p.x - p.ty * p.r * wk * s * 0.5, p.y + p.tx * p.r * wk * s * 0.5]);
+      hazeSvg += `<path d='${poly([...side(1), ...side(-1).reverse()])}' fill='#4fe0b6' fill-opacity='${op}'/>`;
+    }
+  }
+  // the dust: tiny points at the golden angle, thinning out from the centre
+  let rnd = 31415;
+  const rand = () => { rnd = (rnd * 1664525 + 1013904223) % 4294967296; return rnd / 4294967296; };
+  const dots = {};
+  for (let n = 1; n <= dust.count; n++) {
+    const a = n * Math.PI * (3 - Math.sqrt(5)); const r = dust.c * Math.sqrt(n) * (1 + (rand() - 0.5) * 0.25);
+    const x = cx + r * Math.cos(a); const y = cy + r * Math.sin(a);
+    if (x < -150 || y < -80 || x > W + 150 || y > H + 80) continue;
+    const keep = Math.exp(-r / dust.fall); if (rand() > 0.25 + 0.75 * keep) continue;   // sparser outwards, at random
+    let op = Math.round((0.3 + 0.6 * keep) * rand() ** 0.5 * 20) / 20; if (inZone(x, y, 2)) op = Math.round(op * 0.4 * 20) / 20;
+    if (op <= 0) continue;
+    const w = [1.6, 2.4, 3.4][Math.floor(rand() ** 2 * 3)];
+    const key = `${w}|${op}`; dots[key] = (dots[key] || '') + `M${Math.round(x)} ${Math.round(y)}h0`;
+  }
+  const dustSvg = Object.entries(dots).map(([key, d]) => { const [w, op] = key.split('|'); return `<path d='${d}' stroke-width='${w}' stroke-opacity='${op}'/>`; }).join('');
+  // the flying balls (and a few props): trail first, then the icon at its head
+  let trails = ''; let icons = ''; let i = 0;
+  for (const [arm, q, kind, scale = 0.17] of balls) {
+    const th = (q * Math.PI) / 2; const p = pt(arm, th); const rad = Math.max(8, Math.min(70, p.r * scale));
+    const faint = inZone(p.x, p.y, rad);
+    let tr = ''; let ic = '';
+    if (seams[kind]) {
+      const N = 48; const id = `vt${i++}`; const sp = span * Math.min(1, 0.6 + q / 12);
+      const pts = Array.from({ length: N + 1 }, (_, k) => pt(arm, th - sp + (sp * k) / N));
+      const edge = (s) => pts.map((pp, k) => { const w = rad * 0.82 * (0.05 + 0.95 * (k / N) ** 1.3) * s; return [pp.x - pp.ty * w, pp.y + pp.tx * w]; });
+      const tail = pts[0];
+      defs += `<linearGradient id='${id}' gradientUnits='userSpaceOnUse' x1='${f(tail.x)}' y1='${f(tail.y)}' x2='${f(p.x)}' y2='${f(p.y)}'><stop offset='0' stop-color='#4fe0b6' stop-opacity='0'/><stop offset='.6' stop-color='#4fe0b6' stop-opacity='.16'/><stop offset='1' stop-color='#b5ffe8' stop-opacity='.6'/></linearGradient>`;
+      tr = `<path d='${poly([...edge(1), ...edge(-1).reverse()])}' fill='url(#${id})'/>`
+        + `<path d='${polyline(pts.map((pp) => [pp.x, pp.y]))}' fill='none' stroke='url(#${id})' stroke-width='${f(Math.max(0.8, rad * 0.12))}' stroke-linecap='round'/>`;
+      const pose = BALL_POSE[kind][0];
+      ic = `<circle cx='${f(p.x)}' cy='${f(p.y)}' r='${f(rad * 1.6)}' fill='url(#trailHead)'/>` + fibBrighten(ball([kind, p.x, p.y, rad, pose[0] + q * 40, pose[1], pose[2]]))
+        + `<circle cx='${f(p.x)}' cy='${f(p.y)}' r='${f(rad + 1.5)}' fill='none' stroke='#b5ffe8' stroke-opacity='.35' stroke-width='${f(Math.max(1, rad * 0.04))}'/>`;
+    } else {
+      const extra = { whistle: [-18, 'M30 -30C44 -70 10 -100 30 -140'], stopwatch: [12, 40] }[kind] || [0];
+      ic = `<circle cx='${f(p.x)}' cy='${f(p.y)}' r='${f(rad * 1.5)}' fill='url(#trailHead)'/>` + fibBrighten(prop([kind, p.x, p.y, rad * 2, ...extra]));
+    }
+    trails += faint ? `<g opacity='${dim}'>${tr}</g>` : tr; icons += faint ? `<g opacity='${dim}'>${ic}</g>` : ic;
+  }
+  if (process.argv.includes('--debug')) {
+    let d = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${W} ${H}' width='${W}' height='${H}'>`;
+    for (const [a, b2, c, e] of zones) d += `<rect x='${a}' y='${b2}' width='${c - a}' height='${e - b2}' fill='#f0f' fill-opacity='.12' stroke='#f0f'/>`;
+    for (let arm = 0; arm < arms; arm++) for (let q = 2; q <= 10; q += 0.5) { const p = pt(arm, (q * Math.PI) / 2); d += `<circle cx='${f(p.x)}' cy='${f(p.y)}' r='4' fill='#ff0'/><text x='${f(p.x + 6)}' y='${f(p.y - 6)}' fill='#ff0' font-size='16' font-family='Arial'>${arm}:${q}</text>`; }
+    fibDebug[label] = `${d}</svg>`;
+  }
+  console.log(`fundal-arena (${label}): golden vortex, ${arms} arms, ${balls.length} icons`);
+  const body = `<rect width='${W}' height='${H}' fill='${BASE}'/>${atmo}<circle cx='${cx}' cy='${cy}' r='220' fill='url(#vxCore)'/>${hazeSvg}`
+    + `<g fill='none' stroke='#b5ffe8' stroke-linecap='round'>${dustSvg}</g>${trails}${icons}`;
+  return { defs, body };
+}
 function fibSvg(W, H, align, comp) {
-  const { defs, body } = comp.sunflower ? sunflower({ W, H, ...comp, ...comp.sunflower }) : fibonacci({ W, H, ...comp });
+  const { defs, body } = comp.vortex ? vortex({ W, H, ...comp, ...comp.vortex }) : comp.sunflower ? sunflower({ W, H, ...comp, ...comp.sunflower }) : fibonacci({ W, H, ...comp });
   const vig = `<linearGradient id='vig' x1='0' y1='0' x2='1' y2='0'><stop offset='0' stop-color='${BASE}' stop-opacity='.35'/><stop offset='.12' stop-color='${BASE}' stop-opacity='0'/><stop offset='.88' stop-color='${BASE}' stop-opacity='0'/><stop offset='1' stop-color='${BASE}' stop-opacity='.35'/></linearGradient>`;
   return `<svg xmlns='http://www.w3.org/2000/svg' width='100%' height='100%'><defs>${defs}${vig}</defs><rect width='100%' height='100%' fill='${BASE}'/>`
     + `<svg width='100%' height='100%' viewBox='0 0 ${W} ${H}' preserveAspectRatio='${align} meet' overflow='visible'>${body}</svg><rect width='100%' height='100%' fill='url(#vig)'/></svg>`;
@@ -965,6 +1042,9 @@ function fibSvg(W, H, align, comp) {
 const FIB_ZONES_WIDE = [[0, 0, 1600, 150], [169, 321, 485, 381], [169, 399, 608, 475], [169, 500, 637, 566], [169, 601, 565, 664], [169, 700, 779, 783], [850, 340, 1431, 690], [1020, 800, 1260, 850]];   // photo cards, gallery dots
 const FIB_ZONES_PHONE = [[0, 0, 547, 222], [34, 275, 290, 324], [34, 338, 444, 409], [34, 434, 513, 552], [34, 586, 326, 664], [34, 684, 213, 747], [34, 786, 513, 876], [34, 921, 513, 1184]];
 const fibWide = fibSvg(1600, 1000, 'xMidYMid', {
+  // golden vortex (owner, 24.11): [arm, quarter turns from the centre, kind, size factor]
+  vortex: { cx: 800, cy: 540, arms: 3, r0: 12, turn: 0.4, dim: 0.4, dust: { count: 900, c: 30, fall: 420 },
+    balls: [[0, 5.5, 'tennis'], [1, 5, 'volleyball'], [0, 6.5, 'soccer'], [2, 6, 'basketball'], [0, 7, 'tennis'], [2, 7.5, 'whistle', 0.09], [1, 8, 'soccer', 0.12]] },
   label: 'wide', zones: FIB_ZONES_WIDE,
   sunflower: { cx: 800, cy: 540, c: 32, rMax: 980, iconSeeds: true, iconFill: 0.8, iconOp: [0.95, 0.75, 0.42, 0], goldenFade: { r0: 60, low: 0.25 }, iconC: 52, iconCount: 377, size0: 22, grow: 0.075, iconArms: [2, 9, 16], iconEvery: 2, kinds: ['tennis', 'whistle', 'stopwatch', 'volleyball', 'basketball', 'soccer'], dim: 0.4 },
   tiling: { n: 14, flipX: false, flipY: true, fit: { cx: 800, cy: 540, w: 1080 } },
@@ -974,6 +1054,8 @@ const fibWide = fibSvg(1600, 1000, 'xMidYMid', {
   chain: { from: 6.5, step: 1, count: 8, size0: 26, grow: 1.2, dim: 0.45, kinds: ['tennis', 'whistle', 'stopwatch', 'volleyball', 'basketball', 'soccer'] },
 });
 const fibPhone = fibSvg(547, 1184, 'xMidYMin', {
+  vortex: { cx: 273, cy: 600, arms: 3, r0: 9, turn: 1.2, dim: 0.4, dust: { count: 700, c: 26, fall: 330 },
+    balls: [[0, 6.5, 'soccer'], [1, 6, 'tennis'], [2, 5, 'volleyball'], [1, 6.5, 'basketball', 0.14], [2, 5.5, 'whistle', 0.12]] },
   label: 'phone', zones: FIB_ZONES_PHONE,
   sunflower: { cx: 273, cy: 600, c: 28, rMax: 760, iconSeeds: true, iconFill: 0.8, iconOp: [1, 0.9, 0.55, 0], goldenFade: { r0: 45, low: 0.25 }, margin: [60, 60], iconC: 43, iconCount: 233, size0: 18, grow: 0.075, iconArms: 'auto', iconEvery: 1, kinds: ['tennis', 'whistle', 'stopwatch', 'volleyball', 'basketball', 'soccer'], dim: 0.4 },
   tiling: { n: 15, flipX: true, fit: { cx: 273, cy: 600, w: 500 } },
