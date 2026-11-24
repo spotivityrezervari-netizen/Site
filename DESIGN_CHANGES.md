@@ -3,6 +3,15 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-24 (41): Golden vortex: clean layers, no effect over an icon (done by Claude, at the owner's request)
+
+Owner: "it looks fairly good, work a bit more on the graphics, some effects overlap the icons".
+
+- Layers are now drawn in this order: all glows, then all trails, then all icons. One icon's glow never lies over another icon.
+- Each trail is cut short where it would come near another icon, so it ends in the open instead of running into the next ball on the arm (e.g. the big basketball at the top no longer trails into the soccer ball).
+- Every icon sits on a soft dark contact disc (`vxShade`) that separates it from the trails and haze behind it. Small (far) icons are drawn first, big (near) ones on top.
+- The generator warns when two icons almost touch. `design-background.css?v=42`; SEO pages regenerated.
+
 ## 2026-11-24 (40): Golden vortex: more icons, no abrupt ends (done by Claude, at the owner's request)
 
 Owner: "it looks more ok; could you add a few more icons and make it not end so abruptly?".

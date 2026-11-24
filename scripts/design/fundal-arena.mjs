@@ -967,6 +967,7 @@ function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0
   glows.forEach((g, i) => { const gl = glow(`gl${i}`, ...g); defs += gl.defs; atmo += gl.svg(W, H); });
   defs += `<radialGradient id='trailHead'><stop offset='0' stop-color='#8dffdc' stop-opacity='.34'/><stop offset='1' stop-color='#8dffdc' stop-opacity='0'/></radialGradient>`;
   defs += `<radialGradient id='vxCore' gradientUnits='userSpaceOnUse' cx='${cx}' cy='${cy}' r='220'><stop offset='0' stop-color='#9fffe2' stop-opacity='.2'/><stop offset='.4' stop-color='#4fe0b6' stop-opacity='.07'/><stop offset='1' stop-color='#4fe0b6' stop-opacity='0'/></radialGradient>`;
+  defs += `<radialGradient id='vxShade'><stop offset='.78' stop-color='${BASE}' stop-opacity='.55'/><stop offset='1' stop-color='${BASE}' stop-opacity='0'/></radialGradient>`;
   // th = angle travelled along the arm (radians); r = r0·φ^(th / quarter turn)
   const pt = (arm, th) => {
     const a = th + turn + (arm * 2 * Math.PI) / arms; const r = r0 * Math.exp(kk * th);
@@ -1000,29 +1001,43 @@ function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0
     const key = `${w}|${op}`; dots[key] = (dots[key] || '') + `M${Math.round(x)} ${Math.round(y)}h0`;
   }
   const dustSvg = Object.entries(dots).map(([key, d]) => { const [w, op] = key.split('|'); return `<path d='${d}' stroke-width='${w}' stroke-opacity='${op}'/>`; }).join('');
-  // the flying balls (and a few props): trail first, then the icon at its head
-  let trails = ''; let icons = ''; let i = 0;
-  for (const [arm, q, kind, scale = 0.17] of balls) {
-    const th = (q * Math.PI) / 2; const p = pt(arm, th); const rad = Math.max(8, Math.min(70, p.r * scale));
-    const faint = inZone(p.x, p.y, rad);
-    let tr = ''; let ic = '';
+  // the flying balls (and a few props). Owner, 24.11: "unele efecte se suprapun peste iconițe".
+  // So: (1) the layers go glows -> trails -> icons, never one icon's glow over another icon;
+  // (2) each trail is cut short where it would come near another icon (it ends in the open);
+  // (3) every icon sits on a soft dark contact disc that separates it from what is behind;
+  // (4) the small (far) icons are drawn first, the big (near) ones on top.
+  const items = balls.map(([arm, q, kind, scale = 0.17]) => {
+    const th = (q * Math.PI) / 2; const p = pt(arm, th);
+    return { arm, q, kind, th, p, rad: Math.max(8, Math.min(70, p.r * scale)) };
+  });
+  const clearOf = (self, x, y) => items.every((o) => o === self || Math.hypot(o.p.x - x, o.p.y - y) > o.rad * 1.5 + self.rad * 0.5 + 6);
+  let glows2 = ''; let trails = ''; let icons = ''; let i = 0;
+  for (const it of [...items].sort((a, b) => a.rad - b.rad)) {
+    const { arm, q, kind, th, p, rad } = it;
+    const faint = inZone(p.x, p.y, rad); const wrap = (s) => (faint ? `<g opacity='${dim}'>${s}</g>` : s);
+    glows2 += wrap(`<circle cx='${f(p.x)}' cy='${f(p.y)}' r='${f(rad * 1.6)}' fill='url(#trailHead)'/>`);
+    let ic = `<circle cx='${f(p.x)}' cy='${f(p.y)}' r='${f(rad * 1.12)}' fill='url(#vxShade)'/>`;
     if (seams[kind]) {
-      const N = 48; const id = `vt${i++}`; const sp = span * Math.min(1, 0.6 + q / 12);
+      // walk back from the ball along the arm until the trail would touch another icon
+      let sp = span * Math.min(1, 0.6 + q / 12); const step = 0.02;
+      for (let s = rad / p.r; s <= sp; s += step) { const b = pt(arm, th - s); if (!clearOf(it, b.x, b.y)) { sp = Math.max(0.2, s - 0.08); break; } }
+      const N = 48; const id = `vt${i++}`;
       const pts = Array.from({ length: N + 1 }, (_, k) => pt(arm, th - sp + (sp * k) / N));
       const edge = (s) => pts.map((pp, k) => { const w = rad * 0.82 * (0.05 + 0.95 * (k / N) ** 1.3) * s; return [pp.x - pp.ty * w, pp.y + pp.tx * w]; });
       const tail = pts[0];
       defs += `<linearGradient id='${id}' gradientUnits='userSpaceOnUse' x1='${f(tail.x)}' y1='${f(tail.y)}' x2='${f(p.x)}' y2='${f(p.y)}'><stop offset='0' stop-color='#4fe0b6' stop-opacity='0'/><stop offset='.6' stop-color='#4fe0b6' stop-opacity='.16'/><stop offset='1' stop-color='#b5ffe8' stop-opacity='.6'/></linearGradient>`;
-      tr = `<path d='${poly([...edge(1), ...edge(-1).reverse()])}' fill='url(#${id})'/>`
-        + `<path d='${polyline(pts.map((pp) => [pp.x, pp.y]))}' fill='none' stroke='url(#${id})' stroke-width='${f(Math.max(0.8, rad * 0.12))}' stroke-linecap='round'/>`;
+      trails += wrap(`<path d='${poly([...edge(1), ...edge(-1).reverse()])}' fill='url(#${id})'/>`
+        + `<path d='${polyline(pts.map((pp) => [pp.x, pp.y]))}' fill='none' stroke='url(#${id})' stroke-width='${f(Math.max(0.8, rad * 0.12))}' stroke-linecap='round'/>`);
       const pose = BALL_POSE[kind][0];
-      ic = `<circle cx='${f(p.x)}' cy='${f(p.y)}' r='${f(rad * 1.6)}' fill='url(#trailHead)'/>` + fibBrighten(ball([kind, p.x, p.y, rad, pose[0] + q * 40, pose[1], pose[2]]))
+      ic += fibBrighten(ball([kind, p.x, p.y, rad, pose[0] + q * 40, pose[1], pose[2]]))
         + `<circle cx='${f(p.x)}' cy='${f(p.y)}' r='${f(rad + 1.5)}' fill='none' stroke='#b5ffe8' stroke-opacity='.35' stroke-width='${f(Math.max(1, rad * 0.04))}'/>`;
     } else {
       const extra = { whistle: [-18, 'M30 -30C44 -70 10 -100 30 -140'], stopwatch: [12, 40] }[kind] || [0];
-      ic = `<circle cx='${f(p.x)}' cy='${f(p.y)}' r='${f(rad * 1.5)}' fill='url(#trailHead)'/>` + fibBrighten(prop([kind, p.x, p.y, rad * 2, ...extra]));
+      ic += fibBrighten(prop([kind, p.x, p.y, rad * 2, ...extra]));
     }
-    trails += faint ? `<g opacity='${dim}'>${tr}</g>` : tr; icons += faint ? `<g opacity='${dim}'>${ic}</g>` : ic;
+    icons += wrap(ic);
   }
+  items.forEach((a, ia) => items.forEach((b, ib) => { if (ia < ib && Math.hypot(a.p.x - b.p.x, a.p.y - b.p.y) < (a.rad + b.rad) * 1.3) console.warn(`fundal-arena (${label}): icons ${a.arm}:${a.q} and ${b.arm}:${b.q} almost touch`); }));
   if (process.argv.includes('--debug')) {
     let d = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${W} ${H}' width='${W}' height='${H}'>`;
     for (const [a, b2, c, e] of zones) d += `<rect x='${a}' y='${b2}' width='${c - a}' height='${e - b2}' fill='#f0f' fill-opacity='.12' stroke='#f0f'/>`;
@@ -1031,7 +1046,7 @@ function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0
   }
   console.log(`fundal-arena (${label}): golden vortex, ${arms} arms, ${balls.length} icons`);
   const body = `<rect width='${W}' height='${H}' fill='${BASE}'/>${atmo}<circle cx='${cx}' cy='${cy}' r='220' fill='url(#vxCore)'/><g mask='url(#vxFade)'>${hazeSvg}</g>`
-    + `<g fill='none' stroke='#b5ffe8' stroke-linecap='round'>${dustSvg}</g>${trails}${icons}`;
+    + `<g fill='none' stroke='#b5ffe8' stroke-linecap='round'>${dustSvg}</g>${glows2}${trails}${icons}`;
   return { defs, body };
 }
 function fibSvg(W, H, align, comp) {
