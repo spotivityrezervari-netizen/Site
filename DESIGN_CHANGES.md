@@ -3,6 +3,13 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-24 (37): Icons in the sunflower mixed at random (done by Claude, at the owner's request)
+
+Owner: "put the icons more randomly, not so one after another".
+
+- In `iconSeeds` mode the kind is now picked at random for each seed (its own seeded generator, so the picture is the same on every run), and never the same as the nearest neighbours in the packing (n-8, n-13, n-21, n-34). The ball turn (one of three) and the lean of the whistle/stopwatch (±25°) are random too.
+- Positions, sizes and brightness are unchanged. `design-background.css?v=38`; SEO pages regenerated.
+
 ## 2026-11-24 (36): Sunflower made of icons instead of dots (done by Claude, at the owner's request)
 
 Owner: "instead of those dots, make them a bit sparser and put the icons".

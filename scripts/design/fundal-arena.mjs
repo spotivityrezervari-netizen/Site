@@ -891,7 +891,9 @@ function sunflower({ W, H, cx, cy, c, rMax, margin = [200, 100], size0, grow, ki
     icons += covered(x, y, rad) ? `<g opacity='${dim}'>${svg}</g>` : svg;
   }
   // Owner, 24.11: "in loc de buline ... mai rare și să pui iconițele". Every seed is a small icon
-  // (one kind along each of the 21 spirals, so the spirals show by the pattern). Each icon is drawn once in <defs> and placed with <use>, so a
+  // (owner, later: "mai aleatoriu, nu chiar așa una după alta": the kind is picked at random per
+  // seed, never the same as its nearest neighbours n-8, n-13, n-21, n-34; ball turn and lean are
+  // random too). Each icon is drawn once in <defs> and placed with <use>, so a
   // seed costs ~60 bytes. Balls come in three turns each (the light stays top-left); the whistle
   // and stopwatch lean a little. Brightness falls off with the radius in bands (iconOp at r = 0,
   // rMax/3, 2rMax/3, rMax); over the text or the photo they are drawn at seedDim.
@@ -906,16 +908,19 @@ function sunflower({ W, H, cx, cy, c, rMax, margin = [200, 100], size0, grow, ki
     }
     const d0 = c * Math.sqrt((2 * Math.PI) / Math.sqrt(3));
     const opAt = (r) => { const u = Math.min(1, r / rMax) * 3; const i = Math.min(2, Math.floor(u)); return iconOp[i] + (iconOp[i + 1] - iconOp[i]) * (u - i); };
-    const bands = {};
+    const bands = {}; const kindOf = []; let rk = 7919;
+    const rand2 = () => { rk = (rk * 1664525 + 1013904223) % 4294967296; return rk / 4294967296; };
     for (const sd of seeds) {
       const { x, y, n, s, r } = sd;
       if (x < -margin[0] || y < -margin[1] || x > W + margin[0] || y > H + margin[1]) continue;
       const size = d0 * iconFill * s;
       let op = opAt(r); if (inZone(x, y, size / 2)) op *= seedDim;
       op = Math.round(op * 20) / 20; if (op <= 0) continue;
-      const kind = kinds[(n % armCount) % kinds.length]; const isBall = !!seams[kind];   // one kind along each of the 21 spirals
-      const id = `s${kinds.indexOf(kind)}${isBall ? n % 3 : 0}`;
-      const rot = isBall ? '' : `rotate(${Math.round(((n * 37) % 41) - 20)})`;
+      let ki = Math.floor(rand2() * kinds.length);
+      for (let tries = 0; tries < 12 && [8, 13, 21, 34].some((dn) => kindOf[n - dn] === ki); tries++) ki = Math.floor(rand2() * kinds.length);
+      kindOf[n] = ki; const isBall = !!seams[kinds[ki]];
+      const id = `s${ki}${isBall ? Math.floor(rand2() * 3) : 0}`;
+      const rot = isBall ? '' : `rotate(${Math.round(rand2() * 50 - 25)})`;
       bands[op] = (bands[op] || '') + `<use href='#${id}' transform='translate(${Math.round(x)} ${Math.round(y)})${rot}scale(${(size / 100).toFixed(3)})'/>`;
     }
     const uses = Object.entries(bands).map(([op, u]) => `<g opacity='${op}'>${u}</g>`).join('');
