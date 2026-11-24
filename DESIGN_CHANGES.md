@@ -3,6 +3,15 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-24 (50): Hidden constellations and SPOTIVITY written in stars (done by Claude, at the owner's request)
+
+Owner: "the first option with constellations is superb, can we also write spotivity, as it is now, in constellations?".
+
+- **Restore point: git tag `design-before-constellations` (commit 7a16bb3, pushed).** Undo = delete the `constellations` lists in `fibWide` / `fibPhone` (or restore `scripts/design/fundal-arena.mjs` from the tag), re-run the generator, bump `?v=`, regenerate the SEO pages.
+- `constellations` option in `vortex()`: pictures drawn as on a star chart, brighter stars (with a soft glow `cnGlow`, uneven size and brightness) joined by very fine lines. Letters S P O T I V Y and shapes `racket`, `cup`, `hoop`, `ball` are defined in a unit box; each entry is `{ text | shape, x, y, size, rot, star, line, lw }`.
+- Wide: SPOTIVITY under the steps (430,880, size 52), a tennis racket top left (290,228), a cup on the right edge (1512,405), a basketball hoop bottom left (95,828). Phone: SPOTIVITY between the link and the steps (388,765, size 32). The small galaxy at 270,880 moved to 175,965 to make room.
+- Picture size: wide 328 KB, phone 197 KB; `design-background.css` 560 KB (157 KB gzipped). Static. `design-background.css?v=51`; SEO pages regenerated.
+
 ## 2026-11-24 (49): Every small galaxy carries the balls, true 1:1 scale (done by Claude, at the owner's request)
 
 Owner: "you did it fairly well, but I want the small galaxies to have icons too; take the big one and make it 1:1 but at the small, current scale".

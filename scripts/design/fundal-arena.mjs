@@ -969,7 +969,7 @@ function sunflower({ W, H, cx, cy, c, rMax, margin = [200, 100], size0, grow, ki
 // light trail behind it, so the picture moves. Behind them, the arms are only a soft haze (no
 // line), and a fine dust of light lies around the centre the way sunflower seeds do (golden
 // angle, Vogel). Balls further out are bigger; a ball over the text or the photo is faint.
-function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0, balls, dim = 0.4, span = 1.15, haze = 0.022, dust, galaxy = null, universe = null, extend = [80, 80] }) {
+function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0, balls, dim = 0.4, span = 1.15, haze = 0.022, dust, galaxy = null, universe = null, extend = [80, 80], constellations = null }) {
   const PHI = (1 + Math.sqrt(5)) / 2; const kk = Math.log(PHI) / (Math.PI / 2);
   let defs = FIB_BRIGHT ? fibBrightDefs : commonDefs; let atmo = '';
   const ext = `x='-300' y='${-extend[0]}' width='${W + 600}' height='${H + extend[0] + extend[1]}'`;   // the base and the glows cover the extended area too (no edge on tall screens)
@@ -1123,6 +1123,55 @@ function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0
       + `<g fill='none' stroke='${tint}' stroke-linecap='round'>${Object.entries(ga).map(([key, d]) => { const [w, op] = key.split('|'); return `<path d='${dotPath(d)}' stroke-width='${w}' stroke-opacity='${op}'/>`; }).join('')}</g>${mTrails}</g>${mBalls}`;
   }
   defs += miniDefs();
+  // ---- constellations (owner, 24.11: "prima variantă cu constelații este superbă, putem scrie și
+  // spotivity ... în constelații?"). Hidden pictures in the sky, drawn as on a star chart: a few
+  // brighter stars joined by very fine lines. Sport shapes (racket, cup, hoop) and the word
+  // SPOTIVITY in letters made of stars. Restore point: tag design-before-constellations.
+  // Shapes are polylines in a unit box (letters: 0.7 wide, 1 tall; pictures: centred on 0,0).
+  const LETTERS = {
+    S: [[[0.68, 0.12], [0.35, 0], [0.03, 0.18], [0.12, 0.44], [0.58, 0.56], [0.68, 0.8], [0.35, 1], [0.02, 0.88]]],
+    P: [[[0, 1], [0, 0], [0.48, 0.04], [0.66, 0.24], [0.48, 0.46], [0, 0.5]]],
+    O: [[[0.35, 0], [0.68, 0.26], [0.68, 0.74], [0.35, 1], [0.02, 0.74], [0.02, 0.26], [0.35, 0]]],
+    T: [[[0, 0], [0.35, 0], [0.7, 0]], [[0.35, 0], [0.35, 1]]],
+    I: [[[0.12, 0], [0.12, 0.5], [0.12, 1]]],
+    V: [[[0, 0], [0.35, 1], [0.7, 0]]],
+    Y: [[[0, 0], [0.35, 0.5], [0.7, 0]], [[0.35, 0.5], [0.35, 1]]],
+  };
+  const WIDTH = { I: 0.24 };
+  const ring = (cx2, cy2, rx, ry, n) => Array.from({ length: n + 1 }, (_, i) => [cx2 + rx * Math.cos((i / n) * 2 * Math.PI - Math.PI / 2), cy2 + ry * Math.sin((i / n) * 2 * Math.PI - Math.PI / 2)]);
+  const SHAPES = {
+    racket: [ring(0, -0.32, 0.3, 0.4, 9), [[-0.13, 0.06], [0, 0.26], [0.13, 0.06]], [[0, 0.26], [0, 0.72]], [[-0.3, -0.32], [0.3, -0.32]], [[0, -0.72], [0, 0.08]]],
+    cup: [[[-0.4, -0.5], [0.4, -0.5], [0.3, -0.12], [0.1, 0.04], [0.1, 0.3], [0.3, 0.46], [-0.3, 0.46], [-0.1, 0.3], [-0.1, 0.04], [-0.3, -0.12], [-0.4, -0.5]], [[-0.39, -0.42], [-0.62, -0.32], [-0.36, -0.16]], [[0.39, -0.42], [0.62, -0.32], [0.36, -0.16]]],
+    hoop: [[[-0.5, -0.62], [0.5, -0.62], [0.5, -0.12], [-0.5, -0.12], [-0.5, -0.62]], [[-0.3, 0], [0, 0.07], [0.3, 0], [0, -0.07], [-0.3, 0]], [[-0.3, 0], [-0.17, 0.42], [0.17, 0.42], [0.3, 0]], [[0, -0.12], [0, -0.07]]],
+    ball: [ring(0, 0, 0.5, 0.5, 10), [[0, -0.18], [0.17, -0.06], [0.11, 0.15], [-0.11, 0.15], [-0.17, -0.06], [0, -0.18]], [[0, -0.18], [0, -0.5]], [[0.17, -0.06], [0.48, -0.15]], [[0.11, 0.15], [0.29, 0.4]], [[-0.11, 0.15], [-0.29, 0.4]], [[-0.17, -0.06], [-0.48, -0.15]]],
+  };
+  let constSvg = '';
+  for (const c of constellations || []) {
+    let lines = []; const stars2 = new Map();
+    const rad2 = ((c.rot || 0) * Math.PI) / 180; const cs = Math.cos(rad2); const sn = Math.sin(rad2);
+    const place = ([x, y]) => [c.x + (x * cs - y * sn) * c.size, c.y + (x * sn + y * cs) * c.size];
+    if (c.text) {
+      let x0 = 0; const gap = 0.32;
+      const total = [...c.text].reduce((s, ch) => s + (WIDTH[ch] ?? 0.7) + gap, -gap);
+      for (const ch of c.text) {
+        for (const pl of LETTERS[ch]) lines.push(pl.map(([x, y]) => place([x0 + x - total / 2, y - 0.5])));
+        x0 += (WIDTH[ch] ?? 0.7) + gap;
+      }
+    } else lines = SHAPES[c.shape].map((pl) => pl.map(place));
+    let d = '';
+    for (const pl of lines) {
+      d += polyline(pl);
+      for (const [x, y] of pl) stars2.set(`${Math.round(x)},${Math.round(y)}`, [x, y]);
+    }
+    // the stars: a little uneven in size and brightness, as real stars are
+    let st = '';
+    for (const [x, y] of stars2.values()) {
+      const k = rand(); const r = (c.star || 2.2) * (0.75 + 0.5 * k);
+      st += `<circle cx='${f(x)}' cy='${f(y)}' r='${f(r * 3)}' fill='url(#cnGlow)'/><circle cx='${f(x)}' cy='${f(y)}' r='${f(r)}' fill='#effffa' fill-opacity='${f((0.7 + 0.3 * k) * 100) / 100}'/>`;
+    }
+    constSvg += `<path d='${d}' fill='none' stroke='#9fffe2' stroke-opacity='${c.line ?? 0.28}' stroke-width='${c.lw ?? 1}' stroke-linecap='round' stroke-linejoin='round'/>${st}`;
+  }
+  if (constellations) defs += `<radialGradient id='cnGlow'><stop offset='0' stop-color='#c8fff0' stop-opacity='.35'/><stop offset='1' stop-color='#c8fff0' stop-opacity='0'/></radialGradient>`;
   // the flying balls (and a few props). Owner, 24.11: "unele efecte se suprapun peste iconițe".
   // So: (1) the layers go glows -> trails -> icons, never one icon's glow over another icon;
   // (2) each trail is cut short where it would come near another icon (it ends in the open);
@@ -1189,7 +1238,7 @@ function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0
   }
   console.log(`fundal-arena (${label}): golden vortex, ${arms} arms, ${balls.length} icons`);
   const body = `<rect ${ext} fill='${BASE}'/>${atmo}<circle cx='${cx}' cy='${cy}' r='220' fill='url(#vxCore)'/><g mask='url(#vxFade)'>${hazeSvg}</g>`
-    + `${galaxy ? galaxySvg : `<g fill='none' stroke='#b5ffe8' stroke-linecap='round'>${dustSvg}</g>`}${universeSvg}${glows2}${trails}${icons}`;
+    + `${galaxy ? galaxySvg : `<g fill='none' stroke='#b5ffe8' stroke-linecap='round'>${dustSvg}</g>`}${universeSvg}${constSvg}${glows2}${trails}${icons}`;
   return { defs, body };
 }
 function fibSvg(W, H, align, comp) {
@@ -1206,10 +1255,12 @@ const fibWide = fibSvg(1600, 1000, 'xMidYMid', {
   vortex: { cx: 800, cy: 500, arms: 3, r0: 9, extend: [300, 320],   // owner: centred, a little smaller, no hard end at the bottom
     turn: 0.4, dim: 0.4, dust: { count: 900, c: 30, fall: 420 },
     galaxy: { arms2: 5, turn2: 0.6, stars: 600, stars2: 260, width: 0.05, op: 0.95, fall: 1500, rMax: 1150, sky: 140, bulge: 125, haze: 0.04 },
+    // hidden constellations (star-chart pictures) and the name written in stars
+    constellations: [{ text: 'SPOTIVITY', x: 430, y: 880, size: 52 }, { shape: 'racket', x: 290, y: 228, size: 120, rot: -30 }, { shape: 'cup', x: 1512, y: 405, size: 92 }, { shape: 'hoop', x: 95, y: 828, size: 105, rot: -6 }],
     // small far-away galaxies in the free corners: { x, y, r, tilt, rot, arms, tint }
     universe: [{ x: 1350, y: 235, r: 110, tilt: 0.45, rot: -25 }, { x: 1495, y: 865, r: 85, tilt: 0.62, rot: 35, tint: '#bfe6ff' }, { x: 92, y: 640, r: 52, tilt: 0.55, rot: 70 }, { x: 1040, y: 935, r: 42, tilt: 0.38, rot: -12 }, { x: 1545, y: 520, r: 34, tilt: 0.75, rot: 15 },
       // tiny ones scattered over the sky, and a few past the picture for taller screens
-      { x: 667, y: 190, r: 24, tilt: 0.5, rot: 40 }, { x: 1130, y: 178, r: 20, tilt: 0.65, rot: -50, tint: '#bfe6ff' }, { x: 270, y: 880, r: 26, tilt: 0.45, rot: 10 },
+      { x: 667, y: 190, r: 24, tilt: 0.5, rot: 40 }, { x: 1130, y: 178, r: 20, tilt: 0.65, rot: -50, tint: '#bfe6ff' }, { x: 175, y: 965, r: 26, tilt: 0.45, rot: 10 },
       { x: 1250, y: 940, r: 22, tilt: 0.55, rot: 75 }, { x: 60, y: 300, r: 22, tilt: 0.6, rot: -30 }, { x: 1560, y: 700, r: 20, tilt: 0.5, rot: 55 }, { x: 720, y: 975, r: 24, tilt: 0.4, rot: -20, tint: '#bfe6ff' },
       { x: 420, y: 1150, r: 44, tilt: 0.5, rot: 25 }, { x: 1180, y: 1190, r: 46, tilt: 0.42, rot: -35, tint: '#bfe6ff' }, { x: 500, y: -150, r: 36, tilt: 0.55, rot: 60 }, { x: 1150, y: -130, r: 30, tilt: 0.6, rot: -15 }],
     balls: [[0, 5.5, 'tennis'], [1, 5, 'volleyball'], [2, 6, 'basketball'], [0, 7, 'soccer', 0.17, { span: 1.6, accent: true }], [2, 7.5, 'whistle', 0.09], [1, 7.5, 'soccer', 0.12],
@@ -1227,6 +1278,7 @@ const fibPhone = fibSvg(547, 1184, 'xMidYMin', {
   vortex: { cx: 273, cy: 592, arms: 3, r0: 7, extend: [60, 460],
     turn: 1.2, dim: 0.4, dust: { count: 700, c: 26, fall: 330 },
     galaxy: { arms2: 5, turn2: 0.6, stars: 430, stars2: 180, width: 0.05, op: 0.95, fall: 1100, rMax: 1050, sky: 90, bulge: 85, haze: 0.04 },
+    constellations: [{ text: 'SPOTIVITY', x: 388, y: 765, size: 32, star: 1.8, lw: 0.9 }],
     universe: [{ x: 455, y: 250, r: 58, tilt: 0.5, rot: -20 }, { x: 440, y: 762, r: 36, tilt: 0.6, rot: 30, tint: '#bfe6ff' }, { x: 80, y: 205, r: 28, tilt: 0.65, rot: 60 },
       { x: 480, y: 715, r: 16, tilt: 0.55, rot: 35 }, { x: 150, y: 1300, r: 42, tilt: 0.5, rot: 20 }, { x: 420, y: 1450, r: 34, tilt: 0.6, rot: -40, tint: '#bfe6ff' }, { x: 240, y: 1600, r: 26, tilt: 0.45, rot: 70 }],
     // phone (owner, 24.11 cleanup): at most one ball per arm within a quarter turn, so every trail stays whole
