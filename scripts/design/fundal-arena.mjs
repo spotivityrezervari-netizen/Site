@@ -1129,21 +1129,36 @@ function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0
   // SPOTIVITY in letters made of stars. Restore point: tag design-before-constellations.
   // Shapes are polylines in a unit box (letters: 0.7 wide, 1 tall; pictures: centred on 0,0).
   const LETTERS = {
-    S: [[[0.68, 0.12], [0.35, 0], [0.03, 0.18], [0.12, 0.44], [0.58, 0.56], [0.68, 0.8], [0.35, 1], [0.02, 0.88]]],
-    P: [[[0, 1], [0, 0], [0.48, 0.04], [0.66, 0.24], [0.48, 0.46], [0, 0.5]]],
-    O: [[[0.35, 0], [0.68, 0.26], [0.68, 0.74], [0.35, 1], [0.02, 0.74], [0.02, 0.26], [0.35, 0]]],
-    T: [[[0, 0], [0.35, 0], [0.7, 0]], [[0.35, 0], [0.35, 1]]],
+    A: [[[0, 1], [0.35, 0], [0.7, 1]], [[0.14, 0.6], [0.56, 0.6]]],
+    D: [[[0, 0], [0, 1], [0.38, 0.96], [0.66, 0.7], [0.66, 0.3], [0.38, 0.04], [0, 0]]],
+    E: [[[0.62, 0], [0, 0], [0, 0.5], [0, 1], [0.62, 1]], [[0, 0.5], [0.48, 0.5]]],
+    G: [[[0.66, 0.16], [0.36, 0], [0.06, 0.2], [0.02, 0.62], [0.3, 1], [0.62, 0.86], [0.66, 0.56], [0.4, 0.56]]],
+    H: [[[0, 0], [0, 0.5], [0, 1]], [[0.66, 0], [0.66, 0.5], [0.66, 1]], [[0, 0.5], [0.66, 0.5]]],
     I: [[[0.12, 0], [0.12, 0.5], [0.12, 1]]],
+    L: [[[0, 0], [0, 0.5], [0, 1], [0.58, 1]]],
+    M: [[[0, 1], [0, 0], [0.4, 0.56], [0.8, 0], [0.8, 1]]],
+    N: [[[0, 1], [0, 0], [0.66, 1], [0.66, 0]]],
+    O: [[[0.35, 0], [0.68, 0.26], [0.68, 0.74], [0.35, 1], [0.02, 0.74], [0.02, 0.26], [0.35, 0]]],
+    P: [[[0, 1], [0, 0.5], [0, 0], [0.46, 0.03], [0.66, 0.24], [0.46, 0.47], [0, 0.5]]],
+    R: [[[0, 1], [0, 0.5], [0, 0], [0.46, 0.03], [0.66, 0.24], [0.46, 0.47], [0, 0.5], [0.66, 1]]],
+    S: [[[0.66, 0.12], [0.35, 0], [0.04, 0.18], [0.14, 0.44], [0.56, 0.56], [0.66, 0.8], [0.35, 1], [0.02, 0.88]]],
+    T: [[[0, 0], [0.35, 0], [0.7, 0]], [[0.35, 0], [0.35, 0.5], [0.35, 1]]],
+    U: [[[0, 0], [0, 0.68], [0.33, 1], [0.66, 0.68], [0.66, 0]]],
     V: [[[0, 0], [0.35, 1], [0.7, 0]]],
+    W: [[[0, 0], [0.22, 1], [0.46, 0.38], [0.7, 1], [0.92, 0]]],
     Y: [[[0, 0], [0.35, 0.5], [0.7, 0]], [[0.35, 0.5], [0.35, 1]]],
   };
-  const WIDTH = { I: 0.24 };
-  const ring = (cx2, cy2, rx, ry, n) => Array.from({ length: n + 1 }, (_, i) => [cx2 + rx * Math.cos((i / n) * 2 * Math.PI - Math.PI / 2), cy2 + ry * Math.sin((i / n) * 2 * Math.PI - Math.PI / 2)]);
+  const WIDTH = { I: 0.24, M: 0.8, W: 0.92, ' ': 0.45 };
+  const ring = (cx2, cy2, rx, ry, n, a0 = -Math.PI / 2) => Array.from({ length: n + 1 }, (_, i) => [cx2 + rx * Math.cos((i / n) * 2 * Math.PI + a0), cy2 + ry * Math.sin((i / n) * 2 * Math.PI + a0)]);
+  const arc = (cx2, cy2, r, a1, a2, n) => Array.from({ length: n + 1 }, (_, i) => { const a = a1 + ((a2 - a1) * i) / n; return [cx2 + r * Math.cos(a), cy2 + r * Math.sin(a)]; });
   const SHAPES = {
     racket: [ring(0, -0.32, 0.3, 0.4, 9), [[-0.13, 0.06], [0, 0.26], [0.13, 0.06]], [[0, 0.26], [0, 0.72]], [[-0.3, -0.32], [0.3, -0.32]], [[0, -0.72], [0, 0.08]]],
     cup: [[[-0.4, -0.5], [0.4, -0.5], [0.3, -0.12], [0.1, 0.04], [0.1, 0.3], [0.3, 0.46], [-0.3, 0.46], [-0.1, 0.3], [-0.1, 0.04], [-0.3, -0.12], [-0.4, -0.5]], [[-0.39, -0.42], [-0.62, -0.32], [-0.36, -0.16]], [[0.39, -0.42], [0.62, -0.32], [0.36, -0.16]]],
     hoop: [[[-0.5, -0.62], [0.5, -0.62], [0.5, -0.12], [-0.5, -0.12], [-0.5, -0.62]], [[-0.3, 0], [0, 0.07], [0.3, 0], [0, -0.07], [-0.3, 0]], [[-0.3, 0], [-0.17, 0.42], [0.17, 0.42], [0.3, 0]], [[0, -0.12], [0, -0.07]]],
-    ball: [ring(0, 0, 0.5, 0.5, 10), [[0, -0.18], [0.17, -0.06], [0.11, 0.15], [-0.11, 0.15], [-0.17, -0.06], [0, -0.18]], [[0, -0.18], [0, -0.5]], [[0.17, -0.06], [0.48, -0.15]], [[0.11, 0.15], [0.29, 0.4]], [[-0.11, 0.15], [-0.29, 0.4]], [[-0.17, -0.06], [-0.48, -0.15]]],
+    soccer: [ring(0, 0, 0.5, 0.5, 10), [[0, -0.18], [0.17, -0.06], [0.11, 0.15], [-0.11, 0.15], [-0.17, -0.06], [0, -0.18]], [[0, -0.18], [0, -0.5]], [[0.17, -0.06], [0.48, -0.15]], [[0.11, 0.15], [0.29, 0.4]], [[-0.11, 0.15], [-0.29, 0.4]], [[-0.17, -0.06], [-0.48, -0.15]]],
+    tennis: [ring(0, 0, 0.5, 0.5, 10), arc(-0.62, 0, 0.42, -0.95, 0.95, 4), arc(0.62, 0, 0.42, Math.PI - 0.95, Math.PI + 0.95, 4)],
+    basket: [ring(0, 0, 0.5, 0.5, 10), [[0, -0.5], [0, 0], [0, 0.5]], [[-0.5, 0], [0, 0], [0.5, 0]], arc(-0.72, 0, 0.5, -0.8, 0.8, 4), arc(0.72, 0, 0.5, Math.PI - 0.8, Math.PI + 0.8, 4)],
+    volley: [ring(0, 0, 0.5, 0.5, 10), [[0, 0], [0, -0.5]], [[0, 0], [0.43, 0.25]], [[0, 0], [-0.43, 0.25]], arc(0.3, -0.62, 0.55, 1.75, 2.75, 3)],
   };
   let constSvg = '';
   for (const c of constellations || []) {
@@ -1151,10 +1166,10 @@ function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0
     const rad2 = ((c.rot || 0) * Math.PI) / 180; const cs = Math.cos(rad2); const sn = Math.sin(rad2);
     const place = ([x, y]) => [c.x + (x * cs - y * sn) * c.size, c.y + (x * sn + y * cs) * c.size];
     if (c.text) {
-      let x0 = 0; const gap = 0.32;
+      let x0 = 0; const gap = 0.42;   // letters need air, or the stars run together
       const total = [...c.text].reduce((s, ch) => s + (WIDTH[ch] ?? 0.7) + gap, -gap);
       for (const ch of c.text) {
-        for (const pl of LETTERS[ch]) lines.push(pl.map(([x, y]) => place([x0 + x - total / 2, y - 0.5])));
+        for (const pl of LETTERS[ch] || []) lines.push(pl.map(([x, y]) => place([x0 + x - total / 2, y - 0.5])));
         x0 += (WIDTH[ch] ?? 0.7) + gap;
       }
     } else lines = SHAPES[c.shape].map((pl) => pl.map(place));
@@ -1167,11 +1182,15 @@ function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0
     let st = '';
     for (const [x, y] of stars2.values()) {
       const k = rand(); const r = (c.star || 2.2) * (0.75 + 0.5 * k);
-      st += `<circle cx='${f(x)}' cy='${f(y)}' r='${f(r * 3)}' fill='url(#cnGlow)'/><circle cx='${f(x)}' cy='${f(y)}' r='${f(r)}' fill='#effffa' fill-opacity='${f((0.7 + 0.3 * k) * 100) / 100}'/>`;
+      st += `<circle cx='${f(x)}' cy='${f(y)}' r='${f(r * (c.text ? 3.2 : 4.5))}' fill='url(#cnGlow)'/><circle cx='${f(x)}' cy='${f(y)}' r='${f(r)}' fill='#f4fffb' fill-opacity='${f((0.8 + 0.2 * k) * 100) / 100}'/>`;
+      // about one star in four sparkles: a thin four-pointed cross of light
+      if (k > (c.text ? 0.93 : 0.72)) { const L = r * 4.2;   // text: only a rare sparkle, so the letters read clearly
+        st += `<path d='M${f(x - L)} ${f(y)}H${f(x + L)}M${f(x)} ${f(y - L)}V${f(y + L)}' stroke='#e8fff7' stroke-opacity='.55' stroke-width='${f(Math.max(0.6, r * 0.32))}' stroke-linecap='round'/>`; }
     }
-    constSvg += `<path d='${d}' fill='none' stroke='#9fffe2' stroke-opacity='${c.line ?? 0.28}' stroke-width='${c.lw ?? 1}' stroke-linecap='round' stroke-linejoin='round'/>${st}`;
+    // a faint halo along the lines, then the fine line itself
+    constSvg += `<path d='${d}' fill='none' stroke='#4fe0b6' stroke-opacity='.1' stroke-width='${f((c.lw ?? 1.2) * 5)}' stroke-linecap='round' stroke-linejoin='round'/><path d='${d}' fill='none' stroke='#b5ffe8' stroke-opacity='${c.line ?? 0.45}' stroke-width='${c.lw ?? 1.2}' stroke-linecap='round' stroke-linejoin='round'/>${st}`;
   }
-  if (constellations) defs += `<radialGradient id='cnGlow'><stop offset='0' stop-color='#c8fff0' stop-opacity='.35'/><stop offset='1' stop-color='#c8fff0' stop-opacity='0'/></radialGradient>`;
+  if (constellations) defs += `<radialGradient id='cnGlow'><stop offset='0' stop-color='#d6fff2' stop-opacity='.55'/><stop offset='.3' stop-color='#8dffdc' stop-opacity='.16'/><stop offset='1' stop-color='#8dffdc' stop-opacity='0'/></radialGradient>`;
   // the flying balls (and a few props). Owner, 24.11: "unele efecte se suprapun peste iconițe".
   // So: (1) the layers go glows -> trails -> icons, never one icon's glow over another icon;
   // (2) each trail is cut short where it would come near another icon (it ends in the open);
@@ -1256,12 +1275,14 @@ const fibWide = fibSvg(1600, 1000, 'xMidYMid', {
     turn: 0.4, dim: 0.4, dust: { count: 900, c: 30, fall: 420 },
     galaxy: { arms2: 5, turn2: 0.6, stars: 600, stars2: 260, width: 0.05, op: 0.95, fall: 1500, rMax: 1150, sky: 140, bulge: 125, haze: 0.04 },
     // hidden constellations (star-chart pictures) and the name written in stars
-    constellations: [{ text: 'SPOTIVITY', x: 430, y: 880, size: 52 }, { shape: 'racket', x: 290, y: 228, size: 120, rot: -30 }, { shape: 'cup', x: 1512, y: 405, size: 92 }, { shape: 'hoop', x: 95, y: 828, size: 105, rot: -6 }],
+    constellations: [{ text: 'DO IT NOW', x: 425, y: 880, size: 46, star: 2.4 }, { text: 'GAME ON', x: 1085, y: 262, size: 28, star: 2 },
+      { shape: 'racket', x: 290, y: 228, size: 120, rot: -30 }, { shape: 'cup', x: 1512, y: 405, size: 92 }, { shape: 'hoop', x: 95, y: 828, size: 105, rot: -6 },
+      { shape: 'soccer', x: 1335, y: 765, size: 78, rot: 12, star: 2 }, { shape: 'tennis', x: 600, y: 205, size: 64, rot: -20, star: 1.9 }, { shape: 'basket', x: 1545, y: 610, size: 56, rot: 18, star: 1.8 }, { shape: 'volley', x: 820, y: 935, size: 58, rot: 8, star: 1.8 }],
     // small far-away galaxies in the free corners: { x, y, r, tilt, rot, arms, tint }
     universe: [{ x: 1350, y: 235, r: 110, tilt: 0.45, rot: -25 }, { x: 1495, y: 865, r: 85, tilt: 0.62, rot: 35, tint: '#bfe6ff' }, { x: 92, y: 640, r: 52, tilt: 0.55, rot: 70 }, { x: 1040, y: 935, r: 42, tilt: 0.38, rot: -12 }, { x: 1545, y: 520, r: 34, tilt: 0.75, rot: 15 },
       // tiny ones scattered over the sky, and a few past the picture for taller screens
-      { x: 667, y: 190, r: 24, tilt: 0.5, rot: 40 }, { x: 1130, y: 178, r: 20, tilt: 0.65, rot: -50, tint: '#bfe6ff' }, { x: 175, y: 965, r: 26, tilt: 0.45, rot: 10 },
-      { x: 1250, y: 940, r: 22, tilt: 0.55, rot: 75 }, { x: 60, y: 300, r: 22, tilt: 0.6, rot: -30 }, { x: 1560, y: 700, r: 20, tilt: 0.5, rot: 55 }, { x: 720, y: 975, r: 24, tilt: 0.4, rot: -20, tint: '#bfe6ff' },
+      { x: 705, y: 160, r: 22, tilt: 0.5, rot: 40 }, { x: 1235, y: 300, r: 18, tilt: 0.65, rot: -50, tint: '#bfe6ff' }, { x: 175, y: 965, r: 26, tilt: 0.45, rot: 10 },
+      { x: 1250, y: 940, r: 22, tilt: 0.55, rot: 75 }, { x: 60, y: 300, r: 22, tilt: 0.6, rot: -30 }, { x: 1560, y: 720, r: 18, tilt: 0.5, rot: 55 }, { x: 650, y: 985, r: 22, tilt: 0.4, rot: -20, tint: '#bfe6ff' },
       { x: 420, y: 1150, r: 44, tilt: 0.5, rot: 25 }, { x: 1180, y: 1190, r: 46, tilt: 0.42, rot: -35, tint: '#bfe6ff' }, { x: 500, y: -150, r: 36, tilt: 0.55, rot: 60 }, { x: 1150, y: -130, r: 30, tilt: 0.6, rot: -15 }],
     balls: [[0, 5.5, 'tennis'], [1, 5, 'volleyball'], [2, 6, 'basketball'], [0, 7, 'soccer', 0.17, { span: 1.6, accent: true }], [2, 7.5, 'whistle', 0.09], [1, 7.5, 'soccer', 0.12],
       // owner: "încă câteva iconițe și să nu se termine așa brusc": small ones born at the centre, more towards the edges
@@ -1278,7 +1299,7 @@ const fibPhone = fibSvg(547, 1184, 'xMidYMin', {
   vortex: { cx: 273, cy: 592, arms: 3, r0: 7, extend: [60, 460],
     turn: 1.2, dim: 0.4, dust: { count: 700, c: 26, fall: 330 },
     galaxy: { arms2: 5, turn2: 0.6, stars: 430, stars2: 180, width: 0.05, op: 0.95, fall: 1100, rMax: 1050, sky: 90, bulge: 85, haze: 0.04 },
-    constellations: [{ text: 'SPOTIVITY', x: 388, y: 765, size: 32, star: 1.8, lw: 0.9 }],
+    constellations: [{ text: 'DO IT NOW', x: 375, y: 765, size: 30, star: 1.8, lw: 1 }, { shape: 'soccer', x: 470, y: 560, size: 62, rot: 10, star: 1.7, lw: 1 }],
     universe: [{ x: 455, y: 250, r: 58, tilt: 0.5, rot: -20 }, { x: 440, y: 762, r: 36, tilt: 0.6, rot: 30, tint: '#bfe6ff' }, { x: 80, y: 205, r: 28, tilt: 0.65, rot: 60 },
       { x: 480, y: 715, r: 16, tilt: 0.55, rot: 35 }, { x: 150, y: 1300, r: 42, tilt: 0.5, rot: 20 }, { x: 420, y: 1450, r: 34, tilt: 0.6, rot: -40, tint: '#bfe6ff' }, { x: 240, y: 1600, r: 26, tilt: 0.45, rot: 70 }],
     // phone (owner, 24.11 cleanup): at most one ball per arm within a quarter turn, so every trail stays whole

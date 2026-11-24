@@ -3,6 +3,16 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-24 (51): Constellations: quotes instead of SPOTIVITY, ball constellations, more visible (done by Claude, at the owner's request)
+
+Owner: "work a bit more on these constellations, they don't show very well; I don't really like that spotivity; put some quotes, 'do it now' things like that, in constellations, but make them really beautiful; add a ball constellation here and there".
+
+- SPOTIVITY removed. Quotes: wide "DO IT NOW" under the steps (425,880, size 46) and "GAME ON" at the top beside the big ball (1085,262, size 28); phone "DO IT NOW" between the link and the steps.
+- New letters (A D E G H L M N R U W added to S P O T I V Y), wider spacing (gap 0.42) and a space character. New ball constellations: `soccer`, `tennis`, `basket`, `volley`. Wide: soccer ball bottom right, tennis ball top centre-left, basketball on the right edge, volleyball at the bottom; phone: a soccer ball on the right.
+- More visible and prettier: brighter star cores, a larger soft glow (`cnGlow`), a faint halo along every line plus the fine line (opacity .45, width 1.2), and about one star in four on the pictures sparkles with a thin four-pointed cross (rarer on the letters, so they stay readable).
+- Two tiny galaxies moved out of the way. Picture size: wide 360 KB, phone 203 KB; `design-background.css` 598 KB (164 KB gzipped).
+- Restore point unchanged: tag `design-before-constellations`. Static. `design-background.css?v=52`; SEO pages regenerated.
+
 ## 2026-11-24 (50): Hidden constellations and SPOTIVITY written in stars (done by Claude, at the owner's request)
 
 Owner: "the first option with constellations is superb, can we also write spotivity, as it is now, in constellations?".
