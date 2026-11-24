@@ -961,7 +961,7 @@ function sunflower({ W, H, cx, cy, c, rMax, margin = [200, 100], size0, grow, ki
 // light trail behind it, so the picture moves. Behind them, the arms are only a soft haze (no
 // line), and a fine dust of light lies around the centre the way sunflower seeds do (golden
 // angle, Vogel). Balls further out are bigger; a ball over the text or the photo is faint.
-function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0, balls, dim = 0.4, span = 1.15, haze = 0.022, dust, galaxy = null }) {
+function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0, balls, dim = 0.4, span = 1.15, haze = 0.022, dust, galaxy = null, universe = null }) {
   const PHI = (1 + Math.sqrt(5)) / 2; const kk = Math.log(PHI) / (Math.PI / 2);
   let defs = FIB_BRIGHT ? fibBrightDefs : commonDefs; let atmo = '';
   glows.forEach((g, i) => { const gl = glow(`gl${i}`, ...g); defs += gl.defs; atmo += gl.svg(W, H); });
@@ -1048,6 +1048,28 @@ function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0
     galaxySvg = `<circle cx='${cx}' cy='${cy}' r='${g.bulge}' fill='url(#vxBulge)'/><g fill='none' stroke='#d6fff2' stroke-linecap='round'>`
       + Object.entries(stars).map(([key, d]) => { const [w, op] = key.split('|'); return `<path d='${d}' stroke-width='${w}' stroke-opacity='${op}'/>`; }).join('') + '</g>';
   }
+  // ---- universe (owner, 24.11: "mai multe galaxii dinastea, să arate ca un univers"). A few small,
+  // far-away galaxies in the free corners of the screen, each one a little two-armed golden
+  // spiral of stars with a bright core, seen at its own tilt (squashed and turned, as galaxies
+  // look in the sky); one of them slightly bluish. Restore point: tag design-before-universe.
+  let universeSvg = '';
+  for (const [k, gx] of (universe || []).entries()) {
+    const { x: ux, y: uy, r: ur, tilt = 0.5, rot = 0, arms: na = 2, tint = '#d6fff2', stars: ns = Math.round(ur * 2.4) } = gx;
+    const ga = {}; const b0 = ur * 0.06;
+    const put2 = (x, y, w, op) => { op = Math.round(op * 20) / 20; if (op <= 0) return; const key = `${w}|${op}`; ga[key] = (ga[key] || '') + `M${f(x)} ${f(y)}h0`; };
+    const gauss2 = () => Math.sqrt(-2 * Math.log(rand() + 1e-9)) * Math.cos(2 * Math.PI * rand());
+    for (let s = 0; s < ns; s++) {
+      const arm = s % na; const rr = b0 + rand() * (ur - b0); const th = Math.log(rr / b0) / kk;
+      const a = th + (arm * 2 * Math.PI) / na; const off = gauss2() * rr * 0.11;
+      const x = rr * Math.cos(a) - Math.sin(a) * off; const y = rr * Math.sin(a) + Math.cos(a) * off;
+      const fade = 1 - rr / ur;
+      put2(x, y, [1, 1.4, 2][Math.floor(rand() ** 1.8 * 3)], (0.25 + 0.7 * fade) * (0.5 + 0.5 * rand()));
+    }
+    const id = `vxG${k}`;
+    defs += `<radialGradient id='${id}'><stop offset='0' stop-color='#f2fffa' stop-opacity='.75'/><stop offset='.12' stop-color='${tint}' stop-opacity='.32'/><stop offset='.45' stop-color='${tint}' stop-opacity='.08'/><stop offset='1' stop-color='${tint}' stop-opacity='0'/></radialGradient>`;
+    universeSvg += `<g transform='translate(${f(ux)} ${f(uy)}) rotate(${rot}) scale(1 ${tilt})'><circle r='${f(ur * 1.1)}' fill='url(#${id})'/>`
+      + `<g fill='none' stroke='${tint}' stroke-linecap='round'>${Object.entries(ga).map(([key, d]) => { const [w, op] = key.split('|'); return `<path d='${d}' stroke-width='${w}' stroke-opacity='${op}'/>`; }).join('')}</g></g>`;
+  }
   // the flying balls (and a few props). Owner, 24.11: "unele efecte se suprapun peste iconițe".
   // So: (1) the layers go glows -> trails -> icons, never one icon's glow over another icon;
   // (2) each trail is cut short where it would come near another icon (it ends in the open);
@@ -1114,7 +1136,7 @@ function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0
   }
   console.log(`fundal-arena (${label}): golden vortex, ${arms} arms, ${balls.length} icons`);
   const body = `<rect width='${W}' height='${H}' fill='${BASE}'/>${atmo}<circle cx='${cx}' cy='${cy}' r='220' fill='url(#vxCore)'/><g mask='url(#vxFade)'>${hazeSvg}</g>`
-    + `${galaxy ? galaxySvg : `<g fill='none' stroke='#b5ffe8' stroke-linecap='round'>${dustSvg}</g>`}${glows2}${trails}${icons}`;
+    + `${galaxy ? galaxySvg : `<g fill='none' stroke='#b5ffe8' stroke-linecap='round'>${dustSvg}</g>`}${universeSvg}${glows2}${trails}${icons}`;
   return { defs, body };
 }
 function fibSvg(W, H, align, comp) {
@@ -1130,6 +1152,8 @@ const fibWide = fibSvg(1600, 1000, 'xMidYMid', {
   // golden vortex (owner, 24.11): [arm, quarter turns from the centre, kind, size factor]
   vortex: { cx: 800, cy: 540, arms: 3, r0: 12, turn: 0.4, dim: 0.4, dust: { count: 900, c: 30, fall: 420 },
     galaxy: { arms2: 5, turn2: 0.6, stars: 560, stars2: 240, width: 0.05, op: 0.95, fall: 1500, rMax: 1000, sky: 90, bulge: 160, haze: 0.04 },
+    // small far-away galaxies in the free corners: { x, y, r, tilt, rot, arms, tint }
+    universe: [{ x: 1350, y: 235, r: 95, tilt: 0.42, rot: -25 }, { x: 1500, y: 870, r: 75, tilt: 0.62, rot: 35, tint: '#bfe6ff' }, { x: 92, y: 640, r: 48, tilt: 0.5, rot: 70 }, { x: 1040, y: 935, r: 38, tilt: 0.35, rot: -12, arms: 3 }, { x: 1545, y: 520, r: 30, tilt: 0.7, rot: 15 }],
     balls: [[0, 5.5, 'tennis'], [1, 5, 'volleyball'], [2, 6, 'basketball'], [0, 7, 'soccer', 0.17, { span: 1.6, accent: true }], [2, 7.5, 'whistle', 0.09], [1, 8, 'soccer', 0.12],
       // owner: "încă câteva iconițe și să nu se termine așa brusc": small ones born at the centre, more towards the edges
       [1, 4, 'tennis'], [2, 4.5, 'soccer'], [0, 4.5, 'volleyball']] },
@@ -1144,6 +1168,7 @@ const fibWide = fibSvg(1600, 1000, 'xMidYMid', {
 const fibPhone = fibSvg(547, 1184, 'xMidYMin', {
   vortex: { cx: 273, cy: 600, arms: 3, r0: 9, turn: 1.2, dim: 0.4, dust: { count: 700, c: 26, fall: 330 },
     galaxy: { arms2: 5, turn2: 0.6, stars: 400, stars2: 170, width: 0.05, op: 0.95, fall: 1100, rMax: 800, sky: 50, bulge: 110, haze: 0.04 },
+    universe: [{ x: 455, y: 250, r: 50, tilt: 0.45, rot: -20 }, { x: 440, y: 762, r: 32, tilt: 0.55, rot: 30, tint: '#bfe6ff' }, { x: 80, y: 205, r: 26, tilt: 0.6, rot: 60 }],
     // phone (owner, 24.11 cleanup): at most one ball per arm within a quarter turn, so every trail stays whole
     balls: [[0, 6.5, 'soccer', 0.17, { accent: true }], [1, 6, 'tennis'], [2, 5.5, 'basketball', 0.15],
       [2, 4.5, 'tennis'], [0, 4, 'soccer'], [1, 4.5, 'volleyball'], [1, 7, 'soccer', 0.08]] },

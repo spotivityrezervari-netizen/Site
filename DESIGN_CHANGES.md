@@ -3,6 +3,14 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-24 (45): A universe: small far-away galaxies around the main one (done by Claude, at the owner's request)
+
+Owner: "shall we make more of these galaxies, so it looks like a universe? do a little, and if I say undo, bring back the initial form".
+
+- **Restore point: git tag `design-before-universe` (commit 61d9525, pushed).** "Undo" for this step = restore `scripts/design/fundal-arena.mjs` from that tag (or just delete the `universe` lists in `fibWide` / `fibPhone`), re-run `node scripts/design/fundal-arena.mjs`, bump `design-background.css?v=` and regenerate the SEO pages.
+- `universe` option in `vortex()`: small galaxies in the free corners, each a two-armed golden spiral of stars with a bright core, squashed and turned (`tilt`, `rot`) as galaxies look in the sky; one is slightly bluish (`tint` #bfe6ff), one has 3 arms. Wide: 5 (top right, bottom right, left edge, bottom centre, right edge); phone: 3 (top right, beside the steps, top left).
+- Picture size: wide 193 KB, phone 155 KB. Static. `design-background.css?v=46`; SEO pages regenerated.
+
 ## 2026-11-24 (44): Golden vortex becomes a galaxy: 3 + 5 star arms (done by Claude, at the owner's request)
 
 Owner: "shall we put more Fibonacci sequences, so it looks like a galaxy?".
