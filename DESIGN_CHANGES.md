@@ -3,6 +3,15 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-24 (53): Real constellations instead of the sport/quote pictures (done by Claude, at the owner's request)
+
+Owner: "I don't really like the constellations, delete all of them and maybe put some spectacular constellations that exist, centre them nicely so they don't interleave with the Fibonacci spirals, so they look good on each side, on laptop and desktop".
+
+- **Restore point: git tag `design-before-real-constellations` (commit 3496f88, pushed)** = the sport/quote constellations. `design-before-constellations` = none at all.
+- All earlier constellations removed (letters, quotes, sport shapes and their code). New `REAL` set in `vortex()`: Orion, Big Dipper (Ursa Major), Cassiopeia, Cygnus, with star positions as in the sky (north up) and real magnitudes: brighter stars are bigger, stars brighter than magnitude 2 sparkle (a thin cross, longer under magnitude 1). Colours as in the sky: Betelgeuse orange (#ffd3a8), Rigel blue-white (#d4e8ff), Albireo gold. Orion carries a soft nebula in its sword (`cnNeb`). Lines are thin and soft (opacity .24 wide, .32 phone).
+- Wide: one in each free corner, away from the arms and the text: Big Dipper top left (290,225), Cassiopeia top right (1105,245), Orion bottom left (320,918), Cygnus bottom right (1250,930). Phone: Big Dipper right of the title, Orion right of the button, Cassiopeia between the link and the steps. A tiny galaxy moved from 1250,940 to 1060,965.
+- Picture size: wide 317 KB, phone 195 KB; `design-background.css` 546 KB (155 KB gzipped). Static. `design-background.css?v=54`; SEO pages regenerated.
+
 ## 2026-11-24 (52): The same constellations on desktop and phone, calmer (done by Claude, at the owner's request)
 
 Owner: "on phone and desktop the constellations are not the same, please make them roughly the same, keep the proportions and whatever is needed to work well, and work more on the constellations so they don't load the screen too much and are nicer".
