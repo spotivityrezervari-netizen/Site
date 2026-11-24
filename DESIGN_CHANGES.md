@@ -3,6 +3,15 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-24 (46): The small galaxies are the big one in miniature (done by Claude, at the owner's request)
+
+Owner: "on those galaxies, can you make the same Fibonacci sequences as on this big one, but at a much smaller scale?".
+
+- Each small galaxy now has the same structure as the big one: 3 bright arms and 5 faint arms between them (3 + 5 = 8), every arm a golden spiral (×φ per quarter turn, reaching the galaxy's radius after 8.5 quarter turns), a soft haze along each arm, stars scattered around the arms (gaussian, even in radius) and a bright core. Each galaxy starts at its own turn (`spin`), so they don't look copied.
+- Slightly bigger so the arms read: wide r 110 / 85 / 52 / 42 / 34, phone 58 / 36 / 28. The `arms` key of a small galaxy is no longer used.
+- Smaller file: star and haze coordinates are whole units, haze outlines use a coarser step (0.16). Picture size: wide 213 KB, phone 155 KB.
+- Restore point is unchanged: tag `design-before-universe`. Static. `design-background.css?v=47`; SEO pages regenerated.
+
 ## 2026-11-24 (45): A universe: small far-away galaxies around the main one (done by Claude, at the owner's request)
 
 Owner: "shall we make more of these galaxies, so it looks like a universe? do a little, and if I say undo, bring back the initial form".
