@@ -1057,6 +1057,18 @@ function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0
   // Restore point: tag design-before-universe.
   let universeSvg = '';
   const PHI_U = (1 + Math.sqrt(5)) / 2;
+  // owner, 24.11: "pune și niște iconițe, ia 1:1 secvența mare și transpune-o mică de tot". Each
+  // small galaxy carries the same balls as the big one, at the same places on its arms (same arm,
+  // same quarter turn, same kind and size factor), scaled down with the galaxy. The trails lie in
+  // the galaxy's tilted plane; the balls stay round (they are 3D) and are lit from the centre of
+  // their own galaxy. Every icon is drawn once in <defs> and reused with <use>.
+  const mini = new Set();
+  const miniDefs = () => [...mini].map((kind) => {
+    if (seams[kind]) { const pose = BALL_POSE[kind][0]; return `<g id='mi-${kind}'>${fibBrighten(ball([kind, 0, 0, 50, pose[0], pose[1], pose[2]]))}</g>`; }
+    const extra = { whistle: [-18, 'M30 -30C44 -70 10 -100 30 -140'], stopwatch: [12, 40] }[kind] || [0];
+    return `<g id='mi-${kind}'>${fibBrighten(prop([kind, 0, 0, 100, ...extra]))}</g>`;
+  }).join('');
+  if (universe) defs += `<radialGradient id='miTrail' cx='.5' cy='.5' r='.75'><stop offset='0' stop-color='#c8fff0' stop-opacity='.75'/><stop offset='1' stop-color='#4fe0b6' stop-opacity='.12'/></radialGradient>`;
   for (const [k, gx] of (universe || []).entries()) {
     const { x: ux, y: uy, r: ur, tilt = 0.5, rot = 0, tint = '#d6fff2', spin = k * 1.3 } = gx;
     const main = 3; const faint = 5; const quarters = 8.5; const b0 = ur / PHI_U ** quarters;   // the arms reach ur after 8.5 quarter turns
@@ -1079,11 +1091,28 @@ function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0
         if (pts.length > 2) hz += `<path d='${poly([...side(1), ...side(-1).reverse()])}' fill='${tint}' fill-opacity='${n === main ? 0.07 : 0.035}'/>`;
       }
     }
+    let mTrails = ''; let mBalls = '';
+    const cr = Math.cos((rot * Math.PI) / 180); const sr = Math.sin((rot * Math.PI) / 180);
+    const proj = (x, y) => [ux + x * cr - y * tilt * sr, uy + x * sr + y * tilt * cr];   // galaxy plane -> screen
+    for (const [arm, q, kind, scale = 0.17, opt = {}] of balls) {
+      const th = (q * Math.PI) / 2; const [bx, by, br] = at(arm, main, 0, th); if (br > ur * 1.02) continue;
+      const rad = Math.max(1.8, br * scale); mini.add(kind);
+      if (seams[kind]) {
+        const sp = Math.min(1.2, opt.span || span * Math.min(1, 0.6 + q / 12)); const N = 10;
+        const pts = Array.from({ length: N + 1 }, (_, i2) => at(arm, main, 0, th - sp + (sp * i2) / N));
+        const edge = (sg) => pts.map(([x, y, , a], i2) => { const w = rad * 0.8 * (0.05 + 0.95 * (i2 / N) ** 1.3) * sg; const tg = a + Math.atan(1 / kk); return [x - Math.sin(tg) * w, y + Math.cos(tg) * w]; });   // tg = direction of flight along the spiral
+        mTrails += `<path d='${poly([...edge(1), ...edge(-1).reverse()])}' fill='url(#miTrail)'/>`;
+      }
+      const [sx, sy] = proj(bx, by);
+      const light = seams[kind] ? `rotate(${Math.round((Math.atan2(uy - sy, ux - sx) * 180) / Math.PI + 124)})` : '';
+      mBalls += `<circle cx='${f(sx)}' cy='${f(sy)}' r='${f(rad * 1.7)}' fill='url(#trailHead)'/><use href='#mi-${kind}' transform='translate(${f(sx)} ${f(sy)})${light}scale(${(rad / 50).toFixed(3)})'/>`;
+    }
     const id = `vxG${k}`;
     defs += `<radialGradient id='${id}'><stop offset='0' stop-color='#f2fffa' stop-opacity='.8'/><stop offset='.1' stop-color='${tint}' stop-opacity='.35'/><stop offset='.4' stop-color='${tint}' stop-opacity='.08'/><stop offset='1' stop-color='${tint}' stop-opacity='0'/></radialGradient>`;
     universeSvg += `<g transform='translate(${f(ux)} ${f(uy)}) rotate(${rot}) scale(1 ${tilt})'><circle r='${f(ur * 1.05)}' fill='url(#${id})'/>${hz}`
-      + `<g fill='none' stroke='${tint}' stroke-linecap='round'>${Object.entries(ga).map(([key, d]) => { const [w, op] = key.split('|'); return `<path d='${d}' stroke-width='${w}' stroke-opacity='${op}'/>`; }).join('')}</g></g>`;
+      + `<g fill='none' stroke='${tint}' stroke-linecap='round'>${Object.entries(ga).map(([key, d]) => { const [w, op] = key.split('|'); return `<path d='${d}' stroke-width='${w}' stroke-opacity='${op}'/>`; }).join('')}</g>${mTrails}</g>${mBalls}`;
   }
+  defs += miniDefs();
   // the flying balls (and a few props). Owner, 24.11: "unele efecte se suprapun peste iconițe".
   // So: (1) the layers go glows -> trails -> icons, never one icon's glow over another icon;
   // (2) each trail is cut short where it would come near another icon (it ends in the open);

@@ -3,6 +3,15 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-24 (47): The small galaxies carry the balls of the big one, 1:1 in miniature (done by Claude, at the owner's request)
+
+Owner: "can't you put some icons too? take the big sequence 1:1 and transpose it really small".
+
+- Each small galaxy carries the same balls as the big one (same `balls` list: same arm, quarter turn, kind and size factor), scaled with the galaxy. The trails lie in the galaxy's tilted plane (one shared gradient `miTrail`, 10 points each); the balls stay round and are lit from the centre of their own galaxy.
+- Every icon kind is drawn once in `<defs>` (`mi-<kind>`) and reused with `<use>`, so the miniature balls cost little.
+- Picture size: wide 253 KB, phone 183 KB. **`design-background.css` is now 468 KB (147 KB gzipped)** and it is a render-blocking stylesheet; worth moving the pictures out of the CSS later if load time matters.
+- Restore point unchanged: tag `design-before-universe`. Static. `design-background.css?v=48`; SEO pages regenerated.
+
 ## 2026-11-24 (46): The small galaxies are the big one in miniature (done by Claude, at the owner's request)
 
 Owner: "on those galaxies, can you make the same Fibonacci sequences as on this big one, but at a much smaller scale?".
