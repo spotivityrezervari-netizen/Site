@@ -3,6 +3,14 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-24 (38): Golden-ratio fade and depth for the sunflower icons (done by Claude, at the owner's request)
+
+Owner: "I don't really like it, it looks like the WhatsApp background; add a fade at golden-ratio distances to the icons and try to make it nicer".
+
+- `goldenFade: { r0, low }` in `sunflower()`: rings of light around the centre at r0·φ^k (wide r0 60, phone 45); between two rings the icons fade down to `low` (0.25) of their brightness, as a soft wave.
+- Depth: each icon is randomly one of three sizes in the golden ratio, 1 : 1/φ : 1/φ² (1 in 5 big, 2 in 5 middle, 2 in 5 small), and the smaller ones are fainter by the same ratio, so the field looks deep instead of a flat wallpaper.
+- `iconFill` 0.8 (big icons a bit bigger), `iconOp` wide [.95, .75, .42, 0], phone [1, .9, .55, 0]. Sizes: wide 109 KB, phone 90 KB. Removing `goldenFade` returns to the flat version. `design-background.css?v=39`; SEO pages regenerated.
+
 ## 2026-11-24 (37): Icons in the sunflower mixed at random (done by Claude, at the owner's request)
 
 Owner: "put the icons more randomly, not so one after another".
