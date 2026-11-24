@@ -961,7 +961,7 @@ function sunflower({ W, H, cx, cy, c, rMax, margin = [200, 100], size0, grow, ki
 // light trail behind it, so the picture moves. Behind them, the arms are only a soft haze (no
 // line), and a fine dust of light lies around the centre the way sunflower seeds do (golden
 // angle, Vogel). Balls further out are bigger; a ball over the text or the photo is faint.
-function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0, balls, dim = 0.4, span = 1.15, haze = 0.022, dust }) {
+function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0, balls, dim = 0.4, span = 1.15, haze = 0.022, dust, galaxy = null }) {
   const PHI = (1 + Math.sqrt(5)) / 2; const kk = Math.log(PHI) / (Math.PI / 2);
   let defs = FIB_BRIGHT ? fibBrightDefs : commonDefs; let atmo = '';
   glows.forEach((g, i) => { const gl = glow(`gl${i}`, ...g); defs += gl.defs; atmo += gl.svg(W, H); });
@@ -981,7 +981,7 @@ function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0
   const far = Math.hypot(Math.max(cx, W - cx), Math.max(cy, H - cy));
   defs += `<radialGradient id='vxFadeG' gradientUnits='userSpaceOnUse' cx='${cx}' cy='${cy}' r='${f(far)}'><stop offset='0' stop-color='#fff' stop-opacity='0'/><stop offset='.12' stop-color='#fff' stop-opacity='1'/><stop offset='.6' stop-color='#fff' stop-opacity='.8'/><stop offset='1' stop-color='#fff' stop-opacity='0'/></radialGradient><mask id='vxFade' maskUnits='userSpaceOnUse' x='-2000' y='-2000' width='${W + 4000}' height='${H + 4000}'><rect x='-2000' y='-2000' width='${W + 4000}' height='${H + 4000}' fill='url(#vxFadeG)'/></mask>`;
   for (let arm = 0; arm < arms; arm++) {
-    const pts = []; for (let th = 0; th < 10 * Math.PI / 2; th += 0.05) pts.push(pt(arm, th));
+    const pts = []; for (let th = 0; th < 10 * Math.PI / 2; th += 0.12) pts.push(pt(arm, th));
     for (const [wk, op] of [[0.42, haze * 0.5], [0.2, haze]]) {
       const side = (s) => pts.map((p) => [p.x - p.ty * p.r * wk * s * 0.5, p.y + p.tx * p.r * wk * s * 0.5]);
       hazeSvg += `<path d='${poly([...side(1), ...side(-1).reverse()])}' fill='#4fe0b6' fill-opacity='${op}'/>`;
@@ -1002,6 +1002,52 @@ function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0
     const key = `${w}|${op}`; dots[key] = (dots[key] || '') + `M${Math.round(x)} ${Math.round(y)}h0`;
   }
   const dustSvg = Object.entries(dots).map(([key, d]) => { const [w, op] = key.split('|'); return `<path d='${d}' stroke-width='${w}' stroke-opacity='${op}'/>`; }).join('');
+  // ---- galaxy (owner, 24.11: "să punem mai multe secvențe Fibonacci, să arate ca o galaxie?").
+  // The 3 arms of the balls become bright lanes of stars, and 5 fainter arms run between them
+  // (3 + 5 = 8, all Fibonacci numbers), every one a golden spiral. The stars are scattered around
+  // each arm (gaussian, wider further out, denser near the centre, as in a real spiral galaxy);
+  // a few are brighter. A soft bulge lights the core and a few loose stars fill the sky.
+  // Everything is static; stars over the text or the photo are drawn faint.
+  let galaxySvg = '';
+  if (galaxy) {
+    if (galaxy.haze) { hazeSvg = hazeSvg.replace(/fill-opacity='([d.]+)'/g, (m, o) => `fill-opacity='${f((Number(o) * galaxy.haze / haze) * 1000) / 1000}'`); haze = galaxy.haze; }
+    const g = galaxy; const stars = {}; const PHI_G = (1 + Math.sqrt(5)) / 2;
+    const gauss = () => Math.sqrt(-2 * Math.log(rand() + 1e-9)) * Math.cos(2 * Math.PI * rand());
+    const pt2 = (j, th) => {   // the secondary arms, between the main ones
+      const a = th + turn + g.turn2 + (j * 2 * Math.PI) / g.arms2; const r = r0 * Math.exp(kk * th);
+      const dx = r * (kk * Math.cos(a) - Math.sin(a)); const dy = r * (kk * Math.sin(a) + Math.cos(a)); const l = Math.hypot(dx, dy);
+      return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a), r, tx: dx / l, ty: dy / l };
+    };
+    const put = (x, y, w, op) => {
+      if (x < -150 || y < -80 || x > W + 150 || y > H + 80) return;
+      if (inZone(x, y, w)) op *= 0.35;
+      op = Math.round(op * 20) / 20; if (op <= 0) return;
+      const key = `${w}|${op}`; stars[key] = (stars[key] || '') + `M${Math.round(x)} ${Math.round(y)}h0`;
+    };
+    const lane = (at, count, wk, op0) => {
+      for (let s = 0; s < count; s++) {
+        const rr = r0 * PHI_G ** 1.2 + rand() * (g.rMax - r0 * PHI_G ** 1.2); const th = Math.log(rr / r0) / kk; const p = at(th);   // even in radius
+        const off = gauss() * p.r * wk; const along = gauss() * p.r * wk * 0.6;
+        const x = p.x - p.ty * off + p.tx * along; const y = p.y + p.tx * off + p.ty * along;
+        const near = Math.exp(-Math.abs(off) / (p.r * wk * 1.2));                // brighter on the lane itself
+        const fade = Math.min(1, p.r / 90) * Math.exp(-p.r / g.fall);            // from the core outwards
+        const bright = rand() < 0.04;
+        put(x, y, bright ? 3.6 : [1.5, 2.1, 2.8][Math.floor(rand() ** 1.6 * 3)], Math.min(1, (bright ? 1.6 : 1) * op0 * (0.2 + 0.8 * near) * (0.4 + 0.6 * rand()) * (0.25 + fade)));
+      }
+    };
+    for (let arm = 0; arm < arms; arm++) lane((th) => pt(arm, th), g.stars, g.width, g.op);
+    for (let j = 0; j < g.arms2; j++) lane((th) => pt2(j, th), g.stars2, g.width * 1.3, g.op * 0.6);
+    for (let s = 0; s < g.sky; s++) put(rand() * W, rand() * H, [1.2, 1.6, 2.2][Math.floor(rand() ** 2 * 3)], 0.12 + rand() * 0.35);
+    // the soft haze of the secondary arms (the main ones already have theirs)
+    for (let j = 0; j < g.arms2; j++) {
+      const pts = []; for (let th = 0; th < 10 * Math.PI / 2; th += 0.12) pts.push(pt2(j, th));
+      const side = (s2) => pts.map((p) => [p.x - p.ty * p.r * 0.16 * s2, p.y + p.tx * p.r * 0.16 * s2]);
+      hazeSvg += `<path d='${poly([...side(1), ...side(-1).reverse()])}' fill='#4fe0b6' fill-opacity='${f(haze * 0.6 * 1000) / 1000}'/>`;
+    }
+    defs += `<radialGradient id='vxBulge' gradientUnits='userSpaceOnUse' cx='${cx}' cy='${cy}' r='${g.bulge}'><stop offset='0' stop-color='#e8fff6' stop-opacity='.5'/><stop offset='.25' stop-color='#9fffe2' stop-opacity='.22'/><stop offset='.6' stop-color='#4fe0b6' stop-opacity='.06'/><stop offset='1' stop-color='#4fe0b6' stop-opacity='0'/></radialGradient>`;
+    galaxySvg = `<circle cx='${cx}' cy='${cy}' r='${g.bulge}' fill='url(#vxBulge)'/><g fill='none' stroke='#d6fff2' stroke-linecap='round'>`
+      + Object.entries(stars).map(([key, d]) => { const [w, op] = key.split('|'); return `<path d='${d}' stroke-width='${w}' stroke-opacity='${op}'/>`; }).join('') + '</g>';
+  }
   // the flying balls (and a few props). Owner, 24.11: "unele efecte se suprapun peste iconițe".
   // So: (1) the layers go glows -> trails -> icons, never one icon's glow over another icon;
   // (2) each trail is cut short where it would come near another icon (it ends in the open);
@@ -1068,7 +1114,7 @@ function vortex({ W, H, cx, cy, zones, glows, label, arms = 3, r0 = 12, turn = 0
   }
   console.log(`fundal-arena (${label}): golden vortex, ${arms} arms, ${balls.length} icons`);
   const body = `<rect width='${W}' height='${H}' fill='${BASE}'/>${atmo}<circle cx='${cx}' cy='${cy}' r='220' fill='url(#vxCore)'/><g mask='url(#vxFade)'>${hazeSvg}</g>`
-    + `<g fill='none' stroke='#b5ffe8' stroke-linecap='round'>${dustSvg}</g>${glows2}${trails}${icons}`;
+    + `${galaxy ? galaxySvg : `<g fill='none' stroke='#b5ffe8' stroke-linecap='round'>${dustSvg}</g>`}${glows2}${trails}${icons}`;
   return { defs, body };
 }
 function fibSvg(W, H, align, comp) {
@@ -1083,6 +1129,7 @@ const FIB_ZONES_PHONE = [[0, 0, 547, 222], [34, 275, 290, 324], [34, 338, 444, 4
 const fibWide = fibSvg(1600, 1000, 'xMidYMid', {
   // golden vortex (owner, 24.11): [arm, quarter turns from the centre, kind, size factor]
   vortex: { cx: 800, cy: 540, arms: 3, r0: 12, turn: 0.4, dim: 0.4, dust: { count: 900, c: 30, fall: 420 },
+    galaxy: { arms2: 5, turn2: 0.6, stars: 560, stars2: 240, width: 0.05, op: 0.95, fall: 1500, rMax: 1000, sky: 90, bulge: 160, haze: 0.04 },
     balls: [[0, 5.5, 'tennis'], [1, 5, 'volleyball'], [2, 6, 'basketball'], [0, 7, 'soccer', 0.17, { span: 1.6, accent: true }], [2, 7.5, 'whistle', 0.09], [1, 8, 'soccer', 0.12],
       // owner: "încă câteva iconițe și să nu se termine așa brusc": small ones born at the centre, more towards the edges
       [1, 4, 'tennis'], [2, 4.5, 'soccer'], [0, 4.5, 'volleyball']] },
@@ -1096,6 +1143,7 @@ const fibWide = fibSvg(1600, 1000, 'xMidYMid', {
 });
 const fibPhone = fibSvg(547, 1184, 'xMidYMin', {
   vortex: { cx: 273, cy: 600, arms: 3, r0: 9, turn: 1.2, dim: 0.4, dust: { count: 700, c: 26, fall: 330 },
+    galaxy: { arms2: 5, turn2: 0.6, stars: 400, stars2: 170, width: 0.05, op: 0.95, fall: 1100, rMax: 800, sky: 50, bulge: 110, haze: 0.04 },
     // phone (owner, 24.11 cleanup): at most one ball per arm within a quarter turn, so every trail stays whole
     balls: [[0, 6.5, 'soccer', 0.17, { accent: true }], [1, 6, 'tennis'], [2, 5.5, 'basketball', 0.15],
       [2, 4.5, 'tennis'], [0, 4, 'soccer'], [1, 4.5, 'volleyball'], [1, 7, 'soccer', 0.08]] },

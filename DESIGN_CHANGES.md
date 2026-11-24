@@ -3,6 +3,15 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-24 (44): Golden vortex becomes a galaxy: 3 + 5 star arms (done by Claude, at the owner's request)
+
+Owner: "shall we put more Fibonacci sequences, so it looks like a galaxy?".
+
+- `galaxy` option in `vortex()` (on for wide and phone): the 3 arms of the balls become bright lanes of stars, and 5 fainter arms run between them (3 + 5 = 8 arms, all Fibonacci numbers; every arm is a golden spiral, ×φ per quarter turn).
+- Stars are scattered around each arm with a gaussian spread (`width` 0.05 of the radius) and spread evenly in radius, so the outer arms are starry too; about 4% are bright stars. Wide: 560 stars per main arm, 240 per faint arm, 90 loose stars in the sky; phone: 400 / 170 / 50. Stars over the text or the photo are at 35%.
+- A soft bulge lights the core (`vxBulge`, r 160 wide / 110 phone); the arm haze is a little stronger (`haze` 0.04) and the faint arms have their own haze. The sunflower dust is replaced by the stars when `galaxy` is on.
+- Arm outlines are sampled more coarsely (step 0.12), which keeps the file small. Picture size: wide 168 KB, phone 143 KB. Everything stays static. `design-background.css?v=45`; SEO pages regenerated.
+
 ## 2026-11-24 (43): Golden vortex: lit from the centre, one green accent, cleanup (done by Claude, at the owner's request)
 
 Owner: "what other ideas do you have, to make it look even better?", then "I don't want the mouse effect, I want everything static". Done: cleanup, light from the centre, one accent (static only, no animation).
