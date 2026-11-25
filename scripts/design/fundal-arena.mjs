@@ -115,10 +115,28 @@ function ball([kind, cx, cy, r, yaw, pitch, roll, shadow = false]) {
   const s = r / 50;
   const { panels = '', lines } = seams[kind](rotator(yaw, pitch, roll));
   const sw = (px) => f(px / s * 100) / 100;     // screen px -> local units
-  const body = `<circle r='50' fill='url(#ballBody)'/>`
-    + (panels ? `<path d='${panels}' fill='#000' fill-opacity='.42'/>` : '')
-    + `<path d='${lines}' fill='none' stroke='${SEAM}' stroke-opacity='.62' stroke-width='${sw({ tennis: 1.8, basketball: 2, soccer: 1.3, volleyball: 1.3 }[kind])}' stroke-linecap='round' stroke-linejoin='round'/>`
-    + `<circle r='50' fill='url(#ballShade)'/>`
+  if (kind === 'soccer') {
+    // A real football under the floodlights: light panels, dark pentagons, fine stitched seams,
+    // a deep form shadow on the far side, rim light and a soft specular highlight.
+    const soccer = `<circle r='50' fill='url(#soccerBody)'/>`
+      + `<path d='${lines}' fill='none' stroke='#021a16' stroke-opacity='.5' stroke-width='${sw(1.1)}' stroke-linecap='round' stroke-linejoin='round'/>`
+      + `<path d='${panels}' fill='url(#soccerPent)' stroke='#021a16' stroke-width='${sw(0.8)}' stroke-linejoin='round'/>`
+      + `<circle r='50' fill='url(#soccerShade)'/>`
+      + `<circle r='${f(50 - sw(0.6))}' fill='none' stroke='url(#ballRim)' stroke-width='${sw(2)}'/>`
+      + `<ellipse cx='-17' cy='-20' rx='15' ry='10' transform='rotate(-35 -17 -20)' fill='url(#soccerSpec)'/>`;
+    const contactS = shadow ? `<ellipse cx='${f(cx + r * 0.1)}' cy='${f(cy + r * 0.96)}' rx='${f(r * 1.05)}' ry='${f(r * 0.2)}' fill='url(#contact)'/>` : '';
+    return `${contactS}<g transform='translate(${f(cx)} ${f(cy)}) scale(${f(s * 1000) / 1000})'>${soccer}</g>`;
+  }
+  // Lit balls (same light as the football): a coloured body per sport, dark grooves for seams
+  // (tennis: a pale felt seam), deep shadow on the far side.
+  const look = {
+    basketball: { body: 'bbBody', seam: '#04201b', op: 0.85, w: 2.2 },
+    volleyball: { body: 'vbBody', seam: '#06302a', op: 0.6, w: 1.4 },
+    tennis: { body: 'tnBody', seam: '#e9fff6', op: 0.85, w: 1.8 },
+  }[kind];
+  const body = `<circle r='50' fill='url(#${look.body})'/>`
+    + `<path d='${lines}' fill='none' stroke='${look.seam}' stroke-opacity='${look.op}' stroke-width='${sw(look.w)}' stroke-linecap='round' stroke-linejoin='round'/>`
+    + `<circle r='50' fill='url(#soccerShade)'/>`
     + `<circle r='${f(50 - sw(0.6))}' fill='none' stroke='url(#ballRim)' stroke-width='${sw(2.2)}'/>`
     + `<circle r='50' fill='url(#ballSheen)'/>`;
   const contact = shadow ? `<ellipse cx='${f(cx + r * 0.1)}' cy='${f(cy + r * 0.96)}' rx='${f(r * 1.05)}' ry='${f(r * 0.2)}' fill='url(#contact)'/>` : '';
@@ -423,7 +441,7 @@ const commonDefs = `
 <radialGradient id='ballShade' cx='.34' cy='.28' r='.85'><stop offset='.45' stop-color='#000' stop-opacity='0'/><stop offset='1' stop-color='#000' stop-opacity='.6'/></radialGradient>
 <linearGradient id='ballRim' x1='.2' y1='0' x2='.55' y2='1'><stop offset='0' stop-color='#8dffdc' stop-opacity='1'/><stop offset='.35' stop-color='${GLOW}' stop-opacity='.55'/><stop offset='.7' stop-color='${GLOW}' stop-opacity='0'/></linearGradient>
 <radialGradient id='ballSheen' cx='.3' cy='.22' r='.32'><stop offset='0' stop-color='#b5ffe8' stop-opacity='.26'/><stop offset='1' stop-color='#9ff5dc' stop-opacity='0'/></radialGradient>
-<radialGradient id='contact'><stop offset='0' stop-color='#000' stop-opacity='.75'/><stop offset='1' stop-color='#000' stop-opacity='0'/></radialGradient>
+<radialGradient id='soccerBody' cx='.36' cy='.3' r='.8'><stop offset='0' stop-color='#d3efe5'/><stop offset='.35' stop-color='#9cc9bb'/><stop offset='.72' stop-color='#41786b'/><stop offset='1' stop-color='#12332c'/></radialGradient><radialGradient id='soccerPent' gradientUnits='userSpaceOnUse' cx='-14' cy='-20' r='75'><stop offset='0' stop-color='#0d3a32'/><stop offset='1' stop-color='#021a16'/></radialGradient><radialGradient id='bbBody' cx='.36' cy='.3' r='.8'><stop offset='0' stop-color='#5fd1ad'/><stop offset='.4' stop-color='#22856c'/><stop offset='.8' stop-color='#0c4438'/><stop offset='1' stop-color='#05231d'/></radialGradient><radialGradient id='vbBody' cx='.36' cy='.3' r='.8'><stop offset='0' stop-color='#d8f3ea'/><stop offset='.4' stop-color='#97c9b9'/><stop offset='.8' stop-color='#3c7366'/><stop offset='1' stop-color='#12332c'/></radialGradient><radialGradient id='tnBody' cx='.36' cy='.3' r='.8'><stop offset='0' stop-color='#b9f5c8'/><stop offset='.45' stop-color='#5fc48a'/><stop offset='.85' stop-color='#1d5f45'/><stop offset='1' stop-color='#0b2e24'/></radialGradient><radialGradient id='soccerShade' cx='.32' cy='.27' r='.9'><stop offset='.4' stop-color='#011012' stop-opacity='0'/><stop offset='.8' stop-color='#011012' stop-opacity='.45'/><stop offset='1' stop-color='#011012' stop-opacity='.85'/></radialGradient><radialGradient id='soccerSpec'><stop offset='0' stop-color='#fff' stop-opacity='.55'/><stop offset='1' stop-color='#fff' stop-opacity='0'/></radialGradient><radialGradient id='contact'><stop offset='0' stop-color='#000' stop-opacity='.75'/><stop offset='1' stop-color='#000' stop-opacity='0'/></radialGradient>
 <linearGradient id='objBody' x1='.15' y1='0' x2='.85' y2='1'><stop offset='0' stop-color='#1a6a57'/><stop offset='.45' stop-color='#0b3a33'/><stop offset='1' stop-color='#031b18'/></linearGradient>
 <linearGradient id='objShade' x1='0' y1='0' x2='0' y2='1'><stop offset='.35' stop-color='#000' stop-opacity='0'/><stop offset='1' stop-color='#000' stop-opacity='.5'/></linearGradient>
 <linearGradient id='lampBeam' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#8dffdc' stop-opacity='.11'/><stop offset='1' stop-color='#8dffdc' stop-opacity='0'/></linearGradient><radialGradient id='lampGlow'><stop offset='0' stop-color='#c8fff0' stop-opacity='.32'/><stop offset='.3' stop-color='#5fe8bf' stop-opacity='.1'/><stop offset='1' stop-color='#5fe8bf' stop-opacity='0'/></radialGradient><radialGradient id='pinPool'><stop offset='0' stop-color='#4fe0b6' stop-opacity='.3'/><stop offset='1' stop-color='#4fe0b6' stop-opacity='0'/></radialGradient><linearGradient id='cordFade' x1='0' y1='1' x2='1' y2='0'><stop offset='0' stop-color='${SEAM}' stop-opacity='.7'/><stop offset='1' stop-color='${SEAM}' stop-opacity='0'/></linearGradient>`.replace(/\n/g, '');

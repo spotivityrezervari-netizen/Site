@@ -3,6 +3,12 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-25 (65): Arena balls redrawn as lit balls, football in particular (done by Claude, owner: "iconițele puțin mai frumoase, mingea de fotbal în special")
+
+- Restore point: tag `design-before-ball-polish` (2f9b1ab).
+- scripts/design/fundal-arena.mjs, ball(): the football is now a real ball under floodlights (light mint panels `soccerBody`, dark pentagons `soccerPent`, fine dark stitched seams, deep far-side shadow `soccerShade`, rim light, specular highlight) instead of a dark sphere with glowing wireframe seams. Basketball/volleyball/tennis use the same lit look (own body gradients bbBody/vbBody/tnBody, dark grooves, pale tennis seam). Re-generated the CSS vars (74 / 54 KB).
+- `design-background.css?v=66`; SEO pages regenerated.
+
 ## 2026-11-25 (64): UNDO back to the design of 22.11 ~18:00 (commit 89d0059, Arena at v=17) (done by Claude, owner: "dă undo până la schimbările din 22.11 ora 18 aprox")
 
 - Restore point of what was undone: tag `design-before-undo-2211` (8c945e1, Space Cadet).
