@@ -334,6 +334,55 @@ body.pagina-publica { background: #011012; background-color: #011012; }
     }
 }
 
+/* ---------------------------------------------------------------------------
+ * 2026-11-25 (owner, free hand): "Stadion seara". No icons any more: a calm dark base,
+ * two soft floodlight beams from the top corners (the site's green and blue) and the
+ * lines of a pitch seen from the stand, barely visible, low on the screen. Pure CSS +
+ * one ~1 KB SVG, static and fixed (content scrolls over it).
+ * Overrides the "Fundal Final" block above; delete this block to get it back
+ * (tag design-before-stadium-light).
+ * ------------------------------------------------------------------------- */
+:root { --design-bg-pitch: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 1000' preserveAspectRatio='xMidYMax slice'%3E%3Cg fill='none' stroke='%239ff5c8' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M330,380 L1270,380 L2300,1300 L-700,1300 Z'/%3E%3Cpath d='M72,610 L1528,610'/%3E%3Cpath d='M975,610 L977,620 L978,631 L977,642 L975,653 L971,663 L966,674 L959,685 L951,695 L941,704 L930,713 L917,722 L903,729 L888,736 L872,741 L855,746 L837,749 L819,751 L800,751 L781,751 L763,749 L745,746 L728,741 L712,736 L697,729 L683,722 L670,713 L659,704 L649,695 L641,685 L634,674 L629,663 L625,653 L623,642 L622,631 L623,620 L625,610 L629,600 L633,590 L639,581 L646,572 L653,564 L661,556 L670,549 L680,542 L691,536 L702,530 L713,526 L725,521 L737,518 L749,515 L762,513 L774,511 L787,510 L800,510 L813,510 L826,511 L838,513 L851,515 L863,518 L875,521 L887,526 L898,530 L909,536 L920,542 L930,549 L939,556 L947,564 L954,572 L961,581 L967,590 L971,600 L975,610Z'/%3E%3Ccircle cx='800' cy='610' r='5' fill='%239ff5c8' stroke='none'/%3E%3Cpath d='M251,451 L427,451 L80,906 L-259,906'/%3E%3Cpath d='M167,525 L243,525 L49,722 L-53,722'/%3E%3Cpath d='M1349,451 L1173,451 L1520,906 L1859,906'/%3E%3Cpath d='M1433,525 L1357,525 L1551,722 L1653,722'/%3E%3C/g%3E%3C/svg%3E"); }
+html,
+body.pagina-publica { background: #020c0e; background-color: #020c0e; }
+.pagina-publica .home-shell::before {
+    background:
+        /* floodlight beams */
+        conic-gradient(from 118deg at -4% -14%, transparent 0deg, rgba(74, 222, 128, .075) 14deg, rgba(74, 222, 128, .02) 26deg, transparent 34deg),
+        conic-gradient(from 208deg at 104% -14%, transparent 0deg, rgba(56, 189, 248, .055) 10deg, rgba(56, 189, 248, .018) 22deg, transparent 30deg),
+        /* light pools where the beams start, and on the pitch */
+        radial-gradient(ellipse 38% 30% at 6% 0%, rgba(74, 222, 128, .16), transparent 70%),
+        radial-gradient(ellipse 34% 28% at 96% 0%, rgba(56, 189, 248, .12), transparent 70%),
+        radial-gradient(ellipse 70% 38% at 50% 92%, rgba(34, 197, 94, .085), transparent 70%),
+        linear-gradient(180deg, #031416 0%, #020c0e 55%, #021113 100%);
+}
+.pagina-publica .home-shell::after {
+    background-image: var(--design-bg-pitch);
+    background-repeat: no-repeat;
+    background-position: center bottom;
+    background-size: max(100vw, 1100px) auto;
+    opacity: .085;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 30%, #000 75%);
+    mask-image: linear-gradient(to bottom, transparent 30%, #000 75%);
+}
+@media (max-width: 1024px) {
+    .pagina-publica .home-shell::after { background-image: var(--design-bg-pitch); background-size: 1100px auto; background-position: center bottom; }
+}
+@media (max-width: 640px) {
+    .pagina-publica .home-shell::after {
+        background-image: var(--design-bg-pitch); background-repeat: no-repeat;
+        background-size: 1000px auto; background-position: center bottom; opacity: .065;
+    }
+    .pagina-publica .home-shell::before {
+        background:
+            conic-gradient(from 132deg at -10% -6%, transparent 0deg, rgba(74, 222, 128, .07) 12deg, rgba(74, 222, 128, .02) 22deg, transparent 30deg),
+            radial-gradient(ellipse 70% 26% at 0% 0%, rgba(74, 222, 128, .15), transparent 70%),
+            radial-gradient(ellipse 60% 22% at 100% 0%, rgba(56, 189, 248, .10), transparent 70%),
+            radial-gradient(ellipse 90% 30% at 50% 96%, rgba(34, 197, 94, .08), transparent 70%),
+            linear-gradient(180deg, #031416 0%, #020c0e 55%, #021113 100%);
+    }
+}
+
 @media print {
     .pagina-publica .home-shell::before,
     .pagina-publica .home-shell::after { content: none; }

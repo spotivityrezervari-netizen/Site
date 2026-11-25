@@ -3,6 +3,14 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-25 (60): "Stadion seara" background, no icons (done by Claude, owner gave a free hand)
+
+Owner: "îți dau mână liberă la designul din spate; în momentul de față nu îmi place deloc".
+
+- Restore point: tag `design-before-stadium-light` (2fd9568). Undo = delete the last block of design-background.css ("Stadion seara").
+- The line-art icon tile (fundal-final-*.webp) is no longer shown (files kept). New: calm dark base #020c0e, two soft floodlight beams from the top corners (green left, blue right, conic + radial gradients), a green light pool low on the screen, and pitch lines seen from the stand (~1 KB SVG, opacity .085 desktop / .065 phone, faded out in the top 30-75% so nothing sits behind the hero text). Static, fixed layer.
+- `design-background.css?v=61`; SEO pages regenerated.
+
 ## 2026-11-25 (59): Accent line under "Spotivity" removed (done by Claude, at the owner's request)
 
 Owner: "vreau sa imi scoti linia colorate de sub titlul Spotivity".
