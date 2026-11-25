@@ -9,7 +9,9 @@
 :root {
     --design-bg-deep: #031817;
     --design-bg-teal: #041c1b;
-    --design-bg-grain: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPScxODAnIGhlaWdodD0nMTgwJz48ZmlsdGVyIGlkPSduJyB4PScwJyB5PScwJz48ZmVUdXJidWxlbmNlIHR5cGU9J2ZyYWN0YWxOb2lzZScgYmFzZUZyZXF1ZW5jeT0nLjg1JyBudW1PY3RhdmVzPScyJyBzdGl0Y2hUaWxlcz0nc3RpdGNoJy8+PGZlQ29sb3JNYXRyaXggdmFsdWVzPScwIDAgMCAwIC43NSAgMCAwIDAgMCAxICAwIDAgMCAwIC45ICAuNSAwIDAgMCAtLjIyJy8+PC9maWx0ZXI+PHJlY3Qgd2lkdGg9JzE4MCcgaGVpZ2h0PScxODAnIGZpbHRlcj0ndXJsKCNuKScgb3BhY2l0eT0nLjMyJy8+PC9zdmc+");
+    --design-bg-left: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='1800' viewBox='0 0 360 1800'%3E%3Cg transform='translate(20 190) rotate(-12) scale(2.3)' fill='none' stroke='%233fe3c4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg stroke-opacity='0.052' stroke-width='2.43'%3E%3Ccircle r='50'/%3E%3Cpath d='M0.0 -17.0 L16.2 -5.3 L10.0 13.8 L-10.0 13.8 L-16.2 -5.3 Z'/%3E%3Cpath d='M0.0 -17.0 L0.0 -32.0 M-18.7 -46.4 L0.0 -32.0 L18.7 -46.4'/%3E%3Cpath d='M16.2 -5.3 L30.4 -9.9 M38.3 -32.1 L30.4 -9.9 L49.9 3.5'/%3E%3Cpath d='M10.0 13.8 L18.8 25.9 M42.4 26.5 L18.8 25.9 L12.1 48.5'/%3E%3Cpath d='M-10.0 13.8 L-18.8 25.9 M-12.1 48.5 L-18.8 25.9 L-42.4 26.5'/%3E%3Cpath d='M-16.2 -5.3 L-30.4 -9.9 M-49.9 3.5 L-30.4 -9.9 L-38.3 -32.1'/%3E%3C/g%3E%3Cg stroke-opacity='0.15' stroke-width='0.61'%3E%3Ccircle r='50'/%3E%3Cpath d='M0.0 -17.0 L16.2 -5.3 L10.0 13.8 L-10.0 13.8 L-16.2 -5.3 Z'/%3E%3Cpath d='M0.0 -17.0 L0.0 -32.0 M-18.7 -46.4 L0.0 -32.0 L18.7 -46.4'/%3E%3Cpath d='M16.2 -5.3 L30.4 -9.9 M38.3 -32.1 L30.4 -9.9 L49.9 3.5'/%3E%3Cpath d='M10.0 13.8 L18.8 25.9 M42.4 26.5 L18.8 25.9 L12.1 48.5'/%3E%3Cpath d='M-10.0 13.8 L-18.8 25.9 M-12.1 48.5 L-18.8 25.9 L-42.4 26.5'/%3E%3Cpath d='M-16.2 -5.3 L-30.4 -9.9 M-49.9 3.5 L-30.4 -9.9 L-38.3 -32.1'/%3E%3C/g%3E%3C/g%3E%3Cg transform='translate(250 80) rotate(0) scale(1)' fill='none' stroke='%233fe3c4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg stroke-opacity='0.056' stroke-width='5.60'%3E%3Cpath d='M-6 0 H6 M0 -6 V6'/%3E%3C/g%3E%3Cg stroke-opacity='0.16' stroke-width='1.40'%3E%3Cpath d='M-6 0 H6 M0 -6 V6'/%3E%3C/g%3E%3C/g%3E%3Cg transform='translate(310 420) rotate(0) scale(1)' fill='none' stroke='%231fae86' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg stroke-opacity='0.070' stroke-width='5.60'%3E%3Cpath d='M-6 0 H6 M0 -6 V6'/%3E%3C/g%3E%3Cg stroke-opacity='0.2' stroke-width='1.40'%3E%3Cpath d='M-6 0 H6 M0 -6 V6'/%3E%3C/g%3E%3C/g%3E%3Cg transform='translate(230 560) rotate(8) scale(1.1)' fill='none' stroke='%233fe3c4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg stroke-opacity='0.056' stroke-width='5.09'%3E%3Ccircle r='42'/%3E%3Ccircle r='34' stroke-dasharray='2 7'/%3E%3Cpath d='M-7 -44 V-52 H7 V-44 M30 -30 L37 -37 M0 0 V-24 M0 0 L15 9'/%3E%3Ccircle r='3'/%3E%3C/g%3E%3Cg stroke-opacity='0.16' stroke-width='1.27'%3E%3Ccircle r='42'/%3E%3Ccircle r='34' stroke-dasharray='2 7'/%3E%3Cpath d='M-7 -44 V-52 H7 V-44 M30 -30 L37 -37 M0 0 V-24 M0 0 L15 9'/%3E%3Ccircle r='3'/%3E%3C/g%3E%3C/g%3E%3Cpath d='M-10 700 Q160 640 300 760' fill='none' stroke='%231fae86' stroke-opacity='0.14' stroke-width='1.2' stroke-linecap='round'/%3E%3Cg transform='translate(100 900) rotate(-8) scale(1.1)' fill='none' stroke='%231fae86' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg stroke-opacity='0.063' stroke-width='5.09'%3E%3Cpath d='M-34 -46 H34 V-22 Q34 14 0 20 Q-34 14 -34 -22 Z M-34 -36 Q-58 -36 -54 -14 Q-50 2 -28 3 M34 -36 Q58 -36 54 -14 Q50 2 28 3 M-6 20 V38 M6 20 V38 M-22 38 H22 V50 H-22 Z M-12 -30 V-6'/%3E%3C/g%3E%3Cg stroke-opacity='0.18' stroke-width='1.27'%3E%3Cpath d='M-34 -46 H34 V-22 Q34 14 0 20 Q-34 14 -34 -22 Z M-34 -36 Q-58 -36 -54 -14 Q-50 2 -28 3 M34 -36 Q58 -36 54 -14 Q50 2 28 3 M-6 20 V38 M6 20 V38 M-22 38 H22 V50 H-22 Z M-12 -30 V-6'/%3E%3C/g%3E%3C/g%3E%3Cg fill='%233fe3c4' fill-opacity='0.2'%3E%3Ccircle cx='200' cy='1060' r='1.6'/%3E%3Ccircle cx='200' cy='1076' r='1.6'/%3E%3Ccircle cx='200' cy='1092' r='1.6'/%3E%3Ccircle cx='200' cy='1108' r='1.6'/%3E%3Ccircle cx='216' cy='1060' r='1.6'/%3E%3Ccircle cx='216' cy='1076' r='1.6'/%3E%3Ccircle cx='216' cy='1092' r='1.6'/%3E%3Ccircle cx='216' cy='1108' r='1.6'/%3E%3Ccircle cx='232' cy='1060' r='1.6'/%3E%3Ccircle cx='232' cy='1076' r='1.6'/%3E%3Ccircle cx='232' cy='1092' r='1.6'/%3E%3Ccircle cx='232' cy='1108' r='1.6'/%3E%3Ccircle cx='248' cy='1060' r='1.6'/%3E%3Ccircle cx='248' cy='1076' r='1.6'/%3E%3Ccircle cx='248' cy='1092' r='1.6'/%3E%3Ccircle cx='248' cy='1108' r='1.6'/%3E%3Ccircle cx='264' cy='1060' r='1.6'/%3E%3Ccircle cx='264' cy='1076' r='1.6'/%3E%3Ccircle cx='264' cy='1092' r='1.6'/%3E%3Ccircle cx='264' cy='1108' r='1.6'/%3E%3C/g%3E%3Cg transform='translate(270 1290) rotate(20) scale(0.95)' fill='none' stroke='%233fe3c4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg stroke-opacity='0.052' stroke-width='5.89'%3E%3Ccircle r='50'/%3E%3Cpath d='M-32 -38 C-6 -18 -6 18 -32 38 M32 -38 C6 -18 6 18 32 38'/%3E%3C/g%3E%3Cg stroke-opacity='0.15' stroke-width='1.47'%3E%3Ccircle r='50'/%3E%3Cpath d='M-32 -38 C-6 -18 -6 18 -32 38 M32 -38 C6 -18 6 18 32 38'/%3E%3C/g%3E%3C/g%3E%3Cg transform='translate(30 1560) rotate(14) scale(1)' fill='none' stroke='%231fae86' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg stroke-opacity='0.045' stroke-width='5.60'%3E%3Crect x='-110' y='-180' width='220' height='360'/%3E%3Cpath d='M-110 0 H110 M-40 -180 V-140 H40 V-180 M-40 180 V140 H40 V180'/%3E%3Ccircle r='38'/%3E%3Ccircle r='2'/%3E%3C/g%3E%3Cg stroke-opacity='0.13' stroke-width='1.40'%3E%3Crect x='-110' y='-180' width='220' height='360'/%3E%3Cpath d='M-110 0 H110 M-40 -180 V-140 H40 V-180 M-40 180 V140 H40 V180'/%3E%3Ccircle r='38'/%3E%3Ccircle r='2'/%3E%3C/g%3E%3C/g%3E%3Cg transform='translate(300 1710) rotate(0) scale(1)' fill='none' stroke='%233fe3c4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg stroke-opacity='0.056' stroke-width='5.60'%3E%3Cpath d='M-6 0 H6 M0 -6 V6'/%3E%3C/g%3E%3Cg stroke-opacity='0.16' stroke-width='1.40'%3E%3Cpath d='M-6 0 H6 M0 -6 V6'/%3E%3C/g%3E%3C/g%3E%3Cpath d='M0 1120 Q120 1210 60 1380' fill='none' stroke='%233fe3c4' stroke-opacity='0.1' stroke-width='1.2' stroke-linecap='round'/%3E%3C/svg%3E");
+    --design-bg-right: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='1800' viewBox='0 0 360 1800'%3E%3Cg transform='translate(190 130) rotate(12) scale(1)' fill='none' stroke='%233fe3c4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg stroke-opacity='0.056' stroke-width='5.60'%3E%3Cpath d='M-28 -62 L-54 -52 L-76 -20 L-58 -6 L-46 -20 L-46 62 L46 62 L46 -20 L58 -6 L76 -20 L54 -52 L28 -62 Q0 -42 -28 -62 Z'/%3E%3Ctext x='0' y='28' text-anchor='middle' font-family='Arial,Helvetica,sans-serif' font-size='46' font-weight='700' font-style='italic'%3E10%3C/text%3E%3C/g%3E%3Cg stroke-opacity='0.16' stroke-width='1.40'%3E%3Cpath d='M-28 -62 L-54 -52 L-76 -20 L-58 -6 L-46 -20 L-46 62 L46 62 L46 -20 L58 -6 L76 -20 L54 -52 L28 -62 Q0 -42 -28 -62 Z'/%3E%3Ctext x='0' y='28' text-anchor='middle' font-family='Arial,Helvetica,sans-serif' font-size='46' font-weight='700' font-style='italic'%3E10%3C/text%3E%3C/g%3E%3C/g%3E%3Cg transform='translate(60 330) rotate(0) scale(1)' fill='none' stroke='%231fae86' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg stroke-opacity='0.070' stroke-width='5.60'%3E%3Cpath d='M-6 0 H6 M0 -6 V6'/%3E%3C/g%3E%3Cg stroke-opacity='0.2' stroke-width='1.40'%3E%3Cpath d='M-6 0 H6 M0 -6 V6'/%3E%3C/g%3E%3C/g%3E%3Cg transform='translate(350 560) rotate(18) scale(2.4)' fill='none' stroke='%233fe3c4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg stroke-opacity='0.049' stroke-width='2.33'%3E%3Ccircle r='50'/%3E%3Cpath d='M0 -50 V50 M-50 0 H50 M-34 -37 Q-12 0 -34 37 M34 -37 Q12 0 34 37'/%3E%3C/g%3E%3Cg stroke-opacity='0.14' stroke-width='0.58'%3E%3Ccircle r='50'/%3E%3Cpath d='M0 -50 V50 M-50 0 H50 M-34 -37 Q-12 0 -34 37 M34 -37 Q12 0 34 37'/%3E%3C/g%3E%3C/g%3E%3Cpath d='M20 470 Q140 380 360 420' fill='none' stroke='%231fae86' stroke-opacity='0.14' stroke-width='1.2' stroke-linecap='round'/%3E%3Cg fill='%233fe3c4' fill-opacity='0.2'%3E%3Ccircle cx='40' cy='760' r='1.6'/%3E%3Ccircle cx='40' cy='776' r='1.6'/%3E%3Ccircle cx='40' cy='792' r='1.6'/%3E%3Ccircle cx='40' cy='808' r='1.6'/%3E%3Ccircle cx='40' cy='824' r='1.6'/%3E%3Ccircle cx='56' cy='760' r='1.6'/%3E%3Ccircle cx='56' cy='776' r='1.6'/%3E%3Ccircle cx='56' cy='792' r='1.6'/%3E%3Ccircle cx='56' cy='808' r='1.6'/%3E%3Ccircle cx='56' cy='824' r='1.6'/%3E%3Ccircle cx='72' cy='760' r='1.6'/%3E%3Ccircle cx='72' cy='776' r='1.6'/%3E%3Ccircle cx='72' cy='792' r='1.6'/%3E%3Ccircle cx='72' cy='808' r='1.6'/%3E%3Ccircle cx='72' cy='824' r='1.6'/%3E%3Ccircle cx='88' cy='760' r='1.6'/%3E%3Ccircle cx='88' cy='776' r='1.6'/%3E%3Ccircle cx='88' cy='792' r='1.6'/%3E%3Ccircle cx='88' cy='808' r='1.6'/%3E%3Ccircle cx='88' cy='824' r='1.6'/%3E%3C/g%3E%3Cg transform='translate(160 1040) rotate(-15) scale(1.3)' fill='none' stroke='%231fae86' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg stroke-opacity='0.059' stroke-width='4.31'%3E%3Ccircle r='50'/%3E%3Cpath transform='rotate(0)' d='M0 0 Q26 -8 46 -20 M-14 -11 Q8 -34 26 -42'/%3E%3Cpath transform='rotate(120)' d='M0 0 Q26 -8 46 -20 M-14 -11 Q8 -34 26 -42'/%3E%3Cpath transform='rotate(240)' d='M0 0 Q26 -8 46 -20 M-14 -11 Q8 -34 26 -42'/%3E%3C/g%3E%3Cg stroke-opacity='0.17' stroke-width='1.08'%3E%3Ccircle r='50'/%3E%3Cpath transform='rotate(0)' d='M0 0 Q26 -8 46 -20 M-14 -11 Q8 -34 26 -42'/%3E%3Cpath transform='rotate(120)' d='M0 0 Q26 -8 46 -20 M-14 -11 Q8 -34 26 -42'/%3E%3Cpath transform='rotate(240)' d='M0 0 Q26 -8 46 -20 M-14 -11 Q8 -34 26 -42'/%3E%3C/g%3E%3C/g%3E%3Cg transform='translate(300 900) rotate(0) scale(1)' fill='none' stroke='%233fe3c4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg stroke-opacity='0.056' stroke-width='5.60'%3E%3Cpath d='M-6 0 H6 M0 -6 V6'/%3E%3C/g%3E%3Cg stroke-opacity='0.16' stroke-width='1.40'%3E%3Cpath d='M-6 0 H6 M0 -6 V6'/%3E%3C/g%3E%3C/g%3E%3Cpath d='M360 1180 Q180 1260 90 1420' fill='none' stroke='%233fe3c4' stroke-opacity='0.1' stroke-width='1.2' stroke-linecap='round'/%3E%3Cg transform='translate(120 1440) rotate(25) scale(0.8)' fill='none' stroke='%233fe3c4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg stroke-opacity='0.052' stroke-width='7.00'%3E%3Ccircle r='50'/%3E%3Cpath d='M0.0 -17.0 L16.2 -5.3 L10.0 13.8 L-10.0 13.8 L-16.2 -5.3 Z'/%3E%3Cpath d='M0.0 -17.0 L0.0 -32.0 M-18.7 -46.4 L0.0 -32.0 L18.7 -46.4'/%3E%3Cpath d='M16.2 -5.3 L30.4 -9.9 M38.3 -32.1 L30.4 -9.9 L49.9 3.5'/%3E%3Cpath d='M10.0 13.8 L18.8 25.9 M42.4 26.5 L18.8 25.9 L12.1 48.5'/%3E%3Cpath d='M-10.0 13.8 L-18.8 25.9 M-12.1 48.5 L-18.8 25.9 L-42.4 26.5'/%3E%3Cpath d='M-16.2 -5.3 L-30.4 -9.9 M-49.9 3.5 L-30.4 -9.9 L-38.3 -32.1'/%3E%3C/g%3E%3Cg stroke-opacity='0.15' stroke-width='1.75'%3E%3Ccircle r='50'/%3E%3Cpath d='M0.0 -17.0 L16.2 -5.3 L10.0 13.8 L-10.0 13.8 L-16.2 -5.3 Z'/%3E%3Cpath d='M0.0 -17.0 L0.0 -32.0 M-18.7 -46.4 L0.0 -32.0 L18.7 -46.4'/%3E%3Cpath d='M16.2 -5.3 L30.4 -9.9 M38.3 -32.1 L30.4 -9.9 L49.9 3.5'/%3E%3Cpath d='M10.0 13.8 L18.8 25.9 M42.4 26.5 L18.8 25.9 L12.1 48.5'/%3E%3Cpath d='M-10.0 13.8 L-18.8 25.9 M-12.1 48.5 L-18.8 25.9 L-42.4 26.5'/%3E%3Cpath d='M-16.2 -5.3 L-30.4 -9.9 M-49.9 3.5 L-30.4 -9.9 L-38.3 -32.1'/%3E%3C/g%3E%3C/g%3E%3Cg transform='translate(260 1620) rotate(10) scale(0.85)' fill='none' stroke='%233fe3c4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg stroke-opacity='0.049' stroke-width='6.59'%3E%3Cpath d='M-34 -46 H34 V-22 Q34 14 0 20 Q-34 14 -34 -22 Z M-34 -36 Q-58 -36 -54 -14 Q-50 2 -28 3 M34 -36 Q58 -36 54 -14 Q50 2 28 3 M-6 20 V38 M6 20 V38 M-22 38 H22 V50 H-22 Z M-12 -30 V-6'/%3E%3C/g%3E%3Cg stroke-opacity='0.14' stroke-width='1.65'%3E%3Cpath d='M-34 -46 H34 V-22 Q34 14 0 20 Q-34 14 -34 -22 Z M-34 -36 Q-58 -36 -54 -14 Q-50 2 -28 3 M34 -36 Q58 -36 54 -14 Q50 2 28 3 M-6 20 V38 M6 20 V38 M-22 38 H22 V50 H-22 Z M-12 -30 V-6'/%3E%3C/g%3E%3C/g%3E%3Cg transform='translate(330 1340) rotate(0) scale(1)' fill='none' stroke='%231fae86' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg stroke-opacity='0.070' stroke-width='5.60'%3E%3Cpath d='M-6 0 H6 M0 -6 V6'/%3E%3C/g%3E%3Cg stroke-opacity='0.2' stroke-width='1.40'%3E%3Cpath d='M-6 0 H6 M0 -6 V6'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    --design-bg-scatter: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='720' height='1100' viewBox='0 0 720 1100'%3E%3Cg transform='translate(110 140) rotate(0) scale(0.8)' fill='none' stroke='%233fe3c4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg stroke-opacity='0.042' stroke-width='7.00'%3E%3Cpath d='M-6 0 H6 M0 -6 V6'/%3E%3C/g%3E%3Cg stroke-opacity='0.12' stroke-width='1.75'%3E%3Cpath d='M-6 0 H6 M0 -6 V6'/%3E%3C/g%3E%3C/g%3E%3Cg transform='translate(610 420) rotate(0) scale(0.8)' fill='none' stroke='%231fae86' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg stroke-opacity='0.049' stroke-width='7.00'%3E%3Cpath d='M-6 0 H6 M0 -6 V6'/%3E%3C/g%3E%3Cg stroke-opacity='0.14' stroke-width='1.75'%3E%3Cpath d='M-6 0 H6 M0 -6 V6'/%3E%3C/g%3E%3C/g%3E%3Cg transform='translate(300 760) rotate(0) scale(0.8)' fill='none' stroke='%233fe3c4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg stroke-opacity='0.035' stroke-width='7.00'%3E%3Cpath d='M-6 0 H6 M0 -6 V6'/%3E%3C/g%3E%3Cg stroke-opacity='0.1' stroke-width='1.75'%3E%3Cpath d='M-6 0 H6 M0 -6 V6'/%3E%3C/g%3E%3C/g%3E%3Cg transform='translate(520 1000) rotate(0) scale(0.8)' fill='none' stroke='%233fe3c4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg stroke-opacity='0.042' stroke-width='7.00'%3E%3Cpath d='M-6 0 H6 M0 -6 V6'/%3E%3C/g%3E%3Cg stroke-opacity='0.12' stroke-width='1.75'%3E%3Cpath d='M-6 0 H6 M0 -6 V6'/%3E%3C/g%3E%3C/g%3E%3Cg fill='%233fe3c4' fill-opacity='0.12'%3E%3Ccircle cx='60' cy='560' r='1.6'/%3E%3Ccircle cx='60' cy='574' r='1.6'/%3E%3Ccircle cx='74' cy='560' r='1.6'/%3E%3Ccircle cx='74' cy='574' r='1.6'/%3E%3Ccircle cx='88' cy='560' r='1.6'/%3E%3Ccircle cx='88' cy='574' r='1.6'/%3E%3C/g%3E%3Cg fill='%233fe3c4' fill-opacity='0.12'%3E%3Ccircle cx='560' cy='120' r='1.6'/%3E%3Ccircle cx='560' cy='134' r='1.6'/%3E%3Ccircle cx='560' cy='148' r='1.6'/%3E%3Ccircle cx='574' cy='120' r='1.6'/%3E%3Ccircle cx='574' cy='134' r='1.6'/%3E%3Ccircle cx='574' cy='148' r='1.6'/%3E%3Ccircle cx='588' cy='120' r='1.6'/%3E%3Ccircle cx='588' cy='134' r='1.6'/%3E%3Ccircle cx='588' cy='148' r='1.6'/%3E%3C/g%3E%3Cg transform='translate(400 300) rotate(-6) scale(1)' fill='none' stroke='%231fae86' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg stroke-opacity='0.021' stroke-width='5.60'%3E%3Crect x='-120' y='-90' width='240' height='180'/%3E%3Cpath d='M0 -90 V90'/%3E%3Ccircle r='26'/%3E%3Cpath d='M-120 -55 Q-40 -55 -40 0 Q-40 55 -120 55 M120 -55 Q40 -55 40 0 Q40 55 120 55'/%3E%3C/g%3E%3Cg stroke-opacity='0.06' stroke-width='1.40'%3E%3Crect x='-120' y='-90' width='240' height='180'/%3E%3Cpath d='M0 -90 V90'/%3E%3Ccircle r='26'/%3E%3Cpath d='M-120 -55 Q-40 -55 -40 0 Q-40 55 -120 55 M120 -55 Q40 -55 40 0 Q40 55 120 55'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
 }
 
 html,
@@ -42,7 +44,7 @@ body.pagina-publica { background: var(--design-bg-deep); }
     inset: 0;
     z-index: -1;
     pointer-events: none;
-    background-image: none; /* old line-art layers removed 2026-11-22 (Arena background below) */
+    background-image: var(--design-bg-left), var(--design-bg-right), var(--design-bg-scatter);
     background-repeat: repeat-y, repeat-y, repeat;
     background-position: left top, right 0 top 420px, center 160px;
     background-size: 360px 1800px, 360px 1800px, 720px 1100px;
@@ -59,7 +61,7 @@ body.pagina-publica { background: var(--design-bg-deep); }
 /* Mobile: fewer, smaller and fainter elements; no centre scatter behind text. */
 @media (max-width: 640px) {
     .pagina-publica .home-shell::after {
-        background-image: none;
+        background-image: var(--design-bg-left), var(--design-bg-right);
         background-repeat: repeat-y, repeat-y;
         background-size: 190px 950px, 190px 950px;
         background-position: left -30px top, right -30px top 260px;
@@ -181,9 +183,6 @@ body.pagina-publica { background: var(--design-bg-deep); }
 .pagina-publica .welcome-photo-link { background: linear-gradient(to bottom, rgba(4, 28, 27, .62), rgba(4, 28, 27, .16) 42%, transparent 70%); }
 /* Phones paint the browser bar / overscroll area with this colour. */
 html { background-color: #031817; }
-/* No rubber-band / stretch at the ends of the page: that pull revealed a flat strip under the
-   footer, which phones show as a bar at the very bottom (owner, 2026-11-22). */
-html, body.pagina-publica { overscroll-behavior-y: none; }
 
 /* ---------------------------------------------------------------------------
  * 2026-11-20 (5): colour palette from the owner (public pages only; admin unchanged).
@@ -302,63 +301,51 @@ html, body.pagina-publica { overscroll-behavior-y: none; }
 }
 
 /* ---------------------------------------------------------------------------
- * 2026-11-22 (2): "Arena" background (replaces "Fundal Final"; restore tag
- * design-before-arena). Generated by scripts/design/fundal-arena.mjs: a night football
- * pitch in perspective under floodlights, back-lit 3D balls, light trails left by the
- * balls in flight and a fine grain. The layer is fixed to the screen, so each screen
- * shape gets one composed picture instead of a repeating wallpaper.
+ * 2026-11-21: "Fundal Final" from the owner (reference photo FundalFinal.jpeg).
+ * Redrawn 1:1 as a seamless vector tile (generated by scripts/design/fundal-final.mjs),
+ * so it stays sharp on every screen. Near-black green base, emerald light ribbons and
+ * sport line art. The layer stays fixed to the screen; the content scrolls over it.
+ * Overrides layers 1 and 2 above; delete this block to get the previous background back.
  * ------------------------------------------------------------------------- */
 html,
-body.pagina-publica { background: #011012; background-color: #011012; overscroll-behavior-y: none; }
-.pagina-publica .home-shell::before { background: #011012; }
-/* Scroll fix: the layer keeps the height of the LARGE viewport (100lvh), so it never resizes
-   when a phone's address bar slides in or out (that resize redrew the whole picture and made
-   scrolling stutter or jump). It also gets its own GPU layer, so scrolling never repaints it. */
+body.pagina-publica { background: #011012; background-color: #011012; }
+.pagina-publica .home-shell::before {
+    background: radial-gradient(ellipse 70% 45% at 50% 0%, rgba(8, 88, 71, .14), transparent 70%), #011012;
+}
 .pagina-publica .home-shell::after {
-    inset: 0 0 auto 0;
-    height: 100vh;
-    height: 100lvh;
-    transform: translateZ(0);
-    backface-visibility: hidden;
-    will-change: transform;
-    contain: strict;
-    background-color: #011012;
-    /* Top layer: an eased fade into the page base along the bottom (only the last 7% since 24.11
-       evening - owner: "se oprește brusc în jos" - so the galaxy runs on to the bottom; the very
-       bottom still matches the browser bar). Before: last 16%, so the
-       Fibonacci icons near the bottom stay visible), so the bottom of the
-       screen is exactly the same colour as the browser bar / the area phones show below the
-       page (no visible change of contrast there). */
-    background-image: linear-gradient(180deg, rgba(1, 16, 18, 0) 93%, rgba(1, 16, 18, .25) 96.5%, rgba(1, 16, 18, .65) 99%, #011012 100%), var(--design-bg-grain), url("../assets/imagini/fundal-final-desktop.webp");
-    background-repeat: no-repeat, repeat, no-repeat;
-    /* The picture has no fixed size: it fills the layer, and its object groups are glued to the
-       screen corners and scaled to fit, so nothing is ever cut at an edge. */
-    background-size: 100% 100%, 180px 180px, cover;
-    background-position: 0 0, 0 0, center;
+    background-image: url("../assets/imagini/fundal-final-desktop.webp");
+    background-repeat: repeat;
+    background-position: center top;
+    background-size: 1160px auto;
     opacity: 1;
 }
-/* Portrait screens (phones, portrait tablets): the portrait composition. */
-@media (orientation: portrait), (max-width: 640px) {
+@media (max-width: 1024px) {
+    .pagina-publica .home-shell::after { background-size: 1000px auto; background-position: center top; }
+}
+/* Wide screens use a double panel (right half shifted down), so repeats never form rows.
+   Phones: one tile spans the full width, exactly like the reference photo. */
+@media (max-width: 640px) {
     .pagina-publica .home-shell::after {
-        background-image: linear-gradient(180deg, rgba(1, 16, 18, 0) 93%, rgba(1, 16, 18, .25) 96.5%, rgba(1, 16, 18, .65) 99%, #011012 100%), var(--design-bg-grain), url("../assets/imagini/fundal-final-mobil.webp");
-        background-size: 100% 100%, 180px 180px, cover;
-        background-position: 0 0, 0 0, center top;
+        background-image: url("../assets/imagini/fundal-final-mobil.webp");
+        background-repeat: repeat-y;
+        background-size: 100% auto;
+        background-position: center top;
+        opacity: 1;
     }
 }
 
-/* Footer fully transparent: no band and no line at the very bottom. The background picture
-   itself fades softly into the page base at its bottom edge, so whatever a phone shows below
-   the page (overscroll, toolbar area) matches it. */
-.pagina-publica .home-footer {
-    background: transparent;
-    box-shadow: none;
+@media print {
+    .pagina-publica .home-shell::before,
+    .pagina-publica .home-shell::after { content: none; }
 }
 
-/* 2026-11-22: home title. "Spotivity" in the blue label style it had before (uppercase,
-   spaced letters), a bit larger; the tagline below is the big white headline (owner's request). */
-/* 2026-11-24: white and a little larger (owner: "titlul Spotivity fă-l o idee mai mare și alb").
-   2026-11-24 later: written as in the page, "Spotivity" (owner: "cu S mare doar, restul mic"):
-   no uppercase, normal letter spacing. */
+/* ---------------------------------------------------------------------------
+ * 2026-11-25 (owner): "vreau fundalul [de pe poza de referință], tema, culorile, tot,
+ * în afară de scrisul de acum". Everything above is the design of 21.11 (commit d86f0eb,
+ * Modificari/Design/calereferinta.jpeg), with the tile served as WebP files. Below: only
+ * the current hero text (brand "Spotivity", the keyword <h1>, the tagline) and the
+ * phone width guard for the photo card.
+ * ------------------------------------------------------------------------- */
 .pagina-publica .home-welcome .welcome-brand {
     max-width: none; margin: 0 0 16px; color: #fff;
     font-size: clamp(40px, 4vw, 59px); font-weight: 750; line-height: 1.05; letter-spacing: -.01em; text-transform: none;
@@ -372,59 +359,6 @@ body.pagina-publica { background: #011012; background-color: #011012; overscroll
     .pagina-publica .home-welcome p.welcome-tagline { margin-bottom: 18px; font-size: clamp(19px, 5.2vw, 22px); }
 }
 
-@media print {
-    .pagina-publica .home-shell::before,
-    .pagina-publica .home-shell::after { content: none; }
-}
-
-/* 2026-11-24: Fibonacci background — the icons may pass behind the welcome text, so the text
-   gets a soft dark halo (owner: "unde apare peste scris, să se vadă scrisul mai tare"). */
-.pagina-publica .welcome-copy :is(h1, p, .welcome-secondary, .welcome-steps li) {
-    text-shadow: 0 1px 2px rgba(1, 16, 18, .95), 0 0 10px rgba(1, 16, 18, .9), 0 0 24px rgba(1, 16, 18, .8);
-}
-
-/* ---------------------------------------------------------------------------
- * 2026-11-25: hero refinement (owner's brief). Restore point: git tag design-before-hero-refine.
- *   - Background: two WebP pictures (hero-fundal-desktop.webp 1920 px, hero-fundal-mobil.webp
- *     800 px) instead of the ~500 KB SVG data URI; the vortex sits behind the photo card.
- *   - (later the same day the owner chose the reference line-art tile instead, see below)
- *   - One accent colour (the green of "Rezervă un teren"), defined once as variables.
- *   - "Spotivity" is a <p class="hero-brand">, the <h1> carries the keywords.
- * Contrast (WCAG AA): #22c55e on #011012 = 8.5:1; #052e16 on #22c55e = 6.5:1;
- * #4ade80 hover on #011012 = 11.1:1; #052e16 on #4ade80 = 8.6:1; #c9dad5 text on #011012 = 13.3:1.
- * ------------------------------------------------------------------------- */
-.pagina-publica {
-    --accent: #22c55e;
-    --accent-hover: #4ade80;
-    --accent-text: #052e16;
-        --design-green: var(--accent);
-    --design-green-hover: var(--accent-hover);
-    --design-green-ink: var(--accent-text);
-    --design-blue: var(--accent);   /* labels and numbers used light blue: now the single accent */
-}
-/* Background (owner, 25.11.2026 later: "adu-mi modelul de pe poza de referință"): the
-   "Fundal Final" line-art tile again (sport icons, crosses, dots, emerald light ribbons), as on
-   21.11 (commit d86f0eb, reference Modificari/Design/calereferinta.jpeg), now as WebP files made
-   by scripts/design/fundal-final.mjs. The layer stays fixed; the content scrolls over it.
-   The vortex pictures (fundal-arena.mjs) are no longer used. */
-.pagina-publica .home-shell::after {
-    background-image: url("../assets/imagini/fundal-final-desktop.webp");
-    background-repeat: repeat;
-    background-size: 1160px auto;
-    background-position: center top;
-}
-@media (max-width: 1024px) {
-    .pagina-publica .home-shell::after { background-size: 1000px auto; }
-}
-@media (max-width: 640px) {
-    .pagina-publica .home-shell::after {
-        background-image: url("../assets/imagini/fundal-final-mobil.webp");
-        background-repeat: repeat-y;
-        background-size: 100% auto;
-        background-position: center top;
-    }
-}
-
 /* Hero headings: brand (not a heading), the keyword <h1>, then the tagline. */
 .pagina-publica .home-welcome .welcome-title {
     max-width: 24ch; margin: 0 0 12px; color: #fff;
@@ -435,24 +369,6 @@ body.pagina-publica { background: #011012; background-color: #011012; overscroll
     .pagina-publica .home-welcome .welcome-title { font-size: clamp(24px, 6.6vw, 28px); }
     .pagina-publica .home-welcome p.welcome-tagline { font-size: clamp(17px, 4.6vw, 19px); }
 }
-
-/* Accent everywhere in the hero: step numbers, secondary link, dots, focus, hovers. */
-.pagina-publica .welcome-steps strong { color: var(--accent); }
-.pagina-publica .welcome-secondary { color: var(--accent); text-decoration-color: currentColor; }
-.pagina-publica .welcome-secondary:hover { color: var(--accent-hover); }
-.pagina-publica .welcome-slide-cta { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
-.pagina-publica .welcome-photo-link:hover .welcome-slide-cta { background: var(--accent-hover); border-color: var(--accent-hover); }
-.pagina-publica :is(.welcome-primary, .welcome-secondary, .welcome-photo-link, .welcome-gallery-controls button):focus-visible {
-    outline: 2px solid var(--accent); outline-offset: 3px;
-}
-.pagina-publica .welcome-photo-link:focus-visible { outline-width: 3px; outline-offset: -4px; }
-.pagina-publica .welcome-gallery-controls button { color: var(--accent); }
-.pagina-publica .welcome-gallery-controls button > span { border-color: var(--accent); }
-.pagina-publica .welcome-gallery-controls button[aria-pressed="true"] > span { background: var(--accent); }
-.pagina-publica .welcome-gallery-controls button:hover { border-color: rgba(34, 197, 94, .35); }
-/* The pause/play button: same 44 px target as the dots, never shown as "pressed" dot. */
-.pagina-publica .welcome-gallery-controls [data-gallery-toggle] { margin-left: 6px; }
-.pagina-publica .welcome-gallery-controls [data-gallery-toggle][aria-pressed="true"] { background: rgba(34, 197, 94, .12); }
 
 /* Phones: the photo card always fits the screen (no cut on the right, no sideways scroll). */
 @media (max-width: 767px) {

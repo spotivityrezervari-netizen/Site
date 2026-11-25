@@ -3,6 +3,15 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-25 (57): The whole reference design back (theme, colours, background), only the current hero text kept (done by Claude, at the owner's request)
+
+Owner: "vreau fundalul de-l ai în folder, nu acesta cu spirala, tema, culorile, tot, în afară de scrisul de acum".
+
+- Restore point: tag `design-before-reference-theme` (000cb5c).
+- `design-background.css` is the file of 21.11 (commit d86f0eb, the state in `Modificari/Design/calereferinta.jpeg`): Fundal Final tile, blue labels (01/02/03, prices, cities), green buttons, teal surfaces, footer bar. The tile now comes from the WebP files of (56) instead of the data URI.
+- Kept from now: the hero text and its styles (brand "Spotivity", h1 "Rezervă terenuri de sport online", tagline), the carousel pause button, the phone width guard. The single-accent variables, the vortex, the left veil, the 100lvh scroll layer and the transparent footer of 22–25.11 are gone with the old file.
+- `design-background.css?v=58`; SEO pages regenerated.
+
 ## 2026-11-25 (56): Reference line-art tile back ("Fundal Final"), everything else unchanged (done by Claude, at the owner's request)
 
 Owner: "uită-te din nou pe poza de referință și adu-mi modelul acela înapoi, dar păstrează-mi titlurile și restul așa cum e" (reference: `Desktop\Spotivity\Modificari\Design\calereferinta.jpeg`).
