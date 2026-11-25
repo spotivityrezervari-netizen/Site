@@ -3,6 +3,15 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-25 (61): Outfit font + light around the gallery photos (done by Claude, owner gave a free hand)
+
+Owner: "mai joacă-te puțin cu fonturile și lumina în jurul imaginilor care se mișcă, poți mai mult".
+
+- Restore point: tag `design-before-fonts-light` (cefda81). Undo = delete the last block of design-background.css, the two font entries in scripts/public-files.json (and optionally assets/fonts/).
+- Font: Outfit variable (SIL OFL 1.1, from npm @fontsource-variable/outfit 5.3.0), self-hosted in `Idee Site/assets/fonts/` (latin 32 KB + latin-ext 15 KB, licence OFL-Outfit.txt). `scripts/build-public.mjs` now also allows `assets/fonts/*.woff2` (CSP font-src 'self' already allowed it). Public pages only (`.pagina-publica`).
+- Gallery: slow rotating green/blue aurora behind the photo (`.welcome-art::before`, transform only), a light running around the photo edge (`.welcome-photo-card::after`, conic + @property, 6 s), hover zoom 1.04 + stronger glow; sport section photos get the same glow, static. All motion off with prefers-reduced-motion.
+- `design-background.css?v=62`; SEO pages regenerated.
+
 ## 2026-11-25 (60): "Stadion seara" background, no icons (done by Claude, owner gave a free hand)
 
 Owner: "îți dau mână liberă la designul din spate; în momentul de față nu îmi place deloc".

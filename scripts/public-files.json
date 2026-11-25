@@ -2,6 +2,8 @@
   "version": 1,
   "files": [
     "404.html",
+    "assets/fonts/outfit-latin-ext.woff2",
+    "assets/fonts/outfit-latin.woff2",
     "assets/imagini/BackgroundBasketball.avif",
     "assets/imagini/BackgroundFootball.avif",
     "assets/imagini/BackgroundLavolei-desktop.webp",
