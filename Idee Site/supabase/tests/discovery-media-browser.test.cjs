@@ -472,6 +472,23 @@ let checks = 0;
     }, heldPosition, {timeout: 3000});
     await touch.send('Input.dispatchTouchEvent', {type: 'touchMove', touchPoints: [{x: point.x-100, y: point.y}]});
     await touch.send('Input.dispatchTouchEvent', {type: 'touchEnd', touchPoints: []});
+    await touch.send('Emulation.setTouchEmulationEnabled', {enabled: false});
+
+    // Desktop: the moving row can be dragged with the mouse; the drag never opens a booking.
+    const dragBox = await strip.boundingBox();
+    await strip.evaluate(node => { node.scrollLeft = 0; });
+    await homepage.waitForTimeout(300);
+    const beforeDrag = await strip.evaluate(node => node.scrollLeft);
+    const dragY = dragBox.y+Math.min(100, dragBox.height/2);
+    await homepage.mouse.move(dragBox.x+dragBox.width-40, dragY);
+    await homepage.mouse.down();
+    for (let step = 1; step <= 10; step++) await homepage.mouse.move(dragBox.x+dragBox.width-40-step*25, dragY);
+    await homepage.mouse.up();
+    assert.ok(await strip.evaluate(node => node.scrollLeft) > beforeDrag+150, 'A mouse drag must move the row');
+    assert.equal(await homepage.locator('#modal-rezervare').isVisible(), false, 'A mouse drag must not open a booking');
+    await homepage.mouse.move(0, 0);
+    await waitMoving(await visualPosition());
+    await touch.send('Emulation.setTouchEmulationEnabled', {enabled: true});
     for (const sport of ['Fotbal', 'Baschet', 'Tenis', 'Volei', 'Tenis Picior']) {
       const art = homepage.locator(`[data-home-sport="${sport}"] .home-hero-art`);
       for (const distance of [-180, 180]) {
