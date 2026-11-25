@@ -338,7 +338,7 @@
             section.dataset.ownerSport = sport;
             const copy = element('div', 'home-hero-copy');
             const heading = element('div', 'home-sport-heading');
-            const title = element(index === 0 ? 'h1' : 'h2', '', displaySport(sport)); title.id = `owner-home-sport-title-${index}`;
+            const title = element('h2', '', displaySport(sport)); title.id = `owner-home-sport-title-${index}`;
             section.setAttribute('aria-labelledby', title.id); heading.append(title);
             const actions = element('div', 'home-hero-actions');
             actions.append(actionButton('Program', 'program', { sport }, 'home-reserve-button owner-sport-program'));
@@ -361,7 +361,7 @@
         });
         if (!sports.length) {
             const empty = element('div', 'owner-home-empty');
-            empty.append(element('h1', '', 'Încă nu ai terenuri alocate'), element('p', '', editableBases().length ? 'Adaugă primul teren în baza ta sportivă.' : 'Terenurile apar aici după ce primești acces la ele.'));
+            empty.append(element('h2', '', 'Încă nu ai terenuri alocate'), element('p', '', editableBases().length ? 'Adaugă primul teren în baza ta sportivă.' : 'Terenurile apar aici după ce primești acces la ele.'));
             wrapper.append(empty);
         }
         window.applySportAppearance?.(wrapper);

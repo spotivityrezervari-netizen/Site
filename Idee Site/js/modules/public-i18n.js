@@ -132,6 +132,10 @@
         Object.assign(window.dict.ro, {cauta_teren:'Caută terenul',cauta_teren_placeholder:'Numele terenului',niciun_teren_cautare:'Nu am găsit un teren cu acest nume.'});
         Object.assign(window.dict.hu, {cauta_teren:'Pálya keresése',cauta_teren_placeholder:'A pálya neve',niciun_teren_cautare:'Nem találtunk ilyen nevű pályát.'});
         Object.assign(window.dict.en, {cauta_teren:'Find a court',cauta_teren_placeholder:'Court name',niciun_teren_cautare:'No courts match this name.'});
+        // Homepage hero: keyword heading and the photo carousel pause/play button (25.11.2026).
+        Object.assign(window.dict.ro, {home_welcome_title:'Rezervă terenuri de sport online',galerie_pauza:'Oprește schimbarea fotografiilor',galerie_porneste:'Pornește schimbarea fotografiilor'});
+        Object.assign(window.dict.hu, {home_welcome_title:'Foglalj sportpályát online',galerie_pauza:'Képváltás szüneteltetése',galerie_porneste:'Képváltás indítása'});
+        Object.assign(window.dict.en, {home_welcome_title:'Book sports courts online',galerie_pauza:'Pause photo rotation',galerie_porneste:'Start photo rotation'});
 
         window.schimbaLimba = function(limbaNoua) {
             window.lang = languageOrDefault(limbaNoua);

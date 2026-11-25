@@ -201,7 +201,7 @@
                                     <button class="btn-cont" data-admin-city-back>
                                         Înapoi
                                     </button>
-                                    <h1 style="color: white; margin: 0; margin-left: 20px; font-size: 24px;">Setări ${window.escapeHtml(oras)}</h1>
+                                    <h2 style="color: white; margin: 0; margin-left: 20px; font-size: 24px;">Setări ${window.escapeHtml(oras)}</h2>
                                 </div>
                                 <div class="grila-sporturi" style="display: grid; gap: 20px;">
                                     ${carduriTerenuri}

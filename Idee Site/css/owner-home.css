@@ -60,7 +60,7 @@
 .owner-home-status, .owner-home-empty { max-width: 1000px; margin: 24px auto; padding: 20px 24px; color: #e7d5ac; line-height: 1.6; overflow-wrap: anywhere; }
 .owner-home-status { background: rgba(216, 182, 106, .07); border: 1px solid var(--owner-border); border-radius: 14px; }
 .owner-home-status .owner-button { margin: 12px 0 0 12px; }
-#owner-home .owner-home-empty h1 { margin: 0; font-size: clamp(26px, 4vw, 36px); color: #f1d797; line-height: 1.25; }
+#owner-home .owner-home-empty :is(h1, h2) { margin: 0; font-size: clamp(26px, 4vw, 36px); color: #f1d797; line-height: 1.25; }
 .owner-home-empty p { margin: 12px 0 0; color: var(--spotivity-muted, #b9b3a6); }
 .owner-home-base-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 16px; }
 .owner-base-card { position: relative; isolation: isolate; overflow: hidden; min-width: 0; padding: 22px; background: #1b2b20; border: 1px solid var(--owner-border); border-radius: 18px; }

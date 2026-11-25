@@ -39,7 +39,7 @@ body.admin-page { background: #101a14; color: var(--spotivity-cream); }
 .admin-page :is(#modal-adauga-teren, #modal-creeaza-cont, #modal-rezervare-manuala,
     #modal-tabel-program, #modal-istoric) .titlu-modal,
 .admin-page #modal-chat-admin .chat-header h2 { color: var(--spotivity-gold-light) !important; }
-.admin-page .admin-city-header h1 { color: var(--spotivity-cream) !important; }
+.admin-page .admin-city-header :is(h1, h2) { color: var(--spotivity-cream) !important; }
 .admin-page [id^="modal-setari-"] > .modal-continut[style*="#3b82f6"] {
     border-color: var(--spotivity-gold-border) !important;
 }

@@ -47,7 +47,7 @@
     <link rel="stylesheet" href="css/guest-booking.css?v=2">
     <script src="js/guest-booking.js?v=8" defer></script>
     <!-- Feature factories load before the public application bootstrap. -->
-    <script src="js/modules/public-i18n.js?v=5" defer></script>
+    <script src="js/modules/public-i18n.js?v=6" defer></script>
     <script src="js/modules/public-recovery.js?v=3" defer></script>
     <script src="js/modules/public-profile.js?v=6" defer></script>
     <script src="js/modules/public-auth.js?v=5" defer></script>
@@ -69,11 +69,11 @@
     <script src="js/modules/admin-allocations.js?v=3" defer></script>
     <script src="js/modules/admin-history.js?v=8" defer></script>
     <script src="js/modules/admin-chat.js?v=4" defer></script>
-    <script src="js/modules/admin-court-view.js?v=8" defer></script>
+    <script src="js/modules/admin-court-view.js?v=9" defer></script>
     <script src="js/admin.js?v=27" defer></script>
     <script src="js/base-avatar-editor.js?v=3" defer></script>
     <script src="js/admin-baze.js?v=9" defer></script>
-    <script src="js/owner-home.js?v=16" defer></script>
+    <script src="js/owner-home.js?v=17" defer></script>
     <script src="js/owner-court-create.js?v=7" defer></script>
     <script src="js/base-admin.js?v=12" defer></script>
     <script src="js/admin-club-requests.js?v=4" defer></script>
@@ -81,7 +81,7 @@
     <link rel="stylesheet" href="css/home.css?v=8">
     <link rel="stylesheet" href="css/theme.css?v=4">
     <script src="js/home.js?v=11" defer></script>
-    <script src="js/home-gallery.js?v=8" defer></script>
+    <script src="js/home-gallery.js?v=9" defer></script>
     <script src="js/baze.js?v=9" defer></script>
     <script src="js/home-discovery.js?v=15" defer></script>
     <link rel="stylesheet" href="css/profile-editor.css?v=2">
@@ -93,18 +93,20 @@
     <link rel="stylesheet" href="css/club-registration.css?v=2">
     <script src="js/club-registration.js?v=4" defer></script>
 
-    <link rel="stylesheet" href="css/admin.css?v=6">
-    <link rel="stylesheet" href="css/admin-theme.css?v=2">
+    <link rel="stylesheet" href="css/admin.css?v=7">
+    <link rel="stylesheet" href="css/admin-theme.css?v=3">
     <link rel="stylesheet" href="css/base-admin.css?v=9">
     <link rel="stylesheet" href="css/admin-club-requests.css?v=2">
     <link rel="stylesheet" href="css/google-auth.css?v=1">
-    <link rel="stylesheet" href="css/owner-home.css?v=7">
+    <link rel="stylesheet" href="css/owner-home.css?v=8">
     <link rel="stylesheet" href="css/owner-court-create.css?v=3">
     <link rel="stylesheet" href="css/admin-sport-requests.css?v=2">
     <link rel="stylesheet" href="css/admin-late-cancellations.css?v=5">
     <script src="js/admin-late-cancellations.js?v=5" defer></script>
     <link rel="stylesheet" href="css/admin-announcements.css?v=1">
-    <link rel="stylesheet" href="css/design-background.css?v=55">
+    <link rel="preload" as="image" href="assets/imagini/hero-fundal-desktop.webp" type="image/webp" media="(orientation: landscape) and (min-width: 641px)" fetchpriority="high">
+    <link rel="preload" as="image" href="assets/imagini/hero-fundal-mobil.webp" type="image/webp" media="(orientation: portrait), (max-width: 640px)" fetchpriority="high">
+    <link rel="stylesheet" href="css/design-background.css?v=56">
     <script src="js/admin-announcements.js?v=4" defer></script>
     <link rel="stylesheet" href="css/admin-accounts.css?v=5">
     <script src="js/account-deletion.js?v=2" defer></script>
@@ -180,7 +182,8 @@
         <main class="home-main" id="home-main">
             <section class="home-intro home-welcome" data-home-intro aria-labelledby="home-intro-title">
                 <div class="welcome-copy">
-                    <h1 id="home-intro-title" class="welcome-brand">Spotivity</h1>
+                    <p class="welcome-brand hero-brand">Spotivity</p>
+                    <h1 id="home-intro-title" class="welcome-title" data-i18n="home_welcome_title">Rezervă terenuri de sport online</h1>
                     <p class="welcome-tagline" data-i18n="home_welcome_tagline">Locația perfectă pentru activitatea dorită</p>
                     <p data-i18n="home_intro_description">Fotbal, baschet, tenis, volei sau tenis de picior. Găsește terenul potrivit și alege ora care îți convine.</p>
                     <div class="welcome-actions">
@@ -207,7 +210,7 @@
                                 </a>
                             </div>
                             <div class="welcome-photo-card welcome-photo-next" data-photo-next data-gallery-index="1" aria-hidden="true" hidden>
-                                <img class="welcome-under-image" alt="" decoding="async" draggable="false">
+                                <img class="welcome-under-image" alt="" width="1149" height="786" loading="lazy" decoding="async" draggable="false">
                                 <a class="welcome-photo-link" href="terenuri/baschet/" data-sport="Baschet" aria-label="Rezervă un teren — Baschet" tabindex="-1">
                                     <span class="welcome-slide-title" data-slide-title>Baschet</span>
                                     <span class="welcome-slide-cta" data-slide-cta>Rezervă un teren</span>
@@ -221,6 +224,7 @@
                         <button type="button" data-welcome-sport="Tenis" aria-label="Tenis" aria-pressed="false"><span aria-hidden="true"></span></button>
                         <button type="button" data-welcome-sport="Volei" aria-label="Volei" aria-pressed="false"><span aria-hidden="true"></span></button>
                         <button type="button" data-welcome-sport="Tenis Picior" aria-label="Tenis de picior" aria-pressed="false"><span aria-hidden="true"></span></button>
+                        <button type="button" data-gallery-toggle aria-label="Oprește schimbarea fotografiilor" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 4v8M11 4v8"/></svg></button>
                     </div>
                 </div>
             </section>

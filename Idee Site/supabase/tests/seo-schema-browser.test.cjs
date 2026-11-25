@@ -17,7 +17,7 @@ const catalog = JSON.parse(readFileSync(join(root, 'scripts/seo-public-catalog.j
 const baseById = new Map(catalog.bases.map(base => [String(base.id), base]));
 const productionRoot = 'https://spotivity.ro/';
 const pagesRoot = 'https://spotivityrezervari-netizen.github.io/Site/Idee%20Site/';
-const headings = {ro: 'Spotivity', hu: 'Spotivity', en: 'Spotivity'};
+const headings = {ro: 'Rezervă terenuri de sport online', hu: 'Foglalj sportpályát online', en: 'Book sports courts online'};
 const taglines = {ro: 'Locația perfectă pentru activitatea dorită', hu: 'A tökéletes helyszín a kívánt tevékenységhez', en: 'The perfect place for the activity you want'};
 const cleanCity = value => value.trim().replace(/\.+$/, '');
 const courtRoute = court => paths.courtPath(court, baseById.get(String(court.baza_sportiva_id)));

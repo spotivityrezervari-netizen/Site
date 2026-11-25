@@ -43,7 +43,7 @@ const code=name=>readFileSync(join(root,'js',name),'utf8');
    await page.waitForFunction(()=>window.spotivityPublicReady===true);
    assert.equal(await page.evaluate(()=>window.lang),'ro',mode);
    await page.evaluate(()=>window.schimbaLimba('hu'));assert.equal(await page.evaluate(()=>window.lang),'hu',mode);
-   assert.equal((await page.locator('#home-intro-title').textContent()).trim(),'Spotivity',mode);
+   assert.equal((await page.locator('#home-intro-title').textContent()).trim(),'Foglalj sportpályát online',mode);assert.equal((await page.locator('.hero-brand').textContent()).trim(),'Spotivity',mode);
    assert.equal(await page.locator('.welcome-tagline').innerText(),'A tökéletes helyszín a kívánt tevékenységhez',mode);
    await page.evaluate(()=>window.schimbaLimba('__proto__'));assert.equal(await page.evaluate(()=>window.lang),'ro',mode);
    await page.locator('button.card-sport[data-sport="Fotbal"]').first().click();

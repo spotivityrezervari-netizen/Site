@@ -93,7 +93,9 @@ const slugs={Fotbal:'fotbal',Baschet:'baschet',Tenis:'tenis',Volei:'volei','Teni
   await page.evaluate(()=>{window.spotivitySportAppearance.Tenis.fundal_url='assets/imagini/TenisFINAL.jpeg';window.spotivitySportAppearance.Volei.fundal_url='assets/imagini/BackgroundVoleyball.avif';dispatchEvent(new CustomEvent('spotivity:sport-appearance'));});
   // Modified click retains native category href navigation in a new tab.
   await choose('Fotbal');const popupPromise=context.waitForEvent('page');await link.click({modifiers:['Control']});const popup=await popupPromise;await popup.waitForLoadState('domcontentloaded');assert.ok(new URL(popup.url()).pathname.endsWith('/terenuri/fotbal/'));assert.equal(await page.locator('#modal-terenuri').isVisible(),false);await popup.close();
-  await page.emulateMedia({reducedMotion:'no-preference'});await choose('Fotbal');await page.locator('[data-welcome-gallery]').hover();
+  await page.emulateMedia({reducedMotion:'no-preference'});await choose('Fotbal');
+  // Bring the gallery into view but keep the mouse off it: hover now holds the photo.
+  await page.locator('[data-welcome-gallery]').scrollIntoViewIfNeeded();await page.evaluate(()=>scrollTo({top:0,behavior:'instant'}));await page.mouse.move(2,2);
   await page.evaluate(()=>{document.activeElement?.blur();window.slideEvents=[];let previous=document.querySelector('.welcome-cover').dataset.gallerySport;new MutationObserver(()=>{const sport=document.querySelector('.welcome-cover').dataset.gallerySport;if(sport!==previous){slideEvents.push({sport,at:performance.now()});previous=sport;}}).observe(document.querySelector('.welcome-cover'),{attributes:true,attributeFilter:['data-gallery-sport']});});
   await page.waitForFunction(()=>document.querySelector('[data-photo-next]').getAnimations().some(a=>a.playState==='running'));
   const next=page.locator('[data-photo-next]');assert.equal(await next.evaluate(node=>node.getAnimations()[0].effect.getTiming().duration),600);
@@ -102,7 +104,14 @@ const slugs={Fotbal:'fotbal',Baschet:'baschet',Tenis:'tenis',Volei:'volei','Teni
   const cycle=await page.evaluate(()=>slideEvents.slice(0,5));assert.deepEqual(cycle.map(x=>x.sport),['Baschet','Tenis','Volei','Tenis Picior','Fotbal']);
   const intervals=cycle.slice(1).map((event,index)=>Math.round(event.at-cycle[index].at));assert.ok(intervals.every(ms=>ms>=2400&&ms<=2850),JSON.stringify(intervals));
   await link.focus();await page.keyboard.press('Tab');await page.keyboard.press('Shift+Tab');assert.equal(await link.evaluate(node=>node.matches(':focus-visible')),true);const focused=await cover.getAttribute('data-gallery-sport');await page.waitForTimeout(2850);assert.equal(await cover.getAttribute('data-gallery-sport'),focused,'Booking link remains stable while keyboard-focused');
-  assert.equal(await page.locator('[data-gallery-toggle]').count(),0,'The owner removed the pause button; rotation always runs');
+  // Pause/play button is back (25.11.2026 hero brief): labelled, pressed state, stops and restarts the rotation.
+  await page.locator('[data-gallery-toggle]').focus();await page.evaluate(()=>document.activeElement.blur());
+  const toggle=page.locator('[data-gallery-toggle]');assert.equal(await toggle.getAttribute('aria-pressed'),'false');assert.equal(await toggle.getAttribute('aria-label'),'Oprește schimbarea fotografiilor');
+  await toggle.click();await page.mouse.move(2,2);assert.equal(await toggle.getAttribute('aria-pressed'),'true');assert.equal(await toggle.getAttribute('aria-label'),'Pornește schimbarea fotografiilor');
+  const held=await cover.getAttribute('data-gallery-sport');await page.waitForTimeout(2850);assert.equal(await cover.getAttribute('data-gallery-sport'),held,'Paused gallery keeps its photo');
+  await toggle.click();await page.mouse.move(2,2);assert.equal(await toggle.getAttribute('aria-pressed'),'false');
+  // Mouse hover holds the photo too.
+  await page.locator('[data-photo-current]').hover();const hovered=await cover.getAttribute('data-gallery-sport');await page.waitForTimeout(2850);assert.equal(await cover.getAttribute('data-gallery-sport'),hovered,'Hover holds the photo');await page.mouse.move(2,2);
   await page.emulateMedia({reducedMotion:'reduce'});await choose('Tenis');await page.waitForTimeout(2700);assert.equal(await cover.getAttribute('data-gallery-sport'),'Tenis');
   const afterMetadata=await page.evaluate(()=>({h1:document.querySelectorAll('h1').length,canonical:document.querySelector('link[rel="canonical"]').href,title:document.title,json:document.querySelector('#spotivity-seo-data').textContent}));assert.deepEqual(afterMetadata,metadata);
   for(const sport of sports)assert.ok(await page.locator(`a[href$="terenuri/${slugs[sport]}/"]`).count()>0);

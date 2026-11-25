@@ -1,4 +1,5 @@
-/* Clear welcome photos rotate automatically from right to left. */
+/* Clear welcome photos rotate automatically from right to left. The rotation stops on hover,
+   on keyboard focus, with prefers-reduced-motion, and with the pause/play button (WCAG 2.2.2). */
 (() => {
     'use strict';
     function init() {
@@ -10,6 +11,7 @@
         const frame = gallery.querySelector('.welcome-photo-frame');
         const backImage = back.querySelector('img');
         const buttons = [...gallery.querySelectorAll('[data-welcome-sport]')];
+        const toggle = gallery.querySelector('[data-gallery-toggle]');
         const controls = gallery.querySelector('.welcome-gallery-controls');
         const photos = [
             { sport: 'Fotbal', slug: 'fotbal', file: 'BackgroundFootball.avif' },
@@ -19,9 +21,9 @@
             { sport: 'Tenis Picior', slug: 'tenis-de-picior', file: 'BackgroundLavolei.avif' }
         ];
         const labels = {
-            ro: { title: 'Fotografiile sporturilor' },
-            hu: { title: 'Sportfotók' },
-            en: { title: 'Sports photographs' }
+            ro: { title: 'Fotografiile sporturilor', pause: 'Oprește schimbarea fotografiilor', play: 'Pornește schimbarea fotografiilor' },
+            hu: { title: 'Sportfotók', pause: 'Képváltás szüneteltetése', play: 'Képváltás indítása' },
+            en: { title: 'Sports photographs', pause: 'Pause photo rotation', play: 'Start photo rotation' }
         };
         const reduced = matchMedia('(prefers-reduced-motion: reduce)');
         // One complete cycle includes both the still photograph and its slide.
@@ -29,7 +31,7 @@
         const decodedImages = new Map();
         let current = 0, desired = 0, generation = 0, pending = 0, timer;
         let previewGeneration = 0, transition = null, outgoingTransition = null;
-        let visible = false, bookingFocused = false;
+        let paused = false, hovered = false, keyFocus = false, visible = false, bookingFocused = false;
 
         function syncCard(card, index) {
             const photo = photos[index];
@@ -54,11 +56,20 @@
                 button.title = label;
                 button.setAttribute('aria-pressed', String(index === current));
             });
+            if (toggle) {
+                const words = window.dict?.[window.lang] || {};
+                const label = paused ? (words.galerie_porneste || text.play) : (words.galerie_pauza || text.pause);
+                toggle.hidden = reduced.matches;   // nothing moves then, so there is nothing to pause
+                toggle.setAttribute('aria-label', label);
+                toggle.title = label;
+                toggle.setAttribute('aria-pressed', String(paused));
+                toggle.querySelector('path').setAttribute('d', paused ? 'M6 4l7 4-7 4z' : 'M5 4v8M11 4v8');
+            }
             syncCard(front, current);
             if (back.dataset.galleryIndex !== undefined) syncCard(back, Number(back.dataset.galleryIndex));
         }
         function canRotate() {
-            return visible && !document.hidden && !bookingFocused && !reduced.matches
+            return visible && !document.hidden && !paused && !hovered && !keyFocus && !bookingFocused && !reduced.matches
                 && !document.body.classList.contains('fara-scroll')
                 && !document.body.classList.contains('home-menu-open');
         }
@@ -184,6 +195,11 @@
                 schedule();
             });
         }
+        // Keyboard focus anywhere in the gallery (dots, pause button, photo link) holds the photo.
+        gallery.addEventListener('focusin', event => { if (event.target.matches(':focus-visible')) { keyFocus = true; schedule(); } });
+        gallery.addEventListener('focusout', () => {
+            queueMicrotask(() => { keyFocus = gallery.contains(document.activeElement) && document.activeElement.matches(':focus-visible'); schedule(); });
+        });
         gallery.addEventListener('focusin', event => {
             const link = event.target.closest('.welcome-photo-link');
             if (!link || !front.contains(link) || !link.matches(':focus-visible')) return;
@@ -199,6 +215,18 @@
             clearTimeout(timer);
             void show(index, true).then(schedule);
         }));
+        if (toggle) toggle.addEventListener('click', () => {
+            paused = !paused;
+            if (paused) {
+                generation++; previewGeneration++; pending = 0; desired = current;
+                cancelTransition();
+                if (visible) void preparePreview();
+            }
+            syncControls(); schedule();
+        });
+        // Hover (mouse only) holds the current photo; touch taps do not count as hover.
+        gallery.addEventListener('pointerenter', event => { if (event.pointerType === 'mouse') { hovered = true; schedule(); } });
+        gallery.addEventListener('pointerleave', event => { if (event.pointerType === 'mouse') { hovered = false; schedule(); } });
         document.addEventListener('visibilitychange', schedule);
         window.addEventListener('spotivity:language', syncControls);
         window.addEventListener('spotivity:sport-appearance', () => { if (visible) void show(desired, true).then(schedule); });

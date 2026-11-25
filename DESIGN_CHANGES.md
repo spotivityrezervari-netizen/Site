@@ -3,6 +3,17 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-25 (55): Hero refinement: vortex behind the photo, single green accent, SEO h1, carousel pause, WebP background (done by Claude, owner's brief)
+
+- **Restore point: git tag `design-before-hero-refine` (commit 61606ba).** Owner: "dacă îți zic undo adu site-ul la designul inițial" = go back to this tag.
+- Background: vortex centre moved from 800,500 to 1140,515 (behind the photo card); small galaxies (`universe`) and the whistle removed, stars/dust cut by ~60%, 5 balls (soccer accent, basketball, tennis, volleyball, small soccer) placed around the card, none over the text. Phone: vortex low (273,1000), 4 balls, darker.
+- The scenes are no longer data URIs in the CSS: `scripts/design/fundal-raster.mjs` renders them (Edge + Playwright from the test folder) to `assets/imagini/hero-fundal-desktop.webp` (1920×1200, 55.3 KB) and `hero-fundal-mobil.webp` (800×1732, 27.2 KB). `design-background.css` went from 532 KB to ~27 KB. Served with `background-size: cover` and the existing portrait/≤640px media query; both are preloaded with `<link rel="preload" media=…>`.
+- CSS veil `#0b1410` at 55%→0 over the left half (wide) and 35% all over (portrait). Static, no animation.
+- Single accent: `--accent #22c55e`, `--accent-hover #4ade80`, `--accent-text #052e16`; `--design-green*` and `--design-blue` now point to them (step numbers, prices, cities, eyebrows, dots, focus rings and hovers are green). Contrast: 8.5:1, 6.5:1 (button text), 11.1:1 (hover).
+- Hero markup: `<p class="welcome-brand hero-brand">Spotivity</p>`, `<h1 class="welcome-title" data-i18n="home_welcome_title">Rezervă terenuri de sport online</h1>` (HU "Foglalj sportpályát online", EN "Book sports courts online"), tagline unchanged. Admin "Setări <oraș>" and owner workspace headings are `<h2>` now.
+- Carousel pause/play button back (`data-gallery-toggle`, `aria-pressed`, labels in `public-i18n.js`); rotation also stops on mouse hover, keyboard focus and reduced motion. Second photo has `width/height` + `loading="lazy"`. Mobile: hero and card `max-width: 100%`, `box-sizing: border-box`.
+- Versions: `design-background.css?v=56`, `admin.css?v=7`, `admin-theme.css?v=3`, `owner-home.css?v=8`, `home-gallery.js?v=9`, `public-i18n.js?v=6`, `owner-home.js?v=17`, `admin-court-view.js?v=9`; SEO pages regenerated.
+
 ## 2026-11-24 (54): Title "Spotivity" (not uppercase); constellations removed (done by Claude, at the owner's request)
 
 Owner: "write spotivity with only the S capital, the rest small", then "it's too busy, remove the constellations".

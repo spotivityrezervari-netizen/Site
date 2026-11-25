@@ -175,7 +175,7 @@
 .admin-card-detail { color: #b9c3d1; font-size: 13px; }
 .admin-page .sub-pagina-oras { margin-top: 0 !important; }
 .admin-city-header { flex-wrap: wrap; gap: 12px; margin-bottom: 16px !important; }
-.admin-city-header h1 { flex: 1 1 180px; min-width: 0; margin-left: 0 !important; font-size: 21px !important; overflow-wrap: anywhere; line-height: 1.35; }
+.admin-city-header :is(h1, h2) { flex: 1 1 180px; min-width: 0; margin-left: 0 !important; font-size: 21px !important; overflow-wrap: anywhere; line-height: 1.35; }
 .admin-city-header button { min-height: 44px; }
 .admin-page .modal { padding: 12px; }
 .admin-page .modal .modal-continut {

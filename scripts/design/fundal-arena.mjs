@@ -5,10 +5,11 @@
 //   - silk-like bundles of thin light lines sweeping across the scene;
 //   - a few real 3D balls (projected spheres), back-lit with a rim light, some out of focus;
 //   - soft floodlight glows and a fine grain that removes gradient banding.
-// Writes --design-bg-arena (wide screens), --design-bg-arena-phone (portrait) and
-// --design-bg-grain into Idee Site/css/design-background.css. Never edit those lines by hand.
+// Since 25.11.2026 the two scenes are exported as WebP files (hero brief: no 500 KB data URI in
+// the CSS): Idee Site/assets/imagini/hero-fundal-desktop.webp (1920 px) and hero-fundal-mobil.webp
+// (800 px), rendered by scripts/design/fundal-raster.mjs. Only --design-bg-grain stays inline.
 // Run: node scripts/design/fundal-arena.mjs [--svg <prefix>] [--dry] [--ref]
-//   --svg also saves the SVGs, --dry does not touch the CSS, --ref draws the older layout.
+//   --svg also saves the SVGs, --dry writes nothing (no CSS, no WebP), --ref draws the older layout.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
@@ -1243,24 +1244,15 @@ function fibSvg(W, H, align, comp) {
 const FIB_ZONES_WIDE = [[0, 0, 1600, 150], [169, 321, 485, 381], [169, 399, 608, 475], [169, 500, 637, 566], [169, 601, 565, 664], [169, 700, 779, 783], [850, 340, 1431, 690], [1020, 800, 1260, 850]];   // photo cards, gallery dots
 const FIB_ZONES_PHONE = [[0, 0, 547, 222], [34, 275, 290, 324], [34, 338, 444, 409], [34, 434, 513, 552], [34, 586, 326, 664], [34, 684, 213, 747], [34, 786, 513, 876], [34, 921, 513, 1184]];
 const fibWide = fibSvg(1600, 1000, 'xMidYMid', {
-  // golden vortex (owner, 24.11): [arm, quarter turns from the centre, kind, size factor]
-  vortex: { cx: 800, cy: 500, arms: 3, r0: 9, extend: [300, 320],   // owner: centred, a little smaller, no hard end at the bottom
-    turn: 0.4, dim: 0.4, dust: { count: 900, c: 30, fall: 420 },
-    galaxy: { arms2: 5, turn2: 0.6, stars: 600, stars2: 260, width: 0.05, op: 0.95, fall: 1500, rMax: 1150, sky: 140, bulge: 125, haze: 0.04 },
-    // hidden constellations (star-chart pictures) and the name written in stars
-    // real constellations, one in each free corner of each side, away from the arms and the text
-    // owner, 24.11: "e prea încărcat, scoate constelațiile" - off; the old list stays here to bring them back
-    constellationsOff: [{ real: 'dipper', x: 290, y: 225, size: 250 }, { real: 'cassiopeia', x: 1105, y: 245, size: 210, rot: -8 },
-      { real: 'orion', x: 320, y: 918, size: 170 }, { real: 'cygnus', x: 1250, y: 930, size: 150, rot: 10 }],
-    // small far-away galaxies in the free corners: { x, y, r, tilt, rot, arms, tint }
-    universe: [{ x: 1350, y: 235, r: 110, tilt: 0.45, rot: -25 }, { x: 1495, y: 865, r: 85, tilt: 0.62, rot: 35, tint: '#bfe6ff' }, { x: 92, y: 640, r: 52, tilt: 0.55, rot: 70 }, { x: 1040, y: 935, r: 42, tilt: 0.38, rot: -12 }, { x: 1545, y: 520, r: 34, tilt: 0.75, rot: 15 },
-      // tiny ones scattered over the sky, and a few past the picture for taller screens
-      { x: 705, y: 160, r: 22, tilt: 0.5, rot: 40 }, { x: 1235, y: 300, r: 18, tilt: 0.65, rot: -50, tint: '#bfe6ff' }, { x: 175, y: 965, r: 26, tilt: 0.45, rot: 10 },
-      { x: 1060, y: 965, r: 20, tilt: 0.55, rot: 75 }, { x: 60, y: 300, r: 22, tilt: 0.6, rot: -30 }, { x: 1560, y: 720, r: 18, tilt: 0.5, rot: 55 }, { x: 650, y: 985, r: 22, tilt: 0.4, rot: -20, tint: '#bfe6ff' },
-      { x: 420, y: 1150, r: 44, tilt: 0.5, rot: 25 }, { x: 1180, y: 1190, r: 46, tilt: 0.42, rot: -35, tint: '#bfe6ff' }, { x: 500, y: -150, r: 36, tilt: 0.55, rot: 60 }, { x: 1150, y: -130, r: 30, tilt: 0.6, rot: -15 }],
-    balls: [[0, 5.5, 'tennis'], [1, 5, 'volleyball'], [2, 6, 'basketball'], [0, 7, 'soccer', 0.17, { span: 1.6, accent: true }], [2, 7.5, 'whistle', 0.09], [1, 7.5, 'soccer', 0.12],
-      // owner: "încă câteva iconițe și să nu se termine așa brusc": small ones born at the centre, more towards the edges
-      [1, 4, 'tennis'], [2, 4.5, 'soccer'], [0, 4.5, 'volleyball']] },
+  // 25.11.2026 (hero brief): the vortex sits behind the photo card (right column), the left half
+  // (title, text, buttons) stays calm. Simplified ~50%: no small galaxies, no whistle, far fewer
+  // stars, 5 balls. Before: centred at 800,500 with 16 small galaxies (tag design-before-hero-refine).
+  vortex: { cx: 1140, cy: 515, arms: 3, r0: 9, extend: [300, 320],
+    turn: 0.4, dim: 0.4, dust: { count: 300, c: 30, fall: 420 },
+    galaxy: { arms2: 5, turn2: 0.6, stars: 260, stars2: 90, width: 0.05, op: 0.9, fall: 900, rMax: 760, sky: 40, bulge: 125, haze: 0.035 },
+    universe: null,
+    // 5 balls around the photo card, none over the text column (positions checked with --debug)
+    balls: [[0, 7, 'soccer', 0.17, { span: 1.6, accent: true }], [0, 7.5, 'basketball', 0.12], [1, 7, 'tennis', 0.13], [2, 7.5, 'volleyball', 0.11], [0, 8, 'soccer', 0.07]] },
   label: 'wide', zones: FIB_ZONES_WIDE,
   sunflower: { cx: 800, cy: 540, c: 32, rMax: 980, iconSeeds: true, iconFill: 0.8, iconOp: [0.95, 0.75, 0.42, 0], goldenFade: { r0: 60, low: 0.25 }, iconC: 52, iconCount: 377, size0: 22, grow: 0.075, iconArms: [2, 9, 16], iconEvery: 2, kinds: ['tennis', 'whistle', 'stopwatch', 'volleyball', 'basketball', 'soccer'], dim: 0.4 },
   tiling: { n: 14, flipX: false, flipY: true, fit: { cx: 800, cy: 540, w: 1080 } },
@@ -1270,15 +1262,12 @@ const fibWide = fibSvg(1600, 1000, 'xMidYMid', {
   chain: { from: 6.5, step: 1, count: 8, size0: 26, grow: 1.2, dim: 0.45, kinds: ['tennis', 'whistle', 'stopwatch', 'volleyball', 'basketball', 'soccer'] },
 });
 const fibPhone = fibSvg(547, 1184, 'xMidYMin', {
-  vortex: { cx: 273, cy: 592, arms: 3, r0: 7, extend: [60, 460],
-    turn: 1.2, dim: 0.4, dust: { count: 700, c: 26, fall: 330 },
-    galaxy: { arms2: 5, turn2: 0.6, stars: 430, stars2: 180, width: 0.05, op: 0.95, fall: 1100, rMax: 1050, sky: 90, bulge: 85, haze: 0.04 },
-    constellationsOff: [{ real: 'dipper', x: 440, y: 286, size: 150, star: 1.7, line: 0.32 }, { real: 'orion', x: 478, y: 548, size: 110, star: 1.7, line: 0.32 }, { real: 'cassiopeia', x: 382, y: 768, size: 150, star: 1.7, line: 0.32 }],
-    universe: [{ x: 455, y: 250, r: 58, tilt: 0.5, rot: -20 }, { x: 440, y: 762, r: 36, tilt: 0.6, rot: 30, tint: '#bfe6ff' }, { x: 80, y: 205, r: 28, tilt: 0.65, rot: 60 },
-      { x: 480, y: 715, r: 16, tilt: 0.55, rot: 35 }, { x: 150, y: 1300, r: 42, tilt: 0.5, rot: 20 }, { x: 420, y: 1450, r: 34, tilt: 0.6, rot: -40, tint: '#bfe6ff' }, { x: 240, y: 1600, r: 26, tilt: 0.45, rot: 70 }],
-    // phone (owner, 24.11 cleanup): at most one ball per arm within a quarter turn, so every trail stays whole
-    balls: [[0, 6.5, 'soccer', 0.17, { accent: true }], [1, 6, 'tennis'], [2, 5.5, 'basketball', 0.15],
-      [2, 4.5, 'tennis'], [0, 4, 'soccer'], [1, 4.5, 'volleyball'], [1, 7, 'soccer', 0.08]] },
+  // 25.11.2026: phone version simpler and darker; the vortex sits low, behind the photo card.
+  vortex: { cx: 273, cy: 1000, arms: 3, r0: 7, extend: [60, 460],
+    turn: 1.2, dim: 0.35, dust: { count: 200, c: 26, fall: 330 },
+    galaxy: { arms2: 5, turn2: 0.6, stars: 160, stars2: 50, width: 0.05, op: 0.7, fall: 700, rMax: 700, sky: 20, bulge: 85, haze: 0.025 },
+    universe: null,
+    balls: [[0, 6.5, 'soccer', 0.17, { accent: true }], [1, 6, 'tennis'], [2, 5.5, 'basketball', 0.15], [1, 7, 'volleyball', 0.1]] },
   label: 'phone', zones: FIB_ZONES_PHONE,
   sunflower: { cx: 273, cy: 600, c: 28, rMax: 760, iconSeeds: true, iconFill: 0.8, iconOp: [1, 0.9, 0.55, 0], goldenFade: { r0: 45, low: 0.25 }, margin: [60, 60], iconC: 43, iconCount: 233, size0: 18, grow: 0.075, iconArms: 'auto', iconEvery: 1, kinds: ['tennis', 'whistle', 'stopwatch', 'volleyball', 'basketball', 'soccer'], dim: 0.4 },
   tiling: { n: 15, flipX: true, fit: { cx: 273, cy: 600, w: 500 } },
@@ -1294,7 +1283,8 @@ const grain = `<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'>
 const toUri = (svg) => `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
 // Default: the Fibonacci composition (owner, 24.11.2026). --ref draws the previous reference layout.
 const useRef = process.argv.includes('--ref');
-const variants = { '--design-bg-arena': useRef ? wide : fibWide, '--design-bg-arena-phone': useRef ? phone : fibPhone, '--design-bg-grain': grain };
+const variants = { '--design-bg-grain': grain };
+const scenes = { 'hero-fundal-desktop': { svg: useRef ? wide : fibWide, width: 1920, height: 1200, maxKB: 250 }, 'hero-fundal-mobil': { svg: useRef ? phone : fibPhone, width: 800, height: 1732, maxKB: 120 } };
 const cssPath = fileURLToPath(new URL('../../Idee Site/css/design-background.css', import.meta.url));
 let css = readFileSync(cssPath, 'utf8');
 for (const [name, svg] of Object.entries(variants)) {
@@ -1303,7 +1293,11 @@ for (const [name, svg] of Object.entries(variants)) {
   css = css.replace(pattern, () => `${name}: url("${toUri(svg)}");`);
   console.log(`fundal-arena: ${name} ${(toUri(svg).length / 1024).toFixed(1)} KB`);
 }
-if (!process.argv.includes('--dry')) writeFileSync(cssPath, css);   // --dry: only the --svg files
+if (!process.argv.includes('--dry')) {
+  writeFileSync(cssPath, css);
+  const { rasterize } = await import('./fundal-raster.mjs');
+  await rasterize(scenes, fileURLToPath(new URL('../../Idee Site/assets/imagini/', import.meta.url)));
+}
 const out = process.argv.indexOf('--svg');
 if (out > 0) for (const [label, svg] of Object.entries(fibDebug)) writeFileSync(`${process.argv[out + 1]}-dbg-${label}.svg`, svg);
-if (out > 0) for (const [name, svg] of Object.entries(variants)) writeFileSync(`${process.argv[out + 1]}${name.replace('--design-bg', '')}.svg`, svg);
+if (out > 0) for (const [name, { svg }] of Object.entries(scenes)) writeFileSync(`${process.argv[out + 1]}${name}.svg`, svg);
