@@ -3,6 +3,12 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-25 (66): Arena icons pulled in from the edges (done by Claude, owner: "centrează iconițele puțin mai pe mijloc, se taie mult din ele și pe desktop și pe telefon")
+
+- Restore point: tag `design-before-icons-centred` (d80ff71).
+- fundal-arena.mjs positions/sizes: every icon now fits whole in the free margins (checked at 1440x900, 1920x1080 and 390x844) without touching the text, the photo or the 01-02-03 steps. Desktop: basketball, medal, big stopwatch, trophy, football, racket, small stopwatch, volleyball moved in and a bit smaller; hoop + small basketball + dashed shot moved right/down off the steps. Phone: basketball (+ its light trail), jersey, racket, stopwatches, volleyball, whistle, trophy, football moved in/smaller.
+- `design-background.css?v=67`; SEO pages regenerated.
+
 ## 2026-11-25 (65): Arena balls redrawn as lit balls, football in particular (done by Claude, owner: "iconițele puțin mai frumoase, mingea de fotbal în special")
 
 - Restore point: tag `design-before-ball-polish` (2f9b1ab).

@@ -504,7 +504,7 @@ const wide = scene({
   W: 1600, H: 1000,
   glows: [[140, -80, 950, 720, '#11936f', 0.24], [1480, -60, 760, 620, '#0e8064', 0.16], [1180, 640, 620, 380, '#0a5e4b', 0.1], [760, 1060, 820, 300, '#0e8064', 0.14]],
   sparkles: 90,
-  arcs: [[400, 1040, 500, 800, 634, 922]],   // the small basketball's shot into the hoop
+  arcs: [[430, 1010, 540, 770, 694, 884]],   // the small basketball's shot into the hoop
   calm: [450, 470, 500, 300],
   ribbons: [
     // the tennis ball's light trail (it ends under the ball)
@@ -514,23 +514,23 @@ const wide = scene({
   ],
   props: [
     ['scoreboard', 690, 205, 70, 0, '21'],
-    ['medal', 64, 428, 72, -8],
-    ['racket', 1548, 338, 92, 16],
+    ['medal', 80, 430, 60, -8],
+    ['racket', 1515, 350, 78, 16],
     ['jersey', 757, 486, 92, -10],
-    ['hoop', 640, 950, 130],
-    ['calendar', 1195, 872, 74, 8],
-    ['pin', 978, 905, 88],
-    ['stopwatch', 58, 585, 180, 14, 40],
-    ['stopwatch', 1522, 196, 62, -16, 300],
+    ['hoop', 700, 905, 100],
+    ['calendar', 1190, 850, 66, 8],
+    ['pin', 975, 862, 76],
+    ['stopwatch', 88, 605, 120, 14, 40],
+    ['stopwatch', 1495, 205, 56, -16, 300],
     ['whistle', 905, 272, 130, -12],
-    ['trophy', 92, 905, 140, -4],
+    ['trophy', 100, 855, 110, -4],
   ],
   balls: [
-    ['volleyball', 1545, 478, 40, 45, 35, 0],
+    ['volleyball', 1515, 485, 36, 45, 35, 0],
     ['tennis', 1338, 264, 30, 20, 30, 10],
-    ['basketball', 70, 215, 135, -40, 15, -50],
-    ['soccer', 1445, 840, 150, 18, -12, 8],
-    ['basketball', 562, 880, 24, -30, 25, -40],
+    ['basketball', 95, 240, 70, -40, 15, -50],
+    ['soccer', 1440, 815, 108, 18, -12, 8],
+    ['basketball', 630, 846, 20, -30, 25, -40],
   ],
 });
 // Portrait screens (drawn at 600x1400, shown full width from the top).
@@ -541,22 +541,22 @@ const phone = scene({
   calm: [300, 650, 380, 420],
   ribbons: [
     // the basketball's light trail (it ends under the ball)
-    { a: [[-60, 960], [170, 820], [360, 560], [482, 296]], b: [[-60, 1120], [260, 940], [470, 520], [494, 396]], n: 40, strength: 1, peak: 0.88, endOp: 0.7, width: 90, twist: 0.8 },
+    { a: [[-60, 960], [170, 820], [360, 580], [468, 316]], b: [[-60, 1120], [260, 940], [460, 540], [492, 404]], n: 40, strength: 1, peak: 0.88, endOp: 0.7, width: 90, twist: 0.8 },
     { a: [[-40, 250], [120, 190], [260, 130], [430, -40]], b: [[-40, 320], [170, 260], [310, 160], [470, -10]], n: 22, strength: 0.55, peak: 0.45, width: 50, twist: 0.7 },
   ],
   props: [
-    ['jersey', 598, 528, 80, -12],
-    ['racket', 580, 760, 86, 18],
-    ['pin', 335, 1168, 72],
-    ['stopwatch', -8, 770, 112, 12, 40],
-    ['stopwatch', 572, 618, 46, -16, 300],
-    ['whistle', 498, 1080, 92, -18, 'M30 -30C60 -80 20 -150 90 -200'],
-    ['trophy', 500, 1218, 100, 0],
+    ['jersey', 548, 498, 52, -12],
+    ['racket', 545, 775, 70, 18],
+    ['pin', 335, 1168, 64],
+    ['stopwatch', 36, 872, 48, 12, 40],
+    ['stopwatch', 548, 645, 40, -16, 300],
+    ['whistle', 468, 1085, 80, -18, 'M30 -30C60 -80 20 -150 90 -200'],
+    ['trophy', 480, 1230, 84, 0],
   ],
   balls: [
-    ['volleyball', 590, 905, 36, 45, 35, 0],
-    ['basketball', 585, 330, 112, -40, 15, -50],
-    ['soccer', 100, 1185, 125, 18, -12, 8],
+    ['volleyball', 552, 905, 32, 45, 35, 0],
+    ['basketball', 520, 360, 74, -40, 15, -50],
+    ['soccer', 98, 1200, 84, 18, -12, 8],
   ],
 });
 // Fine grain (tiny repeating tile): breaks up the banding of dark gradients.
