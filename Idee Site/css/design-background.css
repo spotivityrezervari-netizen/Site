@@ -429,7 +429,7 @@ body.pagina-publica { background: #020c0e; background-color: #020c0e; }
     content: ""; position: absolute; z-index: 0; pointer-events: none;
     width: min(72%, 520px); aspect-ratio: 1; left: 50%; top: calc(50% - 26px); translate: -50% -50%;
     border-radius: 50%;
-    background: conic-gradient(from 0deg, rgba(34, 197, 94, .55), rgba(56, 189, 248, .45), rgba(34, 197, 94, .08), rgba(56, 189, 248, .4), rgba(74, 222, 128, .5), rgba(34, 197, 94, .55));
+    background: conic-gradient(from 0deg, rgba(29, 41, 81, .9), rgba(74, 90, 156, .6), rgba(29, 41, 81, .2), rgba(120, 138, 210, .45), rgba(29, 41, 81, .9));
     filter: blur(60px); opacity: .45;
     animation: spot-aurora 22s linear infinite;
     will-change: transform;
@@ -447,10 +447,11 @@ body.pagina-publica { background: #020c0e; background-color: #020c0e; }
 .pagina-publica .welcome-photo-card::after {
     content: ""; position: absolute; inset: 0; z-index: 4; pointer-events: none;
     border-radius: inherit; padding: 2px;
-    background: conic-gradient(from var(--spot-ring), transparent 0deg, transparent 230deg, rgba(56, 189, 248, .55) 300deg, #4ade80 352deg, #eafff3 358deg, transparent 360deg);
+    background: conic-gradient(from var(--spot-ring), transparent 0deg, transparent 200deg, rgba(29, 41, 81, .9) 270deg, #4a5a9c 320deg, #a9b6ec 352deg, #e8ecff 358deg, transparent 360deg);
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
-    animation: spot-ring 6s linear infinite;
+    animation: spot-ring 7s linear infinite;
+    filter: drop-shadow(0 0 6px rgba(169, 182, 236, .45));
 }
 @keyframes spot-ring { to { --spot-ring: 360deg; } }
 
@@ -476,6 +477,98 @@ body.pagina-publica { background: #020c0e; background-color: #020c0e; }
 @media (forced-colors: active) {
     .pagina-publica .welcome-art::before,
     .pagina-publica .welcome-photo-card::after { content: none; }
+}
+
+/* ---------------------------------------------------------------------------
+ * 2026-11-25 (owner: "fă mai bine de atât"). One level up:
+ * - Display font Unbounded (SIL OFL 1.1, subset to Latin + RO/HU letters, ~48 KB) for the
+ *   brand, the photo titles and the sport headings; Outfit stays for everything else.
+ * - Ambient light: the glow behind the gallery is a blurred copy of the photo on screen
+ *   (js/design-ambient.js sets --design-ambient), so the light takes the photo's colours.
+ * - Tilt + glare: with a mouse, the gallery leans towards the pointer and a highlight follows.
+ * - The hero text rises in once on load; the main button catches a sweep of light on hover.
+ * Undo: delete this block + js/design-ambient.js (tag design-before-ambient).
+ * ------------------------------------------------------------------------- */
+@font-face {
+    font-family: "Unbounded"; font-style: normal; font-weight: 200 900; font-display: swap;
+    src: url("../assets/fonts/unbounded-latin.woff2") format("woff2");
+    unicode-range: U+0020-007E, U+00A0-00FF, U+2013-2014, U+2018-201E, U+2026, U+20AC;
+}
+@font-face {
+    font-family: "Unbounded"; font-style: normal; font-weight: 200 900; font-display: swap;
+    src: url("../assets/fonts/unbounded-latin-ext.woff2") format("woff2");
+    unicode-range: U+0102-0103, U+0150-0151, U+0170-0171, U+0218-021B;
+}
+.pagina-publica :is(.home-welcome .welcome-brand, .welcome-slide-title, .home-sport-heading h1, .home-sport-heading h2) {
+    font-family: "Unbounded", "Outfit", system-ui, sans-serif;
+}
+.pagina-publica .home-welcome .welcome-brand {
+    font-weight: 700; letter-spacing: -.045em; font-size: clamp(44px, 4.4vw, 64px); line-height: 1.02;
+    background: linear-gradient(180deg, #fff 30%, #cfeee2 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 6px 26px rgba(34, 197, 94, .18));
+}
+.pagina-publica .welcome-slide-title { font-weight: 700; letter-spacing: -.03em; font-size: clamp(24px, 2.3vw, 34px); }
+.pagina-publica .home-sport-heading :is(h1, h2) { font-weight: 700; letter-spacing: -.04em; }
+@media (max-width: 767px) {
+    .pagina-publica .home-welcome .welcome-brand { font-size: clamp(38px, 10.5vw, 46px); }
+    .pagina-publica .home-sport-heading :is(h1, h2) { font-size: clamp(26px, 7.6vw, 32px); }
+}
+
+/* Ambient light from the photo (replaces the rotating aurora once a photo is known). */
+.pagina-publica .welcome-art.has-ambient::before {
+    width: min(92%, 680px); aspect-ratio: 3 / 2; border-radius: 40%;
+    background: var(--design-ambient) center / cover no-repeat;
+    filter: blur(70px) saturate(.9) brightness(.95); opacity: .5;
+    animation: spot-breathe 9s ease-in-out infinite alternate;
+    transition: background-image 1.2s ease;
+}
+@keyframes spot-breathe { from { transform: scale(.94); opacity: .5; } to { transform: scale(1.06); opacity: .7; } }
+
+/* Tilt: the whole frame leans; the cards keep their own slide animation. */
+.pagina-publica .welcome-photo-frame {
+    transform: perspective(1100px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+    transition: transform .6s cubic-bezier(.2, .7, .2, 1);
+}
+.pagina-publica .welcome-photo-frame.is-tilting { transition: transform .12s linear; }
+/* Glare that follows the pointer. */
+.pagina-publica .welcome-photo-card::before {
+    content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none; border-radius: inherit;
+    background: radial-gradient(circle at var(--glare-x, 50%) var(--glare-y, 0%), rgba(255, 255, 255, .22), transparent 45%);
+    mix-blend-mode: soft-light; opacity: 0; transition: opacity .5s;
+}
+.pagina-publica .welcome-photo-frame.is-tilting .welcome-photo-card::before { opacity: 1; }
+
+/* Hero text rises in once, one line after another. */
+@keyframes spot-rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+.pagina-publica .home-welcome .welcome-copy > * { animation: spot-rise .8s cubic-bezier(.2, .7, .2, 1) both; }
+.pagina-publica .home-welcome .welcome-copy > :nth-child(2) { animation-delay: .08s; }
+.pagina-publica .home-welcome .welcome-copy > :nth-child(3) { animation-delay: .16s; }
+.pagina-publica .home-welcome .welcome-copy > :nth-child(4) { animation-delay: .24s; }
+.pagina-publica .home-welcome .welcome-copy > :nth-child(5) { animation-delay: .32s; }
+.pagina-publica .home-welcome .welcome-copy > :nth-child(n+6) { animation-delay: .4s; }
+.pagina-publica .welcome-art { animation: spot-rise 1s .2s cubic-bezier(.2, .7, .2, 1) both; }
+
+/* Main button: a sweep of light on hover, a slightly lifted shadow. */
+.pagina-publica .welcome-primary { position: relative; overflow: hidden; isolation: isolate; transition: transform .25s, box-shadow .25s, background .25s; }
+.pagina-publica .welcome-primary::after {
+    content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+    background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, .55) 50%, transparent 65%);
+    transform: translateX(-120%);
+}
+.pagina-publica .welcome-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 34px rgba(34, 197, 94, .35); }
+.pagina-publica .welcome-primary:hover::after { transform: translateX(120%); transition: transform .8s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+    .pagina-publica .home-welcome .welcome-copy > *,
+    .pagina-publica .welcome-art,
+    .pagina-publica .welcome-art.has-ambient::before { animation: none; }
+    .pagina-publica .welcome-photo-frame { transform: none; transition: none; }
+    .pagina-publica .welcome-primary:hover { transform: none; }
+    .pagina-publica .welcome-primary:hover::after { transition: none; }
+}
+@media (forced-colors: active) {
+    .pagina-publica .home-welcome .welcome-brand { background: none; color: CanvasText; -webkit-text-fill-color: CanvasText; filter: none; }
 }
 
 @media print {

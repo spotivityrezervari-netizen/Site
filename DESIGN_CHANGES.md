@@ -3,6 +3,15 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-25 (62): Display font Unbounded, ambient light from the photo, tilt, Space Cadet edge light (done by Claude, owner: "fă mai bine de atât", then "lumina care se plimbă în tema Space Cadet, nu curcubeu")
+
+- Restore point: tag `design-before-ambient` (c53c892). Undo = delete the last block of design-background.css, `js/design-ambient.js` + its <script> and manifest entry, the unbounded fonts in the manifest; regenerate SEO pages.
+- Unbounded (SIL OFL 1.1, npm @fontsource-variable/unbounded 5.3.0) subset with fontTools to Latin + ăĂ ȘșȚț őŐűŰ: latin 43 KB + ext 4 KB. Used for "Spotivity", photo titles and sport headings.
+- `js/design-ambient.js`: sets `--design-ambient` (blurred copy of the photo on screen behind the gallery) and the pointer tilt/glare vars on `.welcome-photo-frame` (mouse only, off with reduced motion).
+- Hero text rises in once on load (staggered); main button light sweep on hover.
+- Running edge light and aurora recoloured to Space Cadet tones (#1D2951 → #4a5a9c → #a9b6ec → #e8ecff), 7 s per turn; ambient light toned down (saturate .9, opacity .5).
+- `design-background.css?v=63`; SEO pages regenerated.
+
 ## 2026-11-25 (61): Outfit font + light around the gallery photos (done by Claude, owner gave a free hand)
 
 Owner: "mai joacă-te puțin cu fonturile și lumina în jurul imaginilor care se mișcă, poți mai mult".
