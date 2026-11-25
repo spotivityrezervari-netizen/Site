@@ -3,6 +3,14 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-25 (64): UNDO back to the design of 22.11 ~18:00 (commit 89d0059, Arena at v=17) (done by Claude, owner: "dă undo până la schimbările din 22.11 ora 18 aprox")
+
+- Restore point of what was undone: tag `design-before-undo-2211` (8c945e1, Space Cadet).
+- Design files set to their 89d0059 state: css/design-background.css (served as ?v=65), css/design-legal.css (?v=3), scripts/design/fundal-arena.mjs; hero markup back to `<h1 class="welcome-brand">Spotivity</h1>` + tagline (the SEO keyword h1 is gone from the page; i18n key home_welcome_title kept, unused); theme-color #101a14 on index + legal pages.
+- Removed: Outfit/Unbounded fonts, js/design-ambient.js, fundal-final-*.webp + preload lines, scripts/design/fundal-final.mjs and fundal-raster.mjs (all still in git history). build-public.mjs keeps allowing assets/fonts/*.woff2 (harmless).
+- Kept (not design): analytics, account deletion, SEO addresses, speed work, gallery pause button and JS fixes, admin/owner h1→h2 heading changes.
+- Tests seo-schema-browser and public-resilience-browser expect "Spotivity" as the h1 again (both pass locally with Edge).
+
 ## 2026-11-25 (63): Whole public site in the Space Cadet palette, no green/blue gradients (done by Claude, owner: "schimbă peste tot unde e curcubeu cu Space Cadet, fă să fie frumoasă toată pagina")
 
 - Restore point: tag `design-before-space-cadet` (ee73dcc).
