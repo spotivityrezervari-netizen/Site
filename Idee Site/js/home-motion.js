@@ -33,7 +33,10 @@
             let running = false, nextWake = Infinity;
             for (const state of strips.values()) {
                 if (state.max <= 1 || reducedMotion.matches) { state.velocity = 0; setStatus(state, 'idle'); continue; }
-                if (blocked || !state.visible || state.dragging) {
+                // While a finger rests on the row the script never writes scrollLeft:
+                // mobile browsers (iOS Safari especially) drop the native swipe if the
+                // scroll position changes under the finger before the pan starts.
+                if (blocked || !state.visible || state.dragging || state.touch) {
                     state.velocity = state.fling = 0;
                     setStatus(state, 'paused');
                     continue;
@@ -154,7 +157,8 @@
             const endTouch = event => {
                 if (event.touches.length) return;
                 state.touch = null;
-                if (!state.dragging) return;
+                strip.style.removeProperty('--home-courts-offset');
+                if (!state.dragging) { state.position = state.expected = strip.scrollLeft; wake(); return; }
                 state.dragging = false;
                 // The native fling keeps firing scroll events; autoplay resumes once it settles.
                 state.position = state.expected = strip.scrollLeft;

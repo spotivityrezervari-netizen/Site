@@ -464,14 +464,25 @@ let checks = 0;
     await touch.send('Emulation.setTouchEmulationEnabled', {enabled: true});
     const bounds = await strip.boundingBox();
     const point = {x: bounds.x+Math.min(250, bounds.width-25), y: bounds.y+Math.min(100, bounds.height/2)};
+    await strip.evaluate(node => { node.scrollLeft = 0; });
+    await homepage.waitForTimeout(300);
     await touch.send('Input.dispatchTouchEvent', {type: 'touchStart', touchPoints: [point]});
-    const heldPosition = await visualPosition();
+    // The finger owns the row: autoplay must not move it under the finger.
+    await homepage.waitForFunction(() => document.querySelector('[data-home-courts="Fotbal"]').dataset.autoScroll === 'paused');
+    const heldScroll = await strip.evaluate(node => node.scrollLeft);
+    await homepage.waitForTimeout(300);
+    assert.ok(Math.abs(await strip.evaluate(node => node.scrollLeft)-heldScroll) < 1, 'Autoplay must not move the row under a resting finger');
+    for (let step = 1; step <= 12; step++) {
+      await touch.send('Input.dispatchTouchEvent', {type: 'touchMove', touchPoints: [{x: point.x-step*15, y: point.y}]});
+      await homepage.waitForTimeout(16);
+    }
+    assert.ok(await strip.evaluate(node => node.scrollLeft) > heldScroll+100, 'A horizontal finger swipe must scroll the moving row');
+    await touch.send('Input.dispatchTouchEvent', {type: 'touchEnd', touchPoints: []});
+    const releasedPosition = await visualPosition();
     await homepage.waitForFunction(start => {
       const node = document.querySelector('[data-home-courts="Fotbal"]');
       return Math.abs(node.getBoundingClientRect().left-node.querySelector('[data-discovery-court]').getBoundingClientRect().left-start) > 4;
-    }, heldPosition, {timeout: 3000});
-    await touch.send('Input.dispatchTouchEvent', {type: 'touchMove', touchPoints: [{x: point.x-100, y: point.y}]});
-    await touch.send('Input.dispatchTouchEvent', {type: 'touchEnd', touchPoints: []});
+    }, releasedPosition, {timeout: 4000});
     await touch.send('Emulation.setTouchEmulationEnabled', {enabled: false});
 
     // Desktop: the moving row can be dragged with the mouse; the drag never opens a booking.
