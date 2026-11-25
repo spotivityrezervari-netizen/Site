@@ -240,7 +240,8 @@
         new MutationObserver(schedule).observe(document.body, { attributes: true, attributeFilter: ['class'] });
         if (window.IntersectionObserver) {
             new IntersectionObserver(entries => {
-                visible = entries[0].isIntersecting;
+                // Several entries can arrive together (fast scroll out and back): the last one is current.
+                visible = entries[entries.length - 1].isIntersecting;
                 if (visible) void show(desired, true).then(schedule);
                 else schedule();
             }, { threshold: .2 }).observe(gallery);

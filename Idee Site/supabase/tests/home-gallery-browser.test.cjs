@@ -95,7 +95,7 @@ const slugs={Fotbal:'fotbal',Baschet:'baschet',Tenis:'tenis',Volei:'volei','Teni
   await choose('Fotbal');const popupPromise=context.waitForEvent('page');await link.click({modifiers:['Control']});const popup=await popupPromise;await popup.waitForLoadState('domcontentloaded');assert.ok(new URL(popup.url()).pathname.endsWith('/terenuri/fotbal/'));assert.equal(await page.locator('#modal-terenuri').isVisible(),false);await popup.close();
   await page.emulateMedia({reducedMotion:'no-preference'});await choose('Fotbal');
   // Bring the gallery into view but keep the mouse off it: hover now holds the photo.
-  await page.locator('[data-welcome-gallery]').scrollIntoViewIfNeeded();await page.evaluate(()=>scrollTo({top:0,behavior:'instant'}));await page.mouse.move(2,2);
+  await page.evaluate(()=>scrollTo({top:0,behavior:'instant'}));await page.mouse.move(2,2);
   await page.evaluate(()=>{document.activeElement?.blur();window.slideEvents=[];let previous=document.querySelector('.welcome-cover').dataset.gallerySport;new MutationObserver(()=>{const sport=document.querySelector('.welcome-cover').dataset.gallerySport;if(sport!==previous){slideEvents.push({sport,at:performance.now()});previous=sport;}}).observe(document.querySelector('.welcome-cover'),{attributes:true,attributeFilter:['data-gallery-sport']});});
   await page.waitForFunction(()=>document.querySelector('[data-photo-next]').getAnimations().some(a=>a.playState==='running'));
   const next=page.locator('[data-photo-next]');assert.equal(await next.evaluate(node=>node.getAnimations()[0].effect.getTiming().duration),600);

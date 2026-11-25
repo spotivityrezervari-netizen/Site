@@ -329,7 +329,7 @@ body.pagina-publica { background: #011012; background-color: #011012; overscroll
        Fibonacci icons near the bottom stay visible), so the bottom of the
        screen is exactly the same colour as the browser bar / the area phones show below the
        page (no visible change of contrast there). */
-    background-image: linear-gradient(180deg, rgba(1, 16, 18, 0) 93%, rgba(1, 16, 18, .25) 96.5%, rgba(1, 16, 18, .65) 99%, #011012 100%), var(--design-bg-grain), url("../assets/imagini/hero-fundal-desktop.webp");
+    background-image: linear-gradient(180deg, rgba(1, 16, 18, 0) 93%, rgba(1, 16, 18, .25) 96.5%, rgba(1, 16, 18, .65) 99%, #011012 100%), var(--design-bg-grain), url("../assets/imagini/fundal-final-desktop.webp");
     background-repeat: no-repeat, repeat, no-repeat;
     /* The picture has no fixed size: it fills the layer, and its object groups are glued to the
        screen corners and scaled to fit, so nothing is ever cut at an edge. */
@@ -340,7 +340,7 @@ body.pagina-publica { background: #011012; background-color: #011012; overscroll
 /* Portrait screens (phones, portrait tablets): the portrait composition. */
 @media (orientation: portrait), (max-width: 640px) {
     .pagina-publica .home-shell::after {
-        background-image: linear-gradient(180deg, rgba(1, 16, 18, 0) 93%, rgba(1, 16, 18, .25) 96.5%, rgba(1, 16, 18, .65) 99%, #011012 100%), var(--design-bg-grain), url("../assets/imagini/hero-fundal-mobil.webp");
+        background-image: linear-gradient(180deg, rgba(1, 16, 18, 0) 93%, rgba(1, 16, 18, .25) 96.5%, rgba(1, 16, 18, .65) 99%, #011012 100%), var(--design-bg-grain), url("../assets/imagini/fundal-final-mobil.webp");
         background-size: 100% 100%, 180px 180px, cover;
         background-position: 0 0, 0 0, center top;
     }
@@ -387,7 +387,7 @@ body.pagina-publica { background: #011012; background-color: #011012; overscroll
  * 2026-11-25: hero refinement (owner's brief). Restore point: git tag design-before-hero-refine.
  *   - Background: two WebP pictures (hero-fundal-desktop.webp 1920 px, hero-fundal-mobil.webp
  *     800 px) instead of the ~500 KB SVG data URI; the vortex sits behind the photo card.
- *   - A discreet dark veil (#0b1410) over the left half keeps the text side calm.
+ *   - (later the same day the owner chose the reference line-art tile instead, see below)
  *   - One accent colour (the green of "Rezervă un teren"), defined once as variables.
  *   - "Spotivity" is a <p class="hero-brand">, the <h1> carries the keywords.
  * Contrast (WCAG AA): #22c55e on #011012 = 8.5:1; #052e16 on #22c55e = 6.5:1;
@@ -397,28 +397,31 @@ body.pagina-publica { background: #011012; background-color: #011012; overscroll
     --accent: #22c55e;
     --accent-hover: #4ade80;
     --accent-text: #052e16;
-    --hero-veil: 11, 20, 16;   /* #0b1410 */
-    --design-green: var(--accent);
+        --design-green: var(--accent);
     --design-green-hover: var(--accent-hover);
     --design-green-ink: var(--accent-text);
     --design-blue: var(--accent);   /* labels and numbers used light blue: now the single accent */
 }
-/* Wide screens: veil over the left (text) half, the vortex on the right stays bright. */
+/* Background (owner, 25.11.2026 later: "adu-mi modelul de pe poza de referință"): the
+   "Fundal Final" line-art tile again (sport icons, crosses, dots, emerald light ribbons), as on
+   21.11 (commit d86f0eb, reference Modificari/Design/calereferinta.jpeg), now as WebP files made
+   by scripts/design/fundal-final.mjs. The layer stays fixed; the content scrolls over it.
+   The vortex pictures (fundal-arena.mjs) are no longer used. */
 .pagina-publica .home-shell::after {
-    background-image: linear-gradient(180deg, rgba(1, 16, 18, 0) 93%, rgba(1, 16, 18, .25) 96.5%, rgba(1, 16, 18, .65) 99%, #011012 100%),
-        linear-gradient(90deg, rgba(var(--hero-veil), .55) 0%, rgba(var(--hero-veil), .45) 34%, rgba(var(--hero-veil), 0) 56%),
-        var(--design-bg-grain), url("../assets/imagini/hero-fundal-desktop.webp");
-    background-repeat: no-repeat, no-repeat, repeat, no-repeat;
-    background-size: 100% 100%, 100% 100%, 180px 180px, cover;
-    background-position: 0 0, 0 0, 0 0, center;
+    background-image: url("../assets/imagini/fundal-final-desktop.webp");
+    background-repeat: repeat;
+    background-size: 1160px auto;
+    background-position: center top;
 }
-/* Phones and portrait screens: the simpler phone picture, a little darker all over. */
-@media (orientation: portrait), (max-width: 640px) {
+@media (max-width: 1024px) {
+    .pagina-publica .home-shell::after { background-size: 1000px auto; }
+}
+@media (max-width: 640px) {
     .pagina-publica .home-shell::after {
-        background-image: linear-gradient(180deg, rgba(1, 16, 18, 0) 93%, rgba(1, 16, 18, .25) 96.5%, rgba(1, 16, 18, .65) 99%, #011012 100%),
-            linear-gradient(rgba(var(--hero-veil), .35), rgba(var(--hero-veil), .35)),
-            var(--design-bg-grain), url("../assets/imagini/hero-fundal-mobil.webp");
-        background-position: 0 0, 0 0, 0 0, center top;
+        background-image: url("../assets/imagini/fundal-final-mobil.webp");
+        background-repeat: repeat-y;
+        background-size: 100% auto;
+        background-position: center top;
     }
 }
 

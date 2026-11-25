@@ -3,6 +3,17 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-25 (56): Reference line-art tile back ("Fundal Final"), everything else unchanged (done by Claude, at the owner's request)
+
+Owner: "uită-te din nou pe poza de referință și adu-mi modelul acela înapoi, dar păstrează-mi titlurile și restul așa cum e" (reference: `Desktop\Spotivity\Modificari\Design\calereferinta.jpeg`).
+
+- Restore point: git tag `design-before-reference-tile` (commit a694b8b = the vortex). `design-before-hero-refine` = before both changes.
+- `scripts/design/fundal-final.mjs` restored from d86f0eb (the line-art tile of 21.11: sport icons, crosses, dots, emerald ribbons). It now renders WebP files through `fundal-raster.mjs` instead of writing a data URI: `fundal-final-desktop.webp` (double panel, 1641×2400, 150.6 KB) and `fundal-final-mobil.webp` (one column, 1094×3200, 104.1 KB).
+- CSS as on 21.11: tile repeated, 1160 px wide (1000 px under 1024 px), phones ≤640 px one column at 100% width, repeat-y; the layer stays fixed. The left veil of (55) removed. The vortex pictures `hero-fundal-*.webp` deleted (fundal-arena.mjs can still make them).
+- Titles, colours (single green accent), fonts, carousel pause, h1 unchanged from (55).
+- Bug fix in `home-gallery.js`: the IntersectionObserver read `entries[0]` (the oldest) when several entries arrived together, so after a fast scroll the gallery thought it was off screen and stopped rotating; now it reads the last entry.
+- `design-background.css?v=57`, `home-gallery.js?v=10`; preloads point to the new files; SEO pages regenerated.
+
 ## 2026-11-25 (55): Hero refinement: vortex behind the photo, single green accent, SEO h1, carousel pause, WebP background (done by Claude, owner's brief)
 
 - **Restore point: git tag `design-before-hero-refine` (commit 61606ba).** Owner: "dacă îți zic undo adu site-ul la designul inițial" = go back to this tag.
