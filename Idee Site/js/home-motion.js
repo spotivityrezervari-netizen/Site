@@ -9,9 +9,12 @@
         const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
         const strips = new Map();
         const revealed = new WeakSet();
-        let frame = 0, measurement = 0, wakeTimer = 0, previousTime = 0, viewportScrollTimer = 0;
-        let blocked = false, viewportScrolling = false, previousScrollY = window.scrollY;
-        const speed = 22, acceleration = 20, interactionDelay = 6000, viewportScrollDelay = 180;
+        let frame = 0, measurement = 0, wakeTimer = 0, previousTime = 0;
+        let blocked = false;
+        // 25.11.2026 (owner): rows keep moving no matter what — hover, focus, touch and
+        // page scrolling never stop them. Only a manual horizontal drag/fling takes over
+        // the row; the motion continues from the new spot as soon as that gesture settles.
+        const speed = 22, acceleration = 20, settleDelay = 220;
 
         function setStatus(state, status) {
             if (state.strip.dataset.autoScroll !== status) state.strip.dataset.autoScroll = status;
@@ -20,7 +23,7 @@
         function wake() {
             clearTimeout(wakeTimer);
             wakeTimer = 0;
-            if (!frame && !blocked && !viewportScrolling) frame = requestAnimationFrame(animate);
+            if (!frame && !blocked) frame = requestAnimationFrame(animate);
         }
 
         function animate(time) {
@@ -30,7 +33,7 @@
             let running = false, nextWake = Infinity;
             for (const state of strips.values()) {
                 if (state.max <= 1 || reducedMotion.matches) { state.velocity = 0; setStatus(state, 'idle'); continue; }
-                if (blocked || viewportScrolling || state.hovered || state.focused || state.pointer || !state.visible) {
+                if (blocked || !state.visible) {
                     state.velocity = 0;
                     setStatus(state, 'paused');
                     continue;
@@ -62,32 +65,16 @@
                 // so the cards still advance by a fraction of a pixel on every frame.
                 state.strip.style.setProperty('--home-courts-offset', `${(state.expected - state.position).toFixed(4)}px`);
             }
-            if (running && !blocked && !viewportScrolling) frame = requestAnimationFrame(animate);
+            if (running && !blocked) frame = requestAnimationFrame(animate);
             else {
                 previousTime = 0;
-                if (Number.isFinite(nextWake) && !blocked && !viewportScrolling) wakeTimer = setTimeout(wake, Math.max(16, nextWake));
+                if (Number.isFinite(nextWake) && !blocked) wakeTimer = setTimeout(wake, Math.max(16, nextWake));
             }
-        }
-
-        function pauseForViewportScroll() {
-            if (window.scrollY === previousScrollY) return;
-            previousScrollY = window.scrollY;
-            viewportScrolling = true;
-            cancelAnimationFrame(frame);
-            clearTimeout(wakeTimer);
-            clearTimeout(viewportScrollTimer);
-            frame = wakeTimer = previousTime = 0;
-            for (const state of strips.values()) {
-                state.velocity = 0;
-                setStatus(state, state.max > 1 && !reducedMotion.matches ? 'paused' : 'idle');
-            }
-            // Give native vertical panning priority, then accelerate the rows
-            // again without shortening their separate manual-interaction delay.
-            viewportScrollTimer = setTimeout(() => { viewportScrolling = false; wake(); }, viewportScrollDelay);
         }
 
         function pauseForInteraction(state) {
-            state.resumeAfter = performance.now() + interactionDelay;
+            state.resumeAfter = performance.now() + settleDelay;
+            state.velocity = 0;
             setStatus(state, state.max > 1 && !reducedMotion.matches ? 'paused' : 'idle');
             wake();
         }
@@ -105,24 +92,13 @@
             const state = {
                 strip, max: 0, position: strip.scrollLeft, expected: strip.scrollLeft,
                 direction: 1, velocity: 0, resumeAfter: performance.now() + 400,
-                hovered: false, focused: wrapper.contains(document.activeElement), pointer: false, visible: false, listeners: []
+                visible: false, listeners: []
             };
             strips.set(strip, state);
             const listen = (target, name, listener, options) => {
                 target.addEventListener(name, listener, options);
                 state.listeners.push(() => target.removeEventListener(name, listener, options));
             };
-            listen(wrapper, 'pointerenter', event => { if (event.pointerType !== 'touch') { state.hovered = true; wake(); } });
-            listen(wrapper, 'pointerleave', event => { if (event.pointerType !== 'touch') { state.hovered = false; wake(); } });
-            listen(wrapper, 'focusin', () => { state.focused = true; wake(); });
-            listen(wrapper, 'focusout', () => {
-                setTimeout(() => { state.focused = wrapper.contains(document.activeElement); wake(); }, 0);
-            });
-            listen(strip, 'pointerdown', () => { state.pointer = true; pauseForInteraction(state); }, { passive: true });
-            listen(strip, 'wheel', () => pauseForInteraction(state), { passive: true });
-            listen(strip, 'keydown', event => {
-                if (['ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown', ' '].includes(event.key)) pauseForInteraction(state);
-            });
             listen(strip, 'scroll', () => {
                 const position = strip.scrollLeft;
                 if (Math.abs(position - state.expected) > .75) {
@@ -218,13 +194,7 @@
         new MutationObserver(records => {
             if (records.some(record => record.target === document.body || record.target.matches?.('.modal'))) updateBlocked();
         }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class', 'style', 'hidden'] });
-        const releasePointer = () => {
-            for (const state of strips.values()) if (state.pointer) { state.pointer = false; pauseForInteraction(state); }
-        };
-        window.addEventListener('pointerup', releasePointer, { passive: true });
-        window.addEventListener('pointercancel', releasePointer, { passive: true });
         window.addEventListener('resize', scheduleMeasure, { passive: true });
-        window.addEventListener('scroll', pauseForViewportScroll, { passive: true });
         if (!visibilityObserver) window.addEventListener('scroll', scheduleMeasure, { passive: true });
         window.addEventListener('spotivity:language', scheduleMeasure);
         document.getElementById('filtru-oras-global')?.addEventListener('change', scheduleMeasure);

@@ -425,6 +425,7 @@ let checks = 0;
     assert.ok(steps.filter(step => step > .025 && Math.abs(step-Math.round(step)) > .025).length >= 6,
       `Slow autoplay must render actual fractional-pixel movement: ${JSON.stringify(steps)}`);
 
+    // 25.11.2026 (owner): the rows never stop for page scrolling, hover, focus or touch.
     await homepage.evaluate(() => {
       const origin = scrollY;
       let step = 0;
@@ -432,40 +433,30 @@ let checks = 0;
         scrollTo({top: origin+(++step % 2)*8, behavior: 'instant'});
       }, 40);
     });
-    await homepage.waitForFunction(() => document.querySelector('[data-home-courts="Fotbal"]').dataset.autoScroll === 'paused');
-    const viewportScrollPosition = await visualPosition();
-    await homepage.waitForTimeout(400);
-    assert.ok(Math.abs(await visualPosition()-viewportScrollPosition) < 1,
-      'Autoplay must leave the rendering thread free while the page keeps scrolling vertically');
+    await homepage.waitForTimeout(200);
+    await waitMoving(await visualPosition());
     await homepage.evaluate(() => clearInterval(window.discoveryViewportScrollTimer));
-    await homepage.waitForFunction(start => {
-      const node = document.querySelector('[data-home-courts="Fotbal"]');
-      return node.getBoundingClientRect().left-node.querySelector('[data-discovery-court]').getBoundingClientRect().left > start+4;
-    }, viewportScrollPosition, {timeout: 3000});
-    pass('vertical viewport scrolling pauses autoplay and promptly resumes it after scrolling settles');
+    pass('vertical viewport scrolling never stops autoplay');
 
     await strip.hover();
-    await homepage.waitForFunction(() => document.querySelector('[data-home-courts="Fotbal"]').dataset.autoScroll === 'paused');
-    const hoveredPosition = await visualPosition();
-    await homepage.waitForTimeout(400);
-    assert.ok(Math.abs(await visualPosition()-hoveredPosition) < 1, 'Cards must stay still under the pointer');
+    await waitMoving(await visualPosition());
     await strip.locator('[data-discovery-court]').first().focus();
     await homepage.mouse.move(0, 0);
-    const focusedPosition = await visualPosition();
-    await homepage.waitForTimeout(400);
-    assert.ok(Math.abs(await visualPosition()-focusedPosition) < 1, 'Keyboard focus must keep its card still after hover ends');
-    await strip.locator('[data-discovery-court]').first().evaluate(node => node.blur());
     await waitMoving(await visualPosition());
+    await strip.locator('[data-discovery-court]').first().evaluate(node => node.blur());
 
     await strip.hover();
+    const beforeWheel = await strip.evaluate(node => node.scrollLeft);
     await homepage.mouse.wheel(250, 0);
     await homepage.mouse.move(0, 0);
-    await homepage.waitForFunction(() => document.querySelector('[data-home-courts="Fotbal"]').dataset.autoScroll === 'paused');
-    await homepage.waitForTimeout(250); // Allow the native wheel gesture to settle before measuring its grace period.
+    await homepage.waitForFunction(start => Math.abs(document.querySelector('[data-home-courts="Fotbal"]').scrollLeft-start) > 40,
+      beforeWheel, {timeout: 3000});
+    await homepage.waitForTimeout(250); // Let the native wheel gesture settle.
     const manualPosition = await visualPosition();
-    await homepage.waitForTimeout(4500);
-    assert.ok(Math.abs(await visualPosition()-manualPosition) < 1, 'Autoplay must leave time to read after manual scrolling');
-    await waitMoving(manualPosition);
+    await homepage.waitForFunction(start => {
+      const node = document.querySelector('[data-home-courts="Fotbal"]');
+      return Math.abs(node.getBoundingClientRect().left-node.querySelector('[data-discovery-court]').getBoundingClientRect().left-start) > 4;
+    }, manualPosition, {timeout: 3000});
 
     // Dispatch trusted touch input through Chromium, rather than synthesizing
     // DOM events, so the browser's native horizontal gesture still works.
@@ -474,10 +465,11 @@ let checks = 0;
     const bounds = await strip.boundingBox();
     const point = {x: bounds.x+Math.min(250, bounds.width-25), y: bounds.y+Math.min(100, bounds.height/2)};
     await touch.send('Input.dispatchTouchEvent', {type: 'touchStart', touchPoints: [point]});
-    await homepage.waitForFunction(() => document.querySelector('[data-home-courts="Fotbal"]').dataset.autoScroll === 'paused');
     const heldPosition = await visualPosition();
-    await homepage.waitForTimeout(350);
-    assert.ok(Math.abs(await visualPosition()-heldPosition) < 1, 'Touch must stop autoplay before the drag');
+    await homepage.waitForFunction(start => {
+      const node = document.querySelector('[data-home-courts="Fotbal"]');
+      return Math.abs(node.getBoundingClientRect().left-node.querySelector('[data-discovery-court]').getBoundingClientRect().left-start) > 4;
+    }, heldPosition, {timeout: 3000});
     await touch.send('Input.dispatchTouchEvent', {type: 'touchMove', touchPoints: [{x: point.x-100, y: point.y}]});
     await touch.send('Input.dispatchTouchEvent', {type: 'touchEnd', touchPoints: []});
     for (const sport of ['Fotbal', 'Baschet', 'Tenis', 'Volei', 'Tenis Picior']) {
@@ -512,7 +504,7 @@ let checks = 0;
     assert.equal(await homepage.locator('#modal-rezervare').isVisible(), false, 'A horizontal touch drag must not open a booking');
     await strip.scrollIntoViewIfNeeded();
     pass('trusted touch gestures starting on every sport background scroll the page in both directions');
-    pass('cards move in fractional pixels without clones or controls, pause for hover/focus/touch/manual scrolling and resume after the interaction grace period');
+    pass('cards move in fractional pixels without clones or controls, keep moving under hover/focus/touch and resume right after a manual scroll');
 
     await homepage.locator('#home-nav-search-input').fill('Court');
     await homepage.locator('#btn-home-search').click();
