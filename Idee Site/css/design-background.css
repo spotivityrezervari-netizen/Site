@@ -399,11 +399,6 @@ body.pagina-publica { background: #011012; background-color: #011012; }
     max-width: none; text-wrap: pretty; color: #bfeee0;
 }
 .pagina-publica .home-welcome .welcome-copy > p:not(.welcome-brand):not(.welcome-tagline) { max-width: 52ch; }
-/* A thin accent line under the brand, in the same two colours. */
-.pagina-publica .home-welcome .welcome-brand::after {
-    content: ""; display: block; width: 72px; height: 4px; margin-top: 14px; border-radius: 4px;
-    background: linear-gradient(90deg, #22c55e, #38bdf8);
-}
 .pagina-publica .welcome-photo-card {
     box-shadow: 0 0 0 1px rgba(56, 189, 248, .18), 0 18px 60px rgba(34, 197, 94, .14), 0 0 90px rgba(56, 189, 248, .08);
 }

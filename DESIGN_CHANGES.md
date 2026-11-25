@@ -3,6 +3,14 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-25 (59): Accent line under "Spotivity" removed (done by Claude, at the owner's request)
+
+Owner: "vreau sa imi scoti linia colorate de sub titlul Spotivity".
+
+- Removed the `.welcome-brand::after` rule (72x4 px green→blue line). Everything else from (58) stays.
+- Undo: put the rule back (see commit of (58), 3b2007f).
+- `design-background.css?v=60`; SEO pages regenerated.
+
 ## 2026-11-25 (58): Hero text on longer lines, more colour (done by Claude, at the owner's request)
 
 Owner: "scrisul de sub Spotivity să fie mai lung, nu-l restrânge pe rânduri; aruncă niște culori ca să arate mai frumos, mai captivant".
