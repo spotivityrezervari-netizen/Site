@@ -3,6 +3,12 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-25 (63): Whole public site in the Space Cadet palette, no green/blue gradients (done by Claude, owner: "schimbă peste tot unde e curcubeu cu Space Cadet, fă să fie frumoasă toată pagina")
+
+- Restore point: tag `design-before-space-cadet` (ee73dcc).
+- Mechanical colour map over design-background.css and design-legal.css (every hex/rgba of the green-teal theme to its Space Cadet pair): base #070b1a/#0a0f24, panels #10183a-#1d2951, lines #26305a, main action #a9b6ec (hover #c6d0f7, ink #0d1330), labels #8c9ce0, text #c8cfe8/#e9ecf8. Status colours in style.css untouched.
+- theme-color #070b1a on index + legal pages; design-legal.css?v=2, design-background.css?v=64; SEO pages regenerated.
+
 ## 2026-11-25 (62): Display font Unbounded, ambient light from the photo, tilt, Space Cadet edge light (done by Claude, owner: "fă mai bine de atât", then "lumina care se plimbă în tema Space Cadet, nu curcubeu")
 
 - Restore point: tag `design-before-ambient` (c53c892). Undo = delete the last block of design-background.css, `js/design-ambient.js` + its <script> and manifest entry, the unbounded fonts in the manifest; regenerate SEO pages.

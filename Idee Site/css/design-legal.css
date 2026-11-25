@@ -1,20 +1,20 @@
 /*
  * Spotivity design layer for the legal pages (termeni, confidentialitate, cookies).
- * Same palette as css/design-background.css: background #031817, green actions #22C55E,
- * blue labels #38BDF8, white headings, light grey-green text, #1F3A3D borders.
+ * Same palette as css/design-background.css: background #0a0f24, green actions #a9b6ec,
+ * blue labels #8c9ce0, white headings, light grey-green text, #26305a borders.
  * Loaded after css/legal.css and only overrides colours. Undo: delete this file, its
  * <link> in the three legal pages and its line in scripts/public-files.json.
  */
 body {
-    background: linear-gradient(180deg, #041c1b 0%, #031817 320px) #031817;
-    color: #c9dad5;
+    background: linear-gradient(180deg, #0d1430 0%, #0a0f24 320px) #0a0f24;
+    color: #c8cfe8;
 }
-header { border-bottom-color: #1f3a3d; background: rgba(3, 24, 23, .94); }
+header { border-bottom-color: #26305a; background: rgba(10, 15, 36, .94); }
 header a, h1, h2, th { color: #fff; }
-.actualizat { color: #9fb7b0; }
-a { color: #22c55e; }
-a:hover { color: #4ade80; }
-a:focus-visible { outline-color: #22c55e; }
-th, td { border-color: #1f3a3d; }
-.de-completat { background: rgba(56, 189, 248, .14); color: #e8f1ee; }
-nav.legal { border-top-color: #1f3a3d; }
+.actualizat { color: #9aa3c7; }
+a { color: #a9b6ec; }
+a:hover { color: #c6d0f7; }
+a:focus-visible { outline-color: #a9b6ec; }
+th, td { border-color: #26305a; }
+.de-completat { background: rgba(74, 90, 156, .14); color: #e9ecf8; }
+nav.legal { border-top-color: #26305a; }
