@@ -3,6 +3,15 @@
 Changes made only to the visual layer (the page background). Newest first.
 Restore point: git tag `design-before-background` (commit 304a439, before any design change).
 
+## 2026-11-25 (58): Hero text on longer lines, more colour (done by Claude, at the owner's request)
+
+Owner: "scrisul de sub Spotivity să fie mai lung, nu-l restrânge pe rânduri; aruncă niște culori ca să arate mai frumos, mai captivant".
+
+- Restore point: tag `design-before-hero-colours` (e4982cf).
+- h1 and tagline without the 24ch / 26ch limit; on screens ≥1100 px the h1 stays on one line (28–38 px). Paragraph up to 52ch.
+- h1 in a green→blue gradient (#4ade80 → #22c55e → #38bdf8, the site's two colours; plain text in Windows high-contrast), tagline light mint #bfeee0, a short green→blue line under "Spotivity", a soft green/blue glow behind the hero text, and a coloured glow around the photo card. Static.
+- `design-background.css?v=59`; SEO pages regenerated.
+
 ## 2026-11-25 (57): The whole reference design back (theme, colours, background), only the current hero text kept (done by Claude, at the owner's request)
 
 Owner: "vreau fundalul de-l ai în folder, nu acesta cu spirala, tema, culorile, tot, în afară de scrisul de acum".
